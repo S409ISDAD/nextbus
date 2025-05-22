@@ -19,7 +19,8 @@ async def get_cached(key: str, func, args: tuple, exp: int, r: redis.Redis):
     if cached:
         print(f"  cached: {key}")
         time_left = await r.ttl(key)
-        if time_left < 5:
+        if time_left < 15:
+            print(f"     cache expiring soon {key}, regenerating")
             if inspect.iscoroutinefunction(func):
                 asyncio.create_task(func(*args))
         return json.loads(cached)["data"]
