@@ -26,8 +26,8 @@ async def fetch_buses_for_service(service, stop_id, r: redis.Redis) -> list[Bus]
 
     active = await get_cached(
         f"service:{service}:trips",
-        lambda a: fetch_active_buses(a),
-        (service),
+        lambda *args: fetch_active_buses(*args),
+        (service,),
         TRIPS_CACHE,
         r,
     )
@@ -42,8 +42,8 @@ async def fetch_buses_for_service(service, stop_id, r: redis.Redis) -> list[Bus]
 
         this_trip = await get_cached(
             f"trip:{service}:{trip_id}",
-            lambda a: fetch_active_buses(a),
-            (service),
+            lambda *args: fetch_trip(*args),
+            (service, trip_id),
             TRIP_CACHE,
             r,
         )
@@ -52,15 +52,17 @@ async def fetch_buses_for_service(service, stop_id, r: redis.Redis) -> list[Bus]
             continue
 
         for trip_data in this_trip:
-            delay = this_trip.get("delay")
+            delay = trip_data.get("delay")
             if not delay:
                 continue
 
             timestamp = (
-                parser.isoparse(trip_data.get("datetime").timestamp())
+                parser.isoparse(trip_data.get("datetime"))
                 if trip_data.get("datetime")
                 else None
             )
+
+            print(timestamp)
 
             coords = trip_data.get("coordinates", [0, 0])
             vehicle = trip_data.get("vehicle", {})
@@ -76,8 +78,8 @@ async def fetch_buses_for_service(service, stop_id, r: redis.Redis) -> list[Bus]
 
             service_info = await get_cached(
                 f"service_info:{service}",
-                lambda a: get_service_info(a),
-                (service),
+                lambda *args: get_service_info(*args),
+                (service,),
                 SERVICE_CACHE,
                 r,
             )
@@ -123,6 +125,13 @@ def format_delay(delay):
     return formatted_delay
 
 
+async def fetch_trip(service, trip_id):
+    """Fetches specific trip"""
+    data = await fetch_json(JSON_BASE + f"?service={service}&trip={trip_id}")
+
+    return data
+
+
 async def get_services_from_stop(stop_id):
     """Fetches all services from a stop."""
     data = await fetch_json(API_BASE + f"services/?stops={stop_id}")
@@ -130,10 +139,10 @@ async def get_services_from_stop(stop_id):
     if not data:
         return
 
-    services = set()
+    services = []
 
     for service in data.get("results"):
-        services.add(service.get("id"))
+        services.append(service.get("id"))
 
     return services
 
@@ -185,8 +194,8 @@ def get_vehicle_journey(journey_id):
 async def calculate_expected(delay, stop_id, journey_id, r):
     journey = await get_cached(
         f"journeys:{journey_id}",
-        lambda a: get_vehicle_journey(a),
-        (journey_id),
+        lambda *args: get_vehicle_journey(*args),
+        (journey_id,),
         JOURNEY_CACHE,
         r,
     )

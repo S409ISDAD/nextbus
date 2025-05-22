@@ -1,4 +1,5 @@
-import threading
+import inspect
+import asyncio
 import redis.asyncio as redis
 import json
 
@@ -12,17 +13,20 @@ SERVICE_CACHE = 300
 STOPS_CACHE = 600
 
 
-async def get_cached(key: str, func, args, exp: int, r: redis.Redis):
+async def get_cached(key: str, func, args: tuple, exp: int, r: redis.Redis):
     cached = await r.get(key)
 
     if cached:
         time_left = await r.ttl(key)
         if time_left < 5:
-            threading.Thread(target=func, args=args)
-        return cached["data"]
+            if inspect.iscoroutinefunction(func):
+                asyncio.create_task(func(*args))
+        return json.loads(cached)["data"]
+
+    print(f"not cached: {key}")
 
     # if data is not cached
-    result = await func(**args)
+    result = await func(*args)
     if result:
-        r.set(key, value=json.dumps(result), ex=exp)
+        await r.set(key, value=json.dumps({"data": result}), ex=exp)
     return result
