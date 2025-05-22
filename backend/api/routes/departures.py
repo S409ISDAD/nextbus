@@ -24,6 +24,8 @@ async def departures_for_stop(stop_id: str, redis=Depends(get_redis)):
         r=redis,
     )
 
+    print(services)
+
     stop_name = await get_cached(
         f"stops:{stop_id}",
         lambda *args: bustimes.get_stop_name(*args),
@@ -40,4 +42,4 @@ async def departures_for_stop(stop_id: str, redis=Depends(get_redis)):
         result = await task
         buses.extend(result)
 
-    return {"stop_name": stop_name, "buses": buses, "timestamp": buses[0].timestamp}
+    return {"stop_name": stop_name, "buses": buses, "timestamp": 0}

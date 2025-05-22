@@ -7,7 +7,7 @@ from backend.services.caching import (
     JOURNEY_CACHE,
     SERVICE_CACHE,
     get_cached,
-    TRIP_CACHE,
+    BUS_CACHE,
     TRIPS_CACHE,
 )
 from backend.utils.fetch_json import fetch_json
@@ -31,75 +31,79 @@ async def fetch_buses_for_service(service, stop_id, r: redis.Redis) -> list[Bus]
         TRIPS_CACHE,
         r,
     )
+
     if not active:
         return []
 
     for trip in active:
-        trip_id = trip.get("trip_id")
+        bus_id = trip.get("id")
+        print(f"bus id: {bus_id}")
 
-        if not trip_id:
+        if not bus_id:
             continue
 
-        this_trip = await get_cached(
-            f"trip:{service}:{trip_id}",
-            lambda *args: fetch_trip(*args),
-            (service, trip_id),
-            TRIP_CACHE,
+        this_bus = await get_cached(
+            f"bus:{bus_id}",
+            lambda *args: fetch_bus(*args),
+            (bus_id,),
+            BUS_CACHE,
             r,
         )
 
-        if not this_trip:
+        this_bus = this_bus[0]
+
+        if not this_bus:
             continue
 
-        for trip_data in this_trip:
-            delay = trip_data.get("delay")
-            if not delay:
-                continue
+        delay = this_bus.get("delay")
 
-            timestamp = (
-                parser.isoparse(trip_data.get("datetime"))
-                if trip_data.get("datetime")
-                else None
-            )
+        if not delay:
+            continue
 
-            coords = trip_data.get("coordinates", [0, 0])
-            vehicle = trip_data.get("vehicle", {})
-            journey_id = trip_data.get("journey_id")
-            destination = trip_data.get("destination")
-            progress = trip_data.get("progress", 0)
+        timestamp = (
+            parser.isoparse(this_bus.get("datetime"))
+            if this_bus.get("datetime")
+            else None
+        )
 
-            vehicle_name = vehicle["name"].split(" - ")
-            fleet_num = vehicle_name[0] if len(vehicle_name) > 1 else "Unknown"
-            reg = vehicle_name[-1]
+        coords = this_bus.get("coordinates", [0, 0])
+        vehicle = this_bus.get("vehicle", {})
+        journey_id = this_bus.get("journey_id")
+        destination = this_bus.get("destination")
+        progress = this_bus.get("progress", 0)
 
-            lateness = format_delay(delay)
+        vehicle_name = vehicle["name"].split(" - ")
+        fleet_num = vehicle_name[0] if len(vehicle_name) > 1 else "Unknown"
+        reg = vehicle_name[-1]
 
-            service_info = await get_cached(
-                f"service_info:{service}",
-                lambda *args: get_service_info(*args),
-                (service,),
-                SERVICE_CACHE,
-                r,
-            )
+        lateness = format_delay(delay)
 
-            times = await calculate_expected(delay, stop_id, journey_id, r)
+        service_info = await get_cached(
+            f"service_info:{service}",
+            lambda *args: get_service_info(*args),
+            (service,),
+            SERVICE_CACHE,
+            r,
+        )
 
-            if times:
-                buses.append(
-                    Bus(
-                        service=service_info,
-                        destination=destination,
-                        reg=reg,
-                        fleet_num=fleet_num,
-                        journey_id=journey_id,
-                        times=times,
-                        delay=delay,
-                        lateness=lateness,
-                        progress=progress,
-                        coords=coords,
-                        timestamp=timestamp,
-                    )
+        times = await calculate_expected(delay, stop_id, journey_id, r)
+
+        if times:
+            buses.append(
+                Bus(
+                    service=service_info,
+                    destination=destination,
+                    reg=reg,
+                    fleet_num=fleet_num,
+                    journey_id=journey_id,
+                    times=times,
+                    delay=delay,
+                    lateness=lateness,
+                    progress=progress,
+                    coords=coords,
+                    timestamp=timestamp,
                 )
+            )
 
     return buses
 
@@ -123,9 +127,9 @@ def format_delay(delay):
     return formatted_delay
 
 
-async def fetch_trip(service, trip_id):
-    """Fetches specific trip"""
-    data = await fetch_json(JSON_BASE + f"?service={service}&trip={trip_id}")
+async def fetch_bus(bus_id):
+    """Fetches specific bus"""
+    data = await fetch_json(JSON_BASE + f"?id={bus_id}")
 
     return data
 
@@ -137,12 +141,12 @@ async def get_services_from_stop(stop_id):
     if not data:
         return
 
-    services = []
+    services = set()
 
     for service in data.get("results"):
-        services.append(service.get("id"))
+        services.add(service.get("id"))
 
-    return services
+    return list(services)
 
 
 async def fetch_active_buses(service):
