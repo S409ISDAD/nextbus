@@ -1,2 +1,5 @@
-fastapi
+fastapi[standard]
 redis
+aiohttp
+geopy
+python-dateutil
