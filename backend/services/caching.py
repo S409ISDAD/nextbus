@@ -4,7 +4,7 @@ import redis.asyncio as redis
 import json
 
 
-SERVICES_CACHE = 120
+SERVICES_CACHE = 600
 VEHICLES_CACHE = 30
 TRIPS_CACHE = 300
 TRIP_CACHE = 60
@@ -17,6 +17,7 @@ async def get_cached(key: str, func, args: tuple, exp: int, r: redis.Redis):
     cached = await r.get(key)
 
     if cached:
+        print(f"  cached: {key}")
         time_left = await r.ttl(key)
         if time_left < 5:
             if inspect.iscoroutinefunction(func):

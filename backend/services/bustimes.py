@@ -62,8 +62,6 @@ async def fetch_buses_for_service(service, stop_id, r: redis.Redis) -> list[Bus]
                 else None
             )
 
-            print(timestamp)
-
             coords = trip_data.get("coordinates", [0, 0])
             vehicle = trip_data.get("vehicle", {})
             journey_id = trip_data.get("journey_id")
