@@ -80,7 +80,7 @@ function DepartureBoard({ stop_id }: Props) {
             }
         };
         fetchDepartures();
-        const interval = setInterval(fetchDepartures, 60000);
+        const interval = setInterval(fetchDepartures, 30000);
         return () => clearInterval(interval);
     }, [stop_id]);
 

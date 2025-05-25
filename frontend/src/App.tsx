@@ -13,7 +13,7 @@ function App() {
                 p="4"
                 justify="center"
                 align="center">
-                <Text>Bus thing idk</Text>
+                {/* <Text>Bus thing idk</Text> */}
                 <DepartureBoard stop_id="149000007530"></DepartureBoard>
                 <DepartureBoard stop_id="490016425WA"></DepartureBoard>
             </Flex>
