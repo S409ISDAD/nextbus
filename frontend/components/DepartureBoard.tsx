@@ -1,51 +1,261 @@
 import { useEffect, useState } from "react";
 import api from "../src/api";
 import type { Bus } from "../models/Bus";
+import {
+    Flex,
+    Text,
+    Box,
+    Container,
+    Card,
+    Badge,
+    Separator,
+    Spinner,
+    Skeleton,
+} from "@radix-ui/themes";
 
-function DepartureBoard(stop_id) {
+interface DeparturesResponse {
+    timestamp: number;
+    stop_name: string;
+    buses: any[];
+}
+
+interface Props {
+    stop_id: string;
+}
+
+function DepartureBoard({ stop_id }: Props) {
     const [buses, setBuses] = useState<Bus[]>([]);
     const [stop, setStop] = useState<String>("");
     const [loading, setLoading] = useState(true);
+    const [lastRefreshed, setRefreshed] = useState(new Date());
+    const [elapsed, setElapsed] = useState<string>("0s");
     useEffect(() => {
-        const departures = async () => {
+        const interval = setInterval(() => {
+            const now = new Date();
+            const diffSec = Math.floor(
+                (now.getTime() - lastRefreshed.getTime()) / 1000
+            );
+            const min = Math.floor(diffSec / 60);
+            const sec = diffSec % 60;
+
+            setElapsed(min > 0 ? `${min}m ${sec}s` : `${sec}s`);
+        }, 1000);
+        return () => clearInterval(interval);
+    }, [lastRefreshed]);
+
+    useEffect(() => {
+        const fetchDepartures = async () => {
             try {
-                const response = await api.get<Bus[]>(
-                    "/departures/?stop_id=1900HA110102"
+                const response = await api.get<DeparturesResponse>(
+                    `/departures/?stop_id=${stop_id}`
                 );
-                setBuses(response.data["buses"]);
-                setStop(response.data["stop_name"]);
-                console.log(response);
+                const now = new Date();
+                const updatedBuses: Bus[] = response.data.buses
+                    .map((bus) => {
+                        const expected = new Date(bus.expected * 1000);
+                        const scheduled = new Date(bus.scheduled * 1000);
+
+                        const diffMs = expected.getTime() - now.getTime();
+
+                        const min = Math.round(diffMs / 1000 / 60);
+
+                        return {
+                            ...bus,
+                            expected,
+                            scheduled,
+                            timeto: min < 1 ? "Due" : `${min} min`,
+                        };
+                    })
+                    .filter((bus) => bus.expected > now)
+                    .sort(
+                        (a, b) => a.expected.getTime() - b.expected.getTime()
+                    );
+
+                setBuses(updatedBuses);
+                setStop(response.data.stop_name);
+                setRefreshed(new Date(response.data.timestamp * 1000));
             } catch (error) {
                 console.error("failed to get departures", error);
             } finally {
                 setLoading(false);
             }
         };
-        departures();
-    }, []);
+        fetchDepartures();
+        const interval = setInterval(fetchDepartures, 60000);
+        return () => clearInterval(interval);
+    }, [stop_id]);
 
     if (loading) {
-        return <p>loading</p>;
+        return (
+            <Container height="300px" minHeight="300px" width="90vw">
+                {/* <Card style={{ height: "100%" }}>
+                    <Flex
+                        align="center"
+                        justify="center"
+                        gap="3"
+                        style={{ height: "100%" }}>
+                        <Text>Loading...</Text>
+                        <Spinner size="3"></Spinner>
+                    </Flex>
+                </Card> */}
+                <Card style={{ height: "100%" }}>
+                    <Flex direction="column" gap="2" style={{ height: "100%" }}>
+                        <Flex justify="center">
+                            <Skeleton>
+                                <Text
+                                    size="5"
+                                    weight="bold"
+                                    align="center"
+                                    truncate>
+                                    Stop Name
+                                </Text>
+                            </Skeleton>
+                        </Flex>
+
+                        <Box style={{ flexGrow: 1, overflowY: "auto" }} px="2">
+                            <Flex direction="column">
+                                {[1, 2, 3].map(() => (
+                                    <Container>
+                                        <Flex
+                                            direction="row"
+                                            align="center"
+                                            justify="between">
+                                            <Flex gap="2" direction="column">
+                                                <Flex
+                                                    direction="row"
+                                                    gap="1"
+                                                    align="center">
+                                                    <Skeleton>
+                                                        <Text>
+                                                            12 to Location
+                                                        </Text>
+                                                    </Skeleton>
+                                                </Flex>
+                                                <Flex direction="row" gap="3">
+                                                    <Skeleton>
+                                                        <Text color="green">
+                                                            10:10:10
+                                                        </Text>
+                                                    </Skeleton>
+                                                </Flex>
+                                            </Flex>
+                                            <Flex
+                                                direction="row"
+                                                gap="2"
+                                                align="center">
+                                                <Skeleton>
+                                                    <Badge
+                                                        color="amber"
+                                                        variant="solid">
+                                                        <Text weight="bold">
+                                                            0000000
+                                                        </Text>
+                                                    </Badge>
+                                                </Skeleton>
+                                                <Skeleton>
+                                                    <Badge
+                                                        color="iris"
+                                                        size="3">
+                                                        5 min
+                                                    </Badge>
+                                                </Skeleton>
+                                            </Flex>
+                                        </Flex>
+                                        <Separator my="2" size="4" />
+                                    </Container>
+                                ))}
+                            </Flex>
+                        </Box>
+                        <Box>
+                            <Skeleton>Updated 1s ago</Skeleton>
+                        </Box>
+                    </Flex>
+                </Card>
+            </Container>
+        );
     }
 
     return (
-        <div>
-            <h2>Departures from {stop}</h2>
-            <ul>
-                {buses.map((bus) => (
-                    <li key={bus.reg}>
-                        <div>
-                            <h4>
-                                {bus.service.line_name} to {bus.destination}
-                            </h4>
-                            <p>
-                                {bus.expected} - {bus.lateness}
-                            </p>
-                        </div>
-                    </li>
-                ))}
-            </ul>
-        </div>
+        <Container height="300px" width="90vw">
+            <Card style={{ height: "100%" }}>
+                <Flex direction="column" gap="2" style={{ height: "100%" }}>
+                    <Flex justify="center">
+                        <Text size="5" weight="bold" align="center" truncate>
+                            {stop}
+                        </Text>
+                    </Flex>
+
+                    <Box style={{ flexGrow: 1, overflowY: "auto" }} px="2">
+                        <Flex direction="column">
+                            {buses.map((bus) => (
+                                <Container key={bus.reg}>
+                                    <Flex
+                                        direction="row"
+                                        align="center"
+                                        justify="between">
+                                        <Flex direction="column">
+                                            <Flex
+                                                direction="row"
+                                                gap="1"
+                                                align="center">
+                                                <Text size="4" weight="bold">
+                                                    {bus.service.line_name}
+                                                </Text>
+                                                <Text align="center" size="2">
+                                                    to
+                                                </Text>
+                                                <Text weight="bold">
+                                                    {bus.destination}
+                                                </Text>
+                                            </Flex>
+                                            <Flex direction="row" gap="3">
+                                                {bus.delay > 30 ? (
+                                                    <>
+                                                        <Text color="red">
+                                                            <s>
+                                                                {bus.scheduled.toLocaleTimeString()}
+                                                            </s>
+                                                        </Text>
+                                                        <Text color="mint">
+                                                            {bus.expected.toLocaleTimeString()}
+                                                        </Text>
+                                                    </>
+                                                ) : (
+                                                    <Text color="green">
+                                                        {bus.scheduled.toLocaleTimeString()}
+                                                    </Text>
+                                                )}
+                                            </Flex>
+                                        </Flex>
+                                        <Flex
+                                            direction="row"
+                                            gap="2"
+                                            align="center">
+                                            <Badge
+                                                color="amber"
+                                                variant="solid">
+                                                <Text weight="bold">
+                                                    {bus.reg}
+                                                </Text>
+                                            </Badge>
+                                            <Badge color="iris" size="3">
+                                                {bus.timeto}
+                                            </Badge>
+                                        </Flex>
+                                    </Flex>
+                                    <Separator my="2" size="4" />
+                                </Container>
+                            ))}
+                        </Flex>
+                    </Box>
+                    <Box>
+                        <Text color="gray" size="1">
+                            Updated {elapsed} ago
+                        </Text>
+                    </Box>
+                </Flex>
+            </Card>
+        </Container>
     );
 }
 

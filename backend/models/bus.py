@@ -27,6 +27,7 @@ class Bus:
         self.scheduled: int = times[
             "scheduled"
         ]  # scheduled arrival time at stop (unix timestamp)
+        self.started: bool = not (times["not_started"])
         # self.speed: float = speed  # how fast the bus is going
         self.progress: float = progress  # progress between 2 stops, 0-1
         self.coords: list[float] = coords

@@ -1,4 +1,8 @@
 import asyncio
+import datetime
+from datetime import datetime as dt, timedelta
+import math
+import time
 from fastapi import APIRouter, Depends
 from backend.models.bus import Bus
 from backend.services import bustimes
@@ -14,6 +18,7 @@ router = APIRouter()
 
 @router.get("/")
 async def departures_for_stop(stop_id: str, redis=Depends(get_redis)):
+    start_time = time.time()
     buses: list[Bus] = []
 
     services = await get_cached(
@@ -23,8 +28,6 @@ async def departures_for_stop(stop_id: str, redis=Depends(get_redis)):
         exp=SERVICES_CACHE,
         r=redis,
     )
-
-    print(services)
 
     stop_name = await get_cached(
         f"stops:{stop_id}",
@@ -41,5 +44,11 @@ async def departures_for_stop(stop_id: str, redis=Depends(get_redis)):
     for task in asyncio.as_completed(tasks):
         result = await task
         buses.extend(result)
-
-    return {"stop_name": stop_name, "buses": buses, "timestamp": 0}
+    uk_timezone = datetime.timezone(timedelta(hours=1))
+    current_time = math.floor(
+        dt.now(datetime.timezone.utc).astimezone(uk_timezone).timestamp()
+    )
+    end_time = time.time()
+    elapsed = end_time - start_time
+    print(f"took {round(elapsed, 2)}s")
+    return {"stop_name": stop_name, "buses": buses, "timestamp": current_time}

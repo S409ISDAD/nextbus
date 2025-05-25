@@ -1,5 +1,4 @@
 import type { ServiceInfo } from "./ServiceInfo";
-import type { Times } from "./Times";
 import type { ProgressInfo } from "./ProgressInfo";
 
 export interface Bus {
@@ -10,10 +9,11 @@ export interface Bus {
     journey_id: number;
     delay: number;
     lateness: string;
-    expected: string;
-    scheduled: string;
-    times?: Times; // If it's used elsewhere in other cases
+    expected: Date;
+    scheduled: Date;
+    started: boolean;
     progress?: ProgressInfo;
     coords?: number[];
     timestamp?: string;
+    timeto: string;
 }

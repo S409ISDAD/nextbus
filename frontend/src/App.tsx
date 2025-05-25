@@ -1,28 +1,14 @@
 import { useEffect, useState } from "react";
-import reactLogo from "./assets/react.svg";
-import viteLogo from "/vite.svg";
-import "./App.css";
 import DepartureBoard from "../components/DepartureBoard";
+import { Container, Flex, Text } from "@radix-ui/themes";
 
 function App() {
-    const [count, setCount] = useState(0);
-
     return (
-        <>
-            <DepartureBoard></DepartureBoard>
-            <h1>Vite + React</h1>
-            <div className="card">
-                <button onClick={() => setCount((count) => count + 1)}>
-                    count is {count}
-                </button>
-                <p>
-                    Edit <code>src/App.tsx</code> and save to test HMR
-                </p>
-            </div>
-            <p className="read-the-docs">
-                Click on the Vite and React logos to learn more
-            </p>
-        </>
+        <Flex direction="column" gap="3" p="4" justify="center" align="center">
+            <Text>Bus thing idk</Text>
+            <DepartureBoard stop_id="149000007530"></DepartureBoard>
+            <DepartureBoard stop_id="490016425WA"></DepartureBoard>
+        </Flex>
     );
 }
 

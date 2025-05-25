@@ -37,7 +37,6 @@ async def fetch_buses_for_service(service, stop_id, r: redis.Redis) -> list[Bus]
 
     for trip in active:
         bus_id = trip.get("id")
-        print(f"bus id: {bus_id}")
 
         if not bus_id:
             continue
@@ -50,7 +49,10 @@ async def fetch_buses_for_service(service, stop_id, r: redis.Redis) -> list[Bus]
             r,
         )
 
-        this_bus = this_bus[0]
+        try:
+            this_bus = this_bus[0]
+        except TypeError:
+            continue
 
         if not this_bus:
             continue
@@ -243,8 +245,8 @@ async def calculate_expected(delay, stop_id, journey_id, r):
                 return None
 
             return {
-                "expected": dt.strftime(expected_time, "%H:%M:%S"),
-                "scheduled": dt.strftime(scheduled_time, "%H:%M:%S"),
+                "expected": expected_time.timestamp(),
+                "scheduled": scheduled_time.timestamp(),
                 "not_started": not_started,
             }
         stop_idx += 1
