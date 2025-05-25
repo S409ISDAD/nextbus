@@ -195,6 +195,20 @@ def get_vehicle_journey(journey_id):
     return data
 
 
+def check_scheduled_time(scheduled: dt, current_time: dt) -> dt:
+    time_difference = (scheduled - current_time).total_seconds()
+
+    # time is more than 6h in the future so bus is most likely yesterday, subtract 1 day
+    if time_difference / 3600 > 6:
+        scheduled -= timedelta(days=1)
+
+    # time is more than 6h in the past so bus is most likely tomorrow, add 1 day
+    elif time_difference / 3600 < -6:
+        scheduled += timedelta(days=1)
+
+    return scheduled
+
+
 async def calculate_expected(delay, stop_id, journey_id, r):
     journey = await get_cached(
         f"journeys:{journey_id}",
@@ -229,12 +243,14 @@ async def calculate_expected(delay, stop_id, journey_id, r):
             aimed = stop_time.get("aimed_departure_time")
             if not aimed:
                 return None
-            scheduled_time = dt.strptime(aimed, "%H:%M").replace(
+            aimed_time = dt.strptime(aimed, "%H:%M").replace(
                 year=current_time.year,
                 month=current_time.month,
                 day=current_time.day,
                 tzinfo=current_time.tzinfo,
             )
+
+            scheduled_time = check_scheduled_time(aimed_time, current_time)
 
             if not_started:
                 delay = 0

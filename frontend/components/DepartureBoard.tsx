@@ -175,9 +175,9 @@ function DepartureBoard({ stop_id }: Props) {
     }
 
     return (
-        <Container height="300px" width="90vw">
-            <Card style={{ height: "100%" }}>
-                <Flex direction="column" gap="2" style={{ height: "100%" }}>
+        <Container width="90vw">
+            <Card>
+                <Flex direction="column" gap="2">
                     <Flex justify="center">
                         <Text size="5" weight="bold" align="center" truncate>
                             {stop}
@@ -185,7 +185,11 @@ function DepartureBoard({ stop_id }: Props) {
                     </Flex>
 
                     <Box style={{ flexGrow: 1, overflowY: "auto" }} px="2">
-                        <Flex direction="column">
+                        <Flex
+                            direction="column"
+                            maxHeight="200px"
+                            minHeight="100px"
+                            justify="center">
                             {buses.map((bus) => (
                                 <Container key={bus.reg}>
                                     <Flex
@@ -245,13 +249,28 @@ function DepartureBoard({ stop_id }: Props) {
                                     <Separator my="2" size="4" />
                                 </Container>
                             ))}
+                            {buses.length < 4 ? (
+                                <Flex justify="center">
+                                    <Text color="gray">
+                                        No more departures!
+                                    </Text>
+                                </Flex>
+                            ) : (
+                                <></>
+                            )}
                         </Flex>
                     </Box>
-                    <Box>
+                    <Flex gap="2">
                         <Text color="gray" size="1">
                             Updated {elapsed} ago
                         </Text>
-                    </Box>
+                        <Text color="gray" size="1">
+                            ·
+                        </Text>
+                        <Text color="gray" size="1">
+                            Updates every 30s
+                        </Text>
+                    </Flex>
                 </Flex>
             </Card>
         </Container>

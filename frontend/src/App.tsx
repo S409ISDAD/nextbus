@@ -15,7 +15,7 @@ function App() {
                 align="center">
                 {/* <Text>Bus thing idk</Text> */}
                 <DepartureBoard stop_id="149000007530"></DepartureBoard>
-                <DepartureBoard stop_id="490016425WA"></DepartureBoard>
+                <DepartureBoard stop_id="1900HA110364"></DepartureBoard>
             </Flex>
         </Container>
     );
