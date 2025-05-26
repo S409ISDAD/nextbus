@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Bus } from "../models/Bus";
 import type { Journey } from "../models/Journey";
 import fetchJourney from "../utils/getJourney";
@@ -17,8 +17,6 @@ import {
     Skeleton,
     IconButton,
 } from "@radix-ui/themes";
-import { PlusIcon } from "@radix-ui/react-icons";
-import { Icon } from "@radix-ui/themes/components/callout";
 
 const JourneyPage: React.FC = () => {
     const { bus_id, journey_id } = useParams();
@@ -44,6 +42,19 @@ const JourneyPage: React.FC = () => {
         }, 1000);
         return () => clearInterval(interval);
     }, [lastRefreshed]);
+
+    const busRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (journey && busRef.current) {
+            requestAnimationFrame(() => {
+                busRef.current?.scrollIntoView({
+                    behavior: "smooth",
+                    block: "center",
+                });
+            });
+        }
+    }, [journey]);
 
     useEffect(() => {
         let interval: any;
@@ -96,15 +107,34 @@ const JourneyPage: React.FC = () => {
                 {journey?.stops.map((stop, idx) => (
                     <>
                         <Flex key={stop.stop_id} gap="2" align="center">
-                            <IconButton
-                                onClick={() =>
-                                    navigate(`/departures/${stop.stop_id}`)
-                                }
-                                style={{
-                                    cursor: "pointer",
-                                }}>
-                                <FontAwesomeIcon icon={faLocationDot} />
-                            </IconButton>
+                            {bus?.progress.sequence == idx &&
+                            bus.progress.progress < 0.1 ? (
+                                <div ref={busRef}>
+                                    {" "}
+                                    <IconButton
+                                        color="red"
+                                        onClick={() =>
+                                            navigate(
+                                                `/departures/${stop.stop_id}`
+                                            )
+                                        }
+                                        style={{
+                                            cursor: "pointer",
+                                        }}>
+                                        <FontAwesomeIcon icon={faBus} />
+                                    </IconButton>
+                                </div>
+                            ) : (
+                                <IconButton
+                                    onClick={() =>
+                                        navigate(`/departures/${stop.stop_id}`)
+                                    }
+                                    style={{
+                                        cursor: "pointer",
+                                    }}>
+                                    <FontAwesomeIcon icon={faLocationDot} />
+                                </IconButton>
+                            )}
                             <Separator></Separator>
                             <Flex direction="column">
                                 <Text>{stop.name}</Text>
@@ -138,10 +168,18 @@ const JourneyPage: React.FC = () => {
                                 </Flex>
                             </Flex>
                         </Flex>
-                        {bus?.progress.sequence == idx ? (
-                            <IconButton color="red">
-                                <FontAwesomeIcon icon={faBus} />
-                            </IconButton>
+                        {bus?.progress.sequence == idx &&
+                        bus.progress.progress > 0.1 ? (
+                            <div ref={busRef}>
+                                <Flex direction="row" gap="3" align="center">
+                                    <IconButton color="red">
+                                        <FontAwesomeIcon icon={faBus} />
+                                    </IconButton>
+                                    <Text weight="bold">
+                                        The bus is currently here
+                                    </Text>
+                                </Flex>
+                            </div>
                         ) : (
                             <></>
                         )}
