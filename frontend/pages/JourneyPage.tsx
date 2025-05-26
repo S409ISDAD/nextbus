@@ -149,17 +149,7 @@ const JourneyPage: React.FC = () => {
                                 {bus?.progress.sequence == idx &&
                                 bus.progress.progress < 0.1 ? (
                                     <div ref={busRef}>
-                                        {" "}
-                                        <IconButton
-                                            color="red"
-                                            onClick={() =>
-                                                navigate(
-                                                    `/departures/${stop.stop_id}`
-                                                )
-                                            }
-                                            style={{
-                                                cursor: "pointer",
-                                            }}>
+                                        <IconButton color="red">
                                             <FontAwesomeIcon icon={faBus} />
                                         </IconButton>
                                     </div>
