@@ -106,7 +106,7 @@ const JourneyPage: React.FC = () => {
 
     return (
         <Container>
-            <Flex direction="column" p="5" maxHeight="100vh">
+            <Flex direction="column" maxHeight="100vh" p="5">
                 <Flex direction="column" gap="2">
                     <Flex
                         justify="center"
@@ -137,7 +137,12 @@ const JourneyPage: React.FC = () => {
                         </Text>
                     </Flex>
                 </Flex>
-                <Flex direction="column" gap="3" overflow="auto" flexGrow="1">
+                <Flex
+                    direction="column"
+                    gap="3"
+                    overflow="auto"
+                    flexGrow="1"
+                    mt="4">
                     {journey?.stops.map((stop, idx) => (
                         <>
                             <Flex key={stop.stop_id} gap="2" align="center">
