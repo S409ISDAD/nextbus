@@ -84,96 +84,6 @@ const DeparturePage: React.FC = () => {
         return () => clearInterval(interval);
     }, [stop_id]);
 
-    if (loading) {
-        return (
-            <Container height="300px" minHeight="300px">
-                {/* <Card style={{ height: "100%" }}>
-                    <Flex
-                        align="center"
-                        justify="center"
-                        gap="3"
-                        style={{ height: "100%" }}>
-                        <Text>Loading...</Text>
-                        <Spinner size="3"></Spinner>
-                    </Flex>
-                </Card> */}
-                <Card style={{ height: "100%" }}>
-                    <Flex direction="column" gap="2" style={{ height: "100%" }}>
-                        <Flex justify="center">
-                            <Skeleton>
-                                <Text
-                                    size="5"
-                                    weight="bold"
-                                    align="center"
-                                    truncate>
-                                    Stop Name
-                                </Text>
-                            </Skeleton>
-                        </Flex>
-
-                        <Box style={{ flexGrow: 1, overflowY: "auto" }} px="2">
-                            <Flex direction="column">
-                                {[1, 2, 3].map((item) => (
-                                    <Container key={item}>
-                                        <Flex
-                                            direction="row"
-                                            align="center"
-                                            justify="between">
-                                            <Flex gap="2" direction="column">
-                                                <Flex
-                                                    direction="row"
-                                                    gap="1"
-                                                    align="center">
-                                                    <Skeleton>
-                                                        <Text>
-                                                            12 to Location
-                                                        </Text>
-                                                    </Skeleton>
-                                                </Flex>
-                                                <Flex direction="row" gap="3">
-                                                    <Skeleton>
-                                                        <Text color="green">
-                                                            10:10:10
-                                                        </Text>
-                                                    </Skeleton>
-                                                </Flex>
-                                            </Flex>
-                                            <Flex
-                                                direction="row"
-                                                gap="2"
-                                                align="center">
-                                                <Skeleton>
-                                                    <Badge
-                                                        color="amber"
-                                                        variant="solid">
-                                                        <Text weight="bold">
-                                                            0000000
-                                                        </Text>
-                                                    </Badge>
-                                                </Skeleton>
-                                                <Skeleton>
-                                                    <Badge
-                                                        color="iris"
-                                                        size="3">
-                                                        5 min
-                                                    </Badge>
-                                                </Skeleton>
-                                            </Flex>
-                                        </Flex>
-                                        <Separator my="2" size="4" />
-                                    </Container>
-                                ))}
-                            </Flex>
-                        </Box>
-                        <Box>
-                            <Skeleton>Updated 1s ago</Skeleton>
-                        </Box>
-                    </Flex>
-                </Card>
-            </Container>
-        );
-    }
-
     return (
         <Container p="5">
             <Flex direction="column" gap="2">
@@ -188,11 +98,18 @@ const DeparturePage: React.FC = () => {
                     <Text align="center">({stop?.long_name})</Text>
                 </Flex>
                 <Flex direction="row" gap="1" justify="center" wrap="wrap">
-                    {stop?.services.map((service) => (
-                        <Card key={service.id}>
-                            <Text>{service.line_name}</Text>
-                        </Card>
-                    ))}
+                    {stop?.services
+                        .sort((a, b) =>
+                            new Intl.Collator(undefined, {
+                                numeric: true,
+                                sensitivity: "base",
+                            }).compare(a.line_name, b.line_name)
+                        )
+                        .map((service) => (
+                            <Card key={service.id}>
+                                <Text>{service.line_name}</Text>
+                            </Card>
+                        ))}
                 </Flex>
 
                 <Flex gap="2" justify="center">
@@ -213,6 +130,55 @@ const DeparturePage: React.FC = () => {
                             <Flex justify="center">
                                 <Text color="red">{msg}</Text>
                             </Flex>
+                        ) : loading ? (
+                            <>
+                                {[1, 2, 3, 4, 5].map((i) => (
+                                    <Card key={i} style={{ cursor: "pointer" }}>
+                                        <Flex
+                                            direction="row"
+                                            align="center"
+                                            justify="between">
+                                            <Flex
+                                                direction="column"
+                                                gap="1"
+                                                align="start">
+                                                <Skeleton>
+                                                    <Text weight="bold">
+                                                        123 to Location
+                                                    </Text>
+                                                </Skeleton>
+                                                <Skeleton>
+                                                    <Text color="green">
+                                                        10:10:10
+                                                    </Text>
+                                                </Skeleton>
+                                            </Flex>
+                                            <Flex
+                                                direction="row"
+                                                gap="2"
+                                                align="center">
+                                                <Skeleton>
+                                                    <Badge
+                                                        color="amber"
+                                                        variant="solid">
+                                                        <Text weight="bold">
+                                                            AB12ACB
+                                                        </Text>
+                                                    </Badge>
+                                                </Skeleton>
+                                                <Skeleton>
+                                                    <Badge
+                                                        color="iris"
+                                                        size="3">
+                                                        <Text size="5">5</Text>
+                                                        min
+                                                    </Badge>
+                                                </Skeleton>
+                                            </Flex>
+                                        </Flex>
+                                    </Card>
+                                ))}
+                            </>
                         ) : (
                             <>
                                 {buses.map((bus) => (
@@ -223,9 +189,7 @@ const DeparturePage: React.FC = () => {
                                                 `/journeys/${bus.journey_id}`
                                             )
                                         }
-                                        style={{
-                                            cursor: "pointer",
-                                        }}>
+                                        style={{ cursor: "pointer" }}>
                                         <Flex
                                             direction="row"
                                             align="center"
@@ -267,16 +231,12 @@ const DeparturePage: React.FC = () => {
                                                         </Text>
                                                     )}
                                                 </Flex>
-                                                <Flex>
-                                                    {bus.service.detail ? (
-                                                        <Text>
-                                                            Via:{" "}
-                                                            {bus.service.detail}
-                                                        </Text>
-                                                    ) : (
-                                                        <></>
-                                                    )}
-                                                </Flex>
+                                                {bus.service.detail && (
+                                                    <Text>
+                                                        Via:{" "}
+                                                        {bus.service.detail}
+                                                    </Text>
+                                                )}
                                             </Flex>
                                             <Flex
                                                 direction="row"
@@ -303,14 +263,12 @@ const DeparturePage: React.FC = () => {
                                         </Flex>
                                     </Card>
                                 ))}
-                                {buses.length < 4 ? (
+                                {buses.length < 4 && (
                                     <Flex justify="center">
                                         <Text color="gray">
                                             No more departures!
                                         </Text>
                                     </Flex>
-                                ) : (
-                                    <></>
                                 )}
                             </>
                         )}
