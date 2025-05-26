@@ -94,7 +94,10 @@ function DepartureBoard({ stop_id, closest }: Props) {
                     if (closest_stop_id) {
                         setStopID(closest_stop_id);
                         await fetchDepartures(closest_stop_id);
-                        const interval = setInterval(init, 30000);
+                        const interval = setInterval(
+                            () => fetchDepartures(closest_stop_id),
+                            30000
+                        );
                         return () => clearInterval(interval);
                     } else {
                         setMsg("No stop found nearby");
