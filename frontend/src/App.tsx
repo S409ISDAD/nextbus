@@ -1,27 +1,19 @@
 import { useEffect, useState } from "react";
 import DepartureBoard from "../components/DepartureBoard";
+import DeparturePage from "../pages/DeparturePage";
+import Home from "../pages/Home";
 import Navbar from "../components/Navbar";
 import { Container, Flex, Text } from "@radix-ui/themes";
-import getClosestStop, { getCurrentPosition } from "../utils/closestStop";
+import { BrowserRouter, Routes, Route } from "react-router";
 
 function App() {
     return (
-        <Container>
-            {/* <Navbar></Navbar> */}
-            <Flex
-                direction="row"
-                gap="3"
-                p="4"
-                justify="center"
-                align="center"
-                wrap="wrap">
-                {/* <Text>Bus thing idk</Text> */}
-
-                <DepartureBoard stop_id="" closest={true}></DepartureBoard>
-                <DepartureBoard stop_id="149000007530"></DepartureBoard>
-                <DepartureBoard stop_id="1900HA110364"></DepartureBoard>
-            </Flex>
-        </Container>
+        <BrowserRouter>
+            <Routes>
+                <Route path="/" element={<Home />} />
+                <Route path="departures/:stop_id" element={<DeparturePage />} />
+            </Routes>
+        </BrowserRouter>
     );
 }
 

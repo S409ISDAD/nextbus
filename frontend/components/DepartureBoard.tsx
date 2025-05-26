@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import api from "../src/api";
 import type { Bus } from "../models/Bus";
+import fetchDepartures from "../utils/fetchDepartures";
+import { useNavigate } from "react-router";
 import {
     Flex,
     Text,
@@ -13,12 +14,6 @@ import {
 } from "@radix-ui/themes";
 import getClosestStop, { getCurrentPosition } from "../utils/closestStop";
 
-interface DeparturesResponse {
-    timestamp: number;
-    stop_name: string;
-    buses: any[];
-}
-
 interface Props {
     stop_id: string;
     closest?: boolean;
@@ -26,12 +21,15 @@ interface Props {
 
 function DepartureBoard({ stop_id, closest }: Props) {
     const [buses, setBuses] = useState<Bus[]>([]);
-    const [stopID, setStopID] = useState<string>("");
     const [stop, setStop] = useState<String>("");
+    const [stopID, setStopID] = useState<String>("");
     const [loading, setLoading] = useState(true);
     const [lastRefreshed, setRefreshed] = useState(new Date());
     const [elapsed, setElapsed] = useState<string>("0s");
     const [msg, setMsg] = useState<string>("");
+
+    const navigate = useNavigate();
+
     useEffect(() => {
         const interval = setInterval(() => {
             const now = new Date();
@@ -48,54 +46,33 @@ function DepartureBoard({ stop_id, closest }: Props) {
 
     useEffect(() => {
         let interval: any;
-        const fetchDepartures = async (stop_id: string) => {
+        const getData = async (id: string) => {
             try {
-                const response = await api.get<DeparturesResponse>(
-                    `/departures/?stop_id=${stop_id}`
-                );
-                const now = new Date();
-                const updatedBuses: Bus[] = response.data.buses
-                    .map((bus) => {
-                        const expected = new Date(bus.expected * 1000);
-                        const scheduled = new Date(bus.scheduled * 1000);
+                const departures = await fetchDepartures(id);
 
-                        const diffMs = expected.getTime() - now.getTime();
-
-                        const min = Math.round(diffMs / 1000 / 60);
-
-                        return {
-                            ...bus,
-                            expected,
-                            scheduled,
-                            timeto: min < 1 ? "Due" : `${min} min`,
-                        };
-                    })
-                    .filter((bus) => bus.expected > now)
-                    .sort(
-                        (a, b) => a.expected.getTime() - b.expected.getTime()
-                    );
-
-                setBuses(updatedBuses);
-                setStop(response.data.stop_name);
-                setRefreshed(new Date(response.data.timestamp * 1000));
-            } catch (error) {
-                console.error("failed to get departures", error);
-                setMsg("Failed to fetch departures.");
+                if (departures) {
+                    setBuses(departures.updatedBuses);
+                    setStop(departures.stop_name);
+                    setRefreshed(departures.timestamp);
+                } else {
+                    setMsg("Failed to fetch departures.");
+                }
+            } catch {
+                console.log("uh oh");
             } finally {
                 setLoading(false);
             }
         };
-
         const init = async () => {
             try {
                 if (closest) {
                     const pos = await getCurrentPosition();
                     const closest_stop_id = await getClosestStop(pos);
                     if (closest_stop_id) {
+                        await getData(closest_stop_id);
                         setStopID(closest_stop_id);
-                        await fetchDepartures(closest_stop_id);
                         const interval = setInterval(
-                            () => fetchDepartures(closest_stop_id),
+                            () => getData(closest_stop_id),
                             30000
                         );
                         return () => clearInterval(interval);
@@ -104,12 +81,9 @@ function DepartureBoard({ stop_id, closest }: Props) {
                         setLoading(false);
                     }
                 } else {
+                    await getData(stop_id);
                     setStopID(stop_id);
-                    await fetchDepartures(stop_id);
-                    interval = setInterval(
-                        () => fetchDepartures(stop_id),
-                        30000
-                    );
+                    interval = setInterval(() => getData(stop_id), 30000);
                 }
             } catch (error) {
                 console.error("Init error:", error);
@@ -214,7 +188,7 @@ function DepartureBoard({ stop_id, closest }: Props) {
     }
 
     return (
-        <Container>
+        <Container onClick={() => navigate(`/departures/${stopID}`)}>
             <Card>
                 <Flex direction="column" gap="2">
                     <Flex justify="center">
@@ -223,7 +197,7 @@ function DepartureBoard({ stop_id, closest }: Props) {
                         </Text>
                     </Flex>
 
-                    <Box style={{ flexGrow: 1, overflowY: "auto" }} px="2">
+                    <Box style={{ flexGrow: 1, overflowY: "scroll" }} px="2">
                         <Flex
                             direction="column"
                             maxHeight="200px"

@@ -144,12 +144,18 @@ async def get_services_from_stop(stop_id):
     if not data:
         return
 
-    services = set()
+    services = []
 
     for service in data.get("results"):
-        services.add(service.get("id"))
+        services.append(
+            {
+                "id": service.get("id"),
+                "line_name": service.get("line_name"),
+                "detail": service.get("description"),
+            }
+        )
 
-    return list(services)
+    return services
 
 
 async def fetch_active_buses(service):
@@ -176,7 +182,7 @@ async def get_service_info(service):
     }
 
 
-async def get_stop_name(stop_id):
+async def get_stop_details(stop_id):
     data = await fetch_json(
         API_BASE + f"stops/{stop_id}",
     )
@@ -184,8 +190,7 @@ async def get_stop_name(stop_id):
     if not data:
         return
 
-    name = data.get("name")
-    return name
+    return data
 
 
 def get_vehicle_journey(journey_id):

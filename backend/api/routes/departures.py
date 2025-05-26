@@ -29,16 +29,17 @@ async def departures_for_stop(stop_id: str, redis=Depends(get_redis)):
         r=redis,
     )
 
-    stop_name = await get_cached(
+    stop_details = await get_cached(
         f"stops:{stop_id}",
-        lambda *args: bustimes.get_stop_name(*args),
+        lambda *args: bustimes.get_stop_details(*args),
         (stop_id,),
         STOPS_CACHE,
         redis,
     )
+    stop_name = stop_details.get("name")
 
     tasks = [
-        bustimes.fetch_buses_for_service(service, stop_id, redis)
+        bustimes.fetch_buses_for_service(service.get("id"), stop_id, redis)
         for service in services
     ]
     for task in asyncio.as_completed(tasks):
