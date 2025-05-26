@@ -54,7 +54,9 @@ const DeparturePage: React.FC = () => {
                     setBuses(departures.updatedBuses);
                     setRefreshed(departures.timestamp);
                 } else {
-                    setMsg("Failed to fetch departures.");
+                    setMsg(
+                        "Failed to fetch departures. Try reloading the page"
+                    );
                 }
             } catch {
                 console.log("uh oh");
@@ -185,11 +187,9 @@ const DeparturePage: React.FC = () => {
                 </Flex>
                 <Flex direction="row" gap="1" justify="center" wrap="wrap">
                     {stop?.services.map((service) => (
-                        <>
-                            <Card>
-                                <Text>{service.line_name}</Text>
-                            </Card>
-                        </>
+                        <Card key={service.id}>
+                            <Text>{service.line_name}</Text>
+                        </Card>
                     ))}
                 </Flex>
 

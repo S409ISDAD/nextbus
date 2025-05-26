@@ -40,7 +40,8 @@ const fetchDepartures = async (stop_id: string) => {
                 (a, b) => a.expected.getTime() - b.expected.getTime()
             );
         const stop_name = response.data.stop_name
-        const timestamp = new Date(response.data.timestamp)
+        console.log(response.data.timestamp)
+        const timestamp = new Date(response.data.timestamp * 1000)
         return { updatedBuses, stop_name, timestamp }
 
     } catch (error) {
