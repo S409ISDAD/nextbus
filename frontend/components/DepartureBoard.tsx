@@ -11,6 +11,7 @@ import {
     Separator,
     Skeleton,
 } from "@radix-ui/themes";
+import getClosestStop, { getCurrentPosition } from "../utils/closestStop";
 
 interface DeparturesResponse {
     timestamp: number;
@@ -20,11 +21,12 @@ interface DeparturesResponse {
 
 interface Props {
     stop_id: string;
-    error_msg?: string;
+    closest?: boolean;
 }
 
-function DepartureBoard({ stop_id, error_msg }: Props) {
+function DepartureBoard({ stop_id, closest }: Props) {
     const [buses, setBuses] = useState<Bus[]>([]);
+    const [stopID, setStopID] = useState<string>("");
     const [stop, setStop] = useState<String>("");
     const [loading, setLoading] = useState(true);
     const [lastRefreshed, setRefreshed] = useState(new Date());
@@ -45,7 +47,8 @@ function DepartureBoard({ stop_id, error_msg }: Props) {
     }, [lastRefreshed]);
 
     useEffect(() => {
-        const fetchDepartures = async () => {
+        let interval: any;
+        const fetchDepartures = async (stop_id: string) => {
             try {
                 const response = await api.get<DeparturesResponse>(
                     `/departures/?stop_id=${stop_id}`
@@ -77,25 +80,43 @@ function DepartureBoard({ stop_id, error_msg }: Props) {
                 setRefreshed(new Date(response.data.timestamp * 1000));
             } catch (error) {
                 console.error("failed to get departures", error);
+                setMsg("Failed to fetch departures.");
             } finally {
                 setLoading(false);
             }
         };
-        if (error_msg) {
-            setMsg(error_msg);
-            setLoading(false);
 
-            return;
-        }
-        if (!stop_id) {
-            setMsg("Failed to get closest stop");
-            setLoading(false);
-            return;
-        }
-        fetchDepartures();
-        const interval = setInterval(fetchDepartures, 30000);
+        const init = async () => {
+            try {
+                if (closest) {
+                    const pos = await getCurrentPosition();
+                    const closest_stop_id = await getClosestStop(pos);
+                    if (closest_stop_id) {
+                        setStopID(closest_stop_id);
+                        await fetchDepartures(closest_stop_id);
+                        const interval = setInterval(init, 30000);
+                        return () => clearInterval(interval);
+                    } else {
+                        setMsg("No stop found nearby");
+                    }
+                } else {
+                    setStopID(stop_id);
+                    await fetchDepartures(stop_id);
+                    interval = setInterval(
+                        () => fetchDepartures(stop_id),
+                        30000
+                    );
+                }
+            } catch (error) {
+                console.error("Init error:", error);
+                setMsg("Unable to get location or stop data.");
+            }
+        };
+
+        init();
+
         return () => clearInterval(interval);
-    }, [stop_id]);
+    }, [stop_id, closest]);
 
     if (loading) {
         return (
