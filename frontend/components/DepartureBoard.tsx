@@ -20,14 +20,16 @@ interface DeparturesResponse {
 
 interface Props {
     stop_id: string;
+    error_msg?: string;
 }
 
-function DepartureBoard({ stop_id }: Props) {
+function DepartureBoard({ stop_id, error_msg }: Props) {
     const [buses, setBuses] = useState<Bus[]>([]);
     const [stop, setStop] = useState<String>("");
     const [loading, setLoading] = useState(true);
     const [lastRefreshed, setRefreshed] = useState(new Date());
     const [elapsed, setElapsed] = useState<string>("0s");
+    const [msg, setMsg] = useState<string>("");
     useEffect(() => {
         const interval = setInterval(() => {
             const now = new Date();
@@ -79,6 +81,17 @@ function DepartureBoard({ stop_id }: Props) {
                 setLoading(false);
             }
         };
+        if (error_msg) {
+            setMsg(error_msg);
+            setLoading(false);
+
+            return;
+        }
+        if (!stop_id) {
+            setMsg("Failed to get closest stop");
+            setLoading(false);
+            return;
+        }
         fetchDepartures();
         const interval = setInterval(fetchDepartures, 30000);
         return () => clearInterval(interval);
@@ -86,7 +99,7 @@ function DepartureBoard({ stop_id }: Props) {
 
     if (loading) {
         return (
-            <Container height="300px" minHeight="300px" width="90vw">
+            <Container height="300px" minHeight="300px">
                 {/* <Card style={{ height: "100%" }}>
                     <Flex
                         align="center"
@@ -113,8 +126,8 @@ function DepartureBoard({ stop_id }: Props) {
 
                         <Box style={{ flexGrow: 1, overflowY: "auto" }} px="2">
                             <Flex direction="column">
-                                {[1, 2, 3].map(() => (
-                                    <Container>
+                                {[1, 2, 3].map((item) => (
+                                    <Container key={item}>
                                         <Flex
                                             direction="row"
                                             align="center"
@@ -175,7 +188,7 @@ function DepartureBoard({ stop_id }: Props) {
     }
 
     return (
-        <Container width="90vw">
+        <Container>
             <Card>
                 <Flex direction="column" gap="2">
                     <Flex justify="center">
@@ -190,73 +203,92 @@ function DepartureBoard({ stop_id }: Props) {
                             maxHeight="200px"
                             minHeight="100px"
                             justify="center">
-                            {buses.map((bus) => (
-                                <Container key={bus.reg}>
-                                    <Flex
-                                        direction="row"
-                                        align="center"
-                                        justify="between">
-                                        <Flex direction="column">
-                                            <Flex
-                                                direction="row"
-                                                gap="1"
-                                                align="center">
-                                                <Text size="4" weight="bold">
-                                                    {bus.service.line_name}
-                                                </Text>
-                                                <Text align="center" size="2">
-                                                    to
-                                                </Text>
-                                                <Text weight="bold">
-                                                    {bus.destination}
-                                                </Text>
-                                            </Flex>
-                                            <Flex direction="row" gap="3">
-                                                {bus.delay > 30 ? (
-                                                    <>
-                                                        <Text color="red">
-                                                            <s>
-                                                                {bus.scheduled.toLocaleTimeString()}
-                                                            </s>
-                                                        </Text>
-                                                        <Text color="mint">
-                                                            {bus.expected.toLocaleTimeString()}
-                                                        </Text>
-                                                    </>
-                                                ) : (
-                                                    <Text color="green">
-                                                        {bus.scheduled.toLocaleTimeString()}
-                                                    </Text>
-                                                )}
-                                            </Flex>
-                                        </Flex>
-                                        <Flex
-                                            direction="row"
-                                            gap="2"
-                                            align="center">
-                                            <Badge
-                                                color="amber"
-                                                variant="solid">
-                                                <Text weight="bold">
-                                                    {bus.reg}
-                                                </Text>
-                                            </Badge>
-                                            <Badge color="iris" size="3">
-                                                {bus.timeto}
-                                            </Badge>
-                                        </Flex>
-                                    </Flex>
-                                    <Separator my="2" size="4" />
-                                </Container>
-                            ))}
-                            {buses.length < 4 ? (
+                            {msg ? (
                                 <Flex justify="center">
-                                    <Text color="gray">
-                                        No more departures!
-                                    </Text>
+                                    <Text color="red">{msg}</Text>
                                 </Flex>
                             ) : (
-                                <></>
+                                <>
+                                    {buses.map((bus) => (
+                                        <Container key={bus.reg}>
+                                            <Flex
+                                                direction="row"
+                                                align="center"
+                                                justify="between">
+                                                <Flex direction="column">
+                                                    <Flex
+                                                        direction="row"
+                                                        gap="1"
+                                                        align="center">
+                                                        <Text
+                                                            size="4"
+                                                            weight="bold">
+                                                            {
+                                                                bus.service
+                                                                    .line_name
+                                                            }
+                                                        </Text>
+                                                        <Text
+                                                            align="center"
+                                                            size="2">
+                                                            to
+                                                        </Text>
+                                                        <Text weight="bold">
+                                                            {bus.destination}
+                                                        </Text>
+                                                    </Flex>
+                                                    <Flex
+                                                        direction="row"
+                                                        gap="3">
+                                                        {bus.delay > 30 ? (
+                                                            <>
+                                                                <Text color="red">
+                                                                    <s>
+                                                                        {bus.scheduled.toLocaleTimeString()}
+                                                                    </s>
+                                                                </Text>
+                                                                <Text color="mint">
+                                                                    {bus.expected.toLocaleTimeString()}
+                                                                </Text>
+                                                            </>
+                                                        ) : (
+                                                            <Text color="green">
+                                                                {bus.scheduled.toLocaleTimeString()}
+                                                            </Text>
+                                                        )}
+                                                    </Flex>
+                                                </Flex>
+                                                <Flex
+                                                    direction="row"
+                                                    gap="2"
+                                                    align="center">
+                                                    <Badge
+                                                        color="amber"
+                                                        variant="solid">
+                                                        <Text weight="bold">
+                                                            {bus.reg}
+                                                        </Text>
+                                                    </Badge>
+                                                    <Badge
+                                                        color="iris"
+                                                        size="3">
+                                                        {bus.timeto}
+                                                    </Badge>
+                                                </Flex>
+                                            </Flex>
+                                            <Separator my="2" size="4" />
+                                        </Container>
+                                    ))}
+                                    {buses.length < 4 ? (
+                                        <Flex justify="center">
+                                            <Text color="gray">
+                                                No more departures!
+                                            </Text>
+                                        </Flex>
+                                    ) : (
+                                        <></>
+                                    )}
+                                </>
                             )}
                         </Flex>
                     </Box>

@@ -14,10 +14,11 @@ from backend.utils.fetch_json import fetch_json
 from dateutil import parser
 
 from backend.models.bus import Bus
-# from geopy.distance import geodesic
+from geopy.distance import geodesic
 
 
-JSON_BASE = "https://bustimes.org/vehicles.json"
+VEHICLES_BASE = "https://bustimes.org/vehicles.json"
+STOPS_BASE = "https://bustimes.org/stops.json"
 API_BASE = "https://bustimes.org/api/"
 
 
@@ -131,7 +132,7 @@ def format_delay(delay):
 
 async def fetch_bus(bus_id):
     """Fetches specific bus"""
-    data = await fetch_json(JSON_BASE + f"?id={bus_id}")
+    data = await fetch_json(VEHICLES_BASE + f"?id={bus_id}")
 
     return data
 
@@ -153,7 +154,7 @@ async def get_services_from_stop(stop_id):
 
 async def fetch_active_buses(service):
     """Fetches all buses on the route"""
-    data = await fetch_json(JSON_BASE + f"?service={service}")
+    data = await fetch_json(VEHICLES_BASE + f"?service={service}")
 
     if not data:
         return None
@@ -268,6 +269,48 @@ async def calculate_expected(delay, stop_id, journey_id, r):
         stop_idx += 1
 
     return None
+
+
+async def get_closest_stop(lat, lng):
+    buffer = 0.005
+
+    xmin = lng - buffer
+    xmax = lng + buffer
+    ymin = lat - buffer
+    ymax = lat + buffer
+
+    stops = await fetch_json(
+        STOPS_BASE + f"?ymax={ymax}&ymin={ymin}&xmax={xmax}&xmin={xmin}"
+    )
+
+    if not stops:
+        return None
+
+    closest_stop = None
+    min_dist = float("inf")
+
+    for stop in stops.get("features", []):
+        stop_lat = stop["geometry"]["coordinates"][1]
+        stop_lng = stop["geometry"]["coordinates"][0]
+
+        dist = geodesic((lat, lng), (stop_lat, stop_lng)).meters
+
+        if dist < min_dist:
+            min_dist = dist
+            closest_stop = stop
+
+    if closest_stop is None:
+        return {"stop_id": "", "dist": 0, "lat": 0, "lng": 0}
+
+    stop_id = closest_stop["properties"]["url"].split("/")[2]
+    print(stop_id)
+
+    return {
+        "stop_id": stop_id,
+        "dist": min_dist,
+        "lat": closest_stop["geometry"]["coordinates"][0],
+        "lng": closest_stop["geometry"]["coordinates"][1],
+    }
 
 
 # def calculate_speed(self, vehicle, coords, timestamp):
