@@ -98,6 +98,7 @@ function DepartureBoard({ stop_id, closest }: Props) {
                         return () => clearInterval(interval);
                     } else {
                         setMsg("No stop found nearby");
+                        setLoading(false);
                     }
                 } else {
                     setStopID(stop_id);
@@ -110,6 +111,7 @@ function DepartureBoard({ stop_id, closest }: Props) {
             } catch (error) {
                 console.error("Init error:", error);
                 setMsg("Unable to get location or stop data.");
+                setLoading(false);
             }
         };
 
