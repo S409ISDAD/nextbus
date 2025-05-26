@@ -18,16 +18,12 @@ const getClosestStop = async (position: GeolocationPosition) => {
     const lat = position.coords.latitude
     const lng = position.coords.longitude
 
-    try {
-        const response = await api.get<closestStop>(`/location/closest?lat=${lat}&lng=${lng}`)
+    const response = await api.get<closestStop>(`/location/closest?lat=${lat}&lng=${lng}`)
 
-        const stop_id = response.data.stop_id
+    const stop_id = response.data.stop_id
 
-        return stop_id
-    } catch (error) {
-        console.error(error)
-        return "Unable to get closest stop."
-    }
+    return stop_id
+
 }
 
 export default getClosestStop;
