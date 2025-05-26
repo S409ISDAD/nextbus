@@ -188,21 +188,26 @@ function DepartureBoard({ stop_id, closest }: Props) {
     }
 
     return (
-        <Container onClick={() => navigate(`/departures/${stopID}`)}>
+        <Container>
             <Card>
                 <Flex direction="column" gap="2">
-                    <Flex justify="center">
+                    <Flex
+                        justify="center"
+                        onClick={() => navigate(`/departures/${stopID}`)}
+                        style={{
+                            cursor: "pointer",
+                        }}>
                         <Text size="5" weight="bold" align="center" truncate>
                             {stop}
                         </Text>
                     </Flex>
 
-                    <Box style={{ flexGrow: 1, overflowY: "scroll" }} px="2">
+                    <Box px="2">
                         <Flex
                             direction="column"
                             maxHeight="200px"
-                            minHeight="100px"
-                            justify="center">
+                            // minHeight="100px"
+                            style={{ flexGrow: 1, overflowY: "auto" }}>
                             {msg ? (
                                 <Flex justify="center">
                                     <Text color="red">{msg}</Text>
@@ -210,7 +215,16 @@ function DepartureBoard({ stop_id, closest }: Props) {
                             ) : (
                                 <>
                                     {buses.map((bus) => (
-                                        <Container key={bus.reg}>
+                                        <Container
+                                            key={bus.reg}
+                                            onClick={() =>
+                                                navigate(
+                                                    `/journeys/${bus.journey_id}`
+                                                )
+                                            }
+                                            style={{
+                                                cursor: "pointer",
+                                            }}>
                                             <Flex
                                                 direction="row"
                                                 align="center"

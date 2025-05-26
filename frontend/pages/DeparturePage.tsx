@@ -3,7 +3,7 @@ import type { Bus } from "../models/Bus";
 import type { Stop } from "../models/Stop";
 import fetchDepartures from "../utils/fetchDepartures";
 import getStopData from "../utils/getStopData";
-import { useParams } from "react-router";
+import { useNavigate, useParams } from "react-router";
 import {
     Flex,
     Text,
@@ -17,6 +17,8 @@ import {
 
 const DeparturePage: React.FC = () => {
     const { stop_id } = useParams();
+
+    const navigate = useNavigate();
 
     const [buses, setBuses] = useState<Bus[]>([]);
     const [stop, setStop] = useState<Stop>();
@@ -206,7 +208,7 @@ const DeparturePage: React.FC = () => {
                 </Flex>
 
                 <Box style={{ flexGrow: 1, overflowY: "scroll" }} p="3">
-                    <Flex direction="column" justify="center" gap="3">
+                    <Flex direction="column" gap="3">
                         {msg ? (
                             <Flex justify="center">
                                 <Text color="red">{msg}</Text>
@@ -214,7 +216,16 @@ const DeparturePage: React.FC = () => {
                         ) : (
                             <>
                                 {buses.map((bus) => (
-                                    <Card key={bus.reg}>
+                                    <Card
+                                        key={bus.reg}
+                                        onClick={() =>
+                                            navigate(
+                                                `/journeys/${bus.journey_id}`
+                                            )
+                                        }
+                                        style={{
+                                            cursor: "pointer",
+                                        }}>
                                         <Flex
                                             direction="row"
                                             align="center"
