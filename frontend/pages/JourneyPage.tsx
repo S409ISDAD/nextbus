@@ -63,6 +63,8 @@ const JourneyPage: React.FC = () => {
                 const journey = await fetchJourney(bus_id, journey_id);
                 const bus = await getBus(bus_id);
 
+                const now = new Date();
+
                 if (journey) {
                     setJourney(journey);
                 } else {
@@ -74,6 +76,7 @@ const JourneyPage: React.FC = () => {
                 } else {
                     setMsg("Failed to fetch bus. Try reloading the page");
                 }
+                setRefreshed(now);
             } catch {
                 console.log("uh oh");
             } finally {
@@ -102,17 +105,61 @@ const JourneyPage: React.FC = () => {
     }, [bus_id, journey_id]);
 
     return (
-        <Container p="5">
-            <Flex direction="column" gap="3">
-                {journey?.stops.map((stop, idx) => (
-                    <>
-                        <Flex key={stop.stop_id} gap="2" align="center">
-                            {bus?.progress.sequence == idx &&
-                            bus.progress.progress < 0.1 ? (
-                                <div ref={busRef}>
-                                    {" "}
+        <Container>
+            <Flex direction="column" p="5" maxHeight="100vh">
+                <Flex direction="column" gap="2">
+                    <Flex
+                        justify="center"
+                        direction="column"
+                        gap="1"
+                        align="center">
+                        <Text
+                            size="8"
+                            weight="bold"
+                            align="center"
+                            wrap="pretty">
+                            {journey?.route_name} to {journey?.destination}
+                        </Text>
+                        <Text align="center">
+                            {journey?.stops.length} stops
+                        </Text>
+                    </Flex>
+
+                    <Flex gap="2" justify="center">
+                        <Text color="gray" size="1">
+                            Updated {elapsed} ago
+                        </Text>
+                        <Text color="gray" size="1">
+                            ·
+                        </Text>
+                        <Text color="gray" size="1">
+                            Updates every 30s
+                        </Text>
+                    </Flex>
+                </Flex>
+                <Flex direction="column" gap="3" overflow="auto" flexGrow="1">
+                    {journey?.stops.map((stop, idx) => (
+                        <>
+                            <Flex key={stop.stop_id} gap="2" align="center">
+                                {bus?.progress.sequence == idx &&
+                                bus.progress.progress < 0.1 ? (
+                                    <div ref={busRef}>
+                                        {" "}
+                                        <IconButton
+                                            color="red"
+                                            onClick={() =>
+                                                navigate(
+                                                    `/departures/${stop.stop_id}`
+                                                )
+                                            }
+                                            style={{
+                                                cursor: "pointer",
+                                            }}>
+                                            <FontAwesomeIcon icon={faBus} />
+                                        </IconButton>
+                                    </div>
+                                ) : (
                                     <IconButton
-                                        color="red"
                                         onClick={() =>
                                             navigate(
                                                 `/departures/${stop.stop_id}`
@@ -121,27 +168,27 @@ const JourneyPage: React.FC = () => {
                                         style={{
                                             cursor: "pointer",
                                         }}>
-                                        <FontAwesomeIcon icon={faBus} />
+                                        <FontAwesomeIcon icon={faLocationDot} />
                                     </IconButton>
-                                </div>
-                            ) : (
-                                <IconButton
-                                    onClick={() =>
-                                        navigate(`/departures/${stop.stop_id}`)
-                                    }
-                                    style={{
-                                        cursor: "pointer",
-                                    }}>
-                                    <FontAwesomeIcon icon={faLocationDot} />
-                                </IconButton>
-                            )}
-                            <Separator></Separator>
-                            <Flex direction="column">
-                                <Text>{stop.name}</Text>
-                                <Flex direction="row" gap="3">
-                                    {stop.actual_departure_time ? (
-                                        <Text color="red">
-                                            <s>
+                                )}
+                                <Separator></Separator>
+                                <Flex direction="column">
+                                    <Text>{stop.name}</Text>
+                                    <Flex direction="row" gap="3">
+                                        {stop.actual_departure_time ? (
+                                            <Text color="red">
+                                                <s>
+                                                    {stop.aimed_departure_time.toLocaleTimeString(
+                                                        [],
+                                                        {
+                                                            hour: "2-digit",
+                                                            minute: "2-digit",
+                                                        }
+                                                    )}
+                                                </s>
+                                            </Text>
+                                        ) : (
+                                            <Text color="green">
                                                 {stop.aimed_departure_time.toLocaleTimeString(
                                                     [],
                                                     {
@@ -149,42 +196,35 @@ const JourneyPage: React.FC = () => {
                                                         minute: "2-digit",
                                                     }
                                                 )}
-                                            </s>
-                                        </Text>
-                                    ) : (
+                                            </Text>
+                                        )}
                                         <Text color="green">
-                                            {stop.aimed_departure_time.toLocaleTimeString(
-                                                [],
-                                                {
-                                                    hour: "2-digit",
-                                                    minute: "2-digit",
-                                                }
-                                            )}
+                                            {stop.actual_departure_time?.toLocaleTimeString()}
                                         </Text>
-                                    )}
-                                    <Text color="green">
-                                        {stop.actual_departure_time?.toLocaleTimeString()}
-                                    </Text>
+                                    </Flex>
                                 </Flex>
                             </Flex>
-                        </Flex>
-                        {bus?.progress.sequence == idx &&
-                        bus.progress.progress > 0.1 ? (
-                            <div ref={busRef}>
-                                <Flex direction="row" gap="3" align="center">
-                                    <IconButton color="red">
-                                        <FontAwesomeIcon icon={faBus} />
-                                    </IconButton>
-                                    <Text weight="bold">
-                                        The bus is currently here
-                                    </Text>
-                                </Flex>
-                            </div>
-                        ) : (
-                            <></>
-                        )}
-                    </>
-                ))}
+                            {bus?.progress.sequence == idx &&
+                            bus.progress.progress > 0.1 ? (
+                                <div ref={busRef}>
+                                    <Flex
+                                        direction="row"
+                                        gap="3"
+                                        align="center">
+                                        <IconButton color="red">
+                                            <FontAwesomeIcon icon={faBus} />
+                                        </IconButton>
+                                        <Text weight="bold">
+                                            Heading to next stop
+                                        </Text>
+                                    </Flex>
+                                </div>
+                            ) : (
+                                <></>
+                            )}
+                        </>
+                    ))}
+                </Flex>
             </Flex>
         </Container>
     );
