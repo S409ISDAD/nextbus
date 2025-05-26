@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { Bus } from "../models/Bus";
 import type { Stop } from "../models/Stop";
-import fetchDepartures from "../utils/fetchDepartures";
+import fetchDepartures from "../utils/getDepartures";
 import getStopData from "../utils/getStopData";
 import { useNavigate, useParams } from "react-router";
 import {
@@ -186,7 +186,7 @@ const DeparturePage: React.FC = () => {
                                         key={bus.reg}
                                         onClick={() =>
                                             navigate(
-                                                `/journeys/${bus.journey_id}`
+                                                `/buses/${bus.id}/journeys/${bus.journey_id}`
                                             )
                                         }
                                         style={{ cursor: "pointer" }}>
@@ -218,7 +218,13 @@ const DeparturePage: React.FC = () => {
                                                         <>
                                                             <Text color="red">
                                                                 <s>
-                                                                    {bus.scheduled.toLocaleTimeString()}
+                                                                    {bus.scheduled.toLocaleTimeString(
+                                                                        [],
+                                                                        {
+                                                                            hour: "2-digit",
+                                                                            minute: "2-digit",
+                                                                        }
+                                                                    )}
                                                                 </s>
                                                             </Text>
                                                             <Text color="mint">
@@ -227,7 +233,13 @@ const DeparturePage: React.FC = () => {
                                                         </>
                                                     ) : (
                                                         <Text color="green">
-                                                            {bus.scheduled.toLocaleTimeString()}
+                                                            {bus.scheduled.toLocaleTimeString(
+                                                                [],
+                                                                {
+                                                                    hour: "2-digit",
+                                                                    minute: "2-digit",
+                                                                }
+                                                            )}
                                                         </Text>
                                                     )}
                                                 </Flex>

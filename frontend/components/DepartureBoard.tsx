@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { Bus } from "../models/Bus";
-import fetchDepartures from "../utils/fetchDepartures";
+import fetchDepartures from "../utils/getDepartures";
 import { useNavigate } from "react-router";
 import {
     Flex,
@@ -219,7 +219,7 @@ function DepartureBoard({ stop_id, closest }: Props) {
                                             key={bus.reg}
                                             onClick={() =>
                                                 navigate(
-                                                    `/journeys/${bus.journey_id}`
+                                                    `/buses/${bus.id}/journeys/${bus.journey_id}`
                                                 )
                                             }
                                             style={{
@@ -258,7 +258,13 @@ function DepartureBoard({ stop_id, closest }: Props) {
                                                             <>
                                                                 <Text color="red">
                                                                     <s>
-                                                                        {bus.scheduled.toLocaleTimeString()}
+                                                                        {bus.scheduled.toLocaleTimeString(
+                                                                            [],
+                                                                            {
+                                                                                hour: "2-digit",
+                                                                                minute: "2-digit",
+                                                                            }
+                                                                        )}
                                                                     </s>
                                                                 </Text>
                                                                 <Text color="mint">
@@ -267,7 +273,13 @@ function DepartureBoard({ stop_id, closest }: Props) {
                                                             </>
                                                         ) : (
                                                             <Text color="green">
-                                                                {bus.scheduled.toLocaleTimeString()}
+                                                                {bus.scheduled.toLocaleTimeString(
+                                                                    [],
+                                                                    {
+                                                                        hour: "2-digit",
+                                                                        minute: "2-digit",
+                                                                    }
+                                                                )}
                                                             </Text>
                                                         )}
                                                     </Flex>

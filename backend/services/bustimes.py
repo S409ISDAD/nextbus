@@ -17,9 +17,10 @@ from backend.models.bus import Bus
 from geopy.distance import geodesic
 
 
-VEHICLES_BASE = "https://bustimes.org/vehicles.json"
-STOPS_BASE = "https://bustimes.org/stops.json"
-API_BASE = "https://bustimes.org/api/"
+BASE = "https://bustimes.org"
+VEHICLES_BASE = BASE + "/vehicles.json"
+STOPS_BASE = BASE + "/stops.json"
+API_BASE = BASE + "/api/"
 
 
 async def fetch_buses_for_service(service, stop_id, r: redis.Redis) -> list[Bus]:
@@ -89,11 +90,12 @@ async def fetch_buses_for_service(service, stop_id, r: redis.Redis) -> list[Bus]
             r,
         )
 
-        times = await calculate_expected(delay, stop_id, journey_id, r)
+        times = await calculate_expected(delay, stop_id, bus_id, journey_id, r)
 
         if times:
             buses.append(
                 Bus(
+                    id=bus_id,
                     service=service_info,
                     destination=destination,
                     reg=reg,
@@ -193,10 +195,36 @@ async def get_stop_details(stop_id):
     return data
 
 
-def get_vehicle_journey(journey_id):
-    data = fetch_json(
-        API_BASE + f"vehiclejourneys/{journey_id}",
+async def get_vehicle_journey(bus_id, journey_id):
+    data = await fetch_json(
+        BASE + f"/vehicles/{bus_id}/journeys/{journey_id}.json",
     )
+
+    if not data:
+        return
+
+    uk_timezone = datetime.timezone(timedelta(hours=1))
+    current_time = dt.now(datetime.timezone.utc).astimezone(uk_timezone)
+
+    for i, stop in enumerate(data["stops"]):
+        aimed = data["stops"][i].get("aimed_departure_time")
+        if aimed:
+            scheduled_time = dt.strptime(aimed, "%H:%M").replace(
+                year=current_time.year,
+                month=current_time.month,
+                day=current_time.day,
+                tzinfo=current_time.tzinfo,
+            )
+
+            data["stops"][i]["aimed_departure_time"] = check_scheduled_time(
+                scheduled_time, current_time
+            ).timestamp()
+
+        actual_departure = data["stops"][i].get("actual_departure_time")
+        if actual_departure:
+            departure_time = parser.isoparse(actual_departure)
+
+            data["stops"][i]["actual_departure_time"] = departure_time.timestamp()
 
     return data
 
@@ -215,16 +243,16 @@ def check_scheduled_time(scheduled: dt, current_time: dt) -> dt:
     return scheduled
 
 
-async def calculate_expected(delay, stop_id, journey_id, r):
+async def calculate_expected(delay, stop_id, bus_id, journey_id, r):
     journey = await get_cached(
-        f"journeys:{journey_id}",
+        f"journeys:{bus_id}:{journey_id}",
         lambda *args: get_vehicle_journey(*args),
-        (journey_id,),
+        (bus_id, journey_id),
         JOURNEY_CACHE,
         r,
     )
 
-    times = journey.get("times")
+    stops = journey.get("stops")
     uk_timezone = datetime.timezone(timedelta(hours=1))
     current_time = dt.now(datetime.timezone.utc).astimezone(uk_timezone)
 
@@ -232,31 +260,19 @@ async def calculate_expected(delay, stop_id, journey_id, r):
 
     stop_idx = 0
 
-    for stop_time in times:
+    for stop_time in stops:
         if stop_idx == 0:
             aimed = stop_time.get("aimed_departure_time")
-            scheduled_time = dt.strptime(aimed, "%H:%M").replace(
-                year=current_time.year,
-                month=current_time.month,
-                day=current_time.day,
-                tzinfo=current_time.tzinfo,
-            )
+            scheduled_time = dt.fromtimestamp(aimed).astimezone(uk_timezone)
 
             if scheduled_time > current_time:
                 not_started = True
 
-        if stop_time.get("stop").get("atco_code") == stop_id:
+        if stop_time.get("atco_code") == stop_id:
             aimed = stop_time.get("aimed_departure_time")
             if not aimed:
                 return None
-            aimed_time = dt.strptime(aimed, "%H:%M").replace(
-                year=current_time.year,
-                month=current_time.month,
-                day=current_time.day,
-                tzinfo=current_time.tzinfo,
-            )
-
-            scheduled_time = check_scheduled_time(aimed_time, current_time)
+            scheduled_time = dt.fromtimestamp(aimed).astimezone(uk_timezone)
 
             if not_started:
                 delay = 0

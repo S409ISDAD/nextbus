@@ -1,6 +1,7 @@
 class Bus:
     def __init__(
         self,
+        id,
         service,
         destination,
         reg,
@@ -14,6 +15,7 @@ class Bus:
         coords,
         timestamp,
     ):
+        self.id: int = id
         self.service: str = service  # bus number e.g. 64
         self.destination: str = destination
         self.reg: str = reg  # vehicle license plate
