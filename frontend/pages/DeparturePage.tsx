@@ -55,6 +55,7 @@ const DeparturePage: React.FC = () => {
                 if (departures) {
                     setBuses(departures.updatedBuses);
                     setRefreshed(departures.timestamp);
+                    setMsg("");
                 } else {
                     setMsg(
                         "Failed to fetch departures. Try reloading the page"
