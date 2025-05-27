@@ -54,6 +54,7 @@ function DepartureBoard({ stop_id, closest }: Props) {
                     setBuses(departures.updatedBuses);
                     setStop(departures.stop_name);
                     setRefreshed(departures.timestamp);
+                    setMsg("");
                 } else {
                     setMsg("Failed to fetch departures.");
                 }
