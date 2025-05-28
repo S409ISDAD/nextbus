@@ -14,6 +14,7 @@ import {
     Separator,
     Skeleton,
 } from "@radix-ui/themes";
+import timeTo from "../utils/timeTo";
 
 const DeparturePage: React.FC = () => {
     const { stop_id } = useParams();
@@ -36,6 +37,15 @@ const DeparturePage: React.FC = () => {
             const sec = diffSec % 60;
 
             setElapsed(min > 0 ? `${min}m ${sec}s` : `${sec}s`);
+
+            const newBuses = buses.map((bus) => {
+                return {
+                    ...bus,
+                    timeto: timeTo(bus),
+                };
+            });
+
+            setBuses(newBuses);
         }, 1000);
         return () => clearInterval(interval);
     }, [lastRefreshed]);
@@ -96,7 +106,7 @@ const DeparturePage: React.FC = () => {
                     <Text size="8" weight="bold" align="center" wrap="pretty">
                         {stop?.stop_name}
                     </Text>
-                    <Text align="center">({stop?.long_name})</Text>
+                    <Text align="center">{stop?.long_name}</Text>
                 </Flex>
                 <Flex direction="row" gap="1" justify="center" wrap="wrap">
                     {stop?.services
@@ -215,7 +225,7 @@ const DeparturePage: React.FC = () => {
                                                     </Text>
                                                 </Flex>
                                                 <Flex direction="row" gap="3">
-                                                    {bus.delay > 30 ? (
+                                                    {bus.delay > 0 ? (
                                                         <>
                                                             <Text color="red">
                                                                 <s>

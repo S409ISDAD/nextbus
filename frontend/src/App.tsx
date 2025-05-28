@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import DepartureBoard from "../components/DepartureBoard";
 import DeparturePage from "../pages/DeparturePage";
-import JourneyPage from "../pages/JourneyPage";
 import Home from "../pages/Home";
+import JourneyPage from "../pages/JourneyPage";
+import BusPage from "../pages/BusPage";
 import Layout from "../components/Layout";
 import Navbar from "../components/Navbar";
 import { BrowserRouter, Routes, Route } from "react-router";
@@ -13,6 +14,7 @@ function App() {
             <Routes>
                 <Route element={<Layout />}>
                     <Route path="/" element={<Home />} />
+                    <Route path="/buses" element={<BusPage />} />
                     <Route
                         path="departures/:stop_id"
                         element={<DeparturePage />}

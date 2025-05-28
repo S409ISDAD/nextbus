@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { Bus } from "../models/Bus";
 import fetchDepartures from "../utils/getDepartures";
 import { useNavigate } from "react-router";
+import timeTo from "../utils/timeTo";
 import {
     Flex,
     Text,
@@ -40,6 +41,14 @@ function DepartureBoard({ stop_id, closest }: Props) {
             const sec = diffSec % 60;
 
             setElapsed(min > 0 ? `${min}m ${sec}s` : `${sec}s`);
+            const newBuses = buses.map((bus) => {
+                return {
+                    ...bus,
+                    timeto: timeTo(bus),
+                };
+            });
+
+            setBuses(newBuses);
         }, 1000);
         return () => clearInterval(interval);
     }, [lastRefreshed]);
@@ -55,9 +64,10 @@ function DepartureBoard({ stop_id, closest }: Props) {
                     setStop(departures.stop_name);
                     setRefreshed(departures.timestamp);
                     setMsg("");
-                } else {
-                    setMsg("Failed to fetch departures.");
                 }
+                // else {
+                //     setMsg("Failed to fetch departures.");
+                // }
             } catch {
                 console.log("uh oh");
             } finally {
@@ -198,7 +208,7 @@ function DepartureBoard({ stop_id, closest }: Props) {
                         style={{
                             cursor: "pointer",
                         }}>
-                        <Text size="5" weight="bold" align="center" truncate>
+                        <Text size="5" weight="bold" align="center" wrap="wrap">
                             {stop}
                         </Text>
                     </Flex>
@@ -255,7 +265,7 @@ function DepartureBoard({ stop_id, closest }: Props) {
                                                     <Flex
                                                         direction="row"
                                                         gap="3">
-                                                        {bus.delay > 30 ? (
+                                                        {bus.delay > 0 ? (
                                                             <>
                                                                 <Text color="red">
                                                                     <s>
