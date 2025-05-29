@@ -25,11 +25,25 @@ const fetchDepartures = async (stop_id: string) => {
                 const expected = new Date(bus.expected * 1000);
                 const scheduled = new Date(bus.scheduled * 1000);
 
+                const diffMs = expected.getTime() - now.getTime();
+
+                const min = Math.floor(diffMs / 1000 / 60);
+
+                let timeto = ""
+
+                if (min < 1) {
+                    timeto = 'Due'
+                } else if (min < 60) {
+                    timeto = `${min} min`
+                } else {
+                    timeto = `${Math.floor(min / 60)} h`
+                }
+
                 return {
                     ...bus,
                     expected,
                     scheduled,
-                    timeto: timeTo(bus),
+                    timeto: timeto,
                 };
             })
             .filter((bus) => bus.expected > now)
