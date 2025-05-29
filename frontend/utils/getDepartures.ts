@@ -1,5 +1,6 @@
 import api from "../src/api"
 import type { Bus } from "../models/Bus"
+import timeTo from "./timeTo";
 
 interface DeparturesResponse {
     timestamp: number;
@@ -24,15 +25,11 @@ const fetchDepartures = async (stop_id: string) => {
                 const expected = new Date(bus.expected * 1000);
                 const scheduled = new Date(bus.scheduled * 1000);
 
-                const diffMs = expected.getTime() - now.getTime();
-
-                const min = Math.round(diffMs / 1000 / 60);
-
                 return {
                     ...bus,
                     expected,
                     scheduled,
-                    timeto: min < 1 ? "Due" : `${min} min`,
+                    timeto: timeTo(bus),
                 };
             })
             .filter((bus) => bus.expected > now)
