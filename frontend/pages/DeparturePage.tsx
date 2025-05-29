@@ -106,7 +106,7 @@ const DeparturePage: React.FC = () => {
                         )
                         .map((service) => (
                             <div
-                                className="p-3 bg-neutral-900 rounded-2xl border-1 border-neutral-800"
+                                className="p-2 bg-neutral-900 rounded-xl border-1 border-neutral-800"
                                 key={service.id}>
                                 <span className="font-semibold ">
                                     {service.line_name}
@@ -172,9 +172,7 @@ const DeparturePage: React.FC = () => {
                                             )
                                         }
                                         className="cursor-pointer">
-                                        <Card
-                                            key={bus.reg}
-                                            className="rounded-3xl">
+                                        <Card key={bus.reg}>
                                             <div className="flex flex-row justify-between align-center">
                                                 <div className="flex flex-col">
                                                     <div className="flex flex-row flex-wrap items-center gap-1">

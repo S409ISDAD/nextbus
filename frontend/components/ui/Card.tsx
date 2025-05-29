@@ -7,7 +7,7 @@ export function Card({
     return (
         <div
             className={cn(
-                "rounded-2xl shadow-xl p-4 bg-neutral-900 border-1 border-neutral-800 backdrop-blur-sm transition-all",
+                "rounded-3xl shadow-xl p-4 bg-neutral-900 border-1 border-neutral-800 backdrop-blur-sm transition-all",
                 className
             )}>
             {children}
