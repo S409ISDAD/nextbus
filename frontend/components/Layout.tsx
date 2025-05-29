@@ -4,7 +4,7 @@ import Clock from "../components/Clock";
 export default function Layout() {
     return (
         <div className="h-full">
-            <div className="top-0 flex justify-between p-2  z-[1000] border-b-1 border-neutral-800 rounded-b-2xl fixed w-full backdrop-blur-3xl">
+            <div className="top-0 flex justify-between p-[8px] z-[1000] border-b-1 border-neutral-800 rounded-b-[24px] fixed w-full backdrop-blur-2xl shadow-2xl">
                 <div className="flex gap-2">
                     <div className="flex items-center mx-4">
                         <span className="text-xl font-bold">Bus App</span>
