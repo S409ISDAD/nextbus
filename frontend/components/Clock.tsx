@@ -1,5 +1,4 @@
-import { Card } from "@radix-ui/themes";
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 
 function Clock() {
     const [now, setNow] = useState(new Date());
@@ -13,8 +12,8 @@ function Clock() {
     }, []);
 
     return (
-        <div>
-            <Card>{now.toLocaleTimeString()}</Card>
+        <div className="p-2 px-3 rounded-2xl bg-neutral-900 border-1 border-neutral-800">
+            {now.toLocaleTimeString()}
         </div>
     );
 }

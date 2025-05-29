@@ -1,22 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import type { Bus } from "../models/Bus";
 import type { Journey } from "../models/Journey";
 import fetchJourney from "../utils/getJourney";
 import getBus, { type BusResponse } from "../utils/getBus";
 import { useNavigate, useParams } from "react-router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBus, faLocationDot } from "@fortawesome/free-solid-svg-icons";
-import {
-    Flex,
-    Text,
-    Box,
-    Container,
-    Card,
-    Badge,
-    Separator,
-    Skeleton,
-    IconButton,
-} from "@radix-ui/themes";
 
 const JourneyPage: React.FC = () => {
     const { bus_id, journey_id } = useParams();
@@ -105,56 +93,44 @@ const JourneyPage: React.FC = () => {
     }, [bus_id, journey_id]);
 
     return (
-        <Container>
-            <Flex direction="column" maxHeight="100vh" p="5">
-                <Flex direction="column" gap="2">
-                    <Flex
-                        justify="center"
-                        direction="column"
-                        gap="1"
-                        align="center">
-                        <Text
-                            size="8"
-                            weight="bold"
-                            align="center"
-                            wrap="pretty">
+        <div className="md:mx-40">
+            <div className="flex flex-col p-5 pb-0">
+                <div className="flex flex-col gap-2">
+                    <div className="flex flex-col items-center justify-center gap-1">
+                        <span className="text-4xl font-bold text-center wrap-normal">
                             {journey?.route_name} to {journey?.destination}
-                        </Text>
-                        <Text align="center">
+                        </span>
+                        <span className="text-center">
                             {journey?.stops.length} stops
-                        </Text>
-                    </Flex>
+                        </span>
+                    </div>
 
-                    <Flex gap="2" justify="center">
-                        <Text color="gray" size="1">
+                    <div className="flex justify-center gap-2">
+                        <span className="text-xs text-neutral-400">
                             Updated {elapsed} ago
-                        </Text>
-                        <Text color="gray" size="1">
-                            ·
-                        </Text>
-                        <Text color="gray" size="1">
+                        </span>
+                        <span className="text-xs text-neutral-400">·</span>
+                        <span className="text-xs text-neutral-400">
                             Updates every 30s
-                        </Text>
-                    </Flex>
-                </Flex>
-                <Flex
-                    direction="column"
-                    gap="3"
-                    overflow="auto"
-                    flexGrow="1"
-                    mt="4">
+                        </span>
+                    </div>
+                </div>
+                <div className="flex flex-col gap-3 mt-4 overflow-y-auto grow max-h-[60vh] md:max-h-[80vh]">
                     {journey?.stops.map((stop, idx) => (
                         <>
-                            <Flex key={stop.stop_id} gap="2" align="center">
+                            <div
+                                className="flex items-center gap-2"
+                                key={stop.stop_id}>
                                 {bus?.progress.sequence == idx &&
                                 bus.progress.progress < 0.1 ? (
                                     <div ref={busRef}>
-                                        <IconButton color="red">
+                                        <div className="flex items-center justify-center p-2 bg-red-400 rounded-lg cursor-pointer w-9 h-9">
                                             <FontAwesomeIcon icon={faBus} />
-                                        </IconButton>
+                                        </div>
                                     </div>
                                 ) : (
-                                    <IconButton
+                                    <div
+                                        className="flex items-center justify-center p-2 bg-blue-400 rounded-lg w-9 h-9 cursor-pointere"
                                         onClick={() =>
                                             navigate(
                                                 `/departures/${stop.stop_id}`
@@ -164,16 +140,16 @@ const JourneyPage: React.FC = () => {
                                             cursor: "pointer",
                                         }}>
                                         <FontAwesomeIcon icon={faLocationDot} />
-                                    </IconButton>
+                                    </div>
                                 )}
-                                <Separator></Separator>
-                                <Flex direction="column">
-                                    <Text>{stop.name}</Text>
-                                    <Flex direction="row" gap="3">
-                                        {stop.actual_departure_time ? (
-                                            <Text color="red">
+                                <div className="bg-neutral-700 h-[1px] m-1 w-5"></div>
+                                <div className="flex flex-col">
+                                    <span>{stop.name}</span>
+                                    <div className="flex flex-row gap-3">
+                                        {stop.actual_time ? (
+                                            <span className="text-red-400">
                                                 <s>
-                                                    {stop.aimed_departure_time.toLocaleTimeString(
+                                                    {stop.aimed_time.toLocaleTimeString(
                                                         [],
                                                         {
                                                             hour: "2-digit",
@@ -181,47 +157,44 @@ const JourneyPage: React.FC = () => {
                                                         }
                                                     )}
                                                 </s>
-                                            </Text>
+                                            </span>
                                         ) : (
-                                            <Text color="green">
-                                                {stop.aimed_departure_time.toLocaleTimeString(
+                                            <span className="text-green-400">
+                                                {stop.aimed_time.toLocaleTimeString(
                                                     [],
                                                     {
                                                         hour: "2-digit",
                                                         minute: "2-digit",
                                                     }
                                                 )}
-                                            </Text>
+                                            </span>
                                         )}
-                                        <Text color="green">
-                                            {stop.actual_departure_time?.toLocaleTimeString()}
-                                        </Text>
-                                    </Flex>
-                                </Flex>
-                            </Flex>
+                                        <span className="text-green-400">
+                                            {stop.actual_time?.toLocaleTimeString()}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
                             {bus?.progress.sequence == idx &&
                             bus.progress.progress > 0.1 ? (
-                                <div ref={busRef}>
-                                    <Flex
-                                        direction="row"
-                                        gap="3"
-                                        align="center">
-                                        <IconButton color="red">
-                                            <FontAwesomeIcon icon={faBus} />
-                                        </IconButton>
-                                        <Text weight="bold">
-                                            Heading to next stop
-                                        </Text>
-                                    </Flex>
+                                <div
+                                    ref={busRef}
+                                    className="flex flex-row items-center gap-3">
+                                    <div className="flex items-center justify-center p-2 bg-red-400 rounded-lg cursor-pointer w-9 h-9">
+                                        <FontAwesomeIcon icon={faBus} />
+                                    </div>
+                                    <span className="font-bold">
+                                        Heading to next stop
+                                    </span>
                                 </div>
                             ) : (
                                 <></>
                             )}
                         </>
                     ))}
-                </Flex>
-            </Flex>
-        </Container>
+                </div>
+            </div>
+        </div>
     );
 };
 

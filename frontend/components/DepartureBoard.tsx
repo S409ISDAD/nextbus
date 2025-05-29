@@ -3,16 +3,8 @@ import type { Bus } from "../models/Bus";
 import fetchDepartures from "../utils/getDepartures";
 import { useNavigate } from "react-router";
 import timeTo from "../utils/timeTo";
-import {
-    Flex,
-    Text,
-    Box,
-    Container,
-    Card,
-    Badge,
-    Separator,
-    Skeleton,
-} from "@radix-ui/themes";
+import { Spinner } from "@radix-ui/themes";
+import { Card } from "./ui/Card";
 import getClosestStop, { getCurrentPosition } from "../utils/closestStop";
 
 interface Props {
@@ -110,164 +102,64 @@ function DepartureBoard({ stop_id, closest }: Props) {
 
     if (loading) {
         return (
-            <Container height="300px" minHeight="300px">
-                {/* <Card style={{ height: "100%" }}>
-                    <Flex
-                        align="center"
-                        justify="center"
-                        gap="3"
-                        style={{ height: "100%" }}>
-                        <Text>Loading...</Text>
+            <div className="h-[100px] w-[300px]">
+                <Card className="h-full">
+                    <div className="flex flex-col items-center h-full gap-3">
+                        <span>Loading...</span>
                         <Spinner size="3"></Spinner>
-                    </Flex>
-                </Card> */}
-                <Card style={{ height: "100%" }}>
-                    <Flex direction="column" gap="2" style={{ height: "100%" }}>
-                        <Flex justify="center">
-                            <Skeleton>
-                                <Text
-                                    size="5"
-                                    weight="bold"
-                                    align="center"
-                                    truncate>
-                                    Stop Name
-                                </Text>
-                            </Skeleton>
-                        </Flex>
-
-                        <Box style={{ flexGrow: 1, overflowY: "auto" }} px="2">
-                            <Flex direction="column">
-                                {[1, 2, 3].map((item) => (
-                                    <Container key={item}>
-                                        <Flex
-                                            direction="row"
-                                            align="center"
-                                            justify="between">
-                                            <Flex gap="2" direction="column">
-                                                <Flex
-                                                    direction="row"
-                                                    gap="1"
-                                                    align="center">
-                                                    <Skeleton>
-                                                        <Text>
-                                                            12 to Location
-                                                        </Text>
-                                                    </Skeleton>
-                                                </Flex>
-                                                <Flex direction="row" gap="3">
-                                                    <Skeleton>
-                                                        <Text color="green">
-                                                            10:10:10
-                                                        </Text>
-                                                    </Skeleton>
-                                                </Flex>
-                                            </Flex>
-                                            <Flex
-                                                direction="row"
-                                                gap="2"
-                                                align="center">
-                                                <Skeleton>
-                                                    <Badge
-                                                        color="amber"
-                                                        variant="solid">
-                                                        <Text weight="bold">
-                                                            0000000
-                                                        </Text>
-                                                    </Badge>
-                                                </Skeleton>
-                                                <Skeleton>
-                                                    <Badge
-                                                        color="iris"
-                                                        size="3">
-                                                        5 min
-                                                    </Badge>
-                                                </Skeleton>
-                                            </Flex>
-                                        </Flex>
-                                        <Separator my="2" size="4" />
-                                    </Container>
-                                ))}
-                            </Flex>
-                        </Box>
-                        <Box>
-                            <Skeleton>Updated 1s ago</Skeleton>
-                        </Box>
-                    </Flex>
+                    </div>
                 </Card>
-            </Container>
+            </div>
         );
     }
 
     return (
-        <Container>
+        <div>
             <Card>
-                <Flex direction="column" gap="2">
-                    <Flex
-                        justify="center"
-                        onClick={() => navigate(`/departures/${stopID}`)}
-                        style={{
-                            cursor: "pointer",
-                        }}>
-                        <Text size="5" weight="bold" align="center" wrap="wrap">
+                <div className="flex flex-col gap-2">
+                    <div
+                        className="flex justify-center cursor-pointer"
+                        onClick={() => navigate(`/departures/${stopID}`)}>
+                        <span className="text-xl font-bold text-center wrap-normal">
                             {stop}
-                        </Text>
-                    </Flex>
+                        </span>
+                    </div>
 
-                    <Box px="2">
-                        <Flex
-                            direction="column"
-                            maxHeight="200px"
-                            // minHeight="100px"
-                            style={{ flexGrow: 1, overflowY: "auto" }}>
+                    <div className="px-2">
+                        <div className="flex flex-col overflow-y-scroll max-h-[200px] grow">
                             {msg ? (
-                                <Flex justify="center">
-                                    <Text color="red">{msg}</Text>
-                                </Flex>
+                                <div className="flex justify-center">
+                                    <span className="text-red-400">{msg}</span>
+                                </div>
                             ) : (
                                 <>
                                     {buses.map((bus) => (
-                                        <Container
+                                        <div
+                                            className="cursor-pointer"
                                             key={bus.reg}
                                             onClick={() =>
                                                 navigate(
                                                     `/buses/${bus.id}/journeys/${bus.journey_id}`
                                                 )
-                                            }
-                                            style={{
-                                                cursor: "pointer",
-                                            }}>
-                                            <Flex
-                                                direction="row"
-                                                align="center"
-                                                justify="between">
-                                                <Flex direction="column">
-                                                    <Flex
-                                                        direction="row"
-                                                        gap="1"
-                                                        align="center">
-                                                        <Text
-                                                            size="4"
-                                                            weight="bold">
+                                            }>
+                                            <div className="flex flex-row items-center justify-between">
+                                                <div className="flex flex-col">
+                                                    <div className="flex flex-row flex-wrap items-center gap-1">
+                                                        <span className="text-xl font-bold">
                                                             {
                                                                 bus.service
                                                                     .line_name
                                                             }
-                                                        </Text>
-                                                        <Text
-                                                            align="center"
-                                                            size="2">
-                                                            to
-                                                        </Text>
-                                                        <Text weight="bold">
+                                                        </span>
+                                                        <span>to</span>
+                                                        <span className="font-bold">
                                                             {bus.destination}
-                                                        </Text>
-                                                    </Flex>
-                                                    <Flex
-                                                        direction="row"
-                                                        gap="3">
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex flex-row gap-3">
                                                         {bus.delay > 0 ? (
                                                             <>
-                                                                <Text color="red">
+                                                                <span className="text-red-400">
                                                                     <s>
                                                                         {bus.scheduled.toLocaleTimeString(
                                                                             [],
@@ -277,13 +169,13 @@ function DepartureBoard({ stop_id, closest }: Props) {
                                                                             }
                                                                         )}
                                                                     </s>
-                                                                </Text>
-                                                                <Text color="mint">
+                                                                </span>
+                                                                <span className="text-green-400">
                                                                     {bus.expected.toLocaleTimeString()}
-                                                                </Text>
+                                                                </span>
                                                             </>
                                                         ) : (
-                                                            <Text color="green">
+                                                            <span className="text-green-400">
                                                                 {bus.scheduled.toLocaleTimeString(
                                                                     [],
                                                                     {
@@ -291,58 +183,51 @@ function DepartureBoard({ stop_id, closest }: Props) {
                                                                         minute: "2-digit",
                                                                     }
                                                                 )}
-                                                            </Text>
+                                                            </span>
                                                         )}
-                                                    </Flex>
-                                                </Flex>
-                                                <Flex
-                                                    direction="row"
-                                                    gap="2"
-                                                    align="center">
-                                                    <Badge
-                                                        color="amber"
-                                                        variant="solid">
-                                                        <Text weight="bold">
+                                                    </div>
+                                                </div>
+                                                <div className="flex flex-row flex-wrap items-center justify-end gap-2">
+                                                    <div className="flex justify-center px-2 py-1 rounded-lg bg-amber-400">
+                                                        <span className="text-xs font-bold text-neutral-950">
                                                             {bus.reg}
-                                                        </Text>
-                                                    </Badge>
-                                                    <Badge
-                                                        color="iris"
-                                                        size="3">
-                                                        {bus.timeto}
-                                                    </Badge>
-                                                </Flex>
-                                            </Flex>
-                                            <Separator my="2" size="4" />
-                                        </Container>
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-center justify-center gap-1 p-1 rounded-lg w-15 bg-blue-950 h-fit">
+                                                        <span className="text-sm font-bold text-blue-300">
+                                                            {bus.timeto}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="bg-neutral-700 h-[1px] m-1"></div>
+                                        </div>
                                     ))}
                                     {buses.length < 4 ? (
-                                        <Flex justify="center">
-                                            <Text color="gray">
+                                        <div className="flex justify-center">
+                                            <span className="text-neutral-400">
                                                 No more departures!
-                                            </Text>
-                                        </Flex>
+                                            </span>
+                                        </div>
                                     ) : (
                                         <></>
                                     )}
                                 </>
                             )}
-                        </Flex>
-                    </Box>
-                    <Flex gap="2">
-                        <Text color="gray" size="1">
+                        </div>
+                    </div>
+                    <div className="flex justify-center gap-2">
+                        <span className="text-xs text-neutral-400">
                             Updated {elapsed} ago
-                        </Text>
-                        <Text color="gray" size="1">
-                            ·
-                        </Text>
-                        <Text color="gray" size="1">
+                        </span>
+                        <span className="text-xs text-neutral-400">·</span>
+                        <span className="text-xs text-neutral-400">
                             Updates every 30s
-                        </Text>
-                    </Flex>
-                </Flex>
+                        </span>
+                    </div>
+                </div>
             </Card>
-        </Container>
+        </div>
     );
 }
 

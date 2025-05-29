@@ -207,7 +207,10 @@ async def get_vehicle_journey(bus_id, journey_id):
     current_time = dt.now(datetime.timezone.utc).astimezone(uk_timezone)
 
     for i, stop in enumerate(data["stops"]):
-        aimed = data["stops"][i].get("aimed_departure_time")
+        if i == len(data["stops"]) - 1:
+            aimed = data["stops"][i].get("aimed_arrival_time")
+        else:
+            aimed = data["stops"][i].get("aimed_departure_time")
         if aimed:
             scheduled_time = dt.strptime(aimed, "%H:%M").replace(
                 year=current_time.year,
@@ -216,7 +219,7 @@ async def get_vehicle_journey(bus_id, journey_id):
                 tzinfo=current_time.tzinfo,
             )
 
-            data["stops"][i]["aimed_departure_time"] = check_scheduled_time(
+            data["stops"][i]["aimed_time"] = check_scheduled_time(
                 scheduled_time, current_time
             ).timestamp()
 
@@ -224,7 +227,7 @@ async def get_vehicle_journey(bus_id, journey_id):
         if actual_departure:
             departure_time = parser.isoparse(actual_departure)
 
-            data["stops"][i]["actual_departure_time"] = departure_time.timestamp()
+            data["stops"][i]["actual_time"] = departure_time.timestamp()
 
     return data
 
@@ -262,14 +265,14 @@ async def calculate_expected(delay, stop_id, bus_id, journey_id, r):
 
     for stop_time in stops:
         if stop_idx == 0:
-            aimed = stop_time.get("aimed_departure_time")
+            aimed = stop_time.get("aimed_time")
             scheduled_time = dt.fromtimestamp(aimed).astimezone(uk_timezone)
 
             if scheduled_time > current_time:
                 not_started = True
 
         if stop_time.get("atco_code") == stop_id:
-            aimed = stop_time.get("aimed_departure_time")
+            aimed = stop_time.get("aimed_time")
             if not aimed:
                 return None
             scheduled_time = dt.fromtimestamp(aimed).astimezone(uk_timezone)

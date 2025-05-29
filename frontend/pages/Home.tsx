@@ -1,4 +1,3 @@
-import { Container, Flex, TextField, Text, Button } from "@radix-ui/themes";
 import React from "react";
 import DepartureBoard from "../components/DepartureBoard";
 import { faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
@@ -7,55 +6,37 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 const Home: React.FC = () => {
     return (
         <div>
-            <Flex
-                direction="column"
-                gap="6"
-                pt="9"
-                justify="center"
-                align="center">
-                <Flex
-                    direction="column"
-                    p="7"
-                    gap="8"
-                    justify="center"
-                    align="center">
-                    <Text weight="bold" size="8" align="center">
+            <div className="flex flex-col items-center justify-center gap-6 pt-9">
+                <div className="flex flex-col items-center justify-center gap-8 p-7">
+                    <span className="text-5xl font-black text-center">
                         The best way to get the bus.
-                    </Text>
-                    <TextField.Root
-                        placeholder="Search for a stop..."
-                        radius="full"
-                        size="3"
-                        style={{ width: "100%", height: "58px" }}>
-                        <TextField.Slot>
-                            <Flex ml="2">
-                                <FontAwesomeIcon
-                                    height="16"
-                                    width="16"
-                                    icon={faMagnifyingGlass}
-                                />
-                            </Flex>
-                        </TextField.Slot>
-                        <TextField.Slot side="right" px="1">
-                            <Flex mr="1">
-                                <Button size="3">Go</Button>
-                            </Flex>
-                        </TextField.Slot>
-                    </TextField.Root>
-                </Flex>
-                <Flex
-                    direction="row"
-                    gap="5"
-                    justify="center"
-                    align="center"
-                    p="5"
-                    wrap="wrap">
-                    <Text size="6" weight="bold" wrap="pretty" align="center">
+                    </span>
+                    <div className="flex items-center w-full py-2 rounded-full shadow-2xl border-1 border-neutral-800 bg-neutral-900">
+                        <div className="ml-4 mr-2 text-gray-500">
+                            <FontAwesomeIcon
+                                icon={faMagnifyingGlass}
+                                width={16}
+                                height={16}
+                            />
+                        </div>
+
+                        <input
+                            type="text"
+                            placeholder="Search for a stop..."
+                            className="flex-grow font-medium placeholder-gray-400 bg-transparent focus:outline-none"
+                        />
+                        <button className="mr-2 px-4 py-1.5 font-bold text-black rounded-full bg-teal-400  transition cursor-pointer shadow-[0_0_5px_1px_rgba(0,187,167,0.5)] hover:shadow-[0_0_10px_2px_rgba(0,187,167,0.6)]">
+                            Go
+                        </button>
+                    </div>
+                </div>
+                <div className="flex flex-row flex-wrap items-center justify-center gap-5 p-5 md:gap-15">
+                    <span className="text-3xl font-bold text-center md:text-4xl md:w-80">
                         Departure Boards for Every Operator
-                    </Text>
+                    </span>
                     <DepartureBoard stop_id="1990PH130449"></DepartureBoard>
-                </Flex>
-            </Flex>
+                </div>
+            </div>
         </div>
     );
 };

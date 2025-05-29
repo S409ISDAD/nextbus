@@ -4,16 +4,8 @@ import type { Stop } from "../models/Stop";
 import fetchDepartures from "../utils/getDepartures";
 import getStopData from "../utils/getStopData";
 import { useNavigate, useParams } from "react-router";
-import {
-    Flex,
-    Text,
-    Box,
-    Container,
-    Card,
-    Badge,
-    Separator,
-    Skeleton,
-} from "@radix-ui/themes";
+import { Skeleton } from "@radix-ui/themes";
+import { Card } from "../components/ui/Card";
 import timeTo from "../utils/timeTo";
 
 const DeparturePage: React.FC = () => {
@@ -96,19 +88,15 @@ const DeparturePage: React.FC = () => {
     }, [stop_id]);
 
     return (
-        <Container p="5">
-            <Flex direction="column" gap="2">
-                <Flex
-                    justify="center"
-                    direction="column"
-                    gap="1"
-                    align="center">
-                    <Text size="8" weight="bold" align="center" wrap="pretty">
+        <div className="p-5 md:mx-20">
+            <div className="flex flex-col gap-2">
+                <div className="flex flex-col justify-center gap-1 align-center">
+                    <span className="text-4xl font-bold text-center">
                         {stop?.stop_name}
-                    </Text>
-                    <Text align="center">{stop?.long_name}</Text>
-                </Flex>
-                <Flex direction="row" gap="1" justify="center" wrap="wrap">
+                    </span>
+                    <span className="text-center">{stop?.long_name}</span>
+                </div>
+                <div className="flex flex-row flex-wrap justify-center gap-1">
                     {stop?.services
                         .sort((a, b) =>
                             new Intl.Collator(undefined, {
@@ -117,188 +105,167 @@ const DeparturePage: React.FC = () => {
                             }).compare(a.line_name, b.line_name)
                         )
                         .map((service) => (
-                            <Card key={service.id}>
-                                <Text>{service.line_name}</Text>
-                            </Card>
+                            <div
+                                className="p-3 bg-neutral-900 rounded-2xl border-1 border-neutral-800"
+                                key={service.id}>
+                                <span className="font-semibold ">
+                                    {service.line_name}
+                                </span>
+                            </div>
                         ))}
-                </Flex>
+                </div>
 
-                <Flex gap="2" justify="center">
-                    <Text color="gray" size="1">
+                <div className="flex justify-center gap-2">
+                    <span className="text-xs text-neutral-400">
                         Updated {elapsed} ago
-                    </Text>
-                    <Text color="gray" size="1">
-                        ·
-                    </Text>
-                    <Text color="gray" size="1">
+                    </span>
+                    <span className="text-xs text-neutral-400">·</span>
+                    <span className="text-xs text-neutral-400">
                         Updates every 30s
-                    </Text>
-                </Flex>
+                    </span>
+                </div>
 
-                <Box style={{ flexGrow: 1, overflowY: "scroll" }} p="3">
-                    <Flex direction="column" gap="3">
+                <div className="pt-2 grow">
+                    <div className="flex flex-col gap-3">
                         {msg ? (
-                            <Flex justify="center">
-                                <Text color="red">{msg}</Text>
-                            </Flex>
+                            <div className="flex justify-center">
+                                <span className="text-red-400">{msg}</span>
+                            </div>
                         ) : loading ? (
                             <>
                                 {[1, 2, 3, 4, 5].map((i) => (
-                                    <Card key={i} style={{ cursor: "pointer" }}>
-                                        <Flex
-                                            direction="row"
-                                            align="center"
-                                            justify="between">
-                                            <Flex
-                                                direction="column"
-                                                gap="1"
-                                                align="start">
+                                    <Card key={i}>
+                                        <div className="flex flex-row justify-between align-center">
+                                            <div className="flex flex-col gap-1">
                                                 <Skeleton>
-                                                    <Text weight="bold">
+                                                    <span className="text-xl">
                                                         123 to Location
-                                                    </Text>
+                                                    </span>
                                                 </Skeleton>
                                                 <Skeleton>
-                                                    <Text color="green">
-                                                        10:10:10
-                                                    </Text>
+                                                    <span>10:10:10</span>
                                                 </Skeleton>
-                                            </Flex>
-                                            <Flex
-                                                direction="row"
-                                                gap="2"
-                                                align="center">
+                                            </div>
+                                            <div className="flex flex-row gap-3">
                                                 <Skeleton>
-                                                    <Badge
-                                                        color="amber"
-                                                        variant="solid">
-                                                        <Text weight="bold">
-                                                            AB12ACB
-                                                        </Text>
-                                                    </Badge>
+                                                    <div className="p-3">
+                                                        <span>AB12ACB</span>
+                                                    </div>
                                                 </Skeleton>
                                                 <Skeleton>
-                                                    <Badge
-                                                        color="iris"
-                                                        size="3">
-                                                        <Text size="5">5</Text>
-                                                        min
-                                                    </Badge>
+                                                    <div className="p-3">
+                                                        <span>5 min</span>
+                                                    </div>
                                                 </Skeleton>
-                                            </Flex>
-                                        </Flex>
+                                            </div>
+                                        </div>
                                     </Card>
                                 ))}
                             </>
                         ) : (
                             <>
                                 {buses.map((bus) => (
-                                    <Card
-                                        key={bus.reg}
+                                    <div
                                         onClick={() =>
                                             navigate(
                                                 `/buses/${bus.id}/journeys/${bus.journey_id}`
                                             )
                                         }
-                                        style={{ cursor: "pointer" }}>
-                                        <Flex
-                                            direction="row"
-                                            align="center"
-                                            justify="between">
-                                            <Flex direction="column">
-                                                <Flex
-                                                    direction="row"
-                                                    gap="1"
-                                                    align="center">
-                                                    <Text
-                                                        size="4"
-                                                        weight="bold">
-                                                        {bus.service.line_name}
-                                                    </Text>
-                                                    <Text
-                                                        align="center"
-                                                        size="2">
-                                                        to
-                                                    </Text>
-                                                    <Text weight="bold">
-                                                        {bus.destination}
-                                                    </Text>
-                                                </Flex>
-                                                <Flex direction="row" gap="3">
-                                                    {bus.delay > 0 ? (
-                                                        <>
-                                                            <Text color="red">
-                                                                <s>
-                                                                    {bus.scheduled.toLocaleTimeString(
-                                                                        [],
-                                                                        {
-                                                                            hour: "2-digit",
-                                                                            minute: "2-digit",
-                                                                        }
-                                                                    )}
-                                                                </s>
-                                                            </Text>
-                                                            <Text color="mint">
-                                                                {bus.expected.toLocaleTimeString()}
-                                                            </Text>
-                                                        </>
-                                                    ) : (
-                                                        <Text color="green">
-                                                            {bus.scheduled.toLocaleTimeString(
-                                                                [],
-                                                                {
-                                                                    hour: "2-digit",
-                                                                    minute: "2-digit",
-                                                                }
-                                                            )}
-                                                        </Text>
+                                        className="cursor-pointer">
+                                        <Card
+                                            key={bus.reg}
+                                            className="rounded-3xl">
+                                            <div className="flex flex-row justify-between align-center">
+                                                <div className="flex flex-col">
+                                                    <div className="flex flex-row flex-wrap items-center gap-1">
+                                                        <span className="text-xl font-bold">
+                                                            {
+                                                                bus.service
+                                                                    .line_name
+                                                            }
+                                                        </span>
+                                                        <span>to</span>
+                                                        <span className="font-bold">
+                                                            {bus.destination}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex flex-row gap-3">
+                                                        {bus.delay > 0 ? (
+                                                            <>
+                                                                <span className="text-red-400">
+                                                                    <s>
+                                                                        {bus.scheduled.toLocaleTimeString(
+                                                                            [],
+                                                                            {
+                                                                                hour: "2-digit",
+                                                                                minute: "2-digit",
+                                                                            }
+                                                                        )}
+                                                                    </s>
+                                                                </span>
+                                                                <span className="text-green-400">
+                                                                    {bus.expected.toLocaleTimeString()}
+                                                                </span>
+                                                            </>
+                                                        ) : (
+                                                            <span className="text-green-400">
+                                                                {bus.scheduled.toLocaleTimeString(
+                                                                    [],
+                                                                    {
+                                                                        hour: "2-digit",
+                                                                        minute: "2-digit",
+                                                                    }
+                                                                )}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    {bus.service.detail && (
+                                                        <span className="wrap-anywhere">
+                                                            Via:{" "}
+                                                            {bus.service.detail}
+                                                        </span>
                                                     )}
-                                                </Flex>
-                                                {bus.service.detail && (
-                                                    <Text>
-                                                        Via:{" "}
-                                                        {bus.service.detail}
-                                                    </Text>
-                                                )}
-                                            </Flex>
-                                            <Flex
-                                                direction="row"
-                                                gap="2"
-                                                align="center">
-                                                <Badge
-                                                    color="amber"
-                                                    variant="solid">
-                                                    <Text weight="bold">
-                                                        {bus.reg}
-                                                    </Text>
-                                                </Badge>
-                                                <Badge color="iris" size="3">
-                                                    <Text size="5">
-                                                        {
-                                                            bus.timeto.split(
-                                                                " "
-                                                            )[0]
-                                                        }
-                                                    </Text>
-                                                    {bus.timeto.split(" ")[1]}
-                                                </Badge>
-                                            </Flex>
-                                        </Flex>
-                                    </Card>
+                                                </div>
+                                                <div className="flex flex-row flex-wrap items-center justify-end gap-2 md:gap-4">
+                                                    <div className="flex justify-center px-2 py-1 rounded-lg bg-amber-400">
+                                                        <span className="text-xs font-bold align-middle text-neutral-950">
+                                                            {bus.reg}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-center justify-center w-20 gap-1 p-2 rounded-xl bg-blue-950 h-fit">
+                                                        <span className="text-xl font-bold text-blue-300">
+                                                            {
+                                                                bus.timeto.split(
+                                                                    " "
+                                                                )[0]
+                                                            }
+                                                        </span>
+                                                        <span className="font-bold text-blue-300">
+                                                            {
+                                                                bus.timeto.split(
+                                                                    " "
+                                                                )[1]
+                                                            }
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </Card>
+                                    </div>
                                 ))}
                                 {buses.length < 4 && (
-                                    <Flex justify="center">
-                                        <Text color="gray">
+                                    <div className="flex justify-center">
+                                        <span className="text-neutral-400">
                                             No more departures!
-                                        </Text>
-                                    </Flex>
+                                        </span>
+                                    </div>
                                 )}
                             </>
                         )}
-                    </Flex>
-                </Box>
-            </Flex>
-        </Container>
+                    </div>
+                </div>
+            </div>
+        </div>
     );
 };
 
