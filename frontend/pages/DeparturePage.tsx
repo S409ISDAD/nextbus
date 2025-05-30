@@ -193,7 +193,8 @@ const DeparturePage: React.FC = () => {
                                                         </span>
                                                     </div>
                                                     <div className="flex flex-row gap-3">
-                                                        {bus.delay > 0 ? (
+                                                        {bus.delay > 15 ||
+                                                        bus.delay < -15 ? (
                                                             <>
                                                                 <span className="text-red-400">
                                                                     <s>
