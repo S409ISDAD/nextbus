@@ -30,12 +30,16 @@ const DeparturePage: React.FC = () => {
 
             setElapsed(min > 0 ? `${min}m ${sec}s` : `${sec}s`);
 
-            const newBuses = buses.map((bus) => {
-                return {
-                    ...bus,
-                    timeto: timeTo(bus),
-                };
-            });
+            const newBuses = buses
+                .map((bus) => {
+                    return {
+                        ...bus,
+                        timeto: timeTo(bus),
+                    };
+                })
+                .filter(
+                    (bus) => new Date(bus.expected.getTime() + 15 * 1000) > now
+                );
 
             setBuses(newBuses);
         }, 1000);
