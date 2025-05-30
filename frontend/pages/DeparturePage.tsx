@@ -63,9 +63,7 @@ const DeparturePage: React.FC = () => {
                     setRefreshed(departures.timestamp);
                     setMsg("");
                 } else {
-                    setMsg(
-                        "Failed to fetch departures. Try reloading the page"
-                    );
+                    setMsg("Failed to fetch departures. Please Wait...");
                 }
             } catch {
                 console.log("uh oh");
@@ -132,10 +130,13 @@ const DeparturePage: React.FC = () => {
                 <div className="pt-2 grow">
                     <div className="flex flex-col gap-3">
                         {msg ? (
-                            <div className="flex justify-center">
+                            <div className="flex justify-center p-3">
                                 <span className="text-red-400">{msg}</span>
                             </div>
-                        ) : loading ? (
+                        ) : (
+                            <></>
+                        )}
+                        {loading ? (
                             <>
                                 {[1, 2, 3, 4, 5].map((i) => (
                                     <Card key={i}>
