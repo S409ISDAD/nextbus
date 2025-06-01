@@ -145,7 +145,7 @@ function DepartureBoard({ stop_id, closest }: Props) {
                                                     `/buses/${bus.id}/journeys/${bus.journey_id}`
                                                 )
                                             }>
-                                            <div className="flex flex-row items-center justify-between">
+                                            <div className="flex flex-row items-center justify-between gap-2">
                                                 <div className="flex flex-col">
                                                     <div className="flex flex-row flex-wrap items-center gap-1">
                                                         <span className="text-xl font-bold">
