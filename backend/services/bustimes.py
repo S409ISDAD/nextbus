@@ -147,11 +147,16 @@ async def get_services_from_stop(stop_id):
         return
 
     services = []
+    ids = set()
 
     for service in data.get("results"):
+        service_id = service.get("id")
+        if service_id in ids:
+            continue
+        ids.add(service_id)
         services.append(
             {
-                "id": service.get("id"),
+                "id": service_id,
                 "line_name": service.get("line_name"),
                 "detail": service.get("description"),
             }
