@@ -63,7 +63,7 @@ const DeparturePage: React.FC = () => {
                     setRefreshed(departures.timestamp);
                     setMsg("");
                 } else {
-                    setMsg("Failed to fetch departures. Please Wait...");
+                    setMsg("Lost connection to server. Please Wait...");
                 }
             } catch {
                 console.log("uh oh");
