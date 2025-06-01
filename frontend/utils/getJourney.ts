@@ -8,6 +8,7 @@ export interface ResponseStopTime {
     name: string;
     aimed_time: number;
     actual_time?: number;
+    expt_time?: number;
 }
 
 export interface ResponseJourney {
@@ -26,6 +27,7 @@ const getJourney = async (bus_id: string, journey_id: string) => {
             const aimed_time = new Date(stop.aimed_time * 1000);
 
             const actual_time = stop.actual_time ? new Date(stop.actual_time * 1000) : undefined;
+            const expt_time = stop.expt_time ? new Date(stop.expt_time * 1000) : undefined;
 
             const stop_id = stop.atco_code
 
@@ -34,6 +36,7 @@ const getJourney = async (bus_id: string, journey_id: string) => {
                 ...stop,
                 aimed_time,
                 actual_time,
+                expt_time
             };
         })
 

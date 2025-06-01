@@ -200,7 +200,7 @@ async def get_stop_details(stop_id):
     return data
 
 
-async def get_vehicle_journey(bus_id, journey_id):
+async def get_vehicle_journey(bus_id, journey_id, r):
     data = await fetch_json(
         BASE + f"/vehicles/{bus_id}/journeys/{journey_id}.json",
     )
@@ -210,6 +210,15 @@ async def get_vehicle_journey(bus_id, journey_id):
 
     uk_timezone = datetime.timezone(timedelta(hours=1))
     current_time = dt.now(datetime.timezone.utc).astimezone(uk_timezone)
+
+    this_bus = await get_cached(
+        f"bus:{bus_id}",
+        lambda *args: fetch_bus(*args),
+        (bus_id,),
+        BUS_CACHE,
+        r,
+    )
+    this_bus = this_bus[0]
 
     for i, stop in enumerate(data["stops"]):
         if i == len(data["stops"]) - 1:
@@ -224,9 +233,12 @@ async def get_vehicle_journey(bus_id, journey_id):
                 tzinfo=current_time.tzinfo,
             )
 
-            data["stops"][i]["aimed_time"] = check_scheduled_time(
-                scheduled_time, current_time
-            ).timestamp()
+            scheduled_time = check_scheduled_time(scheduled_time, current_time)
+
+            expt_time = scheduled_time + timedelta(seconds=int(this_bus.get("delay")))
+
+            data["stops"][i]["aimed_time"] = scheduled_time.timestamp()
+            data["stops"][i]["expt_time"] = expt_time.timestamp()
 
         actual_departure = data["stops"][i].get("actual_departure_time")
         if actual_departure:
@@ -255,7 +267,7 @@ async def calculate_expected(delay, stop_id, bus_id, journey_id, r):
     journey = await get_cached(
         f"journeys:{bus_id}:{journey_id}",
         lambda *args: get_vehicle_journey(*args),
-        (bus_id, journey_id),
+        (bus_id, journey_id, r),
         JOURNEY_CACHE,
         r,
     )

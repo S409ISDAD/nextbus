@@ -11,7 +11,7 @@ async def get_journey(bus_id: int, journey_id: int, redis=Depends(get_redis)):
     journey = await get_cached(
         key=f"journeys:{bus_id}:{journey_id}",
         func=lambda *args: bustimes.get_vehicle_journey(*args),
-        args=(bus_id, journey_id),
+        args=(bus_id, journey_id, redis),
         exp=BUS_CACHE,
         r=redis,
     )

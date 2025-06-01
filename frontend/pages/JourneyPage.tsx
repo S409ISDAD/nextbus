@@ -119,7 +119,12 @@ const JourneyPage: React.FC = () => {
                     {journey?.stops.map((stop, idx) => (
                         <>
                             <div
-                                className="flex items-center gap-2"
+                                className={`flex items-center gap-2 ${
+                                    bus?.progress &&
+                                    bus?.progress.sequence < idx
+                                        ? ""
+                                        : "opacity-60"
+                                }`}
                                 key={stop.stop_id}>
                                 {bus?.progress.sequence == idx &&
                                 bus.progress.progress < 0.1 ? (
@@ -130,7 +135,7 @@ const JourneyPage: React.FC = () => {
                                     </div>
                                 ) : (
                                     <div
-                                        className="flex items-center justify-center p-2 bg-blue-400 rounded-lg w-9 h-9 cursor-pointere"
+                                        className={`flex items-center justify-center p-2 bg-blue-400 rounded-lg cursor-pointer w-9 h-9`}
                                         onClick={() =>
                                             navigate(
                                                 `/departures/${stop.stop_id}`
@@ -145,10 +150,75 @@ const JourneyPage: React.FC = () => {
                                 <div className="bg-neutral-700 h-[1px] m-1 w-5"></div>
                                 <div className="flex flex-col">
                                     <span>{stop.name}</span>
-                                    <div className="flex flex-row gap-3">
-                                        {stop.actual_time ? (
-                                            <span className="text-red-400">
-                                                <s>
+                                    <div className="flex flex-row gap-6">
+                                        {bus?.progress &&
+                                        bus?.progress.sequence >= idx ? (
+                                            <>
+                                                {stop.actual_time ? (
+                                                    <span className="text-red-400">
+                                                        <s>
+                                                            {stop.aimed_time.toLocaleTimeString(
+                                                                [],
+                                                                {
+                                                                    hour: "2-digit",
+                                                                    minute: "2-digit",
+                                                                }
+                                                            )}
+                                                        </s>
+                                                    </span>
+                                                ) : (
+                                                    <>
+                                                        <span className="text-green-400">
+                                                            {stop.aimed_time.toLocaleTimeString(
+                                                                [],
+                                                                {
+                                                                    hour: "2-digit",
+                                                                    minute: "2-digit",
+                                                                }
+                                                            )}
+                                                        </span>
+                                                        <span className="font-bold text-green-400">
+                                                            On Time
+                                                        </span>
+                                                    </>
+                                                )}
+                                                {stop.actual_time && (
+                                                    <span className="font-bold text-orange-400">
+                                                        Departed:{" "}
+                                                        {stop.actual_time.toLocaleTimeString(
+                                                            [],
+                                                            {
+                                                                hour: "2-digit",
+                                                                minute: "2-digit",
+                                                            }
+                                                        )}
+                                                    </span>
+                                                )}
+                                            </>
+                                        ) : stop.expt_time &&
+                                          stop.expt_time.getTime() -
+                                              stop.aimed_time.getTime() >
+                                              60000 ? (
+                                            <>
+                                                <span className="text-red-400">
+                                                    <s>
+                                                        {stop.aimed_time.toLocaleTimeString(
+                                                            [],
+                                                            {
+                                                                hour: "2-digit",
+                                                                minute: "2-digit",
+                                                            }
+                                                        )}
+                                                    </s>
+                                                </span>
+                                                <span className="font-bold text-orange-400">
+                                                    Expt:{" "}
+                                                    {stop.expt_time.toLocaleTimeString()}
+                                                </span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <span className="text-green-400">
                                                     {stop.aimed_time.toLocaleTimeString(
                                                         [],
                                                         {
@@ -156,22 +226,13 @@ const JourneyPage: React.FC = () => {
                                                             minute: "2-digit",
                                                         }
                                                     )}
-                                                </s>
-                                            </span>
-                                        ) : (
-                                            <span className="text-green-400">
-                                                {stop.aimed_time.toLocaleTimeString(
-                                                    [],
-                                                    {
-                                                        hour: "2-digit",
-                                                        minute: "2-digit",
-                                                    }
-                                                )}
-                                            </span>
+                                                </span>
+
+                                                <span className="font-bold text-green-400 ">
+                                                    On Time
+                                                </span>
+                                            </>
                                         )}
-                                        <span className="text-green-400">
-                                            {stop.actual_time?.toLocaleTimeString()}
-                                        </span>
                                     </div>
                                 </div>
                             </div>
