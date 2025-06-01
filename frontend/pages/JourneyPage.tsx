@@ -93,7 +93,7 @@ const JourneyPage: React.FC = () => {
     }, [bus_id, journey_id]);
 
     return (
-        <div className="md:mx-40">
+        <div className="lg:mx-40">
             <div className="flex flex-col p-5 pb-0">
                 <div className="flex flex-col gap-2">
                     <div className="flex flex-col items-center justify-center gap-1">
@@ -121,9 +121,16 @@ const JourneyPage: React.FC = () => {
                             <div
                                 className={`flex items-center gap-2 ${
                                     bus?.progress &&
-                                    bus?.progress.sequence < idx
-                                        ? ""
-                                        : "opacity-60"
+                                    idx <= bus?.progress.sequence &&
+                                    bus.progress.progress > 0.1
+                                        ? "opacity-60"
+                                        : ""
+                                } ${
+                                    bus?.progress &&
+                                    idx < bus?.progress.sequence &&
+                                    bus.progress.progress < 0.1
+                                        ? "opacity-60"
+                                        : ""
                                 }`}
                                 key={stop.stop_id}>
                                 {bus?.progress.sequence == idx &&
