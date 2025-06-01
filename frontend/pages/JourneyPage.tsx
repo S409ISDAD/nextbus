@@ -4,7 +4,12 @@ import fetchJourney from "../utils/getJourney";
 import getBus, { type BusResponse } from "../utils/getBus";
 import { useNavigate, useParams } from "react-router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBus, faLocationDot } from "@fortawesome/free-solid-svg-icons";
+import {
+    faBus,
+    faFlagCheckered,
+    faLocationDot,
+    faMapPin,
+} from "@fortawesome/free-solid-svg-icons";
 
 const JourneyPage: React.FC = () => {
     const { bus_id, journey_id } = useParams();
@@ -151,7 +156,17 @@ const JourneyPage: React.FC = () => {
                                         style={{
                                             cursor: "pointer",
                                         }}>
-                                        <FontAwesomeIcon icon={faLocationDot} />
+                                        <FontAwesomeIcon
+                                            icon={
+                                                idx ==
+                                                    journey.stops.length - 1 ||
+                                                idx == 0
+                                                    ? faFlagCheckered
+                                                    : stop.minor
+                                                    ? faLocationDot
+                                                    : faMapPin
+                                            }
+                                        />
                                     </div>
                                 )}
                                 <div className="bg-neutral-700 h-[1px] m-1 w-5"></div>

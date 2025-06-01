@@ -9,6 +9,7 @@ export interface ResponseStopTime {
     aimed_time: number;
     actual_time?: number;
     expt_time?: number;
+    minor: boolean;
 }
 
 export interface ResponseJourney {

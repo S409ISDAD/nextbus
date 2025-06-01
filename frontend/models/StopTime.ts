@@ -4,4 +4,5 @@ export interface StopTime {
     aimed_time: Date;
     expt_time?: Date;
     actual_time?: Date;
+    minor: boolean;
 }
