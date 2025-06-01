@@ -213,7 +213,13 @@ const JourneyPage: React.FC = () => {
                                                 </span>
                                                 <span className="font-bold text-orange-400">
                                                     Expt:{" "}
-                                                    {stop.expt_time.toLocaleTimeString()}
+                                                    {stop.expt_time.toLocaleTimeString(
+                                                        [],
+                                                        {
+                                                            hour: "2-digit",
+                                                            minute: "2-digit",
+                                                        }
+                                                    )}
                                                 </span>
                                             </>
                                         ) : (
