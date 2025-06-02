@@ -200,7 +200,7 @@ const JourneyPage: React.FC = () => {
                                                             )}
                                                         </span>
                                                         <span className="font-bold">
-                                                            No Data
+                                                            Did not stop
                                                         </span>
                                                     </>
                                                 )}
