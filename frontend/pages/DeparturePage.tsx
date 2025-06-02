@@ -38,7 +38,7 @@ const DeparturePage: React.FC = () => {
                     };
                 })
                 .filter(
-                    (bus) => new Date(bus.expected.getTime() + 15 * 1000) > now
+                    (bus) => new Date(bus.expected.getTime() + 45 * 1000) > now
                 );
 
             setBuses(newBuses);
