@@ -190,7 +190,7 @@ const JourneyPage: React.FC = () => {
                                                     </span>
                                                 ) : (
                                                     <>
-                                                        <span className="text-green-400">
+                                                        <span>
                                                             {stop.aimed_time.toLocaleTimeString(
                                                                 [],
                                                                 {
@@ -199,8 +199,8 @@ const JourneyPage: React.FC = () => {
                                                                 }
                                                             )}
                                                         </span>
-                                                        <span className="font-bold text-green-400">
-                                                            On Time
+                                                        <span className="font-bold">
+                                                            No Data
                                                         </span>
                                                     </>
                                                 )}

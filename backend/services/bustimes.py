@@ -294,6 +294,10 @@ async def calculate_expected(delay, stop_id, bus_id, journey_id, r):
                 return None
             scheduled_time = dt.fromtimestamp(aimed).astimezone(uk_timezone)
 
+            delay += (
+                45  # account for stopping and various other things that increase delay
+            )
+
             if not_started:
                 delay = 0
 
