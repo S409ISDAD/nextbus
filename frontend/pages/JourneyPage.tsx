@@ -218,9 +218,10 @@ const JourneyPage: React.FC = () => {
                                                 )}
                                             </>
                                         ) : stop.expt_time &&
-                                          stop.expt_time.getTime() -
-                                              stop.aimed_time.getTime() >
-                                              60000 ? (
+                                          Math.abs(
+                                              stop.expt_time.getTime() -
+                                                  stop.aimed_time.getTime()
+                                          ) > 60000 ? (
                                             <>
                                                 <span className="text-red-400">
                                                     <s>
@@ -233,7 +234,7 @@ const JourneyPage: React.FC = () => {
                                                         )}
                                                     </s>
                                                 </span>
-                                                <span className="font-bold text-orange-400">
+                                                <span className="font-bold text-blue-400">
                                                     Expt:{" "}
                                                     {stop.expt_time.toLocaleTimeString(
                                                         [],
