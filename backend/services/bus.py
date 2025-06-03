@@ -90,7 +90,7 @@ async def build_bus(
     times = await calculate_expected(
         delay, progress.get("sequence", 0), stop_id, bus_id, journey_id, r
     )
-    print(times)
+
     if not times:
         return None
     if not times.include:
