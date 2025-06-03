@@ -90,7 +90,9 @@ async def fetch_buses_for_service(service, stop_id, r: redis.Redis) -> list[Bus]
             r,
         )
 
-        times = await calculate_expected(delay, stop_id, bus_id, journey_id, r)
+        times = await calculate_expected(
+            delay, progress.get("sequence", 0), stop_id, bus_id, journey_id, r
+        )
 
         if times:
             buses.append(
@@ -263,7 +265,7 @@ def check_scheduled_time(scheduled: dt, current_time: dt) -> dt:
     return scheduled
 
 
-async def calculate_expected(delay, stop_id, bus_id, journey_id, r):
+async def calculate_expected(delay, sequence, stop_id, bus_id, journey_id, r):
     journey = await get_cached(
         f"journeys:{bus_id}:{journey_id}",
         lambda *args: get_vehicle_journey(*args),
@@ -285,7 +287,7 @@ async def calculate_expected(delay, stop_id, bus_id, journey_id, r):
             aimed = stop_time.get("aimed_time")
             scheduled_time = dt.fromtimestamp(aimed).astimezone(uk_timezone)
 
-            if scheduled_time > current_time:
+            if (scheduled_time > current_time) and (sequence < 2):
                 not_started = True
 
         if stop_time.get("atco_code") == stop_id:
@@ -316,7 +318,7 @@ async def calculate_expected(delay, stop_id, bus_id, journey_id, r):
     return None
 
 
-async def get_closest_stop(lat, lng):
+async def get_closest_stop(lat, lng, ignore):
     buffer = 0.005
 
     xmin = lng - buffer
@@ -340,7 +342,7 @@ async def get_closest_stop(lat, lng):
 
         dist = geodesic((lat, lng), (stop_lat, stop_lng)).meters
 
-        if dist < min_dist:
+        if dist < min_dist and ignore != stop["properties"]["url"].split("/")[2]:
             min_dist = dist
             closest_stop = stop
 

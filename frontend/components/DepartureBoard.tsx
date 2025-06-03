@@ -6,6 +6,8 @@ import timeTo from "../utils/timeTo";
 import { Spinner } from "@radix-ui/themes";
 import { Card } from "./ui/Card";
 import getClosestStop, { getCurrentPosition } from "../utils/closestStop";
+import getStopData from "../utils/getStopData";
+import type { Stop } from "../models/Stop";
 
 interface Props {
     stop_id: string;
@@ -14,7 +16,7 @@ interface Props {
 
 function DepartureBoard({ stop_id, closest }: Props) {
     const [buses, setBuses] = useState<Bus[]>([]);
-    const [stop, setStop] = useState<String>("");
+    const [stop, setStop] = useState<Stop>();
     const [stopID, setStopID] = useState<String>("");
     const [loading, setLoading] = useState(true);
     const [lastRefreshed, setRefreshed] = useState(new Date());
@@ -56,9 +58,13 @@ function DepartureBoard({ stop_id, closest }: Props) {
 
                 if (departures) {
                     setBuses(departures.updatedBuses);
-                    setStop(departures.stop_name);
                     setRefreshed(departures.timestamp);
                     setMsg("");
+                }
+                const stop = await getStopData(id);
+
+                if (stop) {
+                    setStop(stop);
                 }
                 // else {
                 //     setMsg("Failed to fetch departures.");
@@ -73,7 +79,10 @@ function DepartureBoard({ stop_id, closest }: Props) {
             try {
                 if (closest) {
                     const pos = await getCurrentPosition();
-                    const closest_stop_id = await getClosestStop(pos);
+                    const closest_stop_id = await getClosestStop([
+                        pos.coords.latitude,
+                        pos.coords.longitude,
+                    ]);
                     if (closest_stop_id) {
                         await getData(closest_stop_id);
                         setStopID(closest_stop_id);
@@ -124,7 +133,12 @@ function DepartureBoard({ stop_id, closest }: Props) {
                         className="flex justify-center cursor-pointer"
                         onClick={() => navigate(`/departures/${stopID}`)}>
                         <span className="text-xl font-bold text-center wrap-normal">
-                            {stop}
+                            {stop?.stop_name}{" "}
+                            {stop?.indicator
+                                ? `(${stop.indicator})`
+                                : stop?.bearing
+                                ? `(${stop.bearing})`
+                                : ""}
                         </span>
                     </div>
 

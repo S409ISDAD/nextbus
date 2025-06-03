@@ -35,5 +35,8 @@ async def stop_details(stop_id: str, redis=Depends(get_redis)):
         "name": stop_details.get("name"),
         "long_name": stop_details.get("long_name"),
         "active": stop_details.get("active"),
+        "coords": stop_details.get("location"),
+        "indicator": stop_details.get("indicator", ""),
+        "bearing": stop_details.get("bearing", ""),
         "services": services,
     }

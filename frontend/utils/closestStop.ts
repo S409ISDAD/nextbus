@@ -14,11 +14,11 @@ function getCurrentPosition(): Promise<GeolocationPosition> {
     });
 }
 
-const getClosestStop = async (position: GeolocationPosition) => {
-    const lat = position.coords.latitude
-    const lng = position.coords.longitude
+const getClosestStop = async (position: number[], ignore?: string) => {
+    const lat = position[0]
+    const lng = position[1]
 
-    const response = await api.get<closestStop>(`/location/closest?lat=${lat}&lng=${lng}`)
+    const response = await api.get<closestStop>(`/location/closest?lat=${lat}&lng=${lng}&ignore=${ignore}`)
 
     const stop_id = response.data.stop_id
 

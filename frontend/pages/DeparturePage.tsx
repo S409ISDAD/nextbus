@@ -7,6 +7,9 @@ import { useNavigate, useParams } from "react-router";
 import { Skeleton } from "@radix-ui/themes";
 import { Card } from "../components/ui/Card";
 import timeTo from "../utils/timeTo";
+import getClosestStop from "../utils/closestStop";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faUpRightFromSquare } from "@fortawesome/free-solid-svg-icons";
 
 const DeparturePage: React.FC = () => {
     const { stop_id } = useParams();
@@ -15,6 +18,7 @@ const DeparturePage: React.FC = () => {
 
     const [buses, setBuses] = useState<Bus[]>([]);
     const [stop, setStop] = useState<Stop>();
+    const [closestStop, setClosest] = useState<string>();
     const [loading, setLoading] = useState(true);
     const [lastRefreshed, setRefreshed] = useState(new Date());
     const [elapsed, setElapsed] = useState<string>("0s");
@@ -54,6 +58,11 @@ const DeparturePage: React.FC = () => {
 
                 if (stop) {
                     setStop(stop);
+                    const closestStop = await getClosestStop(
+                        stop.coords.reverse(),
+                        stop_id
+                    );
+                    setClosest(closestStop);
                 }
 
                 const departures = await fetchDepartures(id);
@@ -92,11 +101,30 @@ const DeparturePage: React.FC = () => {
     return (
         <div className="p-5 md:mx-20">
             <div className="flex flex-col gap-2">
-                <div className="flex flex-col justify-center gap-1 align-center">
+                <div className="flex flex-col items-center justify-center gap-1">
                     <span className="text-4xl font-bold text-center">
-                        {stop?.stop_name}
+                        {stop?.stop_name}{" "}
+                        {stop?.indicator
+                            ? `(${stop.indicator})`
+                            : stop?.bearing
+                            ? `(${stop.bearing})`
+                            : ""}
                     </span>
-                    <span className="text-center">{stop?.long_name}</span>
+                    <div className="flex items-center gap-2">
+                        <span className="text-center">{stop?.stop_id}</span>
+                        <div
+                            className="flex items-center gap-2 p-2 cursor-pointer bg-neutral-900 w-fit rounded-2xl border-1 border-neutral-800"
+                            onClick={() => {
+                                setBuses([]);
+                                setLoading(true);
+                                navigate(`/departures/${closestStop}`);
+                            }}>
+                            Nearest Stop{" "}
+                            <FontAwesomeIcon
+                                icon={faUpRightFromSquare}
+                                width="20px"></FontAwesomeIcon>
+                        </div>
+                    </div>
                 </div>
                 <div className="flex flex-row flex-wrap justify-center gap-1">
                     {stop?.services
