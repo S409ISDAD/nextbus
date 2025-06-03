@@ -97,6 +97,10 @@ const JourneyPage: React.FC = () => {
         return () => clearInterval(interval);
     }, [bus_id, journey_id]);
 
+    if (loading) {
+        return <></>;
+    }
+
     return (
         <div className="lg:mx-40">
             <div className="flex flex-col p-5 pb-0">
@@ -108,6 +112,11 @@ const JourneyPage: React.FC = () => {
                         <span className="text-center">
                             {journey?.stops.length} stops
                         </span>
+                        {msg ? (
+                            <span className="text-red-400">{msg}</span>
+                        ) : (
+                            <></>
+                        )}
                     </div>
 
                     <div className="flex justify-center gap-2">

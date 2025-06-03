@@ -8,7 +8,7 @@ const BusPage: React.FC = () => {
                 <DepartureBoard stop_id="" closest={true}></DepartureBoard>
                 <DepartureBoard stop_id="149000007530"></DepartureBoard>
                 <DepartureBoard stop_id="1900HA110364"></DepartureBoard>
-                <DepartureBoard stop_id="1900HA110365"></DepartureBoard>
+                <DepartureBoard stop_id="1900HA020369"></DepartureBoard>
             </div>
         </div>
     );

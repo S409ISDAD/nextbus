@@ -1,5 +1,5 @@
 fastapi[standard]
-redis
+redis[async]
 aiohttp
 geopy
 python-dateutil
