@@ -84,18 +84,20 @@ async def build_bus(
 
     if service:
         service_info = await get_service_info(service, r)
-        service_info = Service(**service_info)
     else:
         service_info = None
 
-    if stop_id:
-        times = await calculate_expected(
-            delay, progress.get("sequence", 0), stop_id, bus_id, journey_id, r
-        )
-        if not times:
-            return None
-    else:
-        times = {}
+    times = await calculate_expected(
+        delay, progress.get("sequence", 0), stop_id, bus_id, journey_id, r
+    )
+    print(times)
+    if not times:
+        return None
+    if not times.include:
+        return None
+
+    if times.finished and stop_id:
+        return None
 
     return TrackedBus(
         id=bus_id,
@@ -105,9 +107,10 @@ async def build_bus(
         fleet_num=fleet_num,
         journey_id=journey_id,
         delay=delay,
-        expected=times.get("expected"),
-        scheduled=times.get("scheduled"),
-        started=not times.get("not_started"),
+        expected=times.expected,
+        scheduled=times.scheduled,
+        started=times.started,
+        finished=times.finished,
         progress=progress,
         speed=None,
         coords=coords,

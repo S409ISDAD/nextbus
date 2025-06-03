@@ -1,4 +1,5 @@
 from backend.config import API_BASE, VEHICLES_BASE
+from backend.models.service import Service
 from backend.services.caching import SERVICE_CACHE, TRIPS_CACHE, get_cached
 from backend.utils.fetch_json import fetch_json
 from redis.asyncio import Redis
@@ -27,7 +28,11 @@ async def get_service_info(service, r: Redis):
         r,
     )
 
-    return service_info
+    return Service(
+        id=service_info.get("id"),
+        line_name=service_info.get("line_name"),
+        detail=service_info.get("detail"),
+    )
 
 
 async def fetch_active_buses(service, r: Redis):

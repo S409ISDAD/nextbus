@@ -3,3 +3,4 @@ redis[async]
 aiohttp
 geopy
 python-dateutil
+uvicorn[standard]

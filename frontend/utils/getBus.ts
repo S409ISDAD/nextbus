@@ -13,6 +13,7 @@ export interface BusResponse {
     expected?: number;
     scheduled?: number;
     started: boolean;
+    finished: boolean;
     progress?: ProgressInfo;
     coords?: number[];
 }

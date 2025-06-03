@@ -12,6 +12,7 @@ export interface Bus {
     expected: Date;
     scheduled: Date;
     started: boolean;
+    finished: boolean;
     progress?: ProgressInfo;
     coords?: number[];
     timeto: string;

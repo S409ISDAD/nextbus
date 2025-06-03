@@ -16,6 +16,7 @@ class TrackedBus(BaseModel):
     expected: Optional[int]  # expected arrival time at stop (unix timestamp)
     scheduled: Optional[int]  # scheduled arrival time at stop (unix timestamp)
     started: bool  # if the bus has started the route or is waiting at the first stop
+    finished: bool  # if the bus has finished the route
     speed: Optional[float]  # how fast the bus is going
     progress: Progress
     coords: list[float]

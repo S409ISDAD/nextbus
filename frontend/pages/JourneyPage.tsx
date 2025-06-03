@@ -6,9 +6,11 @@ import { useNavigate, useParams } from "react-router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
     faBus,
+    faCalendarXmark,
     faFlagCheckered,
     faLocationDot,
     faMapPin,
+    faSadTear,
 } from "@fortawesome/free-solid-svg-icons";
 
 const JourneyPage: React.FC = () => {
@@ -129,64 +131,126 @@ const JourneyPage: React.FC = () => {
                         </span>
                     </div>
                 </div>
-                <div className="flex flex-col gap-3 mt-4 overflow-y-auto grow max-h-[60vh] md:max-h-[80vh]">
-                    {journey?.stops.map((stop, idx) => (
-                        <>
-                            <div
-                                className={`flex items-center gap-2 ${
-                                    bus?.progress &&
-                                    idx <= bus?.progress.sequence &&
-                                    bus.progress.progress > 0.1
-                                        ? "opacity-60"
-                                        : ""
-                                } ${
-                                    bus?.progress &&
-                                    idx < bus?.progress.sequence &&
-                                    bus.progress.progress < 0.1
-                                        ? "opacity-60"
-                                        : ""
-                                }`}
-                                key={stop.stop_id}>
-                                {bus?.progress &&
-                                bus?.progress.sequence == idx &&
-                                bus.progress.progress < 0.1 ? (
-                                    <div ref={busRef}>
-                                        <div className="flex items-center justify-center p-2 bg-red-400 rounded-lg cursor-pointer w-9 h-9">
-                                            <FontAwesomeIcon icon={faBus} />
+                {bus?.finished ? (
+                    <div className="flex flex-col gap-3 mt-4 grow h-[60vh] md:max-h-[80vh] items-center justify-center">
+                        <FontAwesomeIcon
+                            icon={faCalendarXmark}
+                            size="5x"
+                            className="text-neutral-400"></FontAwesomeIcon>
+                        <span className="text-xl font-bold text-neutral-500">
+                            This service has ended.
+                        </span>
+                    </div>
+                ) : (
+                    <div className="flex flex-col gap-3 mt-4 overflow-y-auto grow max-h-[60vh] md:max-h-[80vh]">
+                        {journey?.stops.map((stop, idx) => (
+                            <>
+                                <div
+                                    className={`flex items-center gap-2 ${
+                                        bus?.progress &&
+                                        idx <= bus?.progress.sequence &&
+                                        bus.progress.progress > 0.1
+                                            ? "opacity-60"
+                                            : ""
+                                    } ${
+                                        bus?.progress &&
+                                        idx < bus?.progress.sequence &&
+                                        bus.progress.progress < 0.1
+                                            ? "opacity-60"
+                                            : ""
+                                    }`}
+                                    key={stop.stop_id}>
+                                    {bus?.progress &&
+                                    bus?.progress.sequence == idx &&
+                                    bus.progress.progress < 0.1 ? (
+                                        <div ref={busRef}>
+                                            <div className="flex items-center justify-center p-2 bg-red-400 rounded-lg cursor-pointer w-9 h-9">
+                                                <FontAwesomeIcon icon={faBus} />
+                                            </div>
                                         </div>
-                                    </div>
-                                ) : (
-                                    <div
-                                        className={`flex items-center justify-center p-2 bg-blue-400 rounded-lg cursor-pointer w-9 h-9`}
-                                        onClick={() =>
-                                            navigate(
-                                                `/departures/${stop.stop_id}`
-                                            )
-                                        }
-                                        style={{
-                                            cursor: "pointer",
-                                        }}>
-                                        <FontAwesomeIcon
-                                            icon={
-                                                idx ==
-                                                    journey.stops.length - 1 ||
-                                                idx == 0
-                                                    ? faFlagCheckered
-                                                    : stop.minor
-                                                    ? faLocationDot
-                                                    : faMapPin
+                                    ) : (
+                                        <div
+                                            className={`flex items-center justify-center p-2 bg-blue-400 rounded-lg cursor-pointer w-9 h-9`}
+                                            onClick={() =>
+                                                navigate(
+                                                    `/departures/${stop.stop_id}`
+                                                )
                                             }
-                                        />
-                                    </div>
-                                )}
-                                <div className="bg-neutral-700 h-[1px] m-1 w-5"></div>
-                                <div className="flex flex-col">
-                                    <span>{stop.name}</span>
-                                    <div className="flex flex-row gap-6">
-                                        {bus?.progress &&
-                                        bus?.progress.sequence >= idx ? (
-                                            <>
-                                                {stop.actual_time ? (
+                                            style={{
+                                                cursor: "pointer",
+                                            }}>
+                                            <FontAwesomeIcon
+                                                icon={
+                                                    idx ==
+                                                        journey.stops.length -
+                                                            1 || idx == 0
+                                                        ? faFlagCheckered
+                                                        : stop.minor
+                                                        ? faLocationDot
+                                                        : faMapPin
+                                                }
+                                            />
+                                        </div>
+                                    )}
+                                    <div className="bg-neutral-700 h-[1px] m-1 w-5"></div>
+                                    <div className="flex flex-col">
+                                        <span>{stop.name}</span>
+                                        <div className="flex flex-row gap-6">
+                                            {bus?.progress &&
+                                            bus?.progress.sequence >= idx ? (
+                                                <>
+                                                    {stop.actual_time &&
+                                                    bus?.progress?.sequence !=
+                                                        0 ? (
+                                                        <span className="text-red-400">
+                                                            <s>
+                                                                {stop.aimed_time.toLocaleTimeString(
+                                                                    [],
+                                                                    {
+                                                                        hour: "2-digit",
+                                                                        minute: "2-digit",
+                                                                    }
+                                                                )}
+                                                            </s>
+                                                        </span>
+                                                    ) : (
+                                                        <>
+                                                            <span>
+                                                                {stop.aimed_time.toLocaleTimeString(
+                                                                    [],
+                                                                    {
+                                                                        hour: "2-digit",
+                                                                        minute: "2-digit",
+                                                                    }
+                                                                )}
+                                                            </span>
+                                                            <span className="font-bold">
+                                                                No Data
+                                                            </span>
+                                                        </>
+                                                    )}
+                                                    {stop.actual_time &&
+                                                        bus?.progress
+                                                            ?.sequence != 0 && (
+                                                            <span className="font-bold text-orange-400">
+                                                                Departed:{" "}
+                                                                {stop.actual_time.toLocaleTimeString(
+                                                                    [],
+                                                                    {
+                                                                        hour: "2-digit",
+                                                                        minute: "2-digit",
+                                                                    }
+                                                                )}
+                                                            </span>
+                                                        )}
+                                                </>
+                                            ) : stop.expt_time &&
+                                              bus?.progress?.sequence != 0 &&
+                                              Math.abs(
+                                                  stop.expt_time.getTime() -
+                                                      stop.aimed_time.getTime()
+                                              ) > 60000 ? (
+                                                <>
                                                     <span className="text-red-400">
                                                         <s>
                                                             {stop.aimed_time.toLocaleTimeString(
@@ -198,26 +262,9 @@ const JourneyPage: React.FC = () => {
                                                             )}
                                                         </s>
                                                     </span>
-                                                ) : (
-                                                    <>
-                                                        <span>
-                                                            {stop.aimed_time.toLocaleTimeString(
-                                                                [],
-                                                                {
-                                                                    hour: "2-digit",
-                                                                    minute: "2-digit",
-                                                                }
-                                                            )}
-                                                        </span>
-                                                        <span className="font-bold">
-                                                            No Data
-                                                        </span>
-                                                    </>
-                                                )}
-                                                {stop.actual_time && (
-                                                    <span className="font-bold text-orange-400">
-                                                        Departed:{" "}
-                                                        {stop.actual_time.toLocaleTimeString(
+                                                    <span className="font-bold text-blue-400">
+                                                        Expt:{" "}
+                                                        {stop.expt_time.toLocaleTimeString(
                                                             [],
                                                             {
                                                                 hour: "2-digit",
@@ -225,16 +272,10 @@ const JourneyPage: React.FC = () => {
                                                             }
                                                         )}
                                                     </span>
-                                                )}
-                                            </>
-                                        ) : stop.expt_time &&
-                                          Math.abs(
-                                              stop.expt_time.getTime() -
-                                                  stop.aimed_time.getTime()
-                                          ) > 60000 ? (
-                                            <>
-                                                <span className="text-red-400">
-                                                    <s>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <span className="text-green-400">
                                                         {stop.aimed_time.toLocaleTimeString(
                                                             [],
                                                             {
@@ -242,58 +283,36 @@ const JourneyPage: React.FC = () => {
                                                                 minute: "2-digit",
                                                             }
                                                         )}
-                                                    </s>
-                                                </span>
-                                                <span className="font-bold text-blue-400">
-                                                    Expt:{" "}
-                                                    {stop.expt_time.toLocaleTimeString(
-                                                        [],
-                                                        {
-                                                            hour: "2-digit",
-                                                            minute: "2-digit",
-                                                        }
-                                                    )}
-                                                </span>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <span className="text-green-400">
-                                                    {stop.aimed_time.toLocaleTimeString(
-                                                        [],
-                                                        {
-                                                            hour: "2-digit",
-                                                            minute: "2-digit",
-                                                        }
-                                                    )}
-                                                </span>
+                                                    </span>
 
-                                                <span className="font-bold text-green-400 ">
-                                                    On Time
-                                                </span>
-                                            </>
-                                        )}
+                                                    <span className="font-bold text-green-400 ">
+                                                        On Time
+                                                    </span>
+                                                </>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                            {bus?.progress &&
-                            bus?.progress.sequence == idx &&
-                            bus.progress.progress > 0.1 ? (
-                                <div
-                                    ref={busRef}
-                                    className="flex flex-row items-center gap-3">
-                                    <div className="flex items-center justify-center p-2 bg-red-400 rounded-lg cursor-pointer w-9 h-9">
-                                        <FontAwesomeIcon icon={faBus} />
+                                {bus?.progress &&
+                                bus?.progress.sequence == idx &&
+                                bus.progress.progress > 0.1 ? (
+                                    <div
+                                        ref={busRef}
+                                        className="flex flex-row items-center gap-3">
+                                        <div className="flex items-center justify-center p-2 bg-red-400 rounded-lg cursor-pointer w-9 h-9">
+                                            <FontAwesomeIcon icon={faBus} />
+                                        </div>
+                                        <span className="font-bold">
+                                            Heading to next stop
+                                        </span>
                                     </div>
-                                    <span className="font-bold">
-                                        Heading to next stop
-                                    </span>
-                                </div>
-                            ) : (
-                                <></>
-                            )}
-                        </>
-                    ))}
-                </div>
+                                ) : (
+                                    <></>
+                                )}
+                            </>
+                        ))}
+                    </div>
+                )}
             </div>
         </div>
     );

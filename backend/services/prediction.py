@@ -1,5 +1,6 @@
 from datetime import timedelta
 import datetime
+from backend.models.times import Times
 from backend.services.journeys import get_vehicle_journey
 from datetime import datetime as dt
 
@@ -11,6 +12,11 @@ async def calculate_expected(delay, sequence, stop_id, bus_id, journey_id, r):
     current_time = dt.now(datetime.timezone.utc).astimezone(uk_timezone)
 
     not_started = False
+    finished = False
+    include = True
+
+    expected_time = None
+    scheduled_time = None
 
     stop_idx = 0
 
@@ -26,7 +32,8 @@ async def calculate_expected(delay, sequence, stop_id, bus_id, journey_id, r):
         if stop_time.stop_id == stop_id:
             aimed = stop_time.aimed_time
             if not aimed:
-                return None
+                include = False
+                break
             scheduled_time = dt.fromtimestamp(aimed).astimezone(uk_timezone)
 
             delay += (
@@ -39,13 +46,28 @@ async def calculate_expected(delay, sequence, stop_id, bus_id, journey_id, r):
             expected_time = scheduled_time + timedelta(seconds=delay)
 
             if expected_time < current_time:
-                return None
+                include = False
+                break
+        if stop_idx == len(journey.stops) - 1:
+            scheduled_time = dt.fromtimestamp(stop_time.aimed_time).astimezone(
+                uk_timezone
+            )
 
-            return {
-                "expected": expected_time.timestamp(),
-                "scheduled": scheduled_time.timestamp(),
-                "not_started": not_started,
-            }
+            if scheduled_time < current_time:
+                finished = True
+
         stop_idx += 1
 
-    return None
+    if expected_time:
+        expected_time = int(expected_time.timestamp())
+
+    if scheduled_time:
+        scheduled_time = int(scheduled_time.timestamp())
+
+    return Times(
+        expected=expected_time,
+        scheduled=scheduled_time,
+        started=not not_started,
+        finished=finished,
+        include=include,
+    )
