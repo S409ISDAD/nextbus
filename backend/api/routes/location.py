@@ -1,16 +1,7 @@
-import asyncio
-import datetime
-from datetime import datetime as dt, timedelta
-import math
-import time
 from fastapi import APIRouter, Depends
-from backend.models.bus import Bus
-from backend.services import bustimes
+
 from backend.deps import get_redis
-from backend.services.caching import (
-    get_cached,
-    STOPS_CACHE,
-)
+from backend.services import stops
 
 router = APIRouter()
 
@@ -25,4 +16,4 @@ async def closest_stops(lat: float, lng: float, ignore: str, redis=Depends(get_r
     #     redis,
     # )
 
-    return await bustimes.get_closest_stop(lat, lng, ignore)
+    return await stops.get_closest_stop(lat, lng, ignore)

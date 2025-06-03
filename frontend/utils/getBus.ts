@@ -1,25 +1,31 @@
+import type { ProgressInfo } from "../models/ProgressInfo";
+import type { ServiceInfo } from "../models/ServiceInfo";
 import api from "../src/api"
 
-interface Progress {
-    sequence: number;
-    prev_stop: string;
-    next_stop: string;
-    progress: number;
-}
-
 export interface BusResponse {
-    progress: Progress
+    id: number;
+    service: ServiceInfo;
+    destination: string;
+    reg: string;
+    fleet_num: string;
+    journey_id: number;
+    delay: number;
+    expected?: number;
+    scheduled?: number;
+    started: boolean;
+    progress?: ProgressInfo;
+    coords?: number[];
 }
 
 const getBus = async (bus_id: string) => {
     try {
-        const response = await api.get<[BusResponse]>(
+        const response = await api.get<BusResponse>(
             `/buses/?bus_id=${bus_id}`
         );
 
-        console.log(response.data[0])
+        console.log(response.data)
 
-        return response.data[0]
+        return response.data
 
     } catch (error) {
         console.error("failed to get bus", error);

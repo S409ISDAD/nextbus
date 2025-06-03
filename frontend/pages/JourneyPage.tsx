@@ -147,7 +147,8 @@ const JourneyPage: React.FC = () => {
                                         : ""
                                 }`}
                                 key={stop.stop_id}>
-                                {bus?.progress.sequence == idx &&
+                                {bus?.progress &&
+                                bus?.progress.sequence == idx &&
                                 bus.progress.progress < 0.1 ? (
                                     <div ref={busRef}>
                                         <div className="flex items-center justify-center p-2 bg-red-400 rounded-lg cursor-pointer w-9 h-9">
@@ -209,7 +210,7 @@ const JourneyPage: React.FC = () => {
                                                             )}
                                                         </span>
                                                         <span className="font-bold">
-                                                            Did not stop
+                                                            No Data
                                                         </span>
                                                     </>
                                                 )}
@@ -274,7 +275,8 @@ const JourneyPage: React.FC = () => {
                                     </div>
                                 </div>
                             </div>
-                            {bus?.progress.sequence == idx &&
+                            {bus?.progress &&
+                            bus?.progress.sequence == idx &&
                             bus.progress.progress > 0.1 ? (
                                 <div
                                     ref={busRef}

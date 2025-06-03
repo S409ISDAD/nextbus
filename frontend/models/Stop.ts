@@ -2,7 +2,7 @@ import type { ServiceInfo } from "./ServiceInfo";
 
 export interface Stop {
     stop_id: string;
-    stop_name: string;
+    name: string;
     long_name: string;
     indicator: string;
     bearing: string;

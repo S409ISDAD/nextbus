@@ -9,12 +9,10 @@ export interface Bus {
     fleet_num: string;
     journey_id: number;
     delay: number;
-    lateness: string;
     expected: Date;
     scheduled: Date;
     started: boolean;
     progress?: ProgressInfo;
     coords?: number[];
-    timestamp?: string;
     timeto: string;
 }

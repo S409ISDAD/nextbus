@@ -1,0 +1,114 @@
+from typing import Optional
+from dateutil import parser
+from redis.asyncio import Redis
+
+from backend.config import VEHICLES_BASE
+from backend.models.service import Service
+from backend.models.trackedbus import TrackedBus
+from backend.services.caching import BUS_CACHE, get_cached
+from backend.services.prediction import calculate_expected
+from backend.services.services import fetch_active_buses, get_service_info
+from backend.utils.fetch_json import fetch_json
+
+
+async def fetch_bus(bus_id, r: Redis):
+    """Fetches specific bus"""
+
+    async def fetch(bus_id):
+        data = await fetch_json(VEHICLES_BASE + f"?id={bus_id}")
+
+        return data
+
+    this_bus = await get_cached(
+        f"bus:{bus_id}",
+        lambda *args: fetch(*args),
+        (bus_id,),
+        BUS_CACHE,
+        r,
+    )
+
+    try:
+        return this_bus[0]
+    except:
+        return None
+
+
+async def fetch_buses_for_service(service, stop_id, r: Redis) -> list[TrackedBus]:
+    buses: list[TrackedBus] = []
+
+    active = await fetch_active_buses(service, r)
+
+    if not active:
+        return []
+
+    for trip in active:
+        bus_id = trip.get("id")
+
+        if not bus_id:
+            continue
+        bus = await build_bus(bus_id, service, r, stop_id)
+        if bus:
+            buses.append(bus)
+
+    return buses
+
+
+async def build_bus(
+    bus_id: int, service: Optional[int], r: Redis, stop_id: str = ""
+) -> TrackedBus | None:
+    this_bus = await fetch_bus(bus_id, r)
+
+    if not this_bus:
+        return None
+
+    delay = this_bus.get("delay")
+
+    if not delay:
+        return None
+
+    timestamp = (
+        parser.isoparse(this_bus.get("datetime")) if this_bus.get("datetime") else None
+    )
+
+    coords = this_bus.get("coordinates", [0, 0])
+    vehicle = this_bus.get("vehicle", {})
+    journey_id = this_bus.get("journey_id")
+    destination = this_bus.get("destination")
+    progress = this_bus.get("progress", {})
+
+    vehicle_name = vehicle["name"].split(" - ")
+    fleet_num = vehicle_name[0] if len(vehicle_name) > 1 else "Unknown"
+    reg = vehicle_name[-1]
+
+    # journey = await get_vehicle_journey(bus_id, journey_id, r)
+
+    if service:
+        service_info = await get_service_info(service, r)
+        service_info = Service(**service_info)
+    else:
+        service_info = None
+
+    if stop_id:
+        times = await calculate_expected(
+            delay, progress.get("sequence", 0), stop_id, bus_id, journey_id, r
+        )
+        if not times:
+            return None
+    else:
+        times = {}
+
+    return TrackedBus(
+        id=bus_id,
+        service=service_info,
+        destination=destination,
+        reg=reg,
+        fleet_num=fleet_num,
+        journey_id=journey_id,
+        delay=delay,
+        expected=times.get("expected"),
+        scheduled=times.get("scheduled"),
+        started=not times.get("not_started"),
+        progress=progress,
+        speed=None,
+        coords=coords,
+    )

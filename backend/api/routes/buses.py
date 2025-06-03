@@ -1,19 +1,13 @@
 from fastapi import APIRouter, Depends
-from backend.services import bustimes
+from backend.models.trackedbus import TrackedBus
+from backend.services import bus
 from backend.deps import get_redis
-from backend.services.caching import get_cached, BUS_CACHE
 
 router = APIRouter()
 
 
-@router.get("/")
+@router.get("/", response_model=TrackedBus)
 async def get_bus(bus_id: int, redis=Depends(get_redis)):
-    bus = await get_cached(
-        f"bus:{bus_id}",
-        lambda *args: bustimes.fetch_bus(*args),
-        (bus_id,),
-        BUS_CACHE,
-        redis,
-    )
+    this_bus = await bus.build_bus(bus_id, None, redis)
 
-    return bus
+    return this_bus

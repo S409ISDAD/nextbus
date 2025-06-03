@@ -133,7 +133,7 @@ function DepartureBoard({ stop_id, closest }: Props) {
                         className="flex justify-center cursor-pointer"
                         onClick={() => navigate(`/departures/${stopID}`)}>
                         <span className="text-xl font-bold text-center wrap-normal">
-                            {stop?.stop_name}{" "}
+                            {stop?.name}{" "}
                             {stop?.indicator
                                 ? `(${stop.indicator})`
                                 : stop?.bearing

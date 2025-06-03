@@ -1,17 +1,15 @@
 import asyncio
 import datetime
-from datetime import datetime as dt, timedelta
 import math
 import time
+from datetime import datetime as dt
+from datetime import timedelta
+
 from fastapi import APIRouter, Depends
-from backend.models.bus import Bus
-from backend.services import bustimes
+
 from backend.deps import get_redis
-from backend.services.caching import (
-    get_cached,
-    SERVICES_CACHE,
-    STOPS_CACHE,
-)
+from backend.models.trackedbus import TrackedBus
+from backend.services import bus, stops
 
 router = APIRouter()
 
@@ -19,27 +17,16 @@ router = APIRouter()
 @router.get("/")
 async def departures_for_stop(stop_id: str, redis=Depends(get_redis)):
     start_time = time.time()
-    buses: list[Bus] = []
+    buses: list[TrackedBus] = []
 
-    services = await get_cached(
-        key=f"services:{stop_id}",
-        func=lambda *args: bustimes.get_services_from_stop(*args),
-        args=(stop_id,),
-        exp=SERVICES_CACHE,
-        r=redis,
-    )
+    services = await stops.get_services_from_stop(stop_id, redis)
 
-    stop_details = await get_cached(
-        f"stops:{stop_id}",
-        lambda *args: bustimes.get_stop_details(*args),
-        (stop_id,),
-        STOPS_CACHE,
-        redis,
-    )
+    stop_details = await stops.get_stop_details(stop_id, redis)
+
     stop_name = stop_details.get("name")
 
     tasks = [
-        bustimes.fetch_buses_for_service(service.get("id"), stop_id, redis)
+        bus.fetch_buses_for_service(service.get("id"), stop_id, redis)
         for service in services
     ]
     for task in asyncio.as_completed(tasks):

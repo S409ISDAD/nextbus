@@ -59,7 +59,7 @@ const DeparturePage: React.FC = () => {
                 if (stop) {
                     setStop(stop);
                     const closestStop = await getClosestStop(
-                        stop.coords.reverse(),
+                        stop.coords,
                         stop_id
                     );
                     setClosest(closestStop);
@@ -103,7 +103,7 @@ const DeparturePage: React.FC = () => {
             <div className="flex flex-col gap-2">
                 <div className="flex flex-col items-center justify-center gap-1">
                     <span className="text-4xl font-bold text-center">
-                        {stop?.stop_name}{" "}
+                        {stop?.name}{" "}
                         {stop?.indicator
                             ? `(${stop.indicator})`
                             : stop?.bearing
@@ -112,18 +112,22 @@ const DeparturePage: React.FC = () => {
                     </span>
                     <div className="flex items-center gap-2">
                         <span className="text-center">{stop?.stop_id}</span>
-                        <div
-                            className="flex items-center gap-2 p-2 cursor-pointer bg-neutral-900 w-fit rounded-2xl border-1 border-neutral-800"
-                            onClick={() => {
-                                setBuses([]);
-                                setLoading(true);
-                                navigate(`/departures/${closestStop}`);
-                            }}>
-                            Nearest Stop{" "}
-                            <FontAwesomeIcon
-                                icon={faUpRightFromSquare}
-                                width="20px"></FontAwesomeIcon>
-                        </div>
+                        {closestStop ? (
+                            <div
+                                className="flex items-center gap-2 p-2 cursor-pointer bg-neutral-900 w-fit rounded-2xl border-1 border-neutral-800"
+                                onClick={() => {
+                                    setBuses([]);
+                                    setLoading(true);
+                                    navigate(`/departures/${closestStop}`);
+                                }}>
+                                Nearest Stop{" "}
+                                <FontAwesomeIcon
+                                    icon={faUpRightFromSquare}
+                                    width="20px"></FontAwesomeIcon>
+                            </div>
+                        ) : (
+                            <></>
+                        )}
                     </div>
                 </div>
                 <div className="flex flex-row flex-wrap justify-center gap-1">
