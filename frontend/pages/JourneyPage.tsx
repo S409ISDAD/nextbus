@@ -114,6 +114,12 @@ const JourneyPage: React.FC = () => {
                         <span className="text-center">
                             {journey?.stops.length} stops
                         </span>
+                        <a
+                            className="text-teal-500 underline"
+                            href={`https://bustimes.org/vehicles/${bus?.id}#journeys/${journey_id}`}
+                            target="_blank">
+                            View on bustimes.org
+                        </a>
                         {msg ? (
                             <span className="text-red-400">{msg}</span>
                         ) : (

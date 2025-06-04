@@ -100,8 +100,8 @@ const DeparturePage: React.FC = () => {
 
     return (
         <div className="p-5 md:mx-20">
-            <div className="flex flex-col gap-2">
-                <div className="flex flex-col items-center justify-center gap-1">
+            <div className="flex flex-col gap-4">
+                <div className="flex flex-col items-center justify-center gap-3">
                     <span className="text-4xl font-bold text-center">
                         {stop?.name}{" "}
                         {stop?.indicator
@@ -110,7 +110,7 @@ const DeparturePage: React.FC = () => {
                             ? `(${stop.bearing})`
                             : ""}
                     </span>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center justify-center gap-4 gap-y-1">
                         <span className="text-center">{stop?.stop_id}</span>
                         {closestStop ? (
                             <div
@@ -128,6 +128,12 @@ const DeparturePage: React.FC = () => {
                         ) : (
                             <></>
                         )}
+                        <a
+                            className="text-teal-500 underline"
+                            href={`https://bustimes.org/stops/${stop?.stop_id}`}
+                            target="_blank">
+                            View on bustimes.org
+                        </a>
                     </div>
                 </div>
                 <div className="flex flex-row flex-wrap justify-center gap-1">
