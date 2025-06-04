@@ -99,6 +99,9 @@ async def build_bus(
     if times.finished and stop_id:
         return None
 
+    if not times.started:
+        delay = 0
+
     return TrackedBus(
         id=bus_id,
         service=service_info,

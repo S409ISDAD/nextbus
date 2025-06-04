@@ -22,11 +22,11 @@ async def calculate_expected(delay, sequence, stop_id, bus_id, journey_id, r):
 
     for stop_time in journey.stops:
         if stop_idx == 0:
-            scheduled_time = dt.fromtimestamp(stop_time.aimed_time).astimezone(
+            scheduled_time_start = dt.fromtimestamp(stop_time.aimed_time).astimezone(
                 uk_timezone
             )
 
-            if (scheduled_time > current_time) and (sequence < 2):
+            if (scheduled_time_start > current_time) and (sequence < 2):
                 not_started = True
 
         if stop_time.stop_id == stop_id:
@@ -49,11 +49,11 @@ async def calculate_expected(delay, sequence, stop_id, bus_id, journey_id, r):
                 include = False
                 break
         if stop_idx == len(journey.stops) - 1:
-            scheduled_time = dt.fromtimestamp(stop_time.aimed_time).astimezone(
+            scheduled_time_end = dt.fromtimestamp(stop_time.aimed_time).astimezone(
                 uk_timezone
             )
 
-            if scheduled_time < current_time:
+            if scheduled_time_end + timedelta(seconds=delay + 45) < current_time:
                 finished = True
 
         stop_idx += 1
