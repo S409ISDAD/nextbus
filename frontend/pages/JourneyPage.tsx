@@ -86,7 +86,7 @@ const JourneyPage: React.FC = () => {
 
             const interpolatedProgress =
                 prevProgress +
-                progressDelta * -(timeDelta / predictionDuration);
+                -Math.abs(progressDelta * -(timeDelta / predictionDuration));
 
             if (upcoming.sequence > sequence) {
                 setProg(0);
