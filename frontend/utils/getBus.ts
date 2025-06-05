@@ -1,6 +1,8 @@
 import type { ProgressInfo } from "../models/ProgressInfo";
 import type { ServiceInfo } from "../models/ServiceInfo";
+import type { Prediction } from "../models/Bus";
 import api from "../src/api"
+
 
 export interface BusResponse {
     id: number;
@@ -15,6 +17,7 @@ export interface BusResponse {
     started: boolean;
     finished: boolean;
     progress?: ProgressInfo;
+    predictions: Prediction[]
     coords?: number[];
 }
 

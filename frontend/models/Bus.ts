@@ -15,5 +15,13 @@ export interface Bus {
     finished: boolean;
     progress?: ProgressInfo;
     coords?: number[];
+    predictions: Prediction[];
     timeto: string;
+}
+
+export interface Prediction {
+    timestamp: number;
+    sequence: number;
+    progress: number;
+    location: number[];
 }

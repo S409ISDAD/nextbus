@@ -7,7 +7,7 @@ from redis.asyncio import Redis
 
 async def get_service_info(service, r: Redis):
     async def fetch(service):
-        data = await fetch_json(API_BASE + f"services/{service}")
+        data = await fetch_json(API_BASE + f"/services/{service}")
 
         if not data:
             return None

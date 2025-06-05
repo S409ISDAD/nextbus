@@ -13,12 +13,33 @@ import {
     faSadTear,
 } from "@fortawesome/free-solid-svg-icons";
 
+const BusProgress = ({ progress }: { progress: number }) => {
+    const translateY = (1 - progress) * 100;
+
+    return (
+        <div className="flex flex-row justify-center transition-all duration-300 w-9 ">
+            <div className="w-0.5  rounded-lg bg-neutral-600 pt-9">
+                <div
+                    className="flex flex-row items-center gap-3 transition-transform duration-300 translate-x-[-17px] w-max"
+                    style={{ transform: `translateY(-${translateY}%)` }}>
+                    <div className="flex items-center justify-center p-2 mt-5 bg-red-400 rounded-full w-9 h-9">
+                        <FontAwesomeIcon icon={faBus} />
+                    </div>
+                    <span className="mt-5 font-bold">Heading to next stop</span>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const JourneyPage: React.FC = () => {
     const { bus_id, journey_id } = useParams();
 
     const navigate = useNavigate();
 
     const [bus, setBus] = useState<BusResponse>();
+    const [sequence, setSeq] = useState<number>(0);
+    const [progress, setProg] = useState<number>(0);
     const [journey, setJourney] = useState<Journey>();
     const [loading, setLoading] = useState(true);
     const [lastRefreshed, setRefreshed] = useState(new Date());
@@ -37,6 +58,46 @@ const JourneyPage: React.FC = () => {
         }, 1000);
         return () => clearInterval(interval);
     }, [lastRefreshed]);
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            const now = new Date();
+
+            if (!bus?.predictions || bus.predictions.length < 2) return;
+
+            const upcoming = bus.predictions.find((pred, idx) => {
+                const nextTime = pred.timestamp * 1000;
+                return nextTime > now.getTime() && idx > 0;
+            });
+
+            if (!upcoming) return;
+
+            const idx = bus.predictions.indexOf(upcoming);
+            const prev = bus.predictions[idx - 1];
+
+            const newProgress = upcoming.progress;
+            const prevProgress = prev.progress;
+
+            const progressDelta = newProgress - prevProgress;
+
+            const timeDelta = upcoming.timestamp * 1000 - now.getTime();
+            const predictionDuration =
+                (upcoming.timestamp - prev.timestamp) * 1000;
+
+            const interpolatedProgress =
+                prevProgress +
+                progressDelta * -(timeDelta / predictionDuration);
+
+            if (upcoming.sequence > sequence) {
+                setProg(0);
+            } else {
+                setProg(interpolatedProgress);
+            }
+
+            setSeq(upcoming.sequence);
+        }, 100);
+        return () => clearInterval(interval);
+    }, [progress, sequence]);
 
     const busRef = useRef<HTMLDivElement>(null);
 
@@ -69,6 +130,8 @@ const JourneyPage: React.FC = () => {
 
                 if (bus) {
                     setBus(bus);
+                    setSeq(bus.predictions[0].sequence);
+                    setProg(bus.predictions[0].progress);
                 } else {
                     setMsg("Failed to fetch bus. Try reloading the page");
                 }
@@ -154,22 +217,16 @@ const JourneyPage: React.FC = () => {
                             <>
                                 <div
                                     className={`flex items-center gap-2 ${
-                                        bus?.progress &&
-                                        idx <= bus?.progress.sequence &&
-                                        bus.progress.progress > 0.1
+                                        idx <= sequence && progress > 0.05
                                             ? "opacity-60"
                                             : ""
                                     } ${
-                                        bus?.progress &&
-                                        idx < bus?.progress.sequence &&
-                                        bus.progress.progress < 0.1
+                                        idx < sequence && progress < 0.05
                                             ? "opacity-60"
                                             : ""
                                     }`}
                                     key={stop.stop_id}>
-                                    {bus?.progress &&
-                                    bus?.progress.sequence == idx &&
-                                    bus.progress.progress < 0.1 ? (
+                                    {sequence == idx && progress < 0.05 ? (
                                         <div ref={busRef}>
                                             <div className="flex items-center justify-center p-2 bg-red-400 rounded-lg cursor-pointer w-9 h-9">
                                                 <FontAwesomeIcon icon={faBus} />
@@ -203,12 +260,10 @@ const JourneyPage: React.FC = () => {
                                     <div className="flex flex-col">
                                         <span>{stop.name}</span>
                                         <div className="flex flex-row gap-6">
-                                            {bus?.progress &&
-                                            bus?.progress.sequence >= idx ? (
+                                            {sequence >= idx ? (
                                                 <>
                                                     {stop.actual_time &&
-                                                    bus?.progress?.sequence !=
-                                                        0 ? (
+                                                    sequence != 0 ? (
                                                         <span className="text-red-400">
                                                             <s>
                                                                 {stop.aimed_time.toLocaleTimeString(
@@ -237,8 +292,7 @@ const JourneyPage: React.FC = () => {
                                                         </>
                                                     )}
                                                     {stop.actual_time &&
-                                                        bus?.progress
-                                                            ?.sequence != 0 && (
+                                                        sequence != 0 && (
                                                             <span className="font-bold text-orange-400">
                                                                 Departed:{" "}
                                                                 {stop.actual_time.toLocaleTimeString(
@@ -252,7 +306,7 @@ const JourneyPage: React.FC = () => {
                                                         )}
                                                 </>
                                             ) : stop.expt_time &&
-                                              bus?.progress?.sequence != 0 &&
+                                              sequence != 0 &&
                                               Math.abs(
                                                   stop.expt_time.getTime() -
                                                       stop.aimed_time.getTime()
@@ -271,13 +325,14 @@ const JourneyPage: React.FC = () => {
                                                     </span>
                                                     <span className="font-bold text-blue-400">
                                                         Expt:{" "}
-                                                        {stop.expt_time.toLocaleTimeString(
-                                                            [],
-                                                            {
-                                                                hour: "2-digit",
-                                                                minute: "2-digit",
-                                                            }
-                                                        )}
+                                                        {stop.expt_time
+                                                            .toLocaleTimeString
+                                                            // [],
+                                                            // {
+                                                            //     hour: "2-digit",
+                                                            //     minute: "2-digit",
+                                                            // }
+                                                            ()}
                                                     </span>
                                                 </>
                                             ) : (
@@ -300,18 +355,10 @@ const JourneyPage: React.FC = () => {
                                         </div>
                                     </div>
                                 </div>
-                                {bus?.progress &&
-                                bus?.progress.sequence == idx &&
-                                bus.progress.progress > 0.1 ? (
-                                    <div
-                                        ref={busRef}
-                                        className="flex flex-row items-center gap-3">
-                                        <div className="flex items-center justify-center p-2 bg-red-400 rounded-lg cursor-pointer w-9 h-9">
-                                            <FontAwesomeIcon icon={faBus} />
-                                        </div>
-                                        <span className="font-bold">
-                                            Heading to next stop
-                                        </span>
+                                {sequence == idx && progress > 0.05 ? (
+                                    <div ref={busRef}>
+                                        <BusProgress
+                                            progress={progress}></BusProgress>
                                     </div>
                                 ) : (
                                     <></>

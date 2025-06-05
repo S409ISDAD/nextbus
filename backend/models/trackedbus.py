@@ -1,6 +1,7 @@
 from typing import Optional
 from pydantic import BaseModel
 
+from backend.models.prediction import Prediction
 from backend.models.service import Service
 from .progress import Progress
 
@@ -19,6 +20,7 @@ class TrackedBus(BaseModel):
     finished: bool  # if the bus has finished the route
     speed: Optional[float]  # how fast the bus is going
     progress: Progress
+    predictions: list[Prediction]
     coords: list[float]
 
 

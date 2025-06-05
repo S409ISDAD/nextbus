@@ -1,8 +1,101 @@
 from datetime import timedelta
 import datetime
+import math
+from backend.models.journey import Journey
+from backend.models.prediction import Prediction
+from backend.models.stop import StopTime
 from backend.models.times import Times
 from backend.services.journeys import get_vehicle_journey
 from datetime import datetime as dt
+
+
+async def calculate_sequence(stops: list[StopTime], future_time: int) -> int:
+    sequence = 0
+    for stop in stops:
+        if stop.expt_time and stop.expt_time > future_time:
+            return sequence
+
+        sequence += 1
+
+    return sequence
+
+
+async def calculate_progress(prev_expt: int, next_expt: int, future_time: int) -> float:
+    stops_diff = next_expt - prev_expt
+
+    current_diff = future_time - prev_expt
+
+    if stops_diff == 0:
+        return 0
+
+    progress = round(
+        current_diff / stops_diff, 5
+    )  # 0-1 value of current time between prev and next time
+    return progress
+
+
+async def calculate_loc(
+    progress: float, track: list[list[float]], next_track: list[list[float]]
+) -> list[float]:
+    rough_idx = len(track) * progress
+
+    track = track + next_track
+
+    loc1 = track[math.floor(rough_idx)]
+    loc2 = track[math.ceil(rough_idx)]
+
+    diff_lat = loc2[0] - loc1[0]
+    diff_lng = loc2[1] - loc1[1]
+
+    idx_prog = rough_idx - math.floor(rough_idx)
+
+    loc = [diff_lat * idx_prog, diff_lng * idx_prog]
+
+    return loc
+
+
+async def predict_future(
+    bus_id: int, journey_id: int, delay: int, timestamp: dt | None, ahead: int, r
+) -> list[Prediction]:
+    uk_timezone = datetime.timezone(timedelta(hours=1))
+    current_time = dt.now(datetime.timezone.utc).astimezone(uk_timezone)
+
+    journey = await get_vehicle_journey(bus_id, journey_id, delay, r)
+
+    stops = journey.stops
+
+    predictions = []
+
+    for seconds_ahead in range(ahead + 1):
+        future_time = int(current_time.timestamp() + seconds_ahead)
+
+        sequence = await calculate_sequence(stops, future_time)
+
+        if sequence >= len(stops) - 1:
+            break
+
+        prev_expt = stops[sequence - 1].expt_time
+        next_expt = stops[sequence].expt_time
+
+        if prev_expt and next_expt:
+            progress = await calculate_progress(prev_expt, next_expt, future_time)
+
+            track = stops[sequence].track
+            next_track = stops[sequence + 1].track
+
+            if track and next_track:
+                loc = await calculate_loc(progress, track, next_track)
+
+                prediction = Prediction(
+                    timestamp=future_time,
+                    sequence=sequence,
+                    progress=progress,
+                    location=loc,
+                )
+
+                predictions.append(prediction)
+
+    return predictions
 
 
 async def calculate_expected(delay, sequence, stop_id, bus_id, journey_id, r):

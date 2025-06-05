@@ -6,7 +6,7 @@ from backend.config import VEHICLES_BASE
 from backend.models.service import Service
 from backend.models.trackedbus import TrackedBus
 from backend.services.caching import BUS_CACHE, get_cached
-from backend.services.prediction import calculate_expected
+from backend.services.prediction import calculate_expected, predict_future
 from backend.services.services import fetch_active_buses, get_service_info
 from backend.utils.fetch_json import fetch_json
 
@@ -89,6 +89,8 @@ async def build_bus(
 
     delay += 45  # account for stopping and various other things that increase delay
 
+    predictions = await predict_future(bus_id, journey_id, delay, timestamp, 30, r)
+
     times = await calculate_expected(
         delay, progress.get("sequence", 0), stop_id, bus_id, journey_id, r
     )
@@ -117,6 +119,7 @@ async def build_bus(
         started=times.started,
         finished=times.finished,
         progress=progress,
+        predictions=predictions,
         speed=None,
         coords=coords,
     )

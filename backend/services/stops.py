@@ -8,7 +8,7 @@ from redis.asyncio import Redis
 async def get_stop_details(stop_id, r: Redis):
     async def fetch(stop_id):
         data = await fetch_json(
-            API_BASE + f"stops/{stop_id}",
+            API_BASE + f"/stops/{stop_id}",
         )
 
         if not data:
@@ -31,7 +31,7 @@ async def get_services_from_stop(stop_id, r: Redis):
     """Fetches all services from a stop."""
 
     async def fetch(stop_id):
-        data = await fetch_json(API_BASE + f"services/?stops={stop_id}")
+        data = await fetch_json(API_BASE + f"/services/?stops={stop_id}")
 
         if not data:
             return
