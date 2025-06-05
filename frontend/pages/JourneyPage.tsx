@@ -61,6 +61,7 @@ const JourneyPage: React.FC = () => {
                 const now = new Date();
 
                 if (journey) {
+                    document.title = `${journey.route_name} to ${journey.destination}`;
                     setJourney(journey);
                 } else {
                     setMsg("Failed to fetch journey. Try reloading the page");

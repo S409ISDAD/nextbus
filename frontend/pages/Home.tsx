@@ -1,9 +1,12 @@
-import React from "react";
+import React, { useEffect } from "react";
 import DepartureBoard from "../components/DepartureBoard";
 import { faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 const Home: React.FC = () => {
+    useEffect(() => {
+        document.title = "Bus Home";
+    }, []);
     return (
         <div>
             <div className="flex flex-col items-center justify-center gap-6 pt-9">

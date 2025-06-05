@@ -1,7 +1,10 @@
-import React from "react";
+import React, { useEffect } from "react";
 import DepartureBoard from "../components/DepartureBoard";
 
 const BusPage: React.FC = () => {
+    useEffect(() => {
+        document.title = "Bus Page";
+    }, []);
     return (
         <div className="md:mx-40">
             <div className="flex flex-row flex-wrap items-center justify-center gap-3 p-4">

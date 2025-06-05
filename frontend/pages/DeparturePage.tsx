@@ -58,6 +58,7 @@ const DeparturePage: React.FC = () => {
 
                 if (stop) {
                     setStop(stop);
+                    document.title = stop.name;
                     const closestStop = await getClosestStop(
                         stop.coords,
                         stop_id
