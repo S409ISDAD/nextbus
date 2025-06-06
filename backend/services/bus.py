@@ -89,8 +89,6 @@ async def build_bus(
 
     delay += 45  # account for stopping and various other things that increase delay
 
-    predictions = await predict_future(bus_id, journey_id, delay, timestamp, 30, r)
-
     times = await calculate_expected(
         delay, progress.get("sequence", 0), stop_id, bus_id, journey_id, r
     )
@@ -105,6 +103,10 @@ async def build_bus(
 
     if not times.started:
         delay = 0
+
+    predictions = await predict_future(
+        bus_id, journey_id, delay, timestamp, times.started, 30, r
+    )
 
     return TrackedBus(
         id=bus_id,

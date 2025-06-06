@@ -13,17 +13,17 @@ async def calculate_sequence(stops: list[StopTime], future_time: int) -> int:
     sequence = 0
     for stop in stops:
         if stop.expt_time and stop.expt_time > future_time:
-            return sequence
+            return sequence - 1
 
         sequence += 1
 
-    return sequence
+    return max(0, sequence)
 
 
 async def calculate_progress(prev_expt: int, next_expt: int, future_time: int) -> float:
-    stops_diff = next_expt - prev_expt
+    stops_diff = abs(next_expt - prev_expt)
 
-    current_diff = future_time - prev_expt
+    current_diff = abs(future_time - prev_expt)
 
     if stops_diff == 0:
         return 0
@@ -31,15 +31,14 @@ async def calculate_progress(prev_expt: int, next_expt: int, future_time: int) -
     progress = round(
         current_diff / stops_diff, 5
     )  # 0-1 value of current time between prev and next time
-    return progress
+    return min(progress, 1)
 
 
 async def calculate_loc(
     progress: float, track: list[list[float]], next_track: list[list[float]]
 ) -> list[float]:
     rough_idx = len(track) * progress
-
-    track = track + next_track
+    track.extend(next_track)
 
     loc1 = track[math.floor(rough_idx)]
     loc2 = track[math.ceil(rough_idx)]
@@ -55,7 +54,13 @@ async def calculate_loc(
 
 
 async def predict_future(
-    bus_id: int, journey_id: int, delay: int, timestamp: dt | None, ahead: int, r
+    bus_id: int,
+    journey_id: int,
+    delay: int,
+    timestamp: dt | None,
+    started: bool,
+    ahead: int,
+    r,
 ) -> list[Prediction]:
     uk_timezone = datetime.timezone(timedelta(hours=1))
     current_time = dt.now(datetime.timezone.utc).astimezone(uk_timezone)
@@ -74,8 +79,8 @@ async def predict_future(
         if sequence >= len(stops) - 1:
             break
 
-        prev_expt = stops[sequence - 1].expt_time
-        next_expt = stops[sequence].expt_time
+        prev_expt = stops[sequence].expt_time
+        next_expt = stops[sequence + 1].expt_time
 
         if prev_expt and next_expt:
             progress = await calculate_progress(prev_expt, next_expt, future_time)

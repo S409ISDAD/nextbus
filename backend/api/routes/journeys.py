@@ -15,8 +15,11 @@ async def get_journey(bus_id: int, journey_id: int, redis=Depends(get_redis)):
     if not this_bus:
         return None
 
-    journey = await journeys.get_vehicle_journey(
-        bus_id, journey_id, this_bus.get("delay"), redis
-    )
+    delay = this_bus.get("delay")
+
+    if not delay:
+        return None
+
+    journey = await journeys.get_vehicle_journey(bus_id, journey_id, delay, redis)
 
     return journey
