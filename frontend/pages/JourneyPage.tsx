@@ -12,27 +12,6 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import type { Bus } from "../models/Bus";
 
-const BusProgress = ({ progress }: { progress: number }) => {
-    const translateY = progress * 100;
-
-    return (
-        <div className="flex justify-center transition-all duration-300 w-9">
-            <div className="w-0.5 rounded-full bg-neutral-600 pb-9">
-                <div
-                    className="transition-transform duration-300 translate-x-[-17px] w-max h-25"
-                    style={{ transform: `translateY(${translateY}%)` }}>
-                    <div className="flex flex-row items-center gap-3">
-                        <div className="flex items-center justify-center p-2 bg-red-400 rounded-full w-9 h-9">
-                            <FontAwesomeIcon icon={faBus} />
-                        </div>
-                        <span className="font-bold ">Heading to next stop</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-};
-
 const JourneyPage: React.FC = () => {
     const { bus_id } = useParams();
 
@@ -47,6 +26,27 @@ const JourneyPage: React.FC = () => {
     const [lastRefreshed, setRefreshed] = useState(new Date());
     const [elapsed, setElapsed] = useState<string>("0s");
     const [msg, setMsg] = useState<string>("");
+
+    const BusProgress = () => {
+        const total = bus ? bus?.journey.stops.length : 100;
+
+        const translateY = ((sequence + progress) / total) * 100;
+
+        return (
+            <div className="absolute top-0 left-0 h-full mt-[15px] z-100 w-9 ">
+                <div
+                    className="absolute transition-all duration-300 translate-x-[-10px]"
+                    style={{ top: `${translateY * 0.982}%` }}>
+                    <div
+                        className="flex items-center justify-center p-2 bg-red-400 rounded-full w-9 h-9"
+                        ref={busRef}>
+                        <FontAwesomeIcon icon={faBus} />
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
     useEffect(() => {
         const interval = setInterval(() => {
             const now = new Date();
@@ -91,15 +91,6 @@ const JourneyPage: React.FC = () => {
                 -Math.abs(progressDelta * -(timeDelta / predictionDuration));
 
             setProg(interpolatedProgress);
-            if (upcoming.sequence > sequence) {
-                setProg(0.5);
-            }
-
-            if (interpolatedProgress > 0.95 || interpolatedProgress < 0.05) {
-                setShowProg(false);
-            } else {
-                setShowProg(true);
-            }
 
             setSeq(upcoming.sequence);
         }, 200);
@@ -167,7 +158,7 @@ const JourneyPage: React.FC = () => {
 
     return (
         <div className="lg:mx-40">
-            <div className="flex flex-col p-5 pb-0">
+            <div className="flex flex-col p-5">
                 <div className="flex flex-col gap-2">
                     <div className="flex flex-col items-center justify-center gap-1">
                         <span className="text-4xl font-bold text-center wrap-normal">
@@ -210,112 +201,102 @@ const JourneyPage: React.FC = () => {
                         </span>
                     </div>
                 ) : (
-                    <div className="flex flex-col gap-3 mt-4 overflow-y-auto grow max-h-[60vh] md:max-h-[80vh]">
-                        {journey?.stops.map((stop, idx) => (
-                            <>
+                    <div className="relative flex mt-4">
+                        <div className="relative flex flex-col items-center py-6.5">
+                            <BusProgress></BusProgress>
+                            {journey?.stops.map((stop, idx) => (
                                 <div
-                                    className={`flex items-center gap-2 ${
-                                        idx < sequence ? "opacity-60" : ""
-                                    }`}
-                                    key={stop.stop_id}>
-                                    {sequence == idx && !showProg ? (
-                                        <div ref={busRef}>
-                                            <div className="flex items-center justify-center p-2 bg-red-400 rounded-lg cursor-pointer w-9 h-9">
-                                                <FontAwesomeIcon icon={faBus} />
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div
-                                            className={`flex items-center justify-center p-2 bg-blue-400 rounded-lg cursor-pointer w-9 h-9`}
-                                            onClick={() =>
-                                                navigate(
-                                                    `/departures/${stop.stop_id}`
-                                                )
-                                            }
-                                            style={{
-                                                cursor: "pointer",
-                                            }}>
-                                            <FontAwesomeIcon
-                                                icon={
-                                                    idx ==
-                                                        journey.stops.length -
-                                                            1 || idx == 0
-                                                        ? faFlagCheckered
-                                                        : stop.minor
-                                                        ? faLocationDot
-                                                        : faMapPin
-                                                }
-                                            />
-                                        </div>
+                                    key={stop.stop_id}
+                                    className="relative flex flex-col items-center">
+                                    <div className="z-10 w-4 h-4 rounded-full bg-neutral-700"></div>
+
+                                    {idx < journey.stops.length - 1 && (
+                                        <div className="w-[4px] bg-neutral-700 flex-1 min-h-[56px]"></div>
                                     )}
-                                    <div className="bg-neutral-700 h-[1px] m-1 w-5"></div>
-                                    <div className="flex flex-col">
-                                        <span className="font-bold">
-                                            {stop.name}
-                                        </span>
-                                        <div className="flex flex-row gap-6">
-                                            <span>
-                                                {stop.aimed_time.toLocaleTimeString()}
+                                </div>
+                            ))}
+                        </div>
+                        <div className="flex flex-col gap-1">
+                            {journey?.stops.map((stop, idx) => (
+                                <div
+                                    key={stop.stop_id}
+                                    className="flex flex-row items-center">
+                                    <div className="w-5 bg-neutral-700 rounded-r-full h-[4px]"></div>
+                                    <div
+                                        className="p-2 w-fit h-17 "
+                                        onClick={() =>
+                                            navigate(
+                                                `/departures/${stop.stop_id}`
+                                            )
+                                        }
+                                        style={{
+                                            cursor: "pointer",
+                                        }}>
+                                        <div
+                                            className={` ${
+                                                idx < sequence
+                                                    ? "opacity-40"
+                                                    : ""
+                                            }`}>
+                                            <span className="font-bold">
+                                                {stop.name}
                                             </span>
-                                            {sequence >= idx ? (
-                                                <>
-                                                    {stop.actual_time &&
-                                                    sequence != 0 ? (
-                                                        <></>
-                                                    ) : (
-                                                        <span className="font-bold">
-                                                            No Data
-                                                        </span>
-                                                    )}
-                                                    {stop.actual_time &&
-                                                        sequence != 0 && (
-                                                            <span className="font-bold text-orange-400">
-                                                                Departed:{" "}
-                                                                {stop.actual_time.toLocaleTimeString(
-                                                                    [],
-                                                                    {
-                                                                        hour: "2-digit",
-                                                                        minute: "2-digit",
-                                                                    }
-                                                                )}
+                                            <div className="flex flex-row gap-6">
+                                                <span>
+                                                    {stop.aimed_time.toLocaleTimeString()}
+                                                </span>
+                                                {sequence >= idx ? (
+                                                    <>
+                                                        {stop.actual_time &&
+                                                        sequence != 0 ? (
+                                                            <></>
+                                                        ) : (
+                                                            <span className="font-bold">
+                                                                No Data
                                                             </span>
                                                         )}
-                                                </>
-                                            ) : stop.expt_time &&
-                                              sequence != 0 &&
-                                              Math.abs(
-                                                  stop.expt_time.getTime() -
-                                                      stop.aimed_time.getTime()
-                                              ) > 60000 ? (
-                                                <span className="font-bold text-blue-400">
-                                                    Expt:{" "}
-                                                    {stop.expt_time
-                                                        .toLocaleTimeString
-                                                        // [],
-                                                        // {
-                                                        //     hour: "2-digit",
-                                                        //     minute: "2-digit",
-                                                        // }
-                                                        ()}
-                                                </span>
-                                            ) : (
-                                                <span className="font-bold text-green-400 ">
-                                                    On Time
-                                                </span>
-                                            )}
+                                                        {stop.actual_time &&
+                                                            sequence != 0 && (
+                                                                <span className="font-bold text-orange-400">
+                                                                    Departed:{" "}
+                                                                    {stop.actual_time.toLocaleTimeString(
+                                                                        [],
+                                                                        {
+                                                                            hour: "2-digit",
+                                                                            minute: "2-digit",
+                                                                        }
+                                                                    )}
+                                                                </span>
+                                                            )}
+                                                    </>
+                                                ) : stop.expt_time &&
+                                                  sequence != 0 &&
+                                                  Math.abs(
+                                                      stop.expt_time.getTime() -
+                                                          stop.aimed_time.getTime()
+                                                  ) > 60000 ? (
+                                                    <span className="font-bold text-blue-400">
+                                                        Expt:{" "}
+                                                        {stop.expt_time
+                                                            .toLocaleTimeString
+                                                            // [],
+                                                            // {
+                                                            //     hour: "2-digit",
+                                                            //     minute: "2-digit",
+                                                            // }
+                                                            ()}
+                                                    </span>
+                                                ) : (
+                                                    <span className="font-bold text-green-400 ">
+                                                        On Time
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                                {sequence == idx && showProg ? (
-                                    <div ref={busRef}>
-                                        <BusProgress
-                                            progress={progress}></BusProgress>
-                                    </div>
-                                ) : (
-                                    <></>
-                                )}
-                            </>
-                        ))}
+                            ))}
+                        </div>
                     </div>
                 )}
             </div>

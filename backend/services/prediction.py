@@ -21,9 +21,9 @@ async def calculate_sequence(stops: list[StopTime], future_time: int) -> int:
 
 
 async def calculate_progress(prev_expt: int, next_expt: int, future_time: int) -> float:
-    stops_diff = abs(next_expt - prev_expt)
+    stops_diff = abs(next_expt - prev_expt - 5)
 
-    current_diff = abs(future_time - prev_expt)
+    current_diff = abs(future_time - prev_expt + 5)
 
     if stops_diff == 0:
         return 0
