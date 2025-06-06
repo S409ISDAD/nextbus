@@ -1,6 +1,7 @@
 from typing import Optional
 from pydantic import BaseModel
 
+from backend.models.journey import Journey
 from backend.models.prediction import Prediction
 from backend.models.service import Service
 from .progress import Progress
@@ -21,6 +22,7 @@ class TrackedBus(BaseModel):
     speed: Optional[float]  # how fast the bus is going
     progress: Progress
     predictions: list[Prediction]
+    journey: Journey
     coords: list[float]
 
 

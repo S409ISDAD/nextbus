@@ -10,8 +10,10 @@ from backend.models.journey import Journey
 from backend.models.stop import StopTime
 from backend.services.caching import (
     BUS_CACHE,
+    JOURNEY_CACHE,
     get_cached,
 )
+from backend.services.timetable import recalculate_timetable
 from backend.utils.fetch_json import fetch_json
 from backend.utils.time import check_scheduled_time
 
@@ -76,6 +78,11 @@ async def get_vehicle_journey(bus_id, journey_id, delay, r) -> Journey:
 
                 data["stops"][i]["actual_time"] = departure_time.timestamp()
 
+        # data["stops"] = await recalculate_timetable(data["stops"], journey_id, r)
+
+        # for i, stop in enumerate(data["stops"]):
+        #     data["stops"][i]["expt_time"] = data["stops"][i]["aimed_time"] + delay
+
         return data
 
     async def fetch_tracks(journey_id):
@@ -93,11 +100,13 @@ async def get_vehicle_journey(bus_id, journey_id, delay, r) -> Journey:
 
         return tracks
 
+    start_time = dt.now()
+
     journey = await get_cached(
         key=f"journeys:{bus_id}:{journey_id}",
         func=lambda *args: fetch(*args),
         args=(bus_id, journey_id, delay),
-        exp=BUS_CACHE,
+        exp=JOURNEY_CACHE,
         r=r,
     )
 
@@ -116,6 +125,12 @@ async def get_vehicle_journey(bus_id, journey_id, delay, r) -> Journey:
                 minor=stop.get("minor"),
             )
         )
+
+    end_time = dt.now()
+
+    took = end_time - start_time
+
+    # print(f"Calculating journey took {round(took.total_seconds(), 4)}s")
 
     return Journey(
         route_name=journey.get("route_name"),

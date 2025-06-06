@@ -54,8 +54,7 @@ async def calculate_loc(
 
 
 async def predict_future(
-    bus_id: int,
-    journey_id: int,
+    journey: Journey,
     delay: int,
     timestamp: dt | None,
     started: bool,
@@ -64,8 +63,6 @@ async def predict_future(
 ) -> list[Prediction]:
     uk_timezone = datetime.timezone(timedelta(hours=1))
     current_time = dt.now(datetime.timezone.utc).astimezone(uk_timezone)
-
-    journey = await get_vehicle_journey(bus_id, journey_id, delay, r)
 
     stops = journey.stops
 
@@ -164,4 +161,4 @@ async def calculate_expected(delay, sequence, stop_id, bus_id, journey_id, r):
         started=not not_started,
         finished=finished,
         include=include,
-    )
+    ), journey

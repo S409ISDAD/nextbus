@@ -211,9 +211,7 @@ const DeparturePage: React.FC = () => {
                                 {buses.map((bus) => (
                                     <div
                                         onClick={() =>
-                                            navigate(
-                                                `/buses/${bus.id}/journeys/${bus.journey_id}`
-                                            )
+                                            navigate(`/buses/${bus.id}`)
                                         }
                                         className="cursor-pointer">
                                         <Card key={bus.reg}>

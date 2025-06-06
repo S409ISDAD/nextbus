@@ -3,7 +3,6 @@ from dateutil import parser
 from redis.asyncio import Redis
 
 from backend.config import VEHICLES_BASE
-from backend.models.service import Service
 from backend.models.trackedbus import TrackedBus
 from backend.services.caching import BUS_CACHE, get_cached
 from backend.services.prediction import calculate_expected, predict_future
@@ -89,7 +88,7 @@ async def build_bus(
 
     delay += 45  # account for stopping and various other things that increase delay
 
-    times = await calculate_expected(
+    times, journey = await calculate_expected(
         delay, progress.get("sequence", 0), stop_id, bus_id, journey_id, r
     )
 
@@ -104,9 +103,7 @@ async def build_bus(
     if not times.started:
         delay = 0
 
-    predictions = await predict_future(
-        bus_id, journey_id, delay, timestamp, times.started, 30, r
-    )
+    predictions = await predict_future(journey, delay, timestamp, times.started, 35, r)
 
     return TrackedBus(
         id=bus_id,
@@ -122,6 +119,7 @@ async def build_bus(
         finished=times.finished,
         progress=progress,
         predictions=predictions,
+        journey=journey,
         speed=None,
         coords=coords,
     )

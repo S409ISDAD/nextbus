@@ -155,9 +155,7 @@ function DepartureBoard({ stop_id, closest }: Props) {
                                             className="cursor-pointer"
                                             key={bus.reg}
                                             onClick={() =>
-                                                navigate(
-                                                    `/buses/${bus.id}/journeys/${bus.journey_id}`
-                                                )
+                                                navigate(`/buses/${bus.id}`)
                                             }>
                                             <div className="flex flex-row items-center justify-between gap-2">
                                                 <div className="flex flex-col">

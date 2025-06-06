@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { Journey } from "../models/Journey";
-import fetchJourney from "../utils/getJourney";
-import getBus, { type BusResponse } from "../utils/getBus";
+import getBus from "../utils/getBus";
 import { useNavigate, useParams } from "react-router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -10,22 +9,24 @@ import {
     faFlagCheckered,
     faLocationDot,
     faMapPin,
-    faSadTear,
 } from "@fortawesome/free-solid-svg-icons";
+import type { Bus } from "../models/Bus";
 
 const BusProgress = ({ progress }: { progress: number }) => {
-    const translateY = (1 - progress) * 100;
+    const translateY = progress * 100;
 
     return (
-        <div className="flex flex-row justify-center transition-all duration-300 w-9 ">
-            <div className="w-0.5  rounded-lg bg-neutral-600 pt-9">
+        <div className="flex justify-center transition-all duration-300 w-9">
+            <div className="w-0.5 rounded-full bg-neutral-600 pb-9">
                 <div
-                    className="flex flex-row items-center gap-3 transition-transform duration-300 translate-x-[-17px] w-max"
-                    style={{ transform: `translateY(-${translateY}%)` }}>
-                    <div className="flex items-center justify-center p-2 mt-5 bg-red-400 rounded-full w-9 h-9">
-                        <FontAwesomeIcon icon={faBus} />
+                    className="transition-transform duration-300 translate-x-[-17px] w-max h-25"
+                    style={{ transform: `translateY(${translateY}%)` }}>
+                    <div className="flex flex-row items-center gap-3">
+                        <div className="flex items-center justify-center p-2 bg-red-400 rounded-full w-9 h-9">
+                            <FontAwesomeIcon icon={faBus} />
+                        </div>
+                        <span className="font-bold ">Heading to next stop</span>
                     </div>
-                    <span className="mt-5 font-bold">Heading to next stop</span>
                 </div>
             </div>
         </div>
@@ -33,13 +34,14 @@ const BusProgress = ({ progress }: { progress: number }) => {
 };
 
 const JourneyPage: React.FC = () => {
-    const { bus_id, journey_id } = useParams();
+    const { bus_id } = useParams();
 
     const navigate = useNavigate();
 
-    const [bus, setBus] = useState<BusResponse>();
+    const [bus, setBus] = useState<Bus>();
     const [sequence, setSeq] = useState<number>(0);
     const [progress, setProg] = useState<number>(0);
+    const [showProg, setShowProg] = useState(true);
     const [journey, setJourney] = useState<Journey>();
     const [loading, setLoading] = useState(true);
     const [lastRefreshed, setRefreshed] = useState(new Date());
@@ -88,10 +90,15 @@ const JourneyPage: React.FC = () => {
                 prevProgress +
                 -Math.abs(progressDelta * -(timeDelta / predictionDuration));
 
+            setProg(interpolatedProgress);
             if (upcoming.sequence > sequence) {
-                setProg(0);
+                setProg(0.5);
+            }
+
+            if (interpolatedProgress > 0.95 || interpolatedProgress < 0.05) {
+                setShowProg(false);
             } else {
-                setProg(interpolatedProgress);
+                setShowProg(true);
             }
 
             setSeq(upcoming.sequence);
@@ -114,22 +121,16 @@ const JourneyPage: React.FC = () => {
 
     useEffect(() => {
         let interval: any;
-        const getData = async (bus_id: string, journey_id: string) => {
+        const getData = async (bus_id: string) => {
             try {
-                const journey = await fetchJourney(bus_id, journey_id);
                 const bus = await getBus(bus_id);
 
                 const now = new Date();
 
-                if (journey) {
-                    document.title = `${journey.route_name} to ${journey.destination}`;
-                    setJourney(journey);
-                } else {
-                    setMsg("Failed to fetch journey. Try reloading the page");
-                }
-
                 if (bus) {
                     setBus(bus);
+                    setJourney(bus.journey);
+                    document.title = `${journey?.route_name} to ${journey?.destination}`;
                     setSeq(bus.predictions[0].sequence);
                     setProg(bus.predictions[0].progress);
                 } else {
@@ -142,13 +143,10 @@ const JourneyPage: React.FC = () => {
                 setLoading(false);
             }
         };
-        const init = async (bus_id: string, journey_id: string) => {
+        const init = async (bus_id: string) => {
             try {
-                await getData(bus_id, journey_id);
-                interval = setInterval(
-                    () => getData(bus_id, journey_id),
-                    30000
-                );
+                await getData(bus_id);
+                interval = setInterval(() => getData(bus_id), 30000);
             } catch (error) {
                 console.error("Init error:", error);
                 setMsg("Unable to get journey data.");
@@ -156,12 +154,12 @@ const JourneyPage: React.FC = () => {
             }
         };
 
-        if (bus_id && journey_id) {
-            init(bus_id, journey_id);
+        if (bus_id) {
+            init(bus_id);
         }
 
         return () => clearInterval(interval);
-    }, [bus_id, journey_id]);
+    }, [bus_id]);
 
     if (loading) {
         return <></>;
@@ -180,7 +178,7 @@ const JourneyPage: React.FC = () => {
                         </span>
                         <a
                             className="text-teal-500 underline"
-                            href={`https://bustimes.org/vehicles/${bus?.id}#journeys/${journey_id}`}
+                            href={`https://bustimes.org/vehicles/${bus?.id}#journeys/${bus?.journey_id}`}
                             target="_blank">
                             View on bustimes.org
                         </a>
@@ -217,16 +215,10 @@ const JourneyPage: React.FC = () => {
                             <>
                                 <div
                                     className={`flex items-center gap-2 ${
-                                        idx <= sequence && progress > 0.05
-                                            ? "opacity-60"
-                                            : ""
-                                    } ${
-                                        idx < sequence && progress < 0.05
-                                            ? "opacity-60"
-                                            : ""
+                                        idx < sequence ? "opacity-60" : ""
                                     }`}
                                     key={stop.stop_id}>
-                                    {sequence == idx && progress < 0.05 ? (
+                                    {sequence == idx && !showProg ? (
                                         <div ref={busRef}>
                                             <div className="flex items-center justify-center p-2 bg-red-400 rounded-lg cursor-pointer w-9 h-9">
                                                 <FontAwesomeIcon icon={faBus} />
@@ -258,38 +250,22 @@ const JourneyPage: React.FC = () => {
                                     )}
                                     <div className="bg-neutral-700 h-[1px] m-1 w-5"></div>
                                     <div className="flex flex-col">
-                                        <span>{stop.name}</span>
+                                        <span className="font-bold">
+                                            {stop.name}
+                                        </span>
                                         <div className="flex flex-row gap-6">
+                                            <span>
+                                                {stop.aimed_time.toLocaleTimeString()}
+                                            </span>
                                             {sequence >= idx ? (
                                                 <>
                                                     {stop.actual_time &&
                                                     sequence != 0 ? (
-                                                        <span className="text-red-400">
-                                                            <s>
-                                                                {stop.aimed_time.toLocaleTimeString(
-                                                                    [],
-                                                                    {
-                                                                        hour: "2-digit",
-                                                                        minute: "2-digit",
-                                                                    }
-                                                                )}
-                                                            </s>
-                                                        </span>
+                                                        <></>
                                                     ) : (
-                                                        <>
-                                                            <span>
-                                                                {stop.aimed_time.toLocaleTimeString(
-                                                                    [],
-                                                                    {
-                                                                        hour: "2-digit",
-                                                                        minute: "2-digit",
-                                                                    }
-                                                                )}
-                                                            </span>
-                                                            <span className="font-bold">
-                                                                No Data
-                                                            </span>
-                                                        </>
+                                                        <span className="font-bold">
+                                                            No Data
+                                                        </span>
                                                     )}
                                                     {stop.actual_time &&
                                                         sequence != 0 && (
@@ -311,50 +287,26 @@ const JourneyPage: React.FC = () => {
                                                   stop.expt_time.getTime() -
                                                       stop.aimed_time.getTime()
                                               ) > 60000 ? (
-                                                <>
-                                                    <span className="text-red-400">
-                                                        <s>
-                                                            {stop.aimed_time.toLocaleTimeString(
-                                                                [],
-                                                                {
-                                                                    hour: "2-digit",
-                                                                    minute: "2-digit",
-                                                                }
-                                                            )}
-                                                        </s>
-                                                    </span>
-                                                    <span className="font-bold text-blue-400">
-                                                        Expt:{" "}
-                                                        {stop.expt_time.toLocaleTimeString(
-                                                            [],
-                                                            {
-                                                                hour: "2-digit",
-                                                                minute: "2-digit",
-                                                            }
-                                                        )}
-                                                    </span>
-                                                </>
+                                                <span className="font-bold text-blue-400">
+                                                    Expt:{" "}
+                                                    {stop.expt_time
+                                                        .toLocaleTimeString
+                                                        // [],
+                                                        // {
+                                                        //     hour: "2-digit",
+                                                        //     minute: "2-digit",
+                                                        // }
+                                                        ()}
+                                                </span>
                                             ) : (
-                                                <>
-                                                    <span className="text-green-400">
-                                                        {stop.aimed_time.toLocaleTimeString(
-                                                            [],
-                                                            {
-                                                                hour: "2-digit",
-                                                                minute: "2-digit",
-                                                            }
-                                                        )}
-                                                    </span>
-
-                                                    <span className="font-bold text-green-400 ">
-                                                        On Time
-                                                    </span>
-                                                </>
+                                                <span className="font-bold text-green-400 ">
+                                                    On Time
+                                                </span>
                                             )}
                                         </div>
                                     </div>
                                 </div>
-                                {sequence == idx && progress > 0.05 ? (
+                                {sequence == idx && showProg ? (
                                     <div ref={busRef}>
                                         <BusProgress
                                             progress={progress}></BusProgress>

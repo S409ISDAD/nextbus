@@ -7,10 +7,11 @@ import json
 SERVICES_CACHE = 600
 VEHICLES_CACHE = 30
 TRIPS_CACHE = 300
-BUS_CACHE = 60
-JOURNEY_CACHE = 60
+BUS_CACHE = 25
+JOURNEY_CACHE = 25
 SERVICE_CACHE = 300
 STOPS_CACHE = 600
+TIMETABLE_CACHE = 3600
 
 
 async def get_cached(key: str, func, args: tuple, exp: int, r: redis.Redis):

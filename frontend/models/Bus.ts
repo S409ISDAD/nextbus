@@ -1,5 +1,6 @@
 import type { ServiceInfo } from "./ServiceInfo";
 import type { ProgressInfo } from "./ProgressInfo";
+import type { Journey } from "./Journey";
 
 export interface Bus {
     id: number;
@@ -16,6 +17,7 @@ export interface Bus {
     progress?: ProgressInfo;
     coords?: number[];
     predictions: Prediction[];
+    journey: Journey
     timeto: string;
 }
 

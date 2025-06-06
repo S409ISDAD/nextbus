@@ -18,7 +18,7 @@ function App() {
                             element={<DeparturePage />}
                         />
                         <Route
-                            path="/buses/:bus_id/journeys/:journey_id"
+                            path="/buses/:bus_id"
                             element={<JourneyPage />}
                         />
                     </Route>
