@@ -102,7 +102,7 @@ const JourneyPage: React.FC = () => {
             }
 
             setSeq(upcoming.sequence);
-        }, 100);
+        }, 200);
         return () => clearInterval(interval);
     }, [progress, sequence]);
 
@@ -130,7 +130,7 @@ const JourneyPage: React.FC = () => {
                 if (bus) {
                     setBus(bus);
                     setJourney(bus.journey);
-                    document.title = `${journey?.route_name} to ${journey?.destination}`;
+                    document.title = `${bus.journey.route_name} to ${bus.journey.destination}`;
                     setSeq(bus.predictions[0].sequence);
                     setProg(bus.predictions[0].progress);
                 } else {
