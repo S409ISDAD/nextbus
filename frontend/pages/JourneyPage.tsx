@@ -3,6 +3,7 @@ import type { Journey } from "../models/Journey";
 import getBus from "../utils/getBus";
 import { useNavigate, useParams } from "react-router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { lateness } from "../utils/timeTo";
 import {
     faBus,
     faCalendarXmark,
@@ -20,7 +21,6 @@ const JourneyPage: React.FC = () => {
     const [bus, setBus] = useState<Bus>();
     const [sequence, setSeq] = useState<number>(0);
     const [progress, setProg] = useState<number>(0);
-    const [showProg, setShowProg] = useState(true);
     const [journey, setJourney] = useState<Journey>();
     const [loading, setLoading] = useState(true);
     const [lastRefreshed, setRefreshed] = useState(new Date());
@@ -30,13 +30,13 @@ const JourneyPage: React.FC = () => {
     const BusProgress = () => {
         const total = bus ? bus?.journey.stops.length : 100;
 
-        const translateY = ((sequence + progress) / total) * 100;
+        const translateY = ((sequence + progress) / total) * 3745;
 
         return (
-            <div className="absolute top-0 left-0 h-full mt-[15px] z-100 w-9 ">
+            <div className="absolute top-0 left-0 h-full mt-[15px] z-11 w-9 ">
                 <div
-                    className="absolute transition-all duration-300 translate-x-[-10px]"
-                    style={{ top: `${translateY * 0.982}%` }}>
+                    className="absolute transition-all duration-300 ease-in-out  translate-x-[-10px]"
+                    style={{ transform: `translateY(${translateY}px)` }}>
                     <div
                         className="flex items-center justify-center p-2 bg-red-400 rounded-full w-9 h-9"
                         ref={busRef}>
@@ -157,22 +157,39 @@ const JourneyPage: React.FC = () => {
     }
 
     return (
-        <div className="lg:mx-40">
-            <div className="flex flex-col p-5">
-                <div className="flex flex-col gap-2">
+        <div className="">
+            <div className="flex flex-col mt-35">
+                <div className="flex flex-col gap-2 top-0 grow p-5 pt-17 z-12  bg-[#111111] rounded-b-3xl fixed w-full">
                     <div className="flex flex-col items-center justify-center gap-1">
                         <span className="text-4xl font-bold text-center wrap-normal">
                             {journey?.route_name} to {journey?.destination}
                         </span>
-                        <span className="text-center">
-                            {journey?.stops.length} stops
-                        </span>
-                        <a
-                            className="text-teal-500 underline"
-                            href={`https://bustimes.org/vehicles/${bus?.id}#journeys/${bus?.journey_id}`}
-                            target="_blank">
-                            View on bustimes.org
-                        </a>
+                        <div className="flex gap-3">
+                            <span className="text-center">
+                                {journey?.stops.length} stops
+                            </span>
+                            <a
+                                className="text-teal-500 underline"
+                                href={`https://bustimes.org/vehicles/${bus?.id}#journeys/${bus?.journey_id}`}
+                                target="_blank">
+                                View on bustimes.org
+                            </a>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <div className="flex justify-center px-2 py-1 rounded-lg bg-amber-400">
+                                <span className="text-xs font-bold align-middle text-neutral-950">
+                                    {bus?.reg}
+                                </span>
+                            </div>
+                            <span className="font-bold align-middle">
+                                {bus?.fleet_num}
+                            </span>
+                            <div className="flex justify-center px-2 py-1 rounded-lg bg-blue-950">
+                                <span className="text-xs font-bold text-blue-300 align-middle">
+                                    {lateness(bus ? bus.delay : 0)}
+                                </span>
+                            </div>
+                        </div>
                         {msg ? (
                             <span className="text-red-400">{msg}</span>
                         ) : (
@@ -201,7 +218,7 @@ const JourneyPage: React.FC = () => {
                         </span>
                     </div>
                 ) : (
-                    <div className="relative flex mt-4">
+                    <div className="relative flex mx-5 mt-4 md:mx-40">
                         <div className="relative flex flex-col items-center py-6.5">
                             <BusProgress></BusProgress>
                             {journey?.stops.map((stop, idx) => (
@@ -239,7 +256,7 @@ const JourneyPage: React.FC = () => {
                                                     : ""
                                             }`}>
                                             <span className="font-bold">
-                                                {stop.name}
+                                                {idx} {stop.name}
                                             </span>
                                             <div className="flex flex-row gap-6">
                                                 <span>
