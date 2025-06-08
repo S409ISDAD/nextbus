@@ -165,7 +165,7 @@ const JourneyPage: React.FC = () => {
 
     return (
         <div className="">
-            <div className="flex flex-col mt-35">
+            <div className="flex flex-col mt-38">
                 <div className="flex flex-col gap-2 top-0 grow p-5 pb-1 pt-17 z-12  bg-[#111111] rounded-b-3xl fixed w-full">
                     <div className="flex flex-col items-center gap-2">
                         <span className="text-4xl font-bold wrap-normal">
