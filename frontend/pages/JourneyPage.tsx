@@ -10,6 +10,7 @@ import {
     faFlagCheckered,
     faLocationDot,
     faMapPin,
+    faWarning,
 } from "@fortawesome/free-solid-svg-icons";
 import type { Bus, Prediction } from "../models/Bus";
 
@@ -167,55 +168,73 @@ const JourneyPage: React.FC = () => {
         <div className="">
             <div className="flex flex-col mt-38">
                 <div className="flex flex-col gap-2 top-0 grow p-5 pb-1 pt-17 z-12  bg-[#111111] rounded-b-3xl fixed w-full">
-                    <div className="flex flex-col items-center gap-2">
-                        <span className="text-4xl font-bold wrap-normal">
-                            {journey?.route_name} to {journey?.destination}
-                        </span>
-                        <div className="flex gap-3">
-                            <a
-                                className="text-teal-500 underline"
-                                href={`https://bustimes.org/vehicles/${bus?.id}#journeys/${bus?.journey_id}`}
-                                target="_blank">
-                                View on bustimes.org
-                            </a>
-                            <span className="text-center">
-                                {journey?.stops.length} stops
+                    {bus ? (
+                        <div className="flex flex-col items-center gap-2">
+                            <span className="text-4xl font-bold wrap-normal">
+                                {journey?.route_name} to {journey?.destination}
                             </span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                            <div className="flex flex-col items-center gap-1">
-                                <span className="font-bold align-middle">
-                                    {bus?.fleet_num}
+                            <div className="flex gap-3">
+                                <a
+                                    className="text-teal-500 underline"
+                                    href={`https://bustimes.org/vehicles/${bus?.id}#journeys/${bus?.journey_id}`}
+                                    target="_blank">
+                                    View on bustimes.org
+                                </a>
+                                <span className="text-center">
+                                    {journey?.stops.length} stops
                                 </span>
-                                <div className="flex justify-center px-2 py-1 rounded-lg bg-amber-400">
-                                    <span className="text-xs font-bold align-middle text-neutral-950">
-                                        {bus?.reg}
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <div className="flex flex-col items-center gap-1">
+                                    <span className="font-bold align-middle">
+                                        {bus?.fleet_num}
+                                    </span>
+                                    <div className="flex justify-center px-2 py-1 rounded-lg bg-amber-400">
+                                        <span className="text-xs font-bold align-middle text-neutral-950">
+                                            {bus?.reg}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div className="flex flex-col items-center gap-1">
+                                    <span className="text-xs font-bold">
+                                        {bus.livery
+                                            ? bus?.livery.name
+                                            : "No livery"}
+                                    </span>
+                                    <div
+                                        className="rounded shadow-2xl w-15 aspect-3/2"
+                                        style={{
+                                            backgroundImage: bus.livery
+                                                ? bus?.livery.css
+                                                : "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 200' fill='none' xmlns:xlink='http://www.w3.org/1999/xlink'><rect width='300' height='200' fill='%23222222'/><text x='150' y='110' text-anchor='middle' fill='%23999999' font-size='80' font-family='sans-serif' dy='.35em'>?</text></svg>\")",
+                                        }}></div>
+                                </div>
+                                <div className="flex justify-center px-2 py-1 rounded-lg bg-blue-950">
+                                    <span className="font-bold text-blue-300 align-middle text">
+                                        {lateness(bus ? bus.delay : 0)}
                                     </span>
                                 </div>
                             </div>
-
-                            <div className="flex flex-col items-center gap-1">
-                                <span className="text-xs font-bold">
-                                    {bus?.livery.name}
-                                </span>
-                                <div
-                                    className="rounded shadow-2xl w-15 aspect-3/2"
-                                    style={{
-                                        backgroundImage: bus?.livery.css,
-                                    }}></div>
-                            </div>
-                            <div className="flex justify-center px-2 py-1 rounded-lg bg-blue-950">
-                                <span className="font-bold text-blue-300 align-middle text">
-                                    {lateness(bus ? bus.delay : 0)}
+                        </div>
+                    ) : (
+                        <div className="flex flex-row items-center justify-center h-30">
+                            <div className="flex flex-row gap-3 p-3 border-2 border-red-400 bg-red-950 rounded-2xl">
+                                <FontAwesomeIcon
+                                    icon={faWarning}
+                                    size="2x"
+                                    className="text-neutral-300"></FontAwesomeIcon>
+                                <span className="text-2xl font-black text-neutral-300 wrap-normal">
+                                    Bus not active.
                                 </span>
                             </div>
                         </div>
-                        {msg ? (
-                            <span className="text-red-400">{msg}</span>
-                        ) : (
-                            <></>
-                        )}
-                    </div>
+                    )}
+                    {msg ? (
+                        <span className="text-center text-red-400">{msg}</span>
+                    ) : (
+                        <></>
+                    )}
 
                     <div className="flex justify-center gap-2">
                         <span className="text-xs text-neutral-400">
@@ -227,7 +246,7 @@ const JourneyPage: React.FC = () => {
                         </span>
                     </div>
                 </div>
-                {bus?.finished ? (
+                {bus?.finished || !bus ? (
                     <div className="flex flex-col gap-3 mt-4 grow h-[60vh] md:max-h-[80vh] items-center justify-center">
                         <FontAwesomeIcon
                             icon={faCalendarXmark}

@@ -36,7 +36,7 @@ export interface BusResponse {
     progress?: ProgressInfo;
     predictions: Prediction[]
     journey: ResponseJourney
-    livery: Livery
+    livery?: Livery
     coords?: number[];
     timeto: number;
 }

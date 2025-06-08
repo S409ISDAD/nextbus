@@ -3,6 +3,7 @@ from dateutil import parser
 from redis.asyncio import Redis
 
 from backend.config import VEHICLES_BASE
+from backend.models.livery import Livery
 from backend.models.trackedbus import TrackedBus
 from backend.services.caching import BUS_CACHE, get_cached
 from backend.services.livery import get_livery
@@ -85,7 +86,11 @@ async def build_bus(
     if livery_id:
         livery = await get_livery(livery_id, r)
     else:
-        livery = None
+        css = vehicle.get("css")
+        if css:
+            livery = Livery(name="Livery:", css=css)
+        else:
+            livery = None
 
     # journey = await get_vehicle_journey(bus_id, journey_id, r)
 
