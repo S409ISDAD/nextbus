@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
-from backend.api.routes import departures, location, stops, buses
+from backend.api.routes import departures, location, stops, buses, livery
 from backend.deps import get_redis_client
 import logging
 
@@ -44,3 +44,4 @@ app.include_router(departures.router, prefix="/api/v1/departures")
 app.include_router(location.router, prefix="/api/v1/location")
 app.include_router(stops.router, prefix="/api/v1/stops")
 app.include_router(buses.router, prefix="/api/v1/buses")
+app.include_router(livery.router, prefix="/api/v1/liveries")

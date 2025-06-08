@@ -5,6 +5,7 @@ from redis.asyncio import Redis
 from backend.config import VEHICLES_BASE
 from backend.models.trackedbus import TrackedBus
 from backend.services.caching import BUS_CACHE, get_cached
+from backend.services.livery import get_livery
 from backend.services.prediction import calculate_expected, predict_future
 from backend.services.services import fetch_active_buses, get_service_info
 from backend.utils.fetch_json import fetch_json
@@ -79,6 +80,13 @@ async def build_bus(
     fleet_num = vehicle_name[0] if len(vehicle_name) > 1 else "Unknown"
     reg = vehicle_name[-1]
 
+    livery_id = vehicle.get("livery")
+
+    if livery_id:
+        livery = await get_livery(livery_id, r)
+    else:
+        livery = None
+
     # journey = await get_vehicle_journey(bus_id, journey_id, r)
 
     if service:
@@ -120,6 +128,7 @@ async def build_bus(
         progress=progress,
         predictions=predictions,
         journey=journey,
+        livery=livery,
         speed=None,
         coords=coords,
     )

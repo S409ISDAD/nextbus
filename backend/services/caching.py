@@ -12,6 +12,7 @@ JOURNEY_CACHE = 25
 SERVICE_CACHE = 300
 STOPS_CACHE = 600
 TIMETABLE_CACHE = 3600
+LIVERY_CACHE = 3600 * 2
 
 
 async def get_cached(key: str, func, args: tuple, exp: int, r: redis.Redis):

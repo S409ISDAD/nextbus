@@ -166,33 +166,46 @@ const JourneyPage: React.FC = () => {
     return (
         <div className="">
             <div className="flex flex-col mt-35">
-                <div className="flex flex-col gap-2 top-0 grow p-5 pt-17 z-12  bg-[#111111] rounded-b-3xl fixed w-full">
-                    <div className="flex flex-col items-center justify-center gap-1">
-                        <span className="text-4xl font-bold text-center wrap-normal">
+                <div className="flex flex-col gap-2 top-0 grow p-5 pb-1 pt-17 z-12  bg-[#111111] rounded-b-3xl fixed w-full">
+                    <div className="flex flex-col items-center gap-2">
+                        <span className="text-4xl font-bold wrap-normal">
                             {journey?.route_name} to {journey?.destination}
                         </span>
                         <div className="flex gap-3">
-                            <span className="text-center">
-                                {journey?.stops.length} stops
-                            </span>
                             <a
                                 className="text-teal-500 underline"
                                 href={`https://bustimes.org/vehicles/${bus?.id}#journeys/${bus?.journey_id}`}
                                 target="_blank">
                                 View on bustimes.org
                             </a>
+                            <span className="text-center">
+                                {journey?.stops.length} stops
+                            </span>
                         </div>
                         <div className="flex items-center gap-3">
-                            <div className="flex justify-center px-2 py-1 rounded-lg bg-amber-400">
-                                <span className="text-xs font-bold align-middle text-neutral-950">
-                                    {bus?.reg}
+                            <div className="flex flex-col items-center gap-1">
+                                <span className="font-bold align-middle">
+                                    {bus?.fleet_num}
                                 </span>
+                                <div className="flex justify-center px-2 py-1 rounded-lg bg-amber-400">
+                                    <span className="text-xs font-bold align-middle text-neutral-950">
+                                        {bus?.reg}
+                                    </span>
+                                </div>
                             </div>
-                            <span className="font-bold align-middle">
-                                {bus?.fleet_num}
-                            </span>
+
+                            <div className="flex flex-col items-center gap-1">
+                                <span className="text-xs font-bold">
+                                    {bus?.livery.name}
+                                </span>
+                                <div
+                                    className="rounded-lg shadow-2xl w-15 aspect-3/2"
+                                    style={{
+                                        backgroundImage: bus?.livery.css,
+                                    }}></div>
+                            </div>
                             <div className="flex justify-center px-2 py-1 rounded-lg bg-blue-950">
-                                <span className="text-xs font-bold text-blue-300 align-middle">
+                                <span className="font-bold text-blue-300 align-middle text">
                                     {lateness(bus ? bus.delay : 0)}
                                 </span>
                             </div>

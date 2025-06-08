@@ -1,6 +1,7 @@
 import type { ProgressInfo } from "../models/ProgressInfo";
 import type { ServiceInfo } from "../models/ServiceInfo";
 import type { Prediction } from "../models/Bus";
+import type { Livery } from "../models/Livery"
 import api from "../src/api"
 import type { StopTime } from "../models/StopTime";
 import timeTo from "./timeTo";
@@ -35,6 +36,7 @@ export interface BusResponse {
     progress?: ProgressInfo;
     predictions: Prediction[]
     journey: ResponseJourney
+    livery: Livery
     coords?: number[];
     timeto: number;
 }
