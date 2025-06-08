@@ -131,10 +131,10 @@ const JourneyPage: React.FC = () => {
                     setJourney(bus_response.journey);
                     document.title = `${bus_response.journey.route_name} to ${bus_response.journey.destination}`;
                     setMsg("");
+                    setRefreshed(now);
                 } else {
                     setMsg("Failed to fetch bus. Try reloading the page");
                 }
-                setRefreshed(now);
             } catch (error) {
                 console.log("uh oh", error);
             } finally {
