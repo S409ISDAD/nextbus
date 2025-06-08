@@ -199,7 +199,7 @@ const JourneyPage: React.FC = () => {
                                     {bus?.livery.name}
                                 </span>
                                 <div
-                                    className="rounded-lg shadow-2xl w-15 aspect-3/2"
+                                    className="rounded shadow-2xl w-15 aspect-3/2"
                                     style={{
                                         backgroundImage: bus?.livery.css,
                                     }}></div>
