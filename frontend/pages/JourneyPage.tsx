@@ -11,7 +11,7 @@ import {
     faLocationDot,
     faMapPin,
 } from "@fortawesome/free-solid-svg-icons";
-import type { Bus } from "../models/Bus";
+import type { Bus, Prediction } from "../models/Bus";
 
 const JourneyPage: React.FC = () => {
     const { bus_id } = useParams();
@@ -19,6 +19,7 @@ const JourneyPage: React.FC = () => {
     const navigate = useNavigate();
 
     const [bus, setBus] = useState<Bus>();
+    const [predictions, setPredictions] = useState<Prediction[]>();
     const [sequence, setSeq] = useState<number>(0);
     const [progress, setProg] = useState<number>(0);
     const [journey, setJourney] = useState<Journey>();
@@ -30,7 +31,9 @@ const JourneyPage: React.FC = () => {
     const BusProgress = () => {
         const total = bus ? bus?.journey.stops.length : 100;
 
-        const translateY = ((sequence + progress) / total) * 3745;
+        const sectionLength = 72;
+
+        const translateY = (sequence + progress) * sectionLength;
 
         return (
             <div className="absolute top-0 left-0 h-full mt-[15px] z-11 w-9 ">
@@ -65,17 +68,21 @@ const JourneyPage: React.FC = () => {
         const interval = setInterval(() => {
             const now = new Date();
 
-            if (!bus?.predictions || bus.predictions.length < 2) return;
+            if (!predictions || predictions.length < 2) {
+                setSeq(bus?.progress ? bus.progress.sequence : 0);
+                setProg(bus?.progress ? bus.progress.progress : 0);
+                return;
+            }
 
-            const upcoming = bus.predictions.find((pred, idx) => {
+            const upcoming = predictions.find((pred, idx) => {
                 const nextTime = pred.timestamp * 1000;
-                return nextTime > now.getTime() && idx > 0;
+                return nextTime > now.getTime();
             });
 
             if (!upcoming) return;
 
-            const idx = bus.predictions.indexOf(upcoming);
-            const prev = bus.predictions[idx - 1];
+            const idx = predictions.indexOf(upcoming);
+            const prev = predictions[idx - 1];
 
             const newProgress = upcoming.progress;
             const prevProgress = prev.progress;
@@ -95,7 +102,7 @@ const JourneyPage: React.FC = () => {
             setSeq(upcoming.sequence);
         }, 200);
         return () => clearInterval(interval);
-    }, [progress, sequence]);
+    }, [predictions]);
 
     const busRef = useRef<HTMLDivElement>(null);
 
@@ -108,28 +115,27 @@ const JourneyPage: React.FC = () => {
                 });
             });
         }
-    }, [journey]);
+    }, [sequence]);
 
     useEffect(() => {
         let interval: any;
         const getData = async (bus_id: string) => {
             try {
-                const bus = await getBus(bus_id);
+                const bus_response = await getBus(bus_id);
 
                 const now = new Date();
 
-                if (bus) {
-                    setBus(bus);
-                    setJourney(bus.journey);
-                    document.title = `${bus.journey.route_name} to ${bus.journey.destination}`;
-                    setSeq(bus.predictions[0].sequence);
-                    setProg(bus.predictions[0].progress);
+                if (bus_response) {
+                    setBus(bus_response);
+                    setPredictions(bus_response.predictions);
+                    setJourney(bus_response.journey);
+                    document.title = `${bus_response.journey.route_name} to ${bus_response.journey.destination}`;
                 } else {
                     setMsg("Failed to fetch bus. Try reloading the page");
                 }
                 setRefreshed(now);
-            } catch {
-                console.log("uh oh");
+            } catch (error) {
+                console.log("uh oh", error);
             } finally {
                 setLoading(false);
             }
@@ -256,7 +262,7 @@ const JourneyPage: React.FC = () => {
                                                     : ""
                                             }`}>
                                             <span className="font-bold">
-                                                {idx} {stop.name}
+                                                {stop.name}
                                             </span>
                                             <div className="flex flex-row gap-6">
                                                 <span>
@@ -269,7 +275,11 @@ const JourneyPage: React.FC = () => {
                                                             <></>
                                                         ) : (
                                                             <span className="font-bold">
-                                                                No Data
+                                                                {sequence ==
+                                                                    0 &&
+                                                                !bus?.started
+                                                                    ? "Waiting to Start"
+                                                                    : "No Data"}
                                                             </span>
                                                         )}
                                                         {stop.actual_time &&
@@ -287,7 +297,7 @@ const JourneyPage: React.FC = () => {
                                                             )}
                                                     </>
                                                 ) : stop.expt_time &&
-                                                  sequence != 0 &&
+                                                  bus?.started &&
                                                   Math.abs(
                                                       stop.expt_time.getTime() -
                                                           stop.aimed_time.getTime()

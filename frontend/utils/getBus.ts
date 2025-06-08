@@ -6,7 +6,7 @@ import type { StopTime } from "../models/StopTime";
 import timeTo from "./timeTo";
 
 export interface ResponseStopTime {
-    atco_code: string
+    stop_id: string
     name: string;
     aimed_time: number;
     actual_time?: number;
@@ -53,7 +53,7 @@ const getBus = async (bus_id: string) => {
 
         const stops: StopTime[] = bus.journey.stops.map((stop) => {
             return {
-                stop_id: stop.atco_code,
+                stop_id: stop.stop_id,
                 name: stop.name,
                 aimed_time: new Date(stop.aimed_time * 1000),
                 actual_time: stop.actual_time ? new Date(stop.actual_time * 1000) : undefined,
