@@ -130,6 +130,7 @@ const JourneyPage: React.FC = () => {
                     setPredictions(bus_response.predictions);
                     setJourney(bus_response.journey);
                     document.title = `${bus_response.journey.route_name} to ${bus_response.journey.destination}`;
+                    setMsg("");
                 } else {
                     setMsg("Failed to fetch bus. Try reloading the page");
                 }
