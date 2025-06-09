@@ -59,7 +59,7 @@ async def get_vehicle_journey(bus_id, journey_id, delay, r) -> Journey:
                     coords_next = tuple(data["stops"][i]["coordinates"])
                     dist_m = geodesic(coords_prev, coords_next).m
 
-                    delay_factor = 20
+                    delay_factor = 18
 
                     extra_delay = round(dist_m / delay_factor)
                     total_delay = total_delay + extra_delay

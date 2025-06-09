@@ -47,7 +47,7 @@ async def fetch_buses_for_service(service, stop_id, r: Redis) -> list[TrackedBus
 
         if not bus_id:
             continue
-        bus = await build_bus(bus_id, service, r, stop_id)
+        bus = await build_bus(bus_id, service, r, stop_id, get_journey=False)
         if bus:
             buses.append(bus)
 
@@ -55,7 +55,11 @@ async def fetch_buses_for_service(service, stop_id, r: Redis) -> list[TrackedBus
 
 
 async def build_bus(
-    bus_id: int, service: Optional[int], r: Redis, stop_id: str = ""
+    bus_id: int,
+    service: Optional[int],
+    r: Redis,
+    stop_id: str = "",
+    get_journey: bool = True,
 ) -> TrackedBus | None:
     this_bus = await fetch_bus(bus_id, r)
 
@@ -99,7 +103,7 @@ async def build_bus(
     else:
         service_info = None
 
-    delay += 45  # account for stopping and various other things that increase delay
+    delay += 10  # account for stopping and various other things that increase delay
 
     times, journey = await calculate_expected(
         delay, progress.get("sequence", 0), stop_id, bus_id, journey_id, r
@@ -116,7 +120,12 @@ async def build_bus(
     if not times.started:
         delay = 0
 
-    predictions = await predict_future(journey, delay, timestamp, times.started, 35, r)
+    if get_journey:
+        predictions = await predict_future(
+            journey, delay, timestamp, times.started, 35, r
+        )
+    else:
+        predictions = []
 
     return TrackedBus(
         id=bus_id,

@@ -18,7 +18,7 @@ export interface Bus {
     progress?: ProgressInfo;
     coords?: number[];
     predictions: Prediction[];
-    livery: Livery
+    livery?: Livery
     journey: Journey
     timeto: string;
 }

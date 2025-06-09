@@ -130,7 +130,7 @@ const JourneyPage: React.FC = () => {
                     setBus(bus_response);
                     setPredictions(bus_response.predictions);
                     setJourney(bus_response.journey);
-                    document.title = `${bus_response.journey.route_name} to ${bus_response.journey.destination}`;
+                    document.title = `${bus_response.journey.route_name} to ${bus_response.journey.destination} - ${bus_response.reg}`;
                     setMsg("");
                     setRefreshed(now);
                 } else {
@@ -299,7 +299,13 @@ const JourneyPage: React.FC = () => {
                                             </span>
                                             <div className="flex flex-row gap-6">
                                                 <span>
-                                                    {stop.aimed_time.toLocaleTimeString()}
+                                                    {stop.aimed_time.toLocaleTimeString(
+                                                        [],
+                                                        {
+                                                            hour: "2-digit",
+                                                            minute: "2-digit",
+                                                        }
+                                                    )}
                                                 </span>
                                                 {sequence >= idx ? (
                                                     <>
@@ -337,14 +343,13 @@ const JourneyPage: React.FC = () => {
                                                   ) > 60000 ? (
                                                     <span className="font-bold text-blue-400">
                                                         Expt:{" "}
-                                                        {stop.expt_time
-                                                            .toLocaleTimeString
-                                                            // [],
-                                                            // {
-                                                            //     hour: "2-digit",
-                                                            //     minute: "2-digit",
-                                                            // }
-                                                            ()}
+                                                        {stop.expt_time.toLocaleTimeString(
+                                                            [],
+                                                            {
+                                                                hour: "2-digit",
+                                                                minute: "2-digit",
+                                                            }
+                                                        )}
                                                     </span>
                                                 ) : (
                                                     <span className="font-bold text-green-400 ">
