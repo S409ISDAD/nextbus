@@ -9,6 +9,6 @@ router = APIRouter()
 
 @router.get("/", response_model=Optional[TrackedBus])
 async def get_bus(bus_id: int, redis=Depends(get_redis)):
-    this_bus = await bus.build_bus(bus_id, None, redis)
+    this_bus = await bus.build_bus(bus_id, redis)
 
     return this_bus
