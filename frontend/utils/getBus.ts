@@ -4,7 +4,6 @@ import type { Prediction } from "../models/Bus";
 import type { Livery } from "../models/Livery"
 import api from "../src/api"
 import type { StopTime } from "../models/StopTime";
-import timeTo from "./timeTo";
 
 export interface ResponseStopTime {
     stop_id: string

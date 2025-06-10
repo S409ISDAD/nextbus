@@ -7,9 +7,6 @@ import { lateness } from "../utils/timeTo";
 import {
     faBus,
     faCalendarXmark,
-    faFlagCheckered,
-    faLocationDot,
-    faMapPin,
     faWarning,
 } from "@fortawesome/free-solid-svg-icons";
 import type { Bus, Prediction } from "../models/Bus";
@@ -30,8 +27,6 @@ const JourneyPage: React.FC = () => {
     const [msg, setMsg] = useState<string>("");
 
     const BusProgress = () => {
-        const total = bus ? bus?.journey.stops.length : 100;
-
         const sectionLength = 72;
 
         const translateY = (sequence + progress) * sectionLength;
@@ -75,7 +70,7 @@ const JourneyPage: React.FC = () => {
                 return;
             }
 
-            const upcoming = predictions.find((pred, idx) => {
+            const upcoming = predictions.find((pred) => {
                 const nextTime = pred.timestamp * 1000;
                 return nextTime > now.getTime();
             });
