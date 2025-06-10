@@ -7,4 +7,5 @@ from backend.models.stop import StopTime
 class Journey(BaseModel):
     route_name: str
     destination: str
+    service_id: int
     stops: list[StopTime]

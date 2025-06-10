@@ -35,11 +35,13 @@ async def get_service_info(service, r: Redis):
     )
 
 
-async def fetch_active_buses(service, r: Redis):
-    """Fetches all buses on the route"""
+async def fetch_active_buses(services, r: Redis):
+    """Fetches all buses"""
 
-    async def fetch(service):
-        data = await fetch_json(VEHICLES_BASE + f"?service={service}")
+    service_ids = ",".join(str(service) for service in services)
+
+    async def fetch(services):
+        data = await fetch_json(VEHICLES_BASE + f"?service={service_ids}")
 
         if not data:
             return None
@@ -47,9 +49,9 @@ async def fetch_active_buses(service, r: Redis):
         return data
 
     active = await get_cached(
-        f"service:{service}:trips",
+        f"service:{service_ids}:trips",
         lambda *args: fetch(*args),
-        (service,),
+        (services,),
         TRIPS_CACHE,
         r,
     )

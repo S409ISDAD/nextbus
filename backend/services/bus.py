@@ -1,3 +1,4 @@
+import asyncio
 from typing import Optional
 from dateutil import parser
 from redis.asyncio import Redis
@@ -34,29 +35,25 @@ async def fetch_bus(bus_id, r: Redis):
         return None
 
 
-async def fetch_buses_for_service(service, stop_id, r: Redis) -> list[TrackedBus]:
-    buses: list[TrackedBus] = []
-
-    active = await fetch_active_buses(service, r)
+async def fetch_buses(services, stop_id, r: Redis) -> list[TrackedBus]:
+    active = await fetch_active_buses(services, r)
 
     if not active:
         return []
 
-    for trip in active:
-        bus_id = trip.get("id")
+    tasks = [
+        build_bus(bus.get("id"), r, stop_id, get_journey=False)
+        for bus in active
+        if bus.get("id") is not None
+    ]
 
-        if not bus_id:
-            continue
-        bus = await build_bus(bus_id, service, r, stop_id, get_journey=False)
-        if bus:
-            buses.append(bus)
+    buses = await asyncio.gather(*tasks)
 
-    return buses
+    return [bus for bus in buses if bus is not None]
 
 
 async def build_bus(
     bus_id: int,
-    service: Optional[int],
     r: Redis,
     stop_id: str = "",
     get_journey: bool = True,
@@ -98,16 +95,13 @@ async def build_bus(
 
     # journey = await get_vehicle_journey(bus_id, journey_id, r)
 
-    if service:
-        service_info = await get_service_info(service, r)
-    else:
-        service_info = None
-
     delay += 10  # account for stopping and various other things that increase delay
 
     times, journey = await calculate_expected(
         delay, progress.get("sequence", 0), stop_id, bus_id, journey_id, r
     )
+
+    service_info = await get_service_info(journey.service_id, r)
 
     if not times:
         return None

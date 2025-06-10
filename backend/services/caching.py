@@ -1,5 +1,6 @@
 import inspect
 import asyncio
+import time
 import redis.asyncio as redis
 import json
 
@@ -30,7 +31,10 @@ async def get_cached(key: str, func, args: tuple, exp: int, r: redis.Redis):
     # print(f"not cached: {key}")
 
     # if data is not cached
+    start = time.time()
     result = await func(*args)
     if result:
         await r.set(key, value=json.dumps({"data": result}), ex=exp)
+    duration = time.time() - start
+    # print(f"{key} took {duration:.3f}s")
     return result

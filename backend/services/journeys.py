@@ -100,8 +100,6 @@ async def get_vehicle_journey(bus_id, journey_id, delay, r) -> Journey:
 
         return tracks
 
-    start_time = dt.now()
-
     journey = await get_cached(
         key=f"journeys:{bus_id}:{journey_id}",
         func=lambda *args: fetch(*args),
@@ -126,14 +124,9 @@ async def get_vehicle_journey(bus_id, journey_id, delay, r) -> Journey:
             )
         )
 
-    end_time = dt.now()
-
-    took = end_time - start_time
-
-    # print(f"Calculating journey took {round(took.total_seconds(), 4)}s")
-
     return Journey(
         route_name=journey.get("route_name"),
         destination=journey.get("destination"),
+        service_id=journey.get("service_id"),
         stops=stops,
     )
