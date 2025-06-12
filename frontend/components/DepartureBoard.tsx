@@ -16,7 +16,7 @@ interface Props {
 function DepartureBoard({ stop_id, closest }: Props) {
     const [buses, setBuses] = useState<Bus[]>([]);
     const [stop, setStop] = useState<Stop>();
-    const [stopID, setStopID] = useState<String>("");
+    const [stopID, setStopID] = useState<string>("");
     const [loading, setLoading] = useState(true);
     const [lastRefreshed, setRefreshed] = useState(new Date());
     const [elapsed, setElapsed] = useState<string>("0s");
@@ -47,7 +47,7 @@ function DepartureBoard({ stop_id, closest }: Props) {
             setBuses(newBuses);
         }, 1000);
         return () => clearInterval(interval);
-    }, [lastRefreshed]);
+    }, [lastRefreshed, buses]);
 
     useEffect(() => {
         let interval: any;

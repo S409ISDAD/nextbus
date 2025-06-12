@@ -98,7 +98,7 @@ const JourneyPage: React.FC = () => {
             setSeq(upcoming.sequence);
         }, 200);
         return () => clearInterval(interval);
-    }, [predictions]);
+    }, [predictions, bus?.progress]);
 
     const busRef = useRef<HTMLDivElement>(null);
 
@@ -111,7 +111,7 @@ const JourneyPage: React.FC = () => {
                 });
             });
         }
-    }, [sequence]);
+    }, [sequence, journey]);
 
     useEffect(() => {
         let interval: any;

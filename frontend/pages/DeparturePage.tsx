@@ -48,7 +48,7 @@ const DeparturePage: React.FC = () => {
             setBuses(newBuses);
         }, 1000);
         return () => clearInterval(interval);
-    }, [lastRefreshed]);
+    }, [lastRefreshed, buses]);
 
     useEffect(() => {
         let interval: any;

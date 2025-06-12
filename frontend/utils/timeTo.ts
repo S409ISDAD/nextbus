@@ -18,7 +18,7 @@ export default function timeTo(bus: Bus) {
 export function lateness(delay: number) {
     const n_delay = Math.abs(delay)
 
-    var output = ""
+    let output = ""
 
     if (n_delay >= 60) {
         output += `${Math.floor(n_delay / 60)}m`
