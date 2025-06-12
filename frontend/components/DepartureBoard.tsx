@@ -188,9 +188,8 @@ function DepartureBoard({ stop_id, closest }: Props) {
                                                                 </div>
                                                                 <span
                                                                     className={`text-${
-                                                                        Math.abs(
-                                                                            bus.delay
-                                                                        ) >= 60
+                                                                        bus.delay >=
+                                                                        60
                                                                             ? "red"
                                                                             : "green"
                                                                     }-400`}>
@@ -202,17 +201,11 @@ function DepartureBoard({ stop_id, closest }: Props) {
                                                                 </span>
                                                             </div>
                                                         </div>
-                                                        <div className="flex flex-row flex-wrap items-center justify-end gap-2">
-                                                            <div className="flex justify-center px-2 py-1 rounded-lg bg-amber-400">
-                                                                <span className="text-xs font-bold text-neutral-950">
-                                                                    {bus.reg}
-                                                                </span>
-                                                            </div>
-                                                            <div className="flex items-center justify-center gap-1 p-1 rounded-lg w-15 bg-blue-950 h-fit">
-                                                                <span className="text-sm font-bold text-blue-300">
-                                                                    {bus.timeto}
-                                                                </span>
-                                                            </div>
+
+                                                        <div className="flex items-center justify-center gap-1 p-1 ml-5 rounded-lg w-15 bg-blue-950 h-fit">
+                                                            <span className="text-sm font-bold text-blue-300">
+                                                                {bus.timeto}
+                                                            </span>
                                                         </div>
                                                     </div>
                                                     <div className="bg-neutral-700 h-[1px] m-1"></div>
