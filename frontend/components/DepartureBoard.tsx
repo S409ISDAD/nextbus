@@ -177,7 +177,7 @@ function DepartureBoard({ stop_id, closest }: Props) {
                                                                         Expt:
                                                                     </span>
                                                                     <span className="text-teal-400">
-                                                                        {bus.scheduled.toLocaleTimeString(
+                                                                        {bus.expected.toLocaleTimeString(
                                                                             [],
                                                                             {
                                                                                 hour: "2-digit",
