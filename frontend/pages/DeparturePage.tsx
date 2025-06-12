@@ -6,7 +6,7 @@ import getStopData from "../utils/getStopData";
 import { useNavigate, useParams } from "react-router";
 import { Skeleton } from "@radix-ui/themes";
 import { Card } from "../components/ui/Card";
-import timeTo from "../utils/timeTo";
+import timeTo, { lateness } from "../utils/timeTo";
 import getClosestStop from "../utils/closestStop";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUpRightFromSquare } from "@fortawesome/free-solid-svg-icons";
@@ -229,27 +229,18 @@ const DeparturePage: React.FC = () => {
                                                             {bus.destination}
                                                         </span>
                                                     </div>
-                                                    <div className="flex flex-row gap-3">
-                                                        {bus.delay > 15 ||
-                                                        bus.delay < -15 ? (
-                                                            <>
-                                                                <span className="text-red-400">
-                                                                    <s>
-                                                                        {bus.scheduled.toLocaleTimeString(
-                                                                            [],
-                                                                            {
-                                                                                hour: "2-digit",
-                                                                                minute: "2-digit",
-                                                                            }
-                                                                        )}
-                                                                    </s>
-                                                                </span>
-                                                                <span className="text-green-400">
-                                                                    {bus.expected.toLocaleTimeString()}
-                                                                </span>
-                                                            </>
-                                                        ) : (
-                                                            <span className="text-green-400">
+                                                    {bus.service.detail && (
+                                                        <span className="wrap-anywhere text-neutral-400">
+                                                            Via:{" "}
+                                                            {bus.service.detail}
+                                                        </span>
+                                                    )}
+                                                    <div className="flex flex-row gap-3 text-lg font-semibold text-nowrap">
+                                                        <div className="flex items-center gap-0.5">
+                                                            <span className="text-sm text-teal-400">
+                                                                Expt:
+                                                            </span>
+                                                            <span className="text-teal-400">
                                                                 {bus.scheduled.toLocaleTimeString(
                                                                     [],
                                                                     {
@@ -258,14 +249,22 @@ const DeparturePage: React.FC = () => {
                                                                     }
                                                                 )}
                                                             </span>
-                                                        )}
-                                                    </div>
-                                                    {bus.service.detail && (
-                                                        <span className="wrap-anywhere">
-                                                            Via:{" "}
-                                                            {bus.service.detail}
+                                                        </div>
+                                                        <span
+                                                            className={`text-${
+                                                                Math.abs(
+                                                                    bus.delay
+                                                                ) >= 60
+                                                                    ? "red"
+                                                                    : "green"
+                                                            }-400`}>
+                                                            {lateness(
+                                                                bus
+                                                                    ? bus.delay
+                                                                    : 0
+                                                            )}
                                                         </span>
-                                                    )}
+                                                    </div>
                                                 </div>
                                                 <div className="flex flex-row flex-wrap items-center justify-end gap-2 md:gap-4">
                                                     <div className="flex justify-center px-2 py-1 rounded-lg bg-amber-400">

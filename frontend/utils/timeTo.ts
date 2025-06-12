@@ -20,17 +20,15 @@ export function lateness(delay: number) {
 
     var output = ""
 
-    if (n_delay > 15 && n_delay < 60) {
-        output += `${n_delay}s`
-    } else if (n_delay >= 60) {
+    if (n_delay >= 60) {
         output += `${Math.floor(n_delay / 60)}m`
     } else {
         output += "On time"
     }
 
-    if (delay < -15) {
+    if (delay < -60) {
         output += " early"
-    } else if (delay > 15) {
+    } else if (delay > 60) {
         output += " late"
     }
 
