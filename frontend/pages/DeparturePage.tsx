@@ -54,20 +54,21 @@ const DeparturePage: React.FC = () => {
         let interval: any;
         const getData = async (id: string) => {
             try {
-                const stop = await getStopData(id);
+                const stopPromise = getStopData(id);
+                const departuresPromise = fetchDepartures(id);
 
-                if (stop) {
-                    setStop(stop);
-                    document.title = stop.name;
+                const stopData = await stopPromise;
+                if (stopData) {
+                    setStop(stopData);
+                    document.title = stopData.name;
                     const closestStop = await getClosestStop(
-                        stop.coords,
+                        stopData.coords,
                         stop_id
                     );
                     setClosest(closestStop);
                 }
 
-                const departures = await fetchDepartures(id);
-
+                const departures = await departuresPromise;
                 if (departures) {
                     setBuses(departures.updatedBuses);
                     setRefreshed(departures.timestamp);

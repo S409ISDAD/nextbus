@@ -53,12 +53,15 @@ function DepartureBoard({ stop_id, closest }: Props) {
         let interval: any;
         const getData = async (id: string) => {
             try {
-                const stop = await getStopData(id);
+                const stopPromise = getStopData(id);
+                const departuresPromise = fetchDepartures(id);
 
-                if (stop) {
-                    setStop(stop);
+                const stopData = await stopPromise;
+
+                if (stopData) {
+                    setStop(stopData);
                 }
-                const departures = await fetchDepartures(id);
+                const departures = await departuresPromise;
 
                 if (departures) {
                     setBuses(departures.updatedBuses);
@@ -85,7 +88,7 @@ function DepartureBoard({ stop_id, closest }: Props) {
                     if (closest_stop_id) {
                         await getData(closest_stop_id);
                         setStopID(closest_stop_id);
-                        const interval = setInterval(
+                        interval = setInterval(
                             () => getData(closest_stop_id),
                             30000
                         );
