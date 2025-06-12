@@ -216,7 +216,7 @@ const DeparturePage: React.FC = () => {
                                         className="cursor-pointer">
                                         <Card key={bus.reg}>
                                             <div className="flex flex-row justify-between align-center">
-                                                <div className="flex flex-col">
+                                                <div className="flex flex-col justify-between">
                                                     <div className="flex flex-row flex-wrap items-center gap-1">
                                                         <span className="text-xl font-bold">
                                                             {
@@ -235,7 +235,7 @@ const DeparturePage: React.FC = () => {
                                                             {bus.service.detail}
                                                         </span>
                                                     )}
-                                                    <div className="flex flex-row gap-3 text-lg font-semibold text-nowrap">
+                                                    <div className="flex flex-row flex-wrap text-lg font-semibold gap-x-3 text-nowrap">
                                                         <div className="flex items-center gap-0.5">
                                                             <span className="text-sm text-teal-400">
                                                                 Expt:
