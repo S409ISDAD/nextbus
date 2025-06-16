@@ -34,9 +34,9 @@ export function lateness(delay: number) {
         output += "On time"
     }
 
-    if (delay < -60) {
+    if (delay <= -60) {
         output += " early"
-    } else if (delay > 60) {
+    } else if (delay >= 60) {
         output += " late"
     }
 
