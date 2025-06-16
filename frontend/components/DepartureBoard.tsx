@@ -21,6 +21,7 @@ function DepartureBoard({ stop_id, closest }: Props) {
     const [stop, setStop] = useState<Stop>();
     const [stopID, setStopID] = useState<string>("");
     const [loading, setLoading] = useState(true);
+    const [fetching, setFetching] = useState(false);
     const [lastRefreshed, setRefreshed] = useState(new Date());
     const [elapsed, setElapsed] = useState<string>("0s");
     const [msg, setMsg] = useState<string>("");
@@ -56,6 +57,10 @@ function DepartureBoard({ stop_id, closest }: Props) {
     useEffect(() => {
         let interval: any;
         const getData = async (id: string) => {
+            if (fetching) {
+                return;
+            }
+            setFetching(true);
             try {
                 const stopPromise = getStopData(id);
                 const departuresPromise = fetchDepartures(id);
@@ -79,6 +84,7 @@ function DepartureBoard({ stop_id, closest }: Props) {
                 console.log("uh oh");
             } finally {
                 setLoading(false);
+                setFetching(false);
             }
         };
         const init = async () => {
@@ -100,6 +106,7 @@ function DepartureBoard({ stop_id, closest }: Props) {
                     } else {
                         setMsg("No stop found nearby");
                         setLoading(false);
+                        setFetching(false);
                     }
                 } else {
                     setStopID(stop_id);
@@ -110,6 +117,7 @@ function DepartureBoard({ stop_id, closest }: Props) {
                 console.error("Init error:", error);
                 setMsg("Unable to get location or stop data.");
                 setLoading(false);
+                setFetching(false);
             }
         };
 

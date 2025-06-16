@@ -22,6 +22,7 @@ const JourneyPage: React.FC = () => {
     const [progress, setProg] = useState<number>(0);
     const [journey, setJourney] = useState<Journey>();
     const [loading, setLoading] = useState(true);
+    const [fetching, setFetching] = useState(false);
     const [lastRefreshed, setRefreshed] = useState(new Date());
     const [elapsed, setElapsed] = useState<string>("0s");
     const [msg, setMsg] = useState<string>("");
@@ -116,6 +117,10 @@ const JourneyPage: React.FC = () => {
     useEffect(() => {
         let interval: any;
         const getData = async (bus_id: string) => {
+            if (fetching) {
+                return;
+            }
+            setFetching(true);
             try {
                 const bus_response = await getBus(bus_id);
 
@@ -135,6 +140,7 @@ const JourneyPage: React.FC = () => {
                 console.log("uh oh", error);
             } finally {
                 setLoading(false);
+                setFetching(false);
             }
         };
         const init = async (bus_id: string) => {
@@ -145,6 +151,7 @@ const JourneyPage: React.FC = () => {
                 console.error("Init error:", error);
                 setMsg("Unable to get journey data.");
                 setLoading(false);
+                setFetching(false);
             }
         };
 

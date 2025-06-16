@@ -25,6 +25,7 @@ const DeparturePage: React.FC = () => {
     const [stop, setStop] = useState<Stop>();
     const [closestStop, setClosest] = useState<string>();
     const [loading, setLoading] = useState(true);
+    const [fetching, setFetching] = useState(false);
     const [lastRefreshed, setRefreshed] = useState(new Date());
     const [elapsed, setElapsed] = useState<string>("0s");
     const [msg, setMsg] = useState<string>("");
@@ -58,6 +59,10 @@ const DeparturePage: React.FC = () => {
     useEffect(() => {
         let interval: any;
         const getData = async (id: string) => {
+            if (fetching) {
+                return;
+            }
+            setFetching(true);
             try {
                 const stopPromise = getStopData(id);
                 const departuresPromise = fetchDepartures(id);
@@ -85,6 +90,7 @@ const DeparturePage: React.FC = () => {
                 console.log("uh oh");
             } finally {
                 setLoading(false);
+                setFetching(false);
             }
         };
         const init = async (stop_id: string) => {
@@ -95,6 +101,7 @@ const DeparturePage: React.FC = () => {
                 console.error("Init error:", error);
                 setMsg("Unable to get stop data.");
                 setLoading(false);
+                setFetching(false);
             }
         };
 
