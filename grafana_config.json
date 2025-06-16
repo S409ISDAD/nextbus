@@ -199,12 +199,12 @@
             "pluginVersion": "12.0.1+security-01",
             "targets": [
                 {
-                    "expr": "process_resident_memory_bytes",
-                    "refId": "A",
                     "datasource": {
                         "type": "prometheus",
                         "uid": "${DS_PROMETHEUS}"
-                    }
+                    },
+                    "expr": "process_resident_memory_bytes",
+                    "refId": "A"
                 }
             ],
             "title": "Resident Memory",
@@ -259,12 +259,12 @@
             "pluginVersion": "12.0.1+security-01",
             "targets": [
                 {
-                    "expr": "process_virtual_memory_bytes",
-                    "refId": "A",
                     "datasource": {
                         "type": "prometheus",
                         "uid": "${DS_PROMETHEUS}"
-                    }
+                    },
+                    "expr": "process_virtual_memory_bytes",
+                    "refId": "A"
                 }
             ],
             "title": "Virtual Memory",
@@ -455,18 +455,22 @@
             "pluginVersion": "12.0.1+security-01",
             "targets": [
                 {
-                    "expr": "rate(process_cpu_seconds_total[1m])",
-                    "refId": "A",
                     "datasource": {
                         "type": "prometheus",
                         "uid": "${DS_PROMETHEUS}"
-                    }
+                    },
+                    "expr": "rate(process_cpu_seconds_total[1m])",
+                    "refId": "A"
                 }
             ],
             "title": "CPU Usage (per sec)",
             "type": "timeseries"
         },
         {
+            "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+            },
             "fieldConfig": {
                 "defaults": {
                     "color": {
@@ -480,17 +484,20 @@
                         "axisPlacement": "auto",
                         "barAlignment": 0,
                         "barWidthFactor": 0.6,
-                        "drawStyle": "points",
-                        "fillOpacity": 0,
-                        "gradientMode": "none",
+                        "drawStyle": "line",
+                        "fillOpacity": 18,
+                        "gradientMode": "opacity",
                         "hideFrom": {
                             "legend": false,
                             "tooltip": false,
                             "viz": false
                         },
                         "insertNulls": false,
-                        "lineInterpolation": "linear",
-                        "lineWidth": 1,
+                        "lineInterpolation": "smooth",
+                        "lineStyle": {
+                            "fill": "solid"
+                        },
+                        "lineWidth": 2,
                         "pointSize": 5,
                         "scaleDistribution": {
                             "type": "linear"
@@ -544,11 +551,17 @@
             "pluginVersion": "12.0.1+security-01",
             "targets": [
                 {
-                    "expr": "histogram_quantile(0.95, sum by (le, handler) (rate(http_request_duration_seconds_bucket[1m])))",
-                    "refId": "A"
+                    "editorMode": "code",
+                    "expr": "sum by (handler) (\n  rate(http_request_duration_seconds_sum[1m])\n) \n/ \nsum by (handler) (\n  rate(http_request_duration_seconds_count[1m])\n)",
+                    "range": true,
+                    "refId": "A",
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "${DS_PROMETHEUS}"
+                    }
                 }
             ],
-            "title": "HTTP Request Duration (P95 by handler)",
+            "title": "HTTP Request Duration (Sec by handler)",
             "type": "timeseries"
         },
         {
@@ -636,12 +649,12 @@
             "pluginVersion": "12.0.1+security-01",
             "targets": [
                 {
-                    "expr": "sum by (handler) (rate(http_requests_total[1m]))",
-                    "refId": "A",
                     "datasource": {
                         "type": "prometheus",
                         "uid": "${DS_PROMETHEUS}"
-                    }
+                    },
+                    "expr": "sum by (handler) (rate(http_requests_total[1m]))",
+                    "refId": "A"
                 }
             ],
             "title": "Requests per Second (by handler)",
@@ -825,13 +838,13 @@
         "list": []
     },
     "time": {
-        "from": "now-1h",
+        "from": "now-5m",
         "to": "now"
     },
     "timepicker": {},
     "timezone": "browser",
     "title": "Python + HTTP Metrics",
     "uid": "6b273fd8-085a-4200-b590-d99d1ff0f89c",
-    "version": 7,
+    "version": 2,
     "weekStart": ""
 }
