@@ -98,7 +98,7 @@ async def build_bus(
     delay += 10  # account for stopping and various other things that increase delay
 
     times, journey = await calculate_expected(
-        delay, progress.get("sequence", 0), stop_id, bus_id, journey_id, r
+        delay, progress.get("sequence", 0), stop_id, journey_id, r
     )
 
     service_info = await get_service_info(journey.service_id, r)

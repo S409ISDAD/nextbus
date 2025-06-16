@@ -103,7 +103,7 @@ async def predict_future(
     return predictions
 
 
-async def calculate_expected(delay, sequence, stop_id, bus_id, journey_id, r):
+async def calculate_expected(delay, sequence, stop_id, journey_id, r):
     journey = await get_vehicle_journey(journey_id, delay, r)
 
     uk_timezone = datetime.timezone(timedelta(hours=1))

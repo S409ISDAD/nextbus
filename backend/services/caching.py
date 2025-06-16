@@ -4,16 +4,17 @@ import time
 import redis.asyncio as redis
 import json
 
+HOUR = 3600
+DAY = HOUR * 24
 
-SERVICES_CACHE = 600
-VEHICLES_CACHE = 30
-TRIPS_CACHE = 300
+SERVICES_CACHE = DAY
+TRIPS_CACHE = 60
 BUS_CACHE = 25
-JOURNEY_CACHE = 300
-SERVICE_CACHE = 300
-STOPS_CACHE = 600
+JOURNEY_CACHE = DAY
+SERVICE_CACHE = DAY
+STOPS_CACHE = DAY
 TIMETABLE_CACHE = 3600
-LIVERY_CACHE = 3600 * 2
+LIVERY_CACHE = DAY
 
 
 async def get_cached(key: str, func, args: tuple, exp: int, r: redis.Redis):
