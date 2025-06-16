@@ -3,15 +3,23 @@ import type { Bus } from "../models/Bus";
 export default function timeTo(bus: Bus) {
     const now = new Date()
     const diffMs = bus.expected.getTime() - now.getTime();
+    const diffSec = Math.floor(diffMs / 1000);
 
-    const min = Math.floor(diffMs / 1000 / 60);
+    return generateTimeTo(diffSec)
 
-    if (min < 1) {
-        return 'Due'
-    } else if (min < 60) {
-        return `${min} min`
+}
+
+export function generateTimeTo(diffSec: number) {
+    if (diffSec <= 0) {
+        return 'Due';
+    } else if (diffSec < 60) {
+        return '1 min';
+    } else if (diffSec < 3600) {
+        const min = Math.floor(diffSec / 60);
+        return `${min} min`;
     } else {
-        return `${Math.floor(min / 60)} h`
+        const hr = Math.floor(diffSec / 3600);
+        return `${hr} h`;
     }
 }
 

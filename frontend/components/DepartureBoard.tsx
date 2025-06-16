@@ -42,8 +42,9 @@ function DepartureBoard({ stop_id, closest }: Props) {
                     };
                 })
                 .filter(
-                    (bus) => new Date(bus.expected.getTime() + 15 * 1000) > now
+                    (bus) => new Date(bus.expected.getTime() + 60 * 1000) > now
                 );
+
             setBuses(newBuses);
         }, 1000);
         return () => clearInterval(interval);

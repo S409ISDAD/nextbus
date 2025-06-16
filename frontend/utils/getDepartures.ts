@@ -1,5 +1,6 @@
 import api from "../src/api"
 import type { Bus } from "../models/Bus"
+import { generateTimeTo } from "./timeTo";
 
 interface DeparturesResponse {
     timestamp: number;
@@ -24,29 +25,20 @@ const fetchDepartures = async (stop_id: string) => {
                 const expected = new Date(bus.expected * 1000);
                 const scheduled = new Date(bus.scheduled * 1000);
 
-                const diffMs = expected.getTime() - now.getTime();
+                const now = new Date()
 
-                const min = Math.floor(diffMs / 1000 / 60);
-
-                let timeto = ""
-
-                if (min < 1) {
-                    timeto = 'Due'
-                } else if (min < 60) {
-                    timeto = `${min} min`
-                } else {
-                    timeto = `${Math.floor(min / 60)} h`
-                }
+                const diffSec = bus.expected - Math.floor(now.getTime() / 1000);
 
                 return {
                     ...bus,
                     expected,
                     scheduled,
-                    timeto: timeto,
+                    timeto: generateTimeTo(diffSec),
                 };
             })
-            .filter((bus) => bus.expected > now)
-            .sort(
+            .filter(
+                (bus) => new Date(bus.expected.getTime() + 60 * 1000) > now
+            ).sort(
                 (a, b) => a.expected.getTime() - b.expected.getTime()
             );
         const stop_name = response.data.stop_name
