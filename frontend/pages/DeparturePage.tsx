@@ -9,7 +9,12 @@ import { Card } from "../components/ui/Card";
 import timeTo, { lateness } from "../utils/timeTo";
 import getClosestStop from "../utils/closestStop";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUpRightFromSquare } from "@fortawesome/free-solid-svg-icons";
+import {
+    faSatelliteDish,
+    faSlash,
+    faUpRightFromSquare,
+} from "@fortawesome/free-solid-svg-icons";
+import clsx from "clsx";
 
 const DeparturePage: React.FC = () => {
     const { stop_id } = useParams();
@@ -261,7 +266,7 @@ const DeparturePage: React.FC = () => {
                                                             </span>
                                                         </div>
                                                     )}
-                                                    <div className="flex flex-row text-lg font-semibold gap-x-3 text-nowrap">
+                                                    <div className="flex flex-row items-center text-lg font-semibold gap-x-3 text-nowrap">
                                                         <div className="flex items-center gap-0.5">
                                                             <span className="text-sm text-teal-400">
                                                                 Expt:
@@ -288,6 +293,36 @@ const DeparturePage: React.FC = () => {
                                                                     : 0
                                                             )}
                                                         </span>
+                                                        <div className="relative w-5 h-5">
+                                                            <FontAwesomeIcon
+                                                                icon={
+                                                                    faSatelliteDish
+                                                                }
+                                                                className={clsx(
+                                                                    "absolute top-0 left-0 w-5 h-5",
+                                                                    {
+                                                                        "text-blue-400 opacity-40":
+                                                                            bus.status ===
+                                                                            "not_tracking",
+                                                                        "text-sky-500":
+                                                                            bus.status ===
+                                                                            "tracking",
+                                                                        "text-emerald-500":
+                                                                            bus.status ===
+                                                                            "user_tracking",
+                                                                    }
+                                                                )}
+                                                            />
+                                                            {bus.status ===
+                                                                "not_tracking" && (
+                                                                <FontAwesomeIcon
+                                                                    icon={
+                                                                        faSlash
+                                                                    }
+                                                                    className="absolute top-0 left-0 w-5 h-5 text-red-500"
+                                                                />
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </div>
                                                 <div className="flex flex-row flex-wrap items-center justify-end gap-2 md:gap-4">

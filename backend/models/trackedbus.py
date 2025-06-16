@@ -26,6 +26,7 @@ class TrackedBus(BaseModel):
     livery: Optional[Livery]
     journey: Journey
     coords: list[float]
+    status: str
 
 
 class Bus:

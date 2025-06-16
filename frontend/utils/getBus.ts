@@ -38,6 +38,7 @@ export interface BusResponse {
     livery?: Livery
     coords?: number[];
     timeto: number;
+    status: string;
 }
 
 const getBus = async (bus_id: string) => {

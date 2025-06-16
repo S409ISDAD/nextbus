@@ -139,4 +139,5 @@ async def build_bus(
         livery=livery,
         speed=None,
         coords=coords,
+        status="tracking",
     )

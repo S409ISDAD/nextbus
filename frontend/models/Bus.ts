@@ -21,6 +21,7 @@ export interface Bus {
     livery?: Livery
     journey: Journey
     timeto: string;
+    status: string;
 }
 
 export interface Prediction {

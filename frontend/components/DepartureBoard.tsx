@@ -7,6 +7,9 @@ import { Card } from "./ui/Card";
 import getClosestStop, { getCurrentPosition } from "../utils/closestStop";
 import getStopData from "../utils/getStopData";
 import type { Stop } from "../models/Stop";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faSatelliteDish, faSlash } from "@fortawesome/free-solid-svg-icons";
+import clsx from "clsx";
 
 interface Props {
     stop_id: string;
@@ -182,7 +185,7 @@ function DepartureBoard({ stop_id, closest }: Props) {
                                                                     }
                                                                 </span>
                                                             </div>
-                                                            <div className="flex flex-row gap-3 font-semibold text-nowrap">
+                                                            <div className="flex flex-row items-center gap-3 font-semibold text-nowrap">
                                                                 <div className="flex items-center gap-0.5">
                                                                     <span className="text-sm text-teal-400">
                                                                         Expt:
@@ -210,6 +213,36 @@ function DepartureBoard({ stop_id, closest }: Props) {
                                                                             : 0
                                                                     )}
                                                                 </span>
+                                                                <div className="relative w-5 h-5">
+                                                                    <FontAwesomeIcon
+                                                                        icon={
+                                                                            faSatelliteDish
+                                                                        }
+                                                                        className={clsx(
+                                                                            "absolute top-0 left-0 w-5 h-5",
+                                                                            {
+                                                                                "text-blue-400 opacity-40":
+                                                                                    bus.status ===
+                                                                                    "not_tracking",
+                                                                                "text-sky-500":
+                                                                                    bus.status ===
+                                                                                    "tracking",
+                                                                                "text-emerald-500":
+                                                                                    bus.status ===
+                                                                                    "user_tracking",
+                                                                            }
+                                                                        )}
+                                                                    />
+                                                                    {bus.status ===
+                                                                        "not_tracking" && (
+                                                                        <FontAwesomeIcon
+                                                                            icon={
+                                                                                faSlash
+                                                                            }
+                                                                            className="absolute top-0 left-0 w-5 h-5 text-red-500"
+                                                                        />
+                                                                    )}
+                                                                </div>
                                                             </div>
                                                         </div>
 
