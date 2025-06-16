@@ -303,33 +303,12 @@ const JourneyPage: React.FC = () => {
                                                     )}
                                                 </span>
                                                 {sequence >= idx ? (
-                                                    <>
-                                                        {stop.actual_time &&
-                                                        sequence != 0 ? (
-                                                            <></>
-                                                        ) : (
-                                                            <span className="font-bold">
-                                                                {sequence ==
-                                                                    0 &&
-                                                                !bus?.started
-                                                                    ? "Waiting to Start"
-                                                                    : "No Data"}
-                                                            </span>
-                                                        )}
-                                                        {stop.actual_time &&
-                                                            sequence != 0 && (
-                                                                <span className="font-bold text-orange-400">
-                                                                    Departed:{" "}
-                                                                    {stop.actual_time.toLocaleTimeString(
-                                                                        [],
-                                                                        {
-                                                                            hour: "2-digit",
-                                                                            minute: "2-digit",
-                                                                        }
-                                                                    )}
-                                                                </span>
-                                                            )}
-                                                    </>
+                                                    <span className="font-bold">
+                                                        {sequence == 0 &&
+                                                        !bus?.started
+                                                            ? "Waiting to Start"
+                                                            : "Departed"}
+                                                    </span>
                                                 ) : stop.expt_time &&
                                                   bus?.started &&
                                                   Math.abs(

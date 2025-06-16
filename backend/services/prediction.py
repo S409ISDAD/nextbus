@@ -68,6 +68,9 @@ async def predict_future(
 
     predictions = []
 
+    if not started:
+        return predictions
+
     for seconds_ahead in range(ahead + 1):
         future_time = int(current_time.timestamp() + seconds_ahead)
 
@@ -101,7 +104,7 @@ async def predict_future(
 
 
 async def calculate_expected(delay, sequence, stop_id, bus_id, journey_id, r):
-    journey = await get_vehicle_journey(bus_id, journey_id, delay, r)
+    journey = await get_vehicle_journey(journey_id, delay, r)
 
     uk_timezone = datetime.timezone(timedelta(hours=1))
     current_time = dt.now(datetime.timezone.utc).astimezone(uk_timezone)

@@ -9,9 +9,8 @@ export interface ResponseStopTime {
     stop_id: string
     name: string;
     aimed_time: number;
-    actual_time?: number;
     expt_time?: number;
-    minor: boolean;
+    set_down: boolean;
 }
 
 export interface ResponseJourney {
@@ -58,9 +57,8 @@ const getBus = async (bus_id: string) => {
                 stop_id: stop.stop_id,
                 name: stop.name,
                 aimed_time: new Date(stop.aimed_time * 1000),
-                actual_time: stop.actual_time ? new Date(stop.actual_time * 1000) : undefined,
                 expt_time: stop.expt_time ? new Date(stop.expt_time * 1000) : undefined,
-                minor: stop.minor,
+                set_down: stop.set_down,
             };
         });
 

@@ -19,7 +19,6 @@ class StopTime(BaseModel):
     stop_id: str
     name: str
     aimed_time: int
-    actual_time: Optional[int]
     expt_time: Optional[int]
     track: Optional[list[list[float]]]
-    minor: bool
+    set_down: bool

@@ -5,7 +5,7 @@ from datetime import timedelta
 from dateutil import parser
 from geopy.distance import geodesic
 
-from backend.config import API_BASE, BASE
+from backend.config import API_BASE
 from backend.models.journey import Journey
 from backend.models.stop import StopTime
 from backend.services.caching import (
@@ -18,10 +18,10 @@ from backend.utils.fetch_json import fetch_json
 from backend.utils.time import check_scheduled_time
 
 
-async def get_vehicle_journey(bus_id, journey_id, delay, r) -> Journey:
-    async def fetch(bus_id, journey_id, delay):
+async def get_vehicle_journey(journey_id, delay, r) -> Journey:
+    async def fetch(journey_id, delay):
         data = await fetch_json(
-            BASE + f"/vehicles/{bus_id}/journeys/{journey_id}.json",
+            API_BASE + f"/vehiclejourneys/{journey_id}/",
         )
 
         if not data:
@@ -29,18 +29,15 @@ async def get_vehicle_journey(bus_id, journey_id, delay, r) -> Journey:
 
         uk_timezone = datetime.timezone(datetime.timedelta(hours=1))
         current_time = dt.now(datetime.timezone.utc).astimezone(uk_timezone)
-
-        tracks = await fetch_tracks(journey_id)
         prev_time = 0
         total_delay = 0
-        for i, stop in enumerate(data["stops"]):
-            if tracks:
-                data["stops"][i]["track"] = tracks[i]
+        times = data["times"]
+        for i, stop in enumerate(times):
+            aimed_key = (
+                "aimed_arrival_time" if i == len(times) - 1 else "aimed_departure_time"
+            )
 
-            if i == len(data["stops"]) - 1:
-                aimed = data["stops"][i].get("aimed_arrival_time")
-            else:
-                aimed = data["stops"][i].get("aimed_departure_time")
+            aimed = stop.get(aimed_key)
             if aimed:
                 scheduled_time = dt.strptime(aimed, "%H:%M").replace(
                     year=current_time.year,
@@ -55,8 +52,8 @@ async def get_vehicle_journey(bus_id, journey_id, delay, r) -> Journey:
                 old_expt = expt_time
 
                 if prev_time == expt_time:
-                    coords_prev = tuple(data["stops"][i - 1]["coordinates"])
-                    coords_next = tuple(data["stops"][i]["coordinates"])
+                    coords_prev = tuple(times[i - 1]["stop"]["location"])
+                    coords_next = tuple(stop["stop"]["location"])
                     dist_m = geodesic(coords_prev, coords_next).m
 
                     delay_factor = 18
@@ -69,14 +66,8 @@ async def get_vehicle_journey(bus_id, journey_id, delay, r) -> Journey:
 
                 prev_time = old_expt
 
-                data["stops"][i]["aimed_time"] = scheduled_time.timestamp()
-                data["stops"][i]["expt_time"] = expt_time.timestamp()
-
-            actual_departure = data["stops"][i].get("actual_departure_time")
-            if actual_departure:
-                departure_time = parser.isoparse(actual_departure)
-
-                data["stops"][i]["actual_time"] = departure_time.timestamp()
+                stop["aimed_time"] = scheduled_time.timestamp()
+                stop["expt_time"] = expt_time.timestamp()
 
         # data["stops"] = await recalculate_timetable(data["stops"], journey_id, r)
 
@@ -85,48 +76,32 @@ async def get_vehicle_journey(bus_id, journey_id, delay, r) -> Journey:
 
         return data
 
-    async def fetch_tracks(journey_id):
-        data = await fetch_json(
-            API_BASE + f"/vehiclejourneys/{journey_id}/",
-        )
-
-        if not data:
-            return
-
-        tracks = []
-
-        for stop in data["times"]:
-            tracks.append(stop.get("track", None))
-
-        return tracks
-
     journey = await get_cached(
-        key=f"journeys:{bus_id}:{journey_id}",
+        key=f"journeys:{journey_id}",
         func=lambda *args: fetch(*args),
-        args=(bus_id, journey_id, delay),
+        args=(journey_id, delay),
         exp=JOURNEY_CACHE,
         r=r,
     )
 
-    json_stops = journey.get("stops")
+    json_stops = journey.get("times")
     stops: list[StopTime] = []
 
     for stop in json_stops:
         stops.append(
             StopTime(
-                stop_id=stop.get("atco_code"),
-                name=stop.get("name"),
+                stop_id=stop["stop"].get("atco_code"),
+                name=stop["stop"].get("name"),
                 aimed_time=stop.get("aimed_time"),
                 expt_time=stop.get("expt_time"),
-                actual_time=stop.get("actual_time"),
                 track=stop.get("track"),
-                minor=stop.get("minor"),
+                set_down=stop.get("set_down"),
             )
         )
 
     return Journey(
         route_name=journey.get("route_name"),
         destination=journey.get("destination"),
-        service_id=journey.get("service_id"),
+        service_id=journey.get("service").get("id"),
         stops=stops,
     )
