@@ -1,15 +1,12 @@
 #!/bin/bash
 
-set -e 
+set -e
 
 echo "pulling code from repo..."
 git pull origin main
 
 echo "stopping containers..."
-docker compose down -v
-
-echo "removing unused Docker resources..."
-docker system prune -f
+docker compose down
 
 echo "rebuilding and starting containers..."
 docker compose up --build -d
