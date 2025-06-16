@@ -86,8 +86,8 @@ function DepartureBoard({ stop_id, closest }: Props) {
                         pos.coords.longitude,
                     ]);
                     if (closest_stop_id) {
-                        await getData(closest_stop_id);
                         setStopID(closest_stop_id);
+                        await getData(closest_stop_id);
                         interval = setInterval(
                             () => getData(closest_stop_id),
                             30000
@@ -98,8 +98,8 @@ function DepartureBoard({ stop_id, closest }: Props) {
                         setLoading(false);
                     }
                 } else {
-                    await getData(stop_id);
                     setStopID(stop_id);
+                    await getData(stop_id);
                     interval = setInterval(() => getData(stop_id), 30000);
                 }
             } catch (error) {
@@ -115,12 +115,19 @@ function DepartureBoard({ stop_id, closest }: Props) {
     }, [stop_id, closest]);
 
     return (
-        <div>
+        <div className="min-w-[300px]">
             <Card>
                 <div className="flex flex-col gap-2">
                     <div
-                        className="flex justify-center cursor-pointer"
+                        className="flex flex-col justify-center gap-1 cursor-pointer"
                         onClick={() => navigate(`/departures/${stopID}`)}>
+                        {closest && (
+                            <div className="flex items-center justify-center gap-1 p-1 rounded-lg w-fit bg-blue-950 h-fit">
+                                <span className="text-xs font-bold text-blue-300">
+                                    Closest Stop
+                                </span>
+                            </div>
+                        )}
                         <span className="text-xl font-bold text-center wrap-normal">
                             {stop?.name}{" "}
                             {stop?.indicator
@@ -229,7 +236,9 @@ function DepartureBoard({ stop_id, closest }: Props) {
                             </div>
                             <div className="flex justify-center gap-2">
                                 <span className="text-xs text-neutral-400">
-                                    Updated {elapsed} ago
+                                    {loading
+                                        ? "Loading..."
+                                        : `Updated ${elapsed} ago`}
                                 </span>
                                 <span className="text-xs text-neutral-400">
                                     ·

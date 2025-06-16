@@ -5,3 +5,5 @@ geopy
 python-dateutil
 uvicorn[standard]
 numpy
+prometheus-fastapi-instrumentator
+prometheus-client

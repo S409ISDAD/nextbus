@@ -7,7 +7,7 @@ router = APIRouter()
 
 
 @router.get("/closest")
-async def closest_stops(lat: float, lng: float, ignore: str, redis=Depends(get_redis)):
+async def closest_stops(lat: float, lng: float, dist: float, ignore: str, redis=Depends(get_redis)):
     # stop = await get_cached(
     #     f"closest_stop:{round(lat * 1000)}:{round(lng * 1000)}",
     #     lambda *args: bustimes.get_closest_stop(*args),
@@ -16,4 +16,4 @@ async def closest_stops(lat: float, lng: float, ignore: str, redis=Depends(get_r
     #     redis,
     # )
 
-    return await stops.get_closest_stop(lat, lng, ignore)
+    return await stops.get_closest_stop(lat, lng, ignore, dist)

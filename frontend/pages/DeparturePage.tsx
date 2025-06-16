@@ -159,7 +159,7 @@ const DeparturePage: React.FC = () => {
 
                 <div className="flex justify-center gap-2">
                     <span className="text-xs text-neutral-400">
-                        Updated {elapsed} ago
+                        {loading ? "Loading..." : `Updated ${elapsed} ago`}
                     </span>
                     <span className="text-xs text-neutral-400">·</span>
                     <span className="text-xs text-neutral-400">

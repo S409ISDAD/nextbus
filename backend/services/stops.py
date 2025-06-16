@@ -65,13 +65,11 @@ async def get_services_from_stop(stop_id, r: Redis):
     return services
 
 
-async def get_closest_stop(lat, lng, ignore):
-    buffer = 0.005
-
-    xmin = lng - buffer
-    xmax = lng + buffer
-    ymin = lat - buffer
-    ymax = lat + buffer
+async def get_closest_stop(lat, lng, ignore, dist=0.005):
+    xmin = lng - dist
+    xmax = lng + dist
+    ymin = lat - dist
+    ymax = lat + dist
 
     stops = await fetch_json(
         STOPS_BASE + f"?ymax={ymax}&ymin={ymin}&xmax={xmax}&xmin={xmin}"

@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from backend.api.routes import departures, location, stops, buses, livery
 from backend.deps import get_redis_client
 import logging
+from prometheus_fastapi_instrumentator import Instrumentator
 
 
 log = logging.getLogger(__name__)
@@ -27,6 +28,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+
+Instrumentator().instrument(app).expose(app)
 
 app.add_middleware(
     CORSMiddleware,
