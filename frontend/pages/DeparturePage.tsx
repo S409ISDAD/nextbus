@@ -111,7 +111,7 @@ const DeparturePage: React.FC = () => {
         }
 
         return () => clearInterval(interval);
-    }, [stop_id, fetching]);
+    }, [stop_id]);
 
     return (
         <div className="p-5 md:mx-20">

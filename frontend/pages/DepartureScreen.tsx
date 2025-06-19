@@ -70,7 +70,7 @@ const DepartureScreen: React.FC = () => {
         }
 
         return () => clearInterval(interval);
-    }, [stop_id, fetching]);
+    }, [stop_id]);
 
     return (
         <div className="p-5">

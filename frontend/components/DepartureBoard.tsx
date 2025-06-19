@@ -124,7 +124,7 @@ function DepartureBoard({ stop_id, closest }: Props) {
         init();
 
         return () => clearInterval(interval);
-    }, [stop_id, closest, fetching]);
+    }, [stop_id, closest]);
 
     return (
         <div className="min-w-[300px]">
