@@ -160,7 +160,7 @@ const JourneyPage: React.FC = () => {
         }
 
         return () => clearInterval(interval);
-    }, [bus_id]);
+    }, [bus_id, fetching]);
 
     if (loading) {
         return <></>;

@@ -1,44 +1,21 @@
 import { useEffect, useState } from "react";
 import { isTrackedBus, type Departure } from "../models/Bus";
-import type { Stop } from "../models/Stop";
 import fetchDepartures from "../utils/getDepartures";
-import getStopData from "../utils/getStopData";
-import { useNavigate, useParams } from "react-router";
-import { Skeleton } from "@radix-ui/themes";
-import { Card } from "../components/ui/Card";
-import timeTo, { lateness } from "../utils/timeTo";
-import getClosestStop from "../utils/closestStop";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-    faSatelliteDish,
-    faSlash,
-    faUpRightFromSquare,
-} from "@fortawesome/free-solid-svg-icons";
-import clsx from "clsx";
+
+import { useParams } from "react-router";
+
+import timeTo from "../utils/timeTo";
 
 const DepartureScreen: React.FC = () => {
     const { stop_id } = useParams();
 
-    const navigate = useNavigate();
-
     const [buses, setBuses] = useState<Departure[]>([]);
-    const [stop, setStop] = useState<Stop>();
-    const [closestStop, setClosest] = useState<string>();
-    const [loading, setLoading] = useState(true);
     const [fetching, setFetching] = useState(false);
     const [lastRefreshed, setRefreshed] = useState(new Date());
-    const [elapsed, setElapsed] = useState<string>("0s");
-    const [msg, setMsg] = useState<string>("");
+
     useEffect(() => {
         const interval = setInterval(() => {
             const now = new Date();
-            const diffSec = Math.floor(
-                (now.getTime() - lastRefreshed.getTime()) / 1000
-            );
-            const min = Math.floor(diffSec / 60);
-            const sec = diffSec % 60;
-
-            setElapsed(min > 0 ? `${min}m ${sec}s` : `${sec}s`);
 
             const newBuses = buses
                 .map((bus) => {
@@ -71,14 +48,10 @@ const DepartureScreen: React.FC = () => {
                     console.log(departures.updatedBuses);
                     setBuses(departures.updatedBuses);
                     setRefreshed(departures.timestamp);
-                    setMsg("");
-                } else {
-                    setMsg("Lost connection to server. Please Wait...");
                 }
             } catch {
                 console.log("uh oh");
             } finally {
-                setLoading(false);
                 setFetching(false);
             }
         };
@@ -88,8 +61,6 @@ const DepartureScreen: React.FC = () => {
                 interval = setInterval(() => getData(stop_id), 30000);
             } catch (error) {
                 console.error("Init error:", error);
-                setMsg("Unable to get stop data.");
-                setLoading(false);
                 setFetching(false);
             }
         };
@@ -99,7 +70,7 @@ const DepartureScreen: React.FC = () => {
         }
 
         return () => clearInterval(interval);
-    }, [stop_id]);
+    }, [stop_id, fetching]);
 
     return (
         <div className="p-5">
