@@ -1,4 +1,5 @@
 import DeparturePage from "../pages/DeparturePage";
+import DepartureScreen from "../pages/DepartureScreen";
 import Home from "../pages/Home";
 import JourneyPage from "../pages/JourneyPage";
 import BusPage from "../pages/BusPage";
@@ -22,6 +23,10 @@ function App() {
                             element={<JourneyPage />}
                         />
                     </Route>
+                    <Route
+                        path="departureboard/:stop_id"
+                        element={<DepartureScreen />}
+                    />
                 </Routes>
             </BrowserRouter>
         </div>

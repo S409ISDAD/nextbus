@@ -395,7 +395,7 @@ const DeparturePage: React.FC = () => {
                                                                     </span>
                                                                 </div>
                                                                 {!bus.started && (
-                                                                    <span>
+                                                                    <span className="font-medium opacity-70">
                                                                         Upcoming
                                                                     </span>
                                                                 )}
