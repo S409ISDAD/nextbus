@@ -37,6 +37,7 @@ export interface BusResponse {
     livery?: Livery
     coords?: number[];
     timeto: number;
+    type: string;
     status: string;
 }
 

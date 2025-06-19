@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { isTrackedBus, type Bus, type Departure } from "../models/Bus";
+import { isTrackedBus, type Departure } from "../models/Bus";
 import type { Stop } from "../models/Stop";
 import fetchDepartures from "../utils/getDepartures";
 import getStopData from "../utils/getStopData";
-import { redirect, useNavigate, useParams } from "react-router";
+import { useNavigate, useParams } from "react-router";
 import { Skeleton } from "@radix-ui/themes";
 import { Card } from "../components/ui/Card";
 import timeTo, { lateness } from "../utils/timeTo";
