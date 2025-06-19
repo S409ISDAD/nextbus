@@ -233,9 +233,6 @@ function DepartureBoard({ stop_id, closest }: Props) {
                                                                                 className={clsx(
                                                                                     "absolute top-0 left-0 w-5 h-5",
                                                                                     {
-                                                                                        "text-blue-400 opacity-40":
-                                                                                            bus.status ===
-                                                                                            "not_tracking",
                                                                                         "text-sky-500":
                                                                                             bus.status ===
                                                                                             "tracking",
@@ -245,15 +242,6 @@ function DepartureBoard({ stop_id, closest }: Props) {
                                                                                     }
                                                                                 )}
                                                                             />
-                                                                            {bus.status ===
-                                                                                "not_tracking" && (
-                                                                                <FontAwesomeIcon
-                                                                                    icon={
-                                                                                        faSlash
-                                                                                    }
-                                                                                    className="absolute top-0 left-0 w-5 h-5 text-red-500"
-                                                                                />
-                                                                            )}
                                                                         </div>
                                                                     </div>
                                                                 </div>
@@ -310,12 +298,7 @@ function DepartureBoard({ stop_id, closest }: Props) {
                                                                                 )}
                                                                             </span>
                                                                         </div>
-                                                                        {bus.started ? (
-                                                                            <span className="opacity-70">
-                                                                                Not
-                                                                                Tracking
-                                                                            </span>
-                                                                        ) : (
+                                                                        {!bus.started && (
                                                                             <span>
                                                                                 Upcoming
                                                                             </span>
