@@ -1,6 +1,11 @@
 from geopy.distance import geodesic
-from backend.config import API_BASE, STOPS_BASE
-from backend.services.caching import SERVICES_CACHE, STOPS_CACHE, get_cached
+from backend.config import API_BASE, BASE, STOPS_BASE
+from backend.services.caching import (
+    SERVICES_CACHE,
+    STOPS_CACHE,
+    TRIPS_CACHE,
+    get_cached,
+)
 from backend.utils.fetch_json import fetch_json
 from redis.asyncio import Redis
 
@@ -63,6 +68,28 @@ async def get_services_from_stop(stop_id, r: Redis):
     )
 
     return services
+
+
+async def get_times(stop_id, r: Redis):
+    """Fetches departures from a stop."""
+
+    async def fetch(stop_id):
+        data = await fetch_json(BASE + f"/stops/{stop_id}/times.json")
+
+        if not data:
+            return
+
+        return data.get("times")
+
+    times = await get_cached(
+        key=f"times:{stop_id}",
+        func=lambda *args: fetch(*args),
+        args=(stop_id,),
+        exp=TRIPS_CACHE,
+        r=r,
+    )
+
+    return times
 
 
 async def get_closest_stop(lat, lng, ignore, dist=0.005):

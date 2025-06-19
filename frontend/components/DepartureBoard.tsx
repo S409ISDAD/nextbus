@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { Bus } from "../models/Bus";
+import { isTrackedBus, type Departure } from "../models/Bus";
 import fetchDepartures from "../utils/getDepartures";
 import { useNavigate } from "react-router";
 import timeTo, { lateness } from "../utils/timeTo";
@@ -17,7 +17,7 @@ interface Props {
 }
 
 function DepartureBoard({ stop_id, closest }: Props) {
-    const [buses, setBuses] = useState<Bus[]>([]);
+    const [buses, setBuses] = useState<Departure[]>([]);
     const [stop, setStop] = useState<Stop>();
     const [stopID, setStopID] = useState<string>("");
     const [loading, setLoading] = useState(true);
@@ -168,100 +168,205 @@ function DepartureBoard({ stop_id, closest }: Props) {
                                     ) : (
                                         <>
                                             {buses.map((bus) => (
-                                                <div
-                                                    className="cursor-pointer"
-                                                    key={bus.reg}
-                                                    onClick={() =>
-                                                        navigate(
-                                                            `/buses/${bus.id}`
-                                                        )
-                                                    }>
-                                                    <div className="flex flex-row items-center justify-between gap-2">
-                                                        <div className="flex flex-col">
-                                                            <div className="flex flex-row flex-wrap items-center gap-1">
-                                                                <span className="text-xl font-bold">
-                                                                    {
-                                                                        bus
-                                                                            .service
-                                                                            .line_name
-                                                                    }
-                                                                </span>
-                                                                <span>to</span>
-                                                                <span className="font-bold">
-                                                                    {
-                                                                        bus.destination
-                                                                    }
-                                                                </span>
-                                                            </div>
-                                                            <div className="flex flex-row items-center gap-3 font-semibold text-nowrap">
-                                                                <div className="flex items-center gap-0.5">
-                                                                    <span className="text-sm text-teal-400">
-                                                                        Expt:
-                                                                    </span>
-                                                                    <span className="text-teal-400">
-                                                                        {bus.expected.toLocaleTimeString(
-                                                                            [],
+                                                <>
+                                                    {isTrackedBus(bus) ? (
+                                                        <div
+                                                            className="cursor-pointer"
+                                                            key={bus.reg}
+                                                            onClick={() =>
+                                                                navigate(
+                                                                    `/buses/${bus.id}`
+                                                                )
+                                                            }>
+                                                            <div className="flex flex-row items-center justify-between gap-2">
+                                                                <div className="flex flex-col">
+                                                                    <div className="flex flex-row flex-wrap items-center gap-1">
+                                                                        <span className="text-xl font-bold">
                                                                             {
-                                                                                hour: "2-digit",
-                                                                                minute: "2-digit",
+                                                                                bus
+                                                                                    .service
+                                                                                    .line_name
                                                                             }
-                                                                        )}
-                                                                    </span>
-                                                                </div>
-                                                                <span
-                                                                    className={`text-${
-                                                                        bus.delay >=
-                                                                        60
-                                                                            ? "red"
-                                                                            : "green"
-                                                                    }-400`}>
-                                                                    {lateness(
-                                                                        bus
-                                                                            ? bus.delay
-                                                                            : 0
-                                                                    )}
-                                                                </span>
-                                                                <div className="relative w-5 h-5">
-                                                                    <FontAwesomeIcon
-                                                                        icon={
-                                                                            faSatelliteDish
-                                                                        }
-                                                                        className={clsx(
-                                                                            "absolute top-0 left-0 w-5 h-5",
+                                                                        </span>
+                                                                        <span>
+                                                                            to
+                                                                        </span>
+                                                                        <span className="font-bold">
                                                                             {
-                                                                                "text-blue-400 opacity-40":
-                                                                                    bus.status ===
-                                                                                    "not_tracking",
-                                                                                "text-sky-500":
-                                                                                    bus.status ===
-                                                                                    "tracking",
-                                                                                "text-emerald-500":
-                                                                                    bus.status ===
-                                                                                    "user_tracking",
+                                                                                bus.destination
                                                                             }
-                                                                        )}
-                                                                    />
-                                                                    {bus.status ===
-                                                                        "not_tracking" && (
-                                                                        <FontAwesomeIcon
-                                                                            icon={
-                                                                                faSlash
-                                                                            }
-                                                                            className="absolute top-0 left-0 w-5 h-5 text-red-500"
-                                                                        />
-                                                                    )}
+                                                                        </span>
+                                                                    </div>
+                                                                    <div className="flex flex-row items-center gap-3 font-semibold text-nowrap">
+                                                                        <div className="flex items-center gap-0.5">
+                                                                            <span className="text-sm text-teal-400">
+                                                                                Expt:
+                                                                            </span>
+                                                                            <span className="text-teal-400">
+                                                                                {bus.expected.toLocaleTimeString(
+                                                                                    [],
+                                                                                    {
+                                                                                        hour: "2-digit",
+                                                                                        minute: "2-digit",
+                                                                                    }
+                                                                                )}
+                                                                            </span>
+                                                                        </div>
+                                                                        <span
+                                                                            className={`text-${
+                                                                                bus.delay >=
+                                                                                60
+                                                                                    ? "red"
+                                                                                    : "green"
+                                                                            }-400`}>
+                                                                            {lateness(
+                                                                                bus
+                                                                                    ? bus.delay
+                                                                                    : 0
+                                                                            )}
+                                                                        </span>
+                                                                        <div className="relative w-5 h-5">
+                                                                            <FontAwesomeIcon
+                                                                                icon={
+                                                                                    faSatelliteDish
+                                                                                }
+                                                                                className={clsx(
+                                                                                    "absolute top-0 left-0 w-5 h-5",
+                                                                                    {
+                                                                                        "text-blue-400 opacity-40":
+                                                                                            bus.status ===
+                                                                                            "not_tracking",
+                                                                                        "text-sky-500":
+                                                                                            bus.status ===
+                                                                                            "tracking",
+                                                                                        "text-emerald-500":
+                                                                                            bus.status ===
+                                                                                            "user_tracking",
+                                                                                    }
+                                                                                )}
+                                                                            />
+                                                                            {bus.status ===
+                                                                                "not_tracking" && (
+                                                                                <FontAwesomeIcon
+                                                                                    icon={
+                                                                                        faSlash
+                                                                                    }
+                                                                                    className="absolute top-0 left-0 w-5 h-5 text-red-500"
+                                                                                />
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
                                                                 </div>
-                                                            </div>
-                                                        </div>
 
-                                                        <div className="flex items-center justify-center gap-1 p-1 ml-5 rounded-lg w-15 bg-blue-950 h-fit">
-                                                            <span className="text-sm font-bold text-blue-300">
-                                                                {bus.timeto}
-                                                            </span>
+                                                                <div className="flex items-center justify-center gap-1 p-1 ml-5 rounded-lg w-15 bg-blue-950 h-fit">
+                                                                    <span className="text-sm font-bold text-blue-300 text-nowrap">
+                                                                        {
+                                                                            bus.timeto
+                                                                        }
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                            <div className="bg-neutral-700 h-[1px] m-1"></div>
                                                         </div>
-                                                    </div>
-                                                    <div className="bg-neutral-700 h-[1px] m-1"></div>
-                                                </div>
+                                                    ) : (
+                                                        <div
+                                                            className="cursor-pointer"
+                                                            key={bus.trip}
+                                                            onClick={() =>
+                                                                window.open(
+                                                                    `https://bustimes.org/trips/${bus.trip}`,
+                                                                    "_blank"
+                                                                )
+                                                            }>
+                                                            <div className="flex flex-row items-center justify-between gap-2">
+                                                                <div className="flex flex-col">
+                                                                    <div className="flex flex-row flex-wrap items-center gap-1">
+                                                                        <span className="text-xl font-bold">
+                                                                            {
+                                                                                bus.line
+                                                                            }
+                                                                        </span>
+                                                                        <span>
+                                                                            to
+                                                                        </span>
+                                                                        <span className="font-bold">
+                                                                            {
+                                                                                bus.destination
+                                                                            }
+                                                                        </span>
+                                                                    </div>
+                                                                    <div className="flex flex-row items-center gap-3 font-semibold text-nowrap">
+                                                                        <div className="flex items-center gap-0.5">
+                                                                            <span className="text-sm text-teal-400">
+                                                                                Schd:
+                                                                            </span>
+                                                                            <span className="text-teal-400">
+                                                                                {bus.expected.toLocaleTimeString(
+                                                                                    [],
+                                                                                    {
+                                                                                        hour: "2-digit",
+                                                                                        minute: "2-digit",
+                                                                                    }
+                                                                                )}
+                                                                            </span>
+                                                                        </div>
+                                                                        {bus.started ? (
+                                                                            <span className="opacity-70">
+                                                                                Not
+                                                                                Tracking
+                                                                            </span>
+                                                                        ) : (
+                                                                            <span>
+                                                                                Upcoming
+                                                                            </span>
+                                                                        )}
+                                                                        {bus.started && (
+                                                                            <div className="relative w-5 h-5">
+                                                                                <FontAwesomeIcon
+                                                                                    icon={
+                                                                                        faSatelliteDish
+                                                                                    }
+                                                                                    className={clsx(
+                                                                                        "absolute top-0 left-0 w-5 h-5",
+                                                                                        {
+                                                                                            "text-blue-400 opacity-40":
+                                                                                                bus.status ===
+                                                                                                "not_tracking",
+                                                                                            "text-sky-500":
+                                                                                                bus.status ===
+                                                                                                "tracking",
+                                                                                            "text-emerald-500":
+                                                                                                bus.status ===
+                                                                                                "user_tracking",
+                                                                                        }
+                                                                                    )}
+                                                                                />
+                                                                                {bus.status ===
+                                                                                    "not_tracking" && (
+                                                                                    <FontAwesomeIcon
+                                                                                        icon={
+                                                                                            faSlash
+                                                                                        }
+                                                                                        className="absolute top-0 left-0 w-5 h-5 text-red-500"
+                                                                                    />
+                                                                                )}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+
+                                                                <div className="flex items-center justify-center gap-1 p-1 ml-5 rounded-lg w-15 bg-blue-950 h-fit">
+                                                                    <span className="text-sm font-bold text-blue-300 text-nowrap">
+                                                                        {
+                                                                            bus.timeto
+                                                                        }
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                            <div className="bg-neutral-700 h-[1px] m-1"></div>
+                                                        </div>
+                                                    )}
+                                                </>
                                             ))}
                                             {buses.length < 4 ? (
                                                 <div className="flex justify-center">

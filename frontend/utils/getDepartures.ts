@@ -1,5 +1,5 @@
 import api from "../src/api"
-import type { Bus } from "../models/Bus"
+import type { Bus, ScheduledBus } from "../models/Bus"
 import { generateTimeTo } from "./timeTo";
 
 interface DeparturesResponse {
@@ -9,7 +9,7 @@ interface DeparturesResponse {
 }
 
 export interface Departures {
-    buses: Bus[];
+    buses: Bus[] | ScheduledBus[];
     stop_name: string;
     timestamp: Date;
 }
@@ -20,7 +20,7 @@ const fetchDepartures = async (stop_id: string) => {
             `/departures/?stop_id=${stop_id}`
         );
         const now = new Date();
-        const updatedBuses: Bus[] = response.data.buses
+        const updatedBuses: Bus[] | ScheduledBus[] = response.data.buses
             .map((bus) => {
                 const expected = new Date(bus.expected * 1000);
                 const scheduled = new Date(bus.scheduled * 1000);

@@ -5,10 +5,14 @@ from redis.asyncio import Redis
 
 from backend.config import VEHICLES_BASE
 from backend.models.livery import Livery
-from backend.models.trackedbus import TrackedBus
+from backend.models.bus import ScheduledBus, TrackedBus
 from backend.services.caching import BUS_CACHE, get_cached
 from backend.services.livery import get_livery
-from backend.services.prediction import calculate_expected, predict_future
+from backend.services.prediction import (
+    calculate_expected,
+    get_started_finished,
+    predict_future,
+)
 from backend.services.services import fetch_active_buses, get_service_info
 from backend.utils.fetch_json import fetch_json
 
@@ -35,21 +39,47 @@ async def fetch_bus(bus_id, r: Redis):
         return None
 
 
-async def fetch_buses(services, stop_id, r: Redis) -> list[TrackedBus]:
+async def fetch_buses(services, stop_id, times, r: Redis) -> list[TrackedBus]:
     active = await fetch_active_buses(services, r)
 
     if not active:
         return []
 
-    tasks = [
-        build_bus(bus.get("id"), r, stop_id, get_journey=False)
-        for bus in active
-        if bus.get("id") is not None
-    ]
+    active_by_trip = {bus.get("trip_id"): bus for bus in active if bus.get("trip_id")}
+
+    tasks = []
+    for time in times:
+        trip_id = time.get("trip_id")
+        bus = active_by_trip.get(trip_id)
+        if bus:
+            tasks.append(build_bus(bus.get("id"), r, stop_id, get_journey=False))
+        else:
+            tasks.append(build_scheduled(time, r))
 
     buses = await asyncio.gather(*tasks)
 
     return [bus for bus in buses if bus is not None]
+
+
+async def build_scheduled(time, r):
+    scheduled = int(parser.isoparse(time.get("aimed_departure_time")).timestamp())
+
+    destination = time.get("destination").get("locality")
+    line = time.get("service").get("line_name")
+
+    trip_id = time.get("trip_id")
+
+    started, finished = await get_started_finished(trip_id, r)
+
+    return ScheduledBus(
+        destination=destination,
+        line=line,
+        scheduled=scheduled,
+        expected=scheduled,
+        started=started,
+        trip=trip_id,
+        status="not_tracking",
+    )
 
 
 async def build_bus(

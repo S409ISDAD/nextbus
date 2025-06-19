@@ -8,7 +8,7 @@ from datetime import timedelta
 from fastapi import APIRouter, Depends
 
 from backend.deps import get_redis
-from backend.models.trackedbus import TrackedBus
+from backend.models.bus import TrackedBus
 from backend.services import bus, stops
 
 router = APIRouter()
@@ -26,7 +26,9 @@ async def departures_for_stop(stop_id: str, redis=Depends(get_redis)):
 
     stop_name = stop_details.get("name")
 
-    buses = await bus.fetch_buses(service_ids, stop_id, redis)
+    times = await stops.get_times(stop_id, redis)
+
+    buses = await bus.fetch_buses(service_ids, stop_id, times, redis)
 
     uk_timezone = datetime.timezone(timedelta(hours=1))
     current_time = math.floor(

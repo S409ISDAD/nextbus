@@ -1,6 +1,6 @@
-import type { Bus } from "../models/Bus";
+import type { Departure } from "../models/Bus";
 
-export default function timeTo(bus: Bus) {
+export default function timeTo(bus: Departure) {
     const now = new Date()
     const diffMs = bus.expected.getTime() - now.getTime();
     const diffSec = Math.floor(diffMs / 1000);

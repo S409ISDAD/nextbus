@@ -10,8 +10,10 @@ const BusPage: React.FC = () => {
         <div className="md:mx-40">
             <div className="flex flex-row flex-wrap items-center justify-center gap-3 p-4">
                 <Card className="flex flex-col gap-2 p-2 bg-teal-950 rounded-4xl">
-                    <span className="ml-2 text-2xl font-bold">Your Stops</span>
-                    <div className="flex flex-row gap-2 overflow-x-scroll max-w-[300px]">
+                    <span className="mt-1 ml-3 text-2xl font-bold">
+                        Your Stops
+                    </span>
+                    <div className="flex flex-row gap-2 overflow-x-auto max-w-[90vw]">
                         <DepartureBoard
                             stop_id=""
                             closest={true}></DepartureBoard>

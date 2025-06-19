@@ -5,7 +5,7 @@ from backend.models.journey import Journey
 from backend.models.prediction import Prediction
 from backend.models.stop import StopTime
 from backend.models.times import Times
-from backend.services.journeys import get_vehicle_journey
+from backend.services.journeys import get_trip, get_vehicle_journey
 from datetime import datetime as dt
 
 
@@ -147,7 +147,7 @@ async def calculate_expected(delay, sequence, stop_id, journey_id, r):
                 uk_timezone
             )
 
-            if scheduled_time_end + timedelta(seconds=delay + 45) < current_time:
+            if scheduled_time_end + timedelta(seconds=delay + 60) < current_time:
                 finished = True
 
         stop_idx += 1
@@ -165,3 +165,36 @@ async def calculate_expected(delay, sequence, stop_id, journey_id, r):
         finished=finished,
         include=include,
     ), journey
+
+
+async def get_started_finished(trip_id, r):
+    trip = await get_trip(trip_id, 0, r)
+
+    uk_timezone = datetime.timezone(timedelta(hours=1))
+    current_time = dt.now(datetime.timezone.utc).astimezone(uk_timezone)
+
+    not_started = False
+    finished = False
+
+    stop_idx = 0
+
+    for stop_time in trip.stops:
+        if stop_idx == 0:
+            scheduled_time_start = dt.fromtimestamp(stop_time.aimed_time).astimezone(
+                uk_timezone
+            )
+
+            if scheduled_time_start > current_time:
+                not_started = True
+
+        if stop_idx == len(trip.stops) - 1:
+            scheduled_time_end = dt.fromtimestamp(stop_time.aimed_time).astimezone(
+                uk_timezone
+            )
+
+            if scheduled_time_end + timedelta(seconds=60) < current_time:
+                finished = True
+
+        stop_idx += 1
+
+    return not not_started, finished

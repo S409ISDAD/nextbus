@@ -1,6 +1,6 @@
 from typing import Optional
 from fastapi import APIRouter, Depends
-from backend.models.trackedbus import TrackedBus
+from backend.models.bus import TrackedBus
 from backend.services import bus
 from backend.deps import get_redis
 

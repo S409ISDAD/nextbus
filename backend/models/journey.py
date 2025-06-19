@@ -9,3 +9,8 @@ class Journey(BaseModel):
     destination: str
     service_id: int
     stops: list[StopTime]
+
+
+class Trip(BaseModel):
+    service_id: int
+    stops: list[StopTime]

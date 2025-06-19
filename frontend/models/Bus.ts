@@ -3,7 +3,20 @@ import type { ProgressInfo } from "./ProgressInfo";
 import type { Journey } from "./Journey";
 import type { Livery } from "./Livery";
 
+export interface ScheduledBus {
+    type: string;
+    line: string;
+    destination: string;
+    expected: Date;
+    scheduled: Date;
+    timeto: string;
+    started: boolean;
+    trip: number;
+    status: string;
+}
+
 export interface Bus {
+    type: string;
     id: number;
     service: ServiceInfo;
     destination: string;
@@ -30,3 +43,10 @@ export interface Prediction {
     progress: number;
     location: number[];
 }
+
+export function isTrackedBus(bus: Departure): bus is Bus {
+    console.log(bus.type)
+    return bus.type === "tracked";
+}
+
+export type Departure = Bus | ScheduledBus;
