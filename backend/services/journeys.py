@@ -78,7 +78,7 @@ async def get_vehicle_journey(journey_id, delay, r) -> Journey:
 
     journey = await get_cached(
         key=f"journeys:{journey_id}",
-        func=lambda *args: fetch(*args),
+        func=fetch,
         args=(journey_id,),
         exp=JOURNEY_CACHE,
         r=r,
@@ -167,7 +167,7 @@ async def get_trip(trip_id, delay, r) -> Trip:
 
     journey = await get_cached(
         key=f"trips:{trip_id}",
-        func=lambda *args: fetch(*args),
+        func=fetch,
         args=(trip_id,),
         exp=JOURNEY_CACHE,
         r=r,

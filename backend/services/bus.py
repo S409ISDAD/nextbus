@@ -27,7 +27,7 @@ async def fetch_bus(bus_id, r: Redis):
 
     this_bus = await get_cached(
         f"bus:{bus_id}",
-        lambda *args: fetch(*args),
+        fetch,
         (bus_id,),
         BUS_CACHE,
         r,
@@ -39,25 +39,47 @@ async def fetch_bus(bus_id, r: Redis):
         return None
 
 
+def best_bus(buses: list[dict]) -> dict | None:
+    valid = []
+
+    for bus in buses:
+        progress = bus.get("progress")
+        if progress and isinstance(progress.get("sequence"), int):
+            print("valid")
+            valid.append(bus)
+
+    if not valid:
+        return None
+
+    return max(valid, key=lambda b: b["progress"]["sequence"])
+
+
 async def fetch_buses(services, stop_id, times, r: Redis) -> list[TrackedBus]:
+    trip_ids = [time.get("trip_id") for time in times]
     active = await fetch_active_buses(services, r)
 
     if not active:
         return []
 
-    active_by_trip = {bus.get("trip_id"): bus for bus in active if bus.get("trip_id")}
+    active_by_trip: dict[int, list[dict]] = {}
+    for bus in active:
+        trip_id = bus.get("trip_id")
+        if trip_id:
+            active_by_trip.setdefault(trip_id, []).append(bus)
 
     tasks = []
+
     for time in times:
         trip_id = time.get("trip_id")
-        bus = active_by_trip.get(trip_id)
-        if bus:
-            tasks.append(build_bus(bus.get("id"), r, stop_id, get_journey=False))
+        matched_buses = active_by_trip.get(trip_id, [])
+
+        if matched_buses:
+            # Pass all matching buses to the builder
+            tasks.append(build_bus_candidates(matched_buses, r, stop_id))
         else:
             tasks.append(build_scheduled(time, r))
 
     buses = await asyncio.gather(*tasks)
-
     return [bus for bus in buses if bus is not None]
 
 
@@ -80,6 +102,28 @@ async def build_scheduled(time, r):
         trip=trip_id,
         status="not_tracking",
     )
+
+
+async def build_bus_candidates(
+    buses: list[dict], r: Redis, stop_id: str
+) -> TrackedBus | None:
+    results = await asyncio.gather(
+        *[build_bus(bus["id"], r, stop_id, get_journey=False) for bus in buses]
+    )
+
+    valid = [
+        bus
+        for bus in results
+        if bus is not None
+        and hasattr(bus, "progress")
+        and isinstance(bus.progress.sequence, int)
+    ]
+
+    if not valid:
+        return None
+
+    # Return the one with the highest progress.sequence
+    return max(valid, key=lambda b: b.progress.sequence)
 
 
 async def build_bus(

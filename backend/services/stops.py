@@ -23,7 +23,7 @@ async def get_stop_details(stop_id, r: Redis):
 
     stop_details = await get_cached(
         f"stops:{stop_id}",
-        lambda *args: fetch(*args),
+        fetch,
         (stop_id,),
         STOPS_CACHE,
         r,
@@ -61,7 +61,7 @@ async def get_services_from_stop(stop_id, r: Redis):
 
     services = await get_cached(
         key=f"services:{stop_id}",
-        func=lambda *args: fetch(*args),
+        func=fetch,
         args=(stop_id,),
         exp=SERVICES_CACHE,
         r=r,
@@ -83,7 +83,7 @@ async def get_times(stop_id, r: Redis):
 
     times = await get_cached(
         key=f"times:{stop_id}",
-        func=lambda *args: fetch(*args),
+        func=fetch,
         args=(stop_id,),
         exp=TRIPS_CACHE,
         r=r,

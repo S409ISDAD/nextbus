@@ -15,7 +15,7 @@ async def get_livery(id: int, r):
 
     livery = await get_cached(
         key=f"liveries:{id}",
-        func=lambda *args: fetch(*args),
+        func=fetch,
         args=(id,),
         exp=LIVERY_CACHE,
         r=r,

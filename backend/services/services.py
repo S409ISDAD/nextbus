@@ -22,7 +22,7 @@ async def get_service_info(service, r: Redis):
 
     service_info = await get_cached(
         f"service_info:{service}",
-        lambda *args: fetch(*args),
+        fetch,
         (service,),
         SERVICE_CACHE,
         r,
@@ -50,7 +50,7 @@ async def fetch_active_buses(services, r: Redis):
 
     active = await get_cached(
         f"service:{service_ids}:trips",
-        lambda *args: fetch(*args),
+        fetch,
         (services,),
         TRIPS_CACHE,
         r,
