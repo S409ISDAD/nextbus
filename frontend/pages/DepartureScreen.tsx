@@ -90,7 +90,14 @@ const DepartureScreen: React.FC = () => {
                             </div>
                             <div className="flex flex-row flex-wrap items-center justify-end gap-2 md:gap-4">
                                 <span className="text-xl font-bold ">
-                                    {bus.timeto}
+                                    {bus.expected.getTime() -
+                                        new Date().getTime() >
+                                    45 * 60 * 1000
+                                        ? bus.expected.toLocaleTimeString([], {
+                                              hour: "2-digit",
+                                              minute: "2-digit",
+                                          })
+                                        : bus.timeto}
                                 </span>
                             </div>
                         </div>
