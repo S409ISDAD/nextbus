@@ -35,7 +35,7 @@ const JourneyPage: React.FC = () => {
         return (
             <div className="absolute top-0 left-0 h-full mt-[15px] z-11 w-9 ">
                 <div
-                    className="absolute transition-all duration-300 ease-in-out  translate-x-[-10px]"
+                    className="absolute transition-all duration-300 ease-in-out  translate-x-[-15px]"
                     style={{ transform: `translateY(${translateY}px)` }}>
                     <div
                         className="flex items-center justify-center p-2 bg-red-400 rounded-full w-9 h-9"
@@ -260,16 +260,16 @@ const JourneyPage: React.FC = () => {
                     </div>
                 ) : (
                     <div className="relative flex mx-5 mt-4 md:mx-40">
-                        <div className="relative flex flex-col items-center py-6.5">
+                        <div className="relative flex flex-col items-center py-8">
                             <BusProgress></BusProgress>
                             {journey?.stops.map((stop, idx) => (
                                 <div
                                     key={stop.stop_id}
                                     className="relative flex flex-col items-center">
-                                    <div className="z-10 w-4 h-4 rounded-full bg-neutral-700"></div>
+                                    <div className="z-10 w-1 h-1 bg-neutral-700"></div>
 
                                     {idx < journey.stops.length - 1 && (
-                                        <div className="w-[4px] bg-neutral-700 flex-1 min-h-[56px]"></div>
+                                        <div className="w-[4px] bg-neutral-700 flex-1 min-h-[68px]"></div>
                                     )}
                                 </div>
                             ))}
