@@ -55,17 +55,14 @@ def best_bus(buses: list[dict]) -> dict | None:
 
 
 async def fetch_buses(services, stop_id, times, r: Redis) -> list[TrackedBus]:
-    trip_ids = [time.get("trip_id") for time in times]
     active = await fetch_active_buses(services, r)
 
-    if not active:
-        return []
-
     active_by_trip: dict[int, list[dict]] = {}
-    for bus in active:
-        trip_id = bus.get("trip_id")
-        if trip_id:
-            active_by_trip.setdefault(trip_id, []).append(bus)
+    if active:
+        for bus in active:
+            trip_id = bus.get("trip_id")
+            if trip_id:
+                active_by_trip.setdefault(trip_id, []).append(bus)
 
     tasks = []
 
@@ -74,7 +71,6 @@ async def fetch_buses(services, stop_id, times, r: Redis) -> list[TrackedBus]:
         matched_buses = active_by_trip.get(trip_id, [])
 
         if matched_buses:
-            # Pass all matching buses to the builder
             tasks.append(build_bus_candidates(matched_buses, r, stop_id))
         else:
             tasks.append(build_scheduled(time, r))

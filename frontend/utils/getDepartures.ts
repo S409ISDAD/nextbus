@@ -4,20 +4,18 @@ import { generateTimeTo } from "./timeTo";
 
 interface DeparturesResponse {
     timestamp: number;
-    stop_name: string;
     buses: any[];
 }
 
 export interface Departures {
     buses: Bus[] | ScheduledBus[];
-    stop_name: string;
     timestamp: Date;
 }
 
-const fetchDepartures = async (stop_id: string) => {
+const fetchDepartures = async (stop_id: string, type: string) => {
     try {
         const response = await api.get<DeparturesResponse>(
-            `/departures/?stop_id=${stop_id}`
+            `/departures/${type}?stop_id=${stop_id}`
         );
         const now = new Date();
         const updatedBuses: Bus[] | ScheduledBus[] = response.data.buses
@@ -35,16 +33,17 @@ const fetchDepartures = async (stop_id: string) => {
                     scheduled,
                     timeto: generateTimeTo(diffSec),
                 };
-            })
+            }).filter(
+                (bus) => bus.expected.getTime() - now.getTime() < 43200000
+            )
             .filter(
                 (bus) => new Date(bus.expected.getTime() + 60 * 1000) > now
             ).sort(
                 (a, b) => a.expected.getTime() - b.expected.getTime()
             );
-        const stop_name = response.data.stop_name
         console.log(response.data.timestamp)
         const timestamp = new Date(response.data.timestamp * 1000)
-        return { updatedBuses, stop_name, timestamp }
+        return { updatedBuses, timestamp }
 
     } catch (error) {
         console.error("failed to get departures", error);

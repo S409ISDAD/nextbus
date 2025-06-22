@@ -65,7 +65,8 @@ const DeparturePage: React.FC = () => {
             setFetching(true);
             try {
                 const stopPromise = getStopData(id);
-                const departuresPromise = fetchDepartures(id);
+                const schedDeparturesPromise = fetchDepartures(id, "scheduled");
+                const departuresPromise = fetchDepartures(id, "live");
 
                 const stopData = await stopPromise;
                 if (stopData) {
@@ -78,11 +79,22 @@ const DeparturePage: React.FC = () => {
                     setClosest(closestStop);
                 }
 
-                const departures = await departuresPromise;
+                const departures = await schedDeparturesPromise;
                 if (departures) {
                     console.log(departures.updatedBuses);
                     setBuses(departures.updatedBuses);
                     setRefreshed(departures.timestamp);
+                    setMsg("");
+                    setLoading(false);
+                } else {
+                    setMsg("Lost connection to server. Please Wait...");
+                }
+
+                const liveDepartures = await departuresPromise;
+                if (liveDepartures) {
+                    console.log(liveDepartures.updatedBuses);
+                    setBuses(liveDepartures.updatedBuses);
+                    setRefreshed(liveDepartures.timestamp);
                     setMsg("");
                 } else {
                     setMsg("Lost connection to server. Please Wait...");

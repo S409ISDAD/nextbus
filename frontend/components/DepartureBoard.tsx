@@ -63,18 +63,27 @@ function DepartureBoard({ stop_id, closest }: Props) {
             setFetching(true);
             try {
                 const stopPromise = getStopData(id);
-                const departuresPromise = fetchDepartures(id);
+                const schedDeparturesPromise = fetchDepartures(id, "scheduled");
+                const departuresPromise = fetchDepartures(id, "live");
 
                 const stopData = await stopPromise;
 
                 if (stopData) {
                     setStop(stopData);
                 }
-                const departures = await departuresPromise;
+                const departures = await schedDeparturesPromise;
 
                 if (departures) {
                     setBuses(departures.updatedBuses);
                     setRefreshed(departures.timestamp);
+                    setMsg("");
+                    setLoading(false);
+                }
+                const liveDepartures = await departuresPromise;
+                if (liveDepartures) {
+                    console.log(liveDepartures.updatedBuses);
+                    setBuses(liveDepartures.updatedBuses);
+                    setRefreshed(liveDepartures.timestamp);
                     setMsg("");
                 }
                 // else {
