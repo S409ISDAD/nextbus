@@ -22,6 +22,7 @@ export interface ResponseJourney {
 export interface BusResponse {
     id: number;
     service: ServiceInfo;
+    trip: number;
     destination: string;
     reg: string;
     fleet_num: string;

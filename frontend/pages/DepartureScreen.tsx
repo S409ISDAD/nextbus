@@ -1,13 +1,16 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { isTrackedBus, type Departure } from "../models/Bus";
 import fetchDepartures from "../utils/getDepartures";
 
 import { useParams } from "react-router";
 
 import timeTo from "../utils/timeTo";
+import mergeLive from "../utils/mergeLive";
 
 const DepartureScreen: React.FC = () => {
     const { stop_id } = useParams();
+
+    const firstFetch = useRef(true);
 
     const [buses, setBuses] = useState<Departure[]>([]);
     const [fetching, setFetching] = useState(false);
@@ -42,20 +45,35 @@ const DepartureScreen: React.FC = () => {
             setFetching(true);
             try {
                 const schedDeparturesPromise = fetchDepartures(id, "scheduled");
-                const departuresPromise = fetchDepartures(id, "live");
+                const departuresPromise = fetchDepartures(id, "");
 
-                const departures = await schedDeparturesPromise;
+                if (firstFetch.current) {
+                    const departures = await schedDeparturesPromise;
 
-                if (departures) {
-                    setBuses(departures.updatedBuses);
-                    setRefreshed(departures.timestamp);
+                    if (departures) {
+                        setBuses(departures.updatedBuses);
+                        setRefreshed(departures.timestamp);
+                    }
+
+                    const liveResult = await fetchDepartures(id, "live");
+                    if (liveResult) {
+                        setBuses((prev) =>
+                            mergeLive(prev, liveResult.updatedBuses)
+                        );
+                        setRefreshed(liveResult.timestamp);
+                    }
+                    firstFetch.current = false;
+                } else {
+                    const departures = await departuresPromise;
+
+                    if (departures) {
+                        setBuses(departures.updatedBuses);
+                        setRefreshed(departures.timestamp);
+                    }
                 }
-                const liveDepartures = await departuresPromise;
-                if (liveDepartures) {
-                    console.log(liveDepartures.updatedBuses);
-                    setBuses(liveDepartures.updatedBuses);
-                    setRefreshed(liveDepartures.timestamp);
-                }
+                // else {
+                //     setMsg("Failed to fetch departures.");
+                // }
             } catch {
                 console.log("uh oh");
             } finally {

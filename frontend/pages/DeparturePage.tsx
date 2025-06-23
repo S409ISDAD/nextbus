@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { isTrackedBus, type Departure } from "../models/Bus";
 import type { Stop } from "../models/Stop";
 import fetchDepartures from "../utils/getDepartures";
@@ -15,11 +15,14 @@ import {
     faUpRightFromSquare,
 } from "@fortawesome/free-solid-svg-icons";
 import clsx from "clsx";
+import mergeLive from "../utils/mergeLive";
 
 const DeparturePage: React.FC = () => {
     const { stop_id } = useParams();
 
     const navigate = useNavigate();
+
+    const firstFetch = useRef(true);
 
     const [buses, setBuses] = useState<Departure[]>([]);
     const [stop, setStop] = useState<Stop>();
@@ -66,39 +69,44 @@ const DeparturePage: React.FC = () => {
             try {
                 const stopPromise = getStopData(id);
                 const schedDeparturesPromise = fetchDepartures(id, "scheduled");
-                const departuresPromise = fetchDepartures(id, "live");
+                const departuresPromise = fetchDepartures(id, "");
 
-                const stopData = await stopPromise;
-                if (stopData) {
-                    setStop(stopData);
-                    document.title = stopData.name;
-                    const closestStop = await getClosestStop(
-                        stopData.coords,
-                        stop_id
-                    );
-                    setClosest(closestStop);
-                }
+                if (firstFetch.current) {
+                    const stopData = await stopPromise;
 
-                const departures = await schedDeparturesPromise;
-                if (departures) {
-                    console.log(departures.updatedBuses);
-                    setBuses(departures.updatedBuses);
-                    setRefreshed(departures.timestamp);
-                    setMsg("");
-                    setLoading(false);
+                    if (stopData) {
+                        setStop(stopData);
+                    }
+                    const departures = await schedDeparturesPromise;
+
+                    if (departures) {
+                        setBuses(departures.updatedBuses);
+                        setRefreshed(departures.timestamp);
+                        setMsg("");
+                        setLoading(false);
+                    }
+
+                    const liveResult = await fetchDepartures(id, "live");
+                    if (liveResult) {
+                        setBuses((prev) =>
+                            mergeLive(prev, liveResult.updatedBuses)
+                        );
+                        setRefreshed(liveResult.timestamp);
+                    }
+                    firstFetch.current = false;
                 } else {
-                    setMsg("Lost connection to server. Please Wait...");
-                }
+                    const departures = await departuresPromise;
 
-                const liveDepartures = await departuresPromise;
-                if (liveDepartures) {
-                    console.log(liveDepartures.updatedBuses);
-                    setBuses(liveDepartures.updatedBuses);
-                    setRefreshed(liveDepartures.timestamp);
-                    setMsg("");
-                } else {
-                    setMsg("Lost connection to server. Please Wait...");
+                    if (departures) {
+                        setBuses(departures.updatedBuses);
+                        setRefreshed(departures.timestamp);
+                        setMsg("");
+                        setLoading(false);
+                    }
                 }
+                // else {
+                //     setMsg("Failed to fetch departures.");
+                // }
             } catch {
                 console.log("uh oh");
             } finally {

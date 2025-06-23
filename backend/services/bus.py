@@ -79,21 +79,43 @@ async def fetch_buses(services, stop_id, times, r: Redis) -> list[TrackedBus]:
     return [bus for bus in buses if bus is not None]
 
 
-async def build_scheduled(time, r):
+async def fetch_buses_live(services, stop_id, r: Redis) -> list[TrackedBus]:
+    active = await fetch_active_buses(services, r)
+
+    if not active:
+        return []
+
+    tasks = []
+
+    for bus in active:
+        tasks.append(build_bus(bus.get("id"), r, stop_id))
+
+    buses = await asyncio.gather(*tasks)
+    return [bus for bus in buses if bus is not None]
+
+
+async def build_scheduled(time, r, include_started=True):
     scheduled = int(parser.isoparse(time.get("aimed_departure_time")).timestamp())
+    if time.get("expected_departure_time"):
+        expected = int(parser.isoparse(time.get("expected_departure_time")).timestamp())
+    else:
+        expected = scheduled
 
     destination = time.get("destination").get("locality")
     line = time.get("service").get("line_name")
 
     trip_id = time.get("trip_id")
 
-    started, finished = await get_started_finished(trip_id, r)
+    if include_started:
+        started, finished = await get_started_finished(trip_id, r)
+    else:
+        started = False
 
     return ScheduledBus(
         destination=destination,
         line=line,
         scheduled=scheduled,
-        expected=scheduled,
+        expected=expected,
         started=started,
         trip=trip_id,
         status="not_tracking",
@@ -194,6 +216,7 @@ async def build_bus(
     return TrackedBus(
         id=bus_id,
         service=service_info,
+        trip=this_bus.get("trip_id", 0),
         destination=destination,
         reg=reg,
         fleet_num=fleet_num,

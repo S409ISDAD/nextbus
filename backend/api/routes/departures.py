@@ -37,6 +37,21 @@ async def departures_live(stop_id: str, redis=Depends(get_redis)):
 
     service_ids = [service.get("id") for service in services]
 
+    buses = await bus.fetch_buses_live(service_ids, stop_id, redis)
+
+    uk_timezone = datetime.timezone(timedelta(hours=1))
+    current_time = math.floor(
+        dt.now(datetime.timezone.utc).astimezone(uk_timezone).timestamp()
+    )
+    return {"buses": buses, "timestamp": current_time}
+
+
+@router.get("/")
+async def departures(stop_id: str, redis=Depends(get_redis)):
+    services = await stops.get_services_from_stop(stop_id, redis)
+
+    service_ids = [service.get("id") for service in services]
+
     times = await stops.get_times(stop_id, redis)
 
     buses = await bus.fetch_buses(service_ids, stop_id, times, redis)

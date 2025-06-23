@@ -18,6 +18,7 @@ export interface ScheduledBus {
 export interface Bus {
     type: string;
     id: number;
+    trip: number;
     service: ServiceInfo;
     destination: string;
     reg: string;

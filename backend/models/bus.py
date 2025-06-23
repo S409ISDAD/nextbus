@@ -22,6 +22,7 @@ class ScheduledBus(BaseModel):
 class TrackedBus(BaseModel):
     type: str = "tracked"
     id: int
+    trip: int
     service: Optional[Service]
     destination: str
     reg: str  # vehicle license plate

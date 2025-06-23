@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { isTrackedBus, type Departure } from "../models/Bus";
+import { useEffect, useRef, useState } from "react";
+import { Bus, isTrackedBus, ScheduledBus, type Departure } from "../models/Bus";
 import fetchDepartures from "../utils/getDepartures";
 import { useNavigate } from "react-router";
 import timeTo, { lateness } from "../utils/timeTo";
@@ -10,6 +10,7 @@ import type { Stop } from "../models/Stop";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSatelliteDish, faSlash } from "@fortawesome/free-solid-svg-icons";
 import clsx from "clsx";
+import mergeLive from "../utils/mergeLive";
 
 interface Props {
     stop_id: string;
@@ -25,6 +26,8 @@ function DepartureBoard({ stop_id, closest }: Props) {
     const [lastRefreshed, setRefreshed] = useState(new Date());
     const [elapsed, setElapsed] = useState<string>("0s");
     const [msg, setMsg] = useState<string>("");
+
+    const firstFetch = useRef(true);
 
     const navigate = useNavigate();
 
@@ -64,27 +67,40 @@ function DepartureBoard({ stop_id, closest }: Props) {
             try {
                 const stopPromise = getStopData(id);
                 const schedDeparturesPromise = fetchDepartures(id, "scheduled");
-                const departuresPromise = fetchDepartures(id, "live");
+                const departuresPromise = fetchDepartures(id, "");
 
-                const stopData = await stopPromise;
+                if (firstFetch.current) {
+                    const stopData = await stopPromise;
 
-                if (stopData) {
-                    setStop(stopData);
-                }
-                const departures = await schedDeparturesPromise;
+                    if (stopData) {
+                        setStop(stopData);
+                    }
+                    const departures = await schedDeparturesPromise;
 
-                if (departures) {
-                    setBuses(departures.updatedBuses);
-                    setRefreshed(departures.timestamp);
-                    setMsg("");
-                    setLoading(false);
-                }
-                const liveDepartures = await departuresPromise;
-                if (liveDepartures) {
-                    console.log(liveDepartures.updatedBuses);
-                    setBuses(liveDepartures.updatedBuses);
-                    setRefreshed(liveDepartures.timestamp);
-                    setMsg("");
+                    if (departures) {
+                        setBuses(departures.updatedBuses);
+                        setRefreshed(departures.timestamp);
+                        setMsg("");
+                        setLoading(false);
+                    }
+
+                    const liveResult = await fetchDepartures(id, "live");
+                    if (liveResult) {
+                        setBuses((prev) =>
+                            mergeLive(prev, liveResult.updatedBuses)
+                        );
+                        setRefreshed(liveResult.timestamp);
+                    }
+                    firstFetch.current = false;
+                } else {
+                    const departures = await departuresPromise;
+
+                    if (departures) {
+                        setBuses(departures.updatedBuses);
+                        setRefreshed(departures.timestamp);
+                        setMsg("");
+                        setLoading(false);
+                    }
                 }
                 // else {
                 //     setMsg("Failed to fetch departures.");
@@ -92,7 +108,6 @@ function DepartureBoard({ stop_id, closest }: Props) {
             } catch {
                 console.log("uh oh");
             } finally {
-                setLoading(false);
                 setFetching(false);
             }
         };
@@ -111,7 +126,6 @@ function DepartureBoard({ stop_id, closest }: Props) {
                             () => getData(closest_stop_id),
                             30000
                         );
-                        return () => clearInterval(interval);
                     } else {
                         setMsg("No stop found nearby");
                         setLoading(false);
