@@ -1,6 +1,5 @@
 import React, { useEffect } from "react";
 import DepartureBoard from "../components/DepartureBoard";
-import { Card } from "../components/ui/Card";
 
 const BusPage: React.FC = () => {
     useEffect(() => {
