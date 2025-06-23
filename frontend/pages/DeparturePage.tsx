@@ -76,6 +76,12 @@ const DeparturePage: React.FC = () => {
 
                     if (stopData) {
                         setStop(stopData);
+                        document.title = stopData.name;
+                        const closestStop = await getClosestStop(
+                            stopData.coords,
+                            stop_id
+                        );
+                        setClosest(closestStop);
                     }
                     const departures = await schedDeparturesPromise;
 
@@ -153,6 +159,7 @@ const DeparturePage: React.FC = () => {
                                 onClick={() => {
                                     setBuses([]);
                                     setLoading(true);
+                                    firstFetch.current = true;
                                     navigate(`/departures/${closestStop}`);
                                 }}>
                                 Nearest Stop{" "}
@@ -391,8 +398,10 @@ const DeparturePage: React.FC = () => {
                                                                 <span className="text-2xl font-bold">
                                                                     {bus.line}
                                                                 </span>
-                                                                <span>to</span>
-                                                                <span className="font-bold">
+                                                                <span className="text-lg">
+                                                                    to
+                                                                </span>
+                                                                <span className="text-xl font-bold">
                                                                     {
                                                                         bus.destination
                                                                     }

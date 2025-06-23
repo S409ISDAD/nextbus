@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Bus, isTrackedBus, ScheduledBus, type Departure } from "../models/Bus";
+import { isTrackedBus, type Departure } from "../models/Bus";
 import fetchDepartures from "../utils/getDepartures";
 import { useNavigate } from "react-router";
 import timeTo, { lateness } from "../utils/timeTo";
