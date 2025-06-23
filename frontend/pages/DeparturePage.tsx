@@ -410,9 +410,6 @@ const DeparturePage: React.FC = () => {
 
                                                             <div className="flex flex-row items-center text-lg font-semibold gap-x-3 text-nowrap">
                                                                 <div className="flex items-center gap-0.5">
-                                                                    <span className="text-sm text-teal-400">
-                                                                        Schd:
-                                                                    </span>
                                                                     <span className="text-teal-400">
                                                                         {bus.expected.toLocaleTimeString(
                                                                             [],

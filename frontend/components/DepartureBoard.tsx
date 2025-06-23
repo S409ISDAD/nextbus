@@ -308,9 +308,6 @@ function DepartureBoard({ stop_id, closest }: Props) {
                                                                     </div>
                                                                     <div className="flex flex-row items-center gap-3 font-semibold text-nowrap">
                                                                         <div className="flex items-center gap-0.5">
-                                                                            <span className="text-sm text-teal-400">
-                                                                                Schd:
-                                                                            </span>
                                                                             <span className="text-teal-400">
                                                                                 {bus.expected.toLocaleTimeString(
                                                                                     [],
