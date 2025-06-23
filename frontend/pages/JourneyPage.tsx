@@ -206,11 +206,19 @@ const JourneyPage: React.FC = () => {
                                     </span>
                                     <div
                                         className="rounded shadow-2xl w-15 aspect-3/2"
-                                        style={{
-                                            backgroundImage: bus.livery
-                                                ? bus?.livery.css
-                                                : "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 200' fill='none' xmlns:xlink='http://www.w3.org/1999/xlink'><rect width='300' height='200' fill='%23222222'/><text x='150' y='110' text-anchor='middle' fill='%23999999' font-size='80' font-family='sans-serif' dy='.35em'>?</text></svg>\")",
-                                        }}></div>
+                                        style={
+                                            bus.livery?.css.startsWith("#")
+                                                ? {
+                                                      backgroundColor:
+                                                          bus?.livery?.css ||
+                                                          "#222222",
+                                                  }
+                                                : {
+                                                      backgroundImage:
+                                                          bus?.livery?.css ||
+                                                          "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 200' fill='none' xmlns:xlink='http://www.w3.org/1999/xlink'><rect width='300' height='200' fill='%23222222'/><text x='150' y='110' text-anchor='middle' fill='%23999999' font-size='80' font-family='sans-serif' dy='.35em'>?</text></svg>\")",
+                                                  }
+                                        }></div>
                                 </div>
                                 <div className="flex justify-center px-2 py-1 rounded-lg bg-blue-950">
                                     <span className="font-bold text-blue-300 align-middle text">
