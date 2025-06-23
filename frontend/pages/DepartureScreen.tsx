@@ -98,7 +98,7 @@ const DepartureScreen: React.FC = () => {
     }, [stop_id]);
 
     return (
-        <div className="flex flex-col gap-3 p-3 bg-black">
+        <div className="flex flex-col h-full gap-3 p-3 bg-black">
             {buses.map((bus) => (
                 <div className="flex flex-row justify-between text-xl font-bold align-center">
                     <span>
