@@ -98,37 +98,25 @@ const DepartureScreen: React.FC = () => {
     }, [stop_id]);
 
     return (
-        <div className="p-5">
-            <div className="flex flex-col gap-4">
-                <div className="flex flex-col gap-3">
-                    {buses.map((bus) => (
-                        <div className="flex flex-row justify-between align-center">
-                            <div className="flex flex-col justify-around">
-                                <div className="flex flex-row flex-wrap items-center gap-1">
-                                    <span className="text-2xl font-bold">
-                                        {isTrackedBus(bus)
-                                            ? bus.service.line_name
-                                            : bus.line}{" "}
-                                        to {bus.destination}
-                                    </span>
-                                </div>
-                            </div>
-                            <div className="flex flex-row flex-wrap items-center justify-end gap-2 md:gap-4">
-                                <span className="text-xl font-bold ">
-                                    {bus.expected.getTime() -
-                                        new Date().getTime() >
-                                    45 * 60 * 1000
-                                        ? bus.expected.toLocaleTimeString([], {
-                                              hour: "2-digit",
-                                              minute: "2-digit",
-                                          })
-                                        : bus.timeto}
-                                </span>
-                            </div>
-                        </div>
-                    ))}
+        <div className="flex flex-col gap-3 p-3 bg-black">
+            {buses.map((bus) => (
+                <div className="flex flex-row justify-between text-xl font-bold align-center">
+                    <span>
+                        {isTrackedBus(bus) ? bus.service.line_name : bus.line}{" "}
+                        to {bus.destination}
+                    </span>
+
+                    <span>
+                        {bus.expected.getTime() - new Date().getTime() >
+                        45 * 60 * 1000
+                            ? bus.expected.toLocaleTimeString([], {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                              })
+                            : bus.timeto}
+                    </span>
                 </div>
-            </div>
+            ))}
         </div>
     );
 };
