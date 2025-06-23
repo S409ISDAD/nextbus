@@ -176,6 +176,11 @@ const DeparturePage: React.FC = () => {
                             target="_blank">
                             View on bustimes.org
                         </a>
+                        <a
+                            className="px-2 py-1 text-neutral-400 border-1 rounded-xl border-neutral-800 bg-neutral-900"
+                            href={`/departureboard/${stop?.stop_id}`}>
+                            board
+                        </a>
                     </div>
                 </div>
                 <div className="flex flex-row justify-center gap-1 overflow-x-auto">
