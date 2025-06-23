@@ -274,7 +274,15 @@ const JourneyPage: React.FC = () => {
                                 <div
                                     key={stop.stop_id}
                                     className="relative flex flex-col items-center">
-                                    <div className="z-10 w-1 h-1 bg-neutral-700"></div>
+                                    <div
+                                        className={`z-10 w-1 h-1 bg-neutral-700 ${
+                                            idx == 0
+                                                ? "rounded-tl-full"
+                                                : idx ==
+                                                  journey.stops.length - 1
+                                                ? "rounded-bl-full"
+                                                : ""
+                                        }`}></div>
 
                                     {idx < journey.stops.length - 1 && (
                                         <div className="w-[4px] bg-neutral-700 flex-1 min-h-[68px]"></div>
@@ -287,7 +295,7 @@ const JourneyPage: React.FC = () => {
                                 <div
                                     key={stop.stop_id}
                                     className="flex flex-row items-center">
-                                    <div className="w-5 bg-neutral-700 rounded-r-full h-[4px]"></div>
+                                    <div className="w-4 bg-neutral-700 rounded-r-full h-[4px]"></div>
                                     <div
                                         className="p-2 w-fit h-17 "
                                         onClick={() =>
