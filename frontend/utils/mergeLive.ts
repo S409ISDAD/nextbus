@@ -1,4 +1,4 @@
-import { Departure } from "../models/Bus";
+import type { Departure } from "../models/Bus";
 
 export default function mergeLive(scheduled: Departure[], live: Departure[]): Departure[] {
     const liveMap = new Map<number, Departure>(
