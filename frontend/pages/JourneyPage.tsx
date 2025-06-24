@@ -10,6 +10,7 @@ import {
     faWarning,
 } from "@fortawesome/free-solid-svg-icons";
 import type { Bus, Prediction } from "../models/Bus";
+import clsx from "clsx";
 
 const JourneyPage: React.FC = () => {
     const { bus_id } = useParams();
@@ -20,6 +21,7 @@ const JourneyPage: React.FC = () => {
     const [predictions, setPredictions] = useState<Prediction[]>();
     const [sequence, setSeq] = useState<number>(0);
     const [progress, setProg] = useState<number>(0);
+    const [accuracy, setAccuracy] = useState<string>("unknown");
     const [journey, setJourney] = useState<Journey>();
     const [loading, setLoading] = useState(true);
     const [fetching, setFetching] = useState(false);
@@ -57,6 +59,23 @@ const JourneyPage: React.FC = () => {
             const sec = diffSec % 60;
 
             setElapsed(min > 0 ? `${min}m ${sec}s` : `${sec}s`);
+
+            if (bus?.timestamp) {
+                const age = Math.floor(
+                    (now.getTime() - bus?.timestamp.getTime()) / 1000
+                );
+                let accuracy = "unknown";
+
+                if (age <= 45) {
+                    accuracy = "high";
+                } else if (age <= 90) {
+                    accuracy = "med";
+                } else {
+                    accuracy = "low";
+                }
+
+                setAccuracy(accuracy);
+            }
         }, 1000);
         return () => clearInterval(interval);
     }, [lastRefreshed]);
@@ -185,6 +204,21 @@ const JourneyPage: React.FC = () => {
                                 <span className="text-center">
                                     {journey?.stops.length} stops
                                 </span>
+                                <div className="flex gap-1 font-bold">
+                                    <span className="text-center">
+                                        Accuracy:
+                                    </span>
+                                    <span
+                                        className={clsx("text-center", {
+                                            "text-green-400 ":
+                                                accuracy === "high",
+                                            "text-orange-400":
+                                                accuracy === "med",
+                                            "text-red-400": accuracy === "low",
+                                        })}>
+                                        {accuracy}
+                                    </span>
+                                </div>
                             </div>
                             <div className="flex items-center gap-3">
                                 <div className="flex flex-col items-center gap-1">

@@ -77,7 +77,7 @@ async def predict_future(
         future_time = int(current_time.timestamp() + seconds_ahead)
 
         if timestamp:
-            extra = int((current_time.timestamp() - timestamp) - 15)
+            extra = int((current_time.timestamp() - timestamp) - 60) // 4
         else:
             extra = 0
 
