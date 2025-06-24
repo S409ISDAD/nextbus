@@ -85,10 +85,17 @@ async def fetch_buses_live(services, stop_id, r: Redis) -> list[TrackedBus]:
     if not active:
         return []
 
-    tasks = []
+    active_by_trip: dict[int, list[dict]] = {}
 
     for bus in active:
-        tasks.append(build_bus(bus.get("id"), r, stop_id))
+        trip_id = bus.get("trip_id")
+        if trip_id:
+            active_by_trip.setdefault(trip_id, []).append(bus)
+
+    tasks = []
+
+    for trip, buses in active_by_trip.items():
+        tasks.append(build_bus_candidates(buses, r, stop_id))
 
     buses = await asyncio.gather(*tasks)
     return [bus for bus in buses if bus is not None]
