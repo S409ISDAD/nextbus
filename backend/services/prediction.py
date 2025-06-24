@@ -73,11 +73,23 @@ async def predict_future(
     if not started:
         return predictions
 
+    ideal_age = 45  # seconds
+    sensitivity = 0.2  # multiplier for adjustment
+    max_offset = 20  # cap adjustment to ±20s
+
     for seconds_ahead in range(ahead + 1):
         future_time = int(current_time.timestamp() + seconds_ahead)
 
         if timestamp:
-            extra = int((current_time.timestamp() - timestamp) - 60) // 4
+            age = int(
+                (
+                    datetime.datetime.fromtimestamp(future_time, uk_timezone)
+                    - datetime.datetime.fromtimestamp(timestamp, uk_timezone)
+                ).total_seconds()
+            )
+            raw_offset = int((ideal_age - age) * sensitivity)
+            extra = max(-max_offset, min(max_offset, raw_offset))
+            print(f"data is {age}s old, adding {extra}s")
         else:
             extra = 0
 

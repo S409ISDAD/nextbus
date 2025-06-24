@@ -3,7 +3,7 @@ import type { Journey } from "../models/Journey";
 import getBus from "../utils/getBus";
 import { useNavigate, useParams } from "react-router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { lateness } from "../utils/timeTo";
+import timeTo, { generateTimeTo, lateness } from "../utils/timeTo";
 import {
     faBus,
     faCalendarXmark,
@@ -21,6 +21,7 @@ const JourneyPage: React.FC = () => {
     const [predictions, setPredictions] = useState<Prediction[]>();
     const [sequence, setSeq] = useState<number>(0);
     const [progress, setProg] = useState<number>(0);
+    const [age, setAge] = useState<number>(0);
     const [accuracy, setAccuracy] = useState<string>("unknown");
     const [journey, setJourney] = useState<Journey>();
     const [loading, setLoading] = useState(true);
@@ -64,6 +65,7 @@ const JourneyPage: React.FC = () => {
                 const age = Math.floor(
                     (now.getTime() - bus?.timestamp.getTime()) / 1000
                 );
+                setAge(age);
                 let accuracy = "unknown";
 
                 if (age <= 45) {
@@ -218,6 +220,7 @@ const JourneyPage: React.FC = () => {
                                         })}>
                                         {accuracy}
                                     </span>
+                                    {generateTimeTo(age)}
                                 </div>
                             </div>
                             <div className="flex items-center gap-3">

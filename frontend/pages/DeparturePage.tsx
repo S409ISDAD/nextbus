@@ -375,7 +375,7 @@ const DeparturePage: React.FC = () => {
                                                                         )[0]
                                                                     }
                                                                 </span>
-                                                                <span className="font-bold text-blue-300">
+                                                                <span className="self-end h-full font-bold text-blue-300 ">
                                                                     {
                                                                         bus.timeto.split(
                                                                             " "
@@ -473,7 +473,7 @@ const DeparturePage: React.FC = () => {
                                                                         )[0]
                                                                     }
                                                                 </span>
-                                                                <span className="font-bold text-blue-300">
+                                                                <span className="self-end h-full font-bold text-blue-300 ">
                                                                     {
                                                                         bus.timeto.split(
                                                                             " "
