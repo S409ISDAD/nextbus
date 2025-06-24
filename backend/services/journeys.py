@@ -88,13 +88,23 @@ async def get_vehicle_journey(journey_id, delay, r) -> Journey:
     stops: list[StopTime] = []
 
     for stop in json_stops:
+        if stop.get("track"):
+            track = [[lng_lat[1], lng_lat[0]] for lng_lat in stop.get("track")]
+        else:
+            track = None
+
+        coords = stop["stop"].get("location", [0, 0])
+
+        coords = [coords[1], coords[0]]
+
         stops.append(
             StopTime(
                 stop_id=stop["stop"].get("atco_code"),
                 name=stop["stop"].get("name"),
                 aimed_time=stop.get("aimed_time"),
                 expt_time=stop.get("expt_time") + delay,
-                track=stop.get("track"),
+                track=track,
+                coords=coords,
                 set_down=stop.get("set_down"),
             )
         )
@@ -177,13 +187,23 @@ async def get_trip(trip_id, delay, r) -> Trip:
     stops: list[StopTime] = []
 
     for stop in json_stops:
+        if stop.get("track"):
+            track = [[lng_lat[1], lng_lat[0]] for lng_lat in stop.get("track")]
+        else:
+            track = None
+
+        coords = stop["stop"].get("location", [0, 0])
+
+        coords = [coords[1], coords[0]]
+
         stops.append(
             StopTime(
                 stop_id=stop["stop"].get("atco_code"),
                 name=stop["stop"].get("name"),
                 aimed_time=stop.get("aimed_time"),
                 expt_time=stop.get("expt_time") + delay,
-                track=stop.get("track"),
+                track=track,
+                coords=coords,
                 set_down=stop.get("set_down"),
             )
         )

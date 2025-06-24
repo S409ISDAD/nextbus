@@ -10,6 +10,8 @@ export interface ResponseStopTime {
     name: string;
     aimed_time: number;
     expt_time?: number;
+    coords: number[];
+    track: number[][];
     set_down: boolean;
 }
 
@@ -35,7 +37,7 @@ export interface BusResponse {
     finished: boolean;
     progress?: ProgressInfo;
     predictions: Prediction[]
-    journey: ResponseJourney
+    journey: ResponseJourney;
     livery?: Livery
     coords?: number[];
     timeto: number;
@@ -63,6 +65,8 @@ const getBus = async (bus_id: string) => {
                 aimed_time: new Date(stop.aimed_time * 1000),
                 expt_time: stop.expt_time ? new Date(stop.expt_time * 1000) : undefined,
                 set_down: stop.set_down,
+                coords: stop.coords,
+                track: stop.track,
             };
         });
 

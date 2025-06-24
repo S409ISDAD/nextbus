@@ -1,6 +1,7 @@
 from datetime import timedelta
 import datetime
 import math
+from geopy.distance import geodesic
 from backend.models.journey import Journey
 from backend.models.prediction import Prediction
 from backend.models.stop import StopTime
@@ -39,20 +40,39 @@ async def calculate_progress(prev_expt: int, next_expt: int, future_time: int) -
 async def calculate_loc(
     progress: float, track: list[list[float]], next_track: list[list[float]]
 ) -> list[float]:
-    rough_idx = len(track) * progress
-    track.extend(next_track)
+    progress = max(0.0, min(progress, 1.0))
 
-    loc1 = track[math.floor(rough_idx)]
-    loc2 = track[math.ceil(rough_idx)]
+    full_track = track + next_track
+    if len(full_track) < 2:
+        return full_track[0] if full_track else [0.0, 0.0]
 
-    diff_lat = loc2[0] - loc1[0]
-    diff_lng = loc2[1] - loc1[1]
+    distances = []
+    cumulative = [0.0]
 
-    idx_prog = rough_idx - math.floor(rough_idx)
+    for i in range(len(full_track) - 1):
+        d = geodesic(full_track[i], full_track[i + 1]).m
+        distances.append(d)
+        cumulative.append(cumulative[-1] + d)
 
-    loc = [diff_lat * idx_prog, diff_lng * idx_prog]
+    total_dist = cumulative[-1]
+    target_dist = total_dist * progress
 
-    return loc
+    for i in range(len(distances)):
+        if cumulative[i + 1] >= target_dist:
+            seg_dist = distances[i]
+            if seg_dist == 0:
+                return full_track[i]
+            seg_prog = (target_dist - cumulative[i]) / seg_dist
+
+            lat1, lng1 = full_track[i]
+            lat2, lng2 = full_track[i + 1]
+
+            interp_lat = lat1 + (lat2 - lat1) * seg_prog
+            interp_lng = lng1 + (lng2 - lng1) * seg_prog
+
+            return [interp_lat, interp_lng]
+
+    return full_track[-1]
 
 
 async def predict_future(
@@ -79,6 +99,8 @@ async def predict_future(
 
     for seconds_ahead in range(ahead + 1):
         future_time = int(current_time.timestamp() + seconds_ahead)
+
+        timestamp = None
 
         if timestamp:
             age = int(
