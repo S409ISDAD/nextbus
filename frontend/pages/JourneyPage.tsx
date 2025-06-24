@@ -94,6 +94,14 @@ const getFaBusIcon = (bus?: any): L.DivIcon => {
     });
 };
 
+const pinIcon = L.divIcon({
+    html: `<i class="fas fa-location-dot fa-2x"></i>`,
+    className: "text-blue-500",
+    iconSize: [30, 30],
+    iconAnchor: [15, 30],
+    popupAnchor: [0, -30],
+});
+
 const MapView: React.FC<MapViewProps> = ({
     lat,
     lng,
@@ -122,7 +130,9 @@ const MapView: React.FC<MapViewProps> = ({
                     <Popup>Bus is here</Popup>
                 </Marker>
                 {bus.journey.stops.map((stop) => (
-                    <Marker position={[stop.coords[0], stop.coords[1]]}>
+                    <Marker
+                        position={[stop.coords[0], stop.coords[1]]}
+                        icon={pinIcon}>
                         <Popup>{stop.name}</Popup>
                     </Marker>
                 ))}
