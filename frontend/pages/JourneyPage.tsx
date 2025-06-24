@@ -108,9 +108,13 @@ const MapView: React.FC<MapViewProps> = ({
                 zoom={15}
                 style={{ height: "200px", width: "100vw" }}>
                 <TileLayer
+                    attribution='&copy; <a href="https://osm.org/copyright">OpenStreetMap</a>'
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+                {/* <TileLayer
                     attribution='&copy; <a href="https://stadiamaps.com/">Stadia Maps</a>, &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors'
                     url="https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png"
-                />
+                /> */}
                 <Marker
                     position={[lat, lng]}
                     icon={getFaBusIcon(bus)}
@@ -125,7 +129,7 @@ const MapView: React.FC<MapViewProps> = ({
                 <Polyline
                     positions={track}
                     pathOptions={{
-                        color: "white",
+                        color: "black",
                         weight: 4,
                         opacity: 0.7,
                     }}
