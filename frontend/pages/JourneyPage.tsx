@@ -94,14 +94,6 @@ const getFaBusIcon = (bus?: any): L.DivIcon => {
     });
 };
 
-const pinIcon = L.divIcon({
-    html: `<i class="fas fa-location-dot fa-3x"></i>`,
-    className: "text-blue-400",
-    iconSize: [30, 30],
-    iconAnchor: [15, 15],
-    popupAnchor: [0, -30],
-});
-
 const MapView: React.FC<MapViewProps> = ({
     lat,
     lng,
@@ -165,7 +157,6 @@ const JourneyPage: React.FC = () => {
     const [sequence, setSeq] = useState<number>(0);
     const [progress, setProg] = useState<number>(0);
     const [location, setLoc] = useState<number[]>([0, 0]);
-    const [age, setAge] = useState<number>(0);
     const [accuracy, setAccuracy] = useState<string>("unknown");
     const [journey, setJourney] = useState<Journey>();
     const [loading, setLoading] = useState(true);
@@ -209,7 +200,6 @@ const JourneyPage: React.FC = () => {
                 const age = Math.floor(
                     (now.getTime() - bus?.timestamp.getTime()) / 1000
                 );
-                setAge(age);
                 let accuracy = "unknown";
 
                 if (age <= 45) {
