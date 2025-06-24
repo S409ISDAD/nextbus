@@ -9,10 +9,12 @@ from backend.services.journeys import get_trip, get_vehicle_journey
 from datetime import datetime as dt
 
 
-async def calculate_sequence(stops: list[StopTime], future_time: int) -> int:
+async def calculate_sequence(
+    stops: list[StopTime], future_time: int, extra: int
+) -> int:
     sequence = 0
     for stop in stops:
-        if stop.expt_time and stop.expt_time > future_time:
+        if stop.expt_time and stop.expt_time + extra > future_time:
             return sequence - 1
 
         sequence += 1
@@ -56,7 +58,7 @@ async def calculate_loc(
 async def predict_future(
     journey: Journey,
     delay: int,
-    timestamp: dt | None,
+    timestamp: int | None,
     started: bool,
     ahead: int,
     r,
@@ -74,13 +76,18 @@ async def predict_future(
     for seconds_ahead in range(ahead + 1):
         future_time = int(current_time.timestamp() + seconds_ahead)
 
-        sequence = await calculate_sequence(stops, future_time)
+        if timestamp:
+            extra = int((current_time.timestamp() - timestamp) - 15)
+        else:
+            extra = 0
+
+        sequence = await calculate_sequence(stops, future_time, extra)
 
         if sequence >= len(stops) - 1:
             break
 
-        prev_expt = stops[sequence].expt_time
-        next_expt = stops[sequence + 1].expt_time
+        prev_expt = stops[sequence].expt_time + extra
+        next_expt = stops[sequence + 1].expt_time + extra
 
         if prev_expt and next_expt:
             progress = await calculate_progress(prev_expt, next_expt, future_time)
@@ -139,7 +146,7 @@ async def calculate_expected(delay, sequence, stop_id, journey_id, r):
 
             expected_time = scheduled_time + timedelta(seconds=delay)
 
-            if expected_time < current_time:
+            if expected_time + timedelta(minutes=1) < current_time:
                 include = False
                 break
         if stop_idx == len(journey.stops) - 1:

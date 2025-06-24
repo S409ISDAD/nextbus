@@ -19,6 +19,7 @@ export interface Bus {
     type: string;
     id: number;
     trip: number;
+    timestamp: Date;
     service: ServiceInfo;
     destination: string;
     reg: string;

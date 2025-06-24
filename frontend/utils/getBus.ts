@@ -23,6 +23,7 @@ export interface BusResponse {
     id: number;
     service: ServiceInfo;
     trip: number;
+    timestamp: number;
     destination: string;
     reg: string;
     fleet_num: string;
@@ -52,6 +53,7 @@ const getBus = async (bus_id: string) => {
 
         const expected = new Date(bus.expected ? bus.expected * 1000 : 0);
         const scheduled = new Date(bus.scheduled ? bus.scheduled * 1000 : 0);
+        const timestamp = new Date(bus.timestamp ? bus.timestamp * 1000 : 0);
 
 
         const stops: StopTime[] = bus.journey.stops.map((stop) => {
@@ -68,6 +70,7 @@ const getBus = async (bus_id: string) => {
             ...bus,
             expected,
             scheduled,
+            timestamp,
             journey: {
                 ...bus.journey,
                 stops,

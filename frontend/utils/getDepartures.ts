@@ -22,6 +22,7 @@ const fetchDepartures = async (stop_id: string, type: string) => {
             .map((bus) => {
                 const expected = new Date(bus.expected * 1000);
                 const scheduled = new Date(bus.scheduled * 1000);
+                const timestamp = new Date(bus.timestamp * 1000);
 
                 const now = new Date()
 
@@ -31,6 +32,7 @@ const fetchDepartures = async (stop_id: string, type: string) => {
                     ...bus,
                     expected,
                     scheduled,
+                    timestamp,
                     timeto: generateTimeTo(diffSec),
                 };
             }).filter(

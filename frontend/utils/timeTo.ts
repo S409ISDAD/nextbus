@@ -19,7 +19,12 @@ export function generateTimeTo(diffSec: number) {
         return `${min} min`;
     } else {
         const hr = Math.floor(diffSec / 3600);
-        return `${hr} h`;
+        const min = Math.floor(diffSec / 60) - hr * 60;
+        if (min == 0) {
+            return `${hr}h`;
+
+        }
+        return `${hr}h ${min}m`;
     }
 }
 

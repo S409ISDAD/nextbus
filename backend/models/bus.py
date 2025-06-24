@@ -23,6 +23,7 @@ class TrackedBus(BaseModel):
     type: str = "tracked"
     id: int
     trip: int
+    timestamp: Optional[int]
     service: Optional[Service]
     destination: str
     reg: str  # vehicle license plate

@@ -168,7 +168,9 @@ async def build_bus(
         return None
 
     timestamp = (
-        parser.isoparse(this_bus.get("datetime")) if this_bus.get("datetime") else None
+        int(parser.isoparse(this_bus.get("datetime")).timestamp())
+        if this_bus.get("datetime")
+        else None
     )
 
     coords = this_bus.get("coordinates", [0, 0])
@@ -224,6 +226,7 @@ async def build_bus(
         id=bus_id,
         service=service_info,
         trip=this_bus.get("trip_id", 0),
+        timestamp=timestamp,
         destination=destination,
         reg=reg,
         fleet_num=fleet_num,
