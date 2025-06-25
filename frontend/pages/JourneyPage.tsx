@@ -100,7 +100,7 @@ const pinIcon = L.divIcon({
     html: `<i class="fas fa-location-dot fa-2x"></i>`,
     className: "text-blue-500",
     iconSize: [12, 30],
-    iconAnchor: [12, 25],
+    iconAnchor: [10, 25],
     popupAnchor: [-6, -30],
 });
 
