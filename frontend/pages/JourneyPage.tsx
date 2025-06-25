@@ -133,6 +133,7 @@ const MapView: React.FC<MapViewProps> = ({
                 </Marker>
                 {bus.journey.stops.map((stop) => (
                     <Marker
+                        key={stop.stop_id}
                         position={[stop.coords[0], stop.coords[1]]}
                         icon={pinIcon}>
                         <Popup>{stop.name}</Popup>
@@ -239,7 +240,9 @@ const JourneyPage: React.FC = () => {
             if (!predictions || predictions.length < 2) {
                 setSeq(bus?.progress ? bus.progress.sequence : 0);
                 setProg(bus?.progress ? bus.progress.progress : 0);
-                setLoc(bus?.coords || [0, 0]);
+                const lat = bus?.coords?.[1] ?? 0;
+                const lng = bus?.coords?.[0] ?? 0;
+                setLoc([lat, lng]);
                 return;
             }
 
@@ -251,6 +254,7 @@ const JourneyPage: React.FC = () => {
             if (!upcoming) return;
 
             const idx = predictions.indexOf(upcoming);
+
             const prev = predictions[idx - 1];
 
             const newProgress = upcoming.progress;
@@ -358,8 +362,8 @@ const JourneyPage: React.FC = () => {
                 <div className="flex flex-col gap-2 top-0 grow p-5 pb-1 pt-15 z-12  bg-[#111111] rounded-b-2xl fixed w-full">
                     {bus ? (
                         <div className="flex flex-col items-center justify-center gap-2">
-                            <div className="fixed flex items-center gap-3 p-2 border-[2px] my-1 border-neutral-800 z-10000000 top-15 backdrop-blur rounded-2xl backdrop-brightness-75">
-                                <span className="text-3xl font-bold wrap-normal">
+                            <div className="fixed flex items-center gap-3 p-2 px-3 my-1 shadow-2xl z-10000000 top-15 bg-neutral-800 rounded-2xl">
+                                <span className="text-3xl font-bold text-white wrap-normal">
                                     {journey?.route_name} to{" "}
                                     {journey?.destination}
                                 </span>

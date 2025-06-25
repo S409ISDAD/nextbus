@@ -37,12 +37,10 @@ async def calculate_progress(prev_expt: int, next_expt: int, future_time: int) -
     return min(progress, 1)
 
 
-async def calculate_loc(
-    progress: float, track: list[list[float]], next_track: list[list[float]]
-) -> list[float]:
+async def calculate_loc(progress: float, track: list[list[float]]) -> list[float]:
     progress = max(0.0, min(progress, 1.0))
 
-    full_track = track + next_track
+    full_track = track
     if len(full_track) < 2:
         return full_track[0] if full_track else [0.0, 0.0]
 
@@ -126,11 +124,10 @@ async def predict_future(
         if prev_expt and next_expt:
             progress = await calculate_progress(prev_expt, next_expt, future_time)
 
-            track = stops[sequence].track
-            next_track = stops[sequence + 1].track
+            track = stops[sequence + 1].track
 
-            if track and next_track:
-                loc = await calculate_loc(progress, track, next_track)
+            if track:
+                loc = await calculate_loc(progress, track)
 
                 prediction = Prediction(
                     timestamp=future_time,
