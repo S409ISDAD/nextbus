@@ -78,22 +78,6 @@ const MapCenterUpdater: React.FC<{ lat: number; lng: number }> = ({
 
 import L, { type LatLngExpression } from "leaflet";
 
-const getFaBusIcon = (bus?: any): L.DivIcon => {
-    const backgroundStyle = bus?.livery?.css
-        ? bus.livery.css
-        : "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 200' fill='none'><rect width='300' height='200' fill='%23222222'/><text x='150' y='110' text-anchor='middle' fill='%23999999' font-size='80' font-family='sans-serif' dy='.35em'>?</text></svg>\")";
-
-    const html = `<div style="width: 30px; height: 20px;  background-image: ${backgroundStyle}; background-size: cover; border: 1px solid; border-radius: 0.2rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"></div>`;
-
-    return L.divIcon({
-        html,
-        className: "",
-        iconSize: [30, 20],
-        iconAnchor: [15, 10],
-        popupAnchor: [0, -10],
-    });
-};
-
 const busIcon = L.divIcon({
     html: `<div style="
     display: flex;
