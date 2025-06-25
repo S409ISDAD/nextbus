@@ -96,14 +96,21 @@ const busIcon = L.divIcon({
     popupAnchor: [0, -12],
 });
 
-const pinIcon = L.divIcon({
-    html: `<i class="fas fa-location-dot fa-2x"></i>`,
-    className: "text-blue-500",
-    iconSize: [12, 30],
-    iconAnchor: [10, 25],
-    popupAnchor: [-6, -30],
-});
+// const pinIcon = L.divIcon({
+//     html: `<i class="fas fa-location-dot fa-2x"></i>`,
+//     className: "text-blue-500",
+//     iconSize: [12, 30],
+//     iconAnchor: [10, 25],
+//     popupAnchor: [-6, -30],
+// });
 
+const pinIcon = L.divIcon({
+    html: `<i class="fas fa-circle"></i>`,
+    className: "text-blue-500",
+    iconSize: [12, 12],
+    iconAnchor: [12, 12],
+    popupAnchor: [-6, -6],
+});
 const MapView: React.FC<MapViewProps> = ({
     lat,
     lng,
@@ -136,7 +143,16 @@ const MapView: React.FC<MapViewProps> = ({
                         key={stop.stop_id}
                         position={[stop.coords[0], stop.coords[1]]}
                         icon={pinIcon}>
-                        <Popup>{stop.name}</Popup>
+                        <Popup>
+                            <div className="flex flex-col">
+                                <span>{stop.name}</span>
+                                Expt:{" "}
+                                {stop.expt_time?.toLocaleTimeString([], {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                })}
+                            </div>
+                        </Popup>
                     </Marker>
                 ))}
                 <Polyline
