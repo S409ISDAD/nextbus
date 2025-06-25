@@ -94,12 +94,30 @@ const getFaBusIcon = (bus?: any): L.DivIcon => {
     });
 };
 
+const busIcon = L.divIcon({
+    html: `<div style="
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #f87171;
+    border-radius: 9999px;
+    width: 24px;
+    height: 24px;
+  ">
+    <i class="fas fa-bus" style="color: white; font-size: 12px;"></i>
+  </div>`,
+    className: "",
+    iconSize: [24, 24],
+    iconAnchor: [12, 12],
+    popupAnchor: [0, -12],
+});
+
 const pinIcon = L.divIcon({
     html: `<i class="fas fa-location-dot fa-2x"></i>`,
     className: "text-blue-500",
-    iconSize: [30, 30],
-    iconAnchor: [15, 30],
-    popupAnchor: [0, -30],
+    iconSize: [12, 30],
+    iconAnchor: [12, 25],
+    popupAnchor: [-6, -30],
 });
 
 const MapView: React.FC<MapViewProps> = ({
@@ -125,7 +143,7 @@ const MapView: React.FC<MapViewProps> = ({
                 /> */}
                 <Marker
                     position={[lat, lng]}
-                    icon={getFaBusIcon(bus)}
+                    icon={busIcon}
                     zIndexOffset={1000}>
                     <Popup>Bus is here</Popup>
                 </Marker>
