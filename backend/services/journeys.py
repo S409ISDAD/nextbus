@@ -2,18 +2,15 @@ import datetime
 from datetime import datetime as dt
 from datetime import timedelta
 
-from dateutil import parser
 from geopy.distance import geodesic
 
 from backend.config import API_BASE
 from backend.models.journey import Journey, Trip
 from backend.models.stop import StopTime
 from backend.services.caching import (
-    BUS_CACHE,
     JOURNEY_CACHE,
     get_cached,
 )
-from backend.services.timetable import recalculate_timetable
 from backend.utils.fetch_json import fetch_json
 from backend.utils.time import check_scheduled_time
 

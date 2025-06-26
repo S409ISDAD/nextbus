@@ -47,7 +47,6 @@ export interface Prediction {
 }
 
 export function isTrackedBus(bus: Departure): bus is Bus {
-    console.log(bus.type)
     return bus.type === "tracked";
 }
 

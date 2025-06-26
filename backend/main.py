@@ -3,6 +3,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from backend.api.routes import departures, location, stops, buses, livery
+from backend.websockets.routes import ws_router
 from backend.deps import get_redis_client
 import logging
 from prometheus_fastapi_instrumentator import Instrumentator
@@ -49,6 +50,7 @@ async def timing_middleware(request: Request, call_next):
     return response
 
 
+app.include_router(ws_router)
 app.include_router(departures.router, prefix="/api/v1/departures")
 app.include_router(location.router, prefix="/api/v1/location")
 app.include_router(stops.router, prefix="/api/v1/stops")

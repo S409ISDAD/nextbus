@@ -12,13 +12,10 @@ export interface Departures {
     timestamp: Date;
 }
 
-const fetchDepartures = async (stop_id: string, type: string) => {
+export const parseDepartures = async (departures: DeparturesResponse) => {
     try {
-        const response = await api.get<DeparturesResponse>(
-            `/departures/${type}?stop_id=${stop_id}`
-        );
         const now = new Date();
-        const updatedBuses: Bus[] | ScheduledBus[] = response.data.buses
+        const updatedBuses: Bus[] | ScheduledBus[] = departures.buses
             .map((bus) => {
                 const expected = new Date(bus.expected * 1000);
                 const scheduled = new Date(bus.scheduled * 1000);
@@ -43,9 +40,21 @@ const fetchDepartures = async (stop_id: string, type: string) => {
             ).sort(
                 (a, b) => a.expected.getTime() - b.expected.getTime()
             );
-        console.log(response.data.timestamp)
-        const timestamp = new Date(response.data.timestamp * 1000)
+        const timestamp = new Date(departures.timestamp * 1000)
         return { updatedBuses, timestamp }
+
+    } catch (error) {
+        console.error("failed to get departures", error);
+        return null;
+    }
+};
+
+const fetchDepartures = async (stop_id: string, type: string) => {
+    try {
+        const response = await api.get<DeparturesResponse>(
+            `/departures/${type}?stop_id=${stop_id}`
+        );
+        return parseDepartures(response.data)
 
     } catch (error) {
         console.error("failed to get departures", error);

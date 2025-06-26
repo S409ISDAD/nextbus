@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { isTrackedBus, type Departure } from "../models/Bus";
 import type { Stop } from "../models/Stop";
-import fetchDepartures from "../utils/getDepartures";
+import fetchDepartures, { parseDepartures } from "../utils/getDepartures";
 import getStopData from "../utils/getStopData";
 import { useNavigate, useParams } from "react-router";
 import { Skeleton } from "@radix-ui/themes";
@@ -15,7 +15,7 @@ import {
     faUpRightFromSquare,
 } from "@fortawesome/free-solid-svg-icons";
 import clsx from "clsx";
-import mergeLive from "../utils/mergeLive";
+import { WebSocketManager } from "../websockets/ws_manager";
 
 const DeparturePage: React.FC = () => {
     const { stop_id } = useParams();
@@ -32,6 +32,7 @@ const DeparturePage: React.FC = () => {
     const [lastRefreshed, setRefreshed] = useState(new Date());
     const [elapsed, setElapsed] = useState<string>("0s");
     const [msg, setMsg] = useState<string>("");
+
     useEffect(() => {
         const interval = setInterval(() => {
             const now = new Date();
@@ -69,7 +70,6 @@ const DeparturePage: React.FC = () => {
             try {
                 const stopPromise = getStopData(id);
                 const schedDeparturesPromise = fetchDepartures(id, "scheduled");
-                const departuresPromise = fetchDepartures(id, "");
 
                 if (firstFetch.current) {
                     const stopData = await stopPromise;
@@ -92,23 +92,7 @@ const DeparturePage: React.FC = () => {
                         setLoading(false);
                     }
 
-                    const liveResult = await fetchDepartures(id, "live");
-                    if (liveResult) {
-                        setBuses((prev) =>
-                            mergeLive(prev, liveResult.updatedBuses)
-                        );
-                        setRefreshed(liveResult.timestamp);
-                    }
                     firstFetch.current = false;
-                } else {
-                    const departures = await departuresPromise;
-
-                    if (departures) {
-                        setBuses(departures.updatedBuses);
-                        setRefreshed(departures.timestamp);
-                        setMsg("");
-                        setLoading(false);
-                    }
                 }
                 // else {
                 //     setMsg("Failed to fetch departures.");
@@ -123,7 +107,27 @@ const DeparturePage: React.FC = () => {
         const init = async (stop_id: string) => {
             try {
                 await getData(stop_id);
-                interval = setInterval(() => getData(stop_id), 30000);
+                const ws = WebSocketManager.getInstance(`stop/${stop_id}`);
+                ws.connect();
+                ws.onOpen(() => {
+                    console.log("WS connected");
+                });
+
+                ws.onMessage(async (msg) => {
+                    if (msg.type === "departures") {
+                        console.log("Got departures", msg.data);
+                        const buses = await parseDepartures(msg.data);
+
+                        if (buses) {
+                            setBuses(buses.updatedBuses);
+                            setRefreshed(buses.timestamp);
+                            setMsg("");
+                            setLoading(false);
+                        }
+                    }
+                });
+
+                return () => ws.close();
             } catch (error) {
                 console.error("Init error:", error);
                 setMsg("Unable to get stop data.");
@@ -208,7 +212,7 @@ const DeparturePage: React.FC = () => {
                     </span>
                     <span className="text-xs text-neutral-400">·</span>
                     <span className="text-xs text-neutral-400">
-                        Updates every 30s
+                        Updates every 20s
                     </span>
                 </div>
 

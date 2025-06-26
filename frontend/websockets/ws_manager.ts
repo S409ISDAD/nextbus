@@ -1,0 +1,89 @@
+export type WSMessage = {
+    type: string;
+    [key: string]: any;
+};
+
+type Callback = (msg: WSMessage) => void;
+
+export class WebSocketManager {
+    private static instances: Map<string, WebSocketManager> = new Map();
+
+    private socket: WebSocket | null = null;
+    private url: string;
+    private autoReconnect: boolean = true;
+    private reconnectDelay: number = 2000;
+
+    private onMessageCallbacks: Callback[] = [];
+    private onOpenCallbacks: (() => void)[] = [];
+    private onCloseCallbacks: (() => void)[] = [];
+
+    private constructor(url: string) {
+        this.url = url;
+    }
+
+    public static getInstance(url: string): WebSocketManager {
+        if (!this.instances.has(url)) {
+            const instance = new WebSocketManager(url);
+            this.instances.set(url, instance);
+            instance.connect();
+        }
+        return this.instances.get(url)!;
+    }
+
+    connect() {
+        if (this.socket && this.socket.readyState < 2) return;
+        this.socket = new WebSocket(`${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}/ws/${this.url}`);
+
+        this.socket.onopen = () => {
+            this.onOpenCallbacks.forEach(cb => cb());
+        };
+
+        this.socket.onmessage = (event: MessageEvent) => {
+            try {
+                const msg: WSMessage = JSON.parse(event.data);
+                this.onMessageCallbacks.forEach(cb => cb(msg));
+            } catch (err) {
+                console.error("WS message parse error", err);
+            }
+        };
+
+        this.socket.onclose = () => {
+            this.onCloseCallbacks.forEach(cb => cb());
+            if (this.autoReconnect) {
+                setTimeout(() => this.connect(), this.reconnectDelay);
+            }
+        };
+
+        this.socket.onerror = (err) => {
+            console.error("WS error:", err);
+            this.socket?.close();
+        };
+    }
+
+    send(data: object) {
+        if (this.socket?.readyState === WebSocket.OPEN) {
+            this.socket.send(JSON.stringify(data));
+        }
+    }
+
+    onMessage(callback: Callback) {
+        this.onMessageCallbacks.push(callback);
+    }
+
+    onOpen(callback: () => void) {
+        this.onOpenCallbacks.push(callback);
+    }
+
+    onClose(callback: () => void) {
+        this.onCloseCallbacks.push(callback);
+    }
+
+    close() {
+        this.autoReconnect = false;
+        this.socket?.close();
+    }
+
+    isConnected(): boolean {
+        return this.socket?.readyState === WebSocket.OPEN;
+    }
+}

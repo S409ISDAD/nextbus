@@ -7,3 +7,5 @@ uvicorn[standard]
 numpy
 prometheus-fastapi-instrumentator
 prometheus-client
+websockets
+pubsub

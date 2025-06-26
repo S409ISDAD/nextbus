@@ -1,6 +1,5 @@
 from datetime import timedelta
 import datetime
-import math
 from geopy.distance import geodesic
 from backend.models.journey import Journey
 from backend.models.prediction import Prediction

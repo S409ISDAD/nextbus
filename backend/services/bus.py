@@ -1,5 +1,4 @@
 import asyncio
-from typing import Optional
 from dateutil import parser
 from redis.asyncio import Redis
 
@@ -35,7 +34,7 @@ async def fetch_bus(bus_id, r: Redis):
 
     try:
         return this_bus[0]
-    except:
+    except:  # noqa: E722
         return None
 
 

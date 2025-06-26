@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { isTrackedBus, type Departure } from "../models/Bus";
-import fetchDepartures from "../utils/getDepartures";
+import fetchDepartures, { parseDepartures } from "../utils/getDepartures";
 import { useNavigate } from "react-router";
 import timeTo, { lateness } from "../utils/timeTo";
 import { Card } from "./ui/Card";
@@ -10,7 +10,7 @@ import type { Stop } from "../models/Stop";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSatelliteDish, faSlash } from "@fortawesome/free-solid-svg-icons";
 import clsx from "clsx";
-import mergeLive from "../utils/mergeLive";
+import { WebSocketManager } from "../websockets/ws_manager";
 
 interface Props {
     stop_id: string;
@@ -67,7 +67,6 @@ function DepartureBoard({ stop_id, closest }: Props) {
             try {
                 const stopPromise = getStopData(id);
                 const schedDeparturesPromise = fetchDepartures(id, "scheduled");
-                const departuresPromise = fetchDepartures(id, "");
 
                 if (firstFetch.current) {
                     const stopData = await stopPromise;
@@ -83,24 +82,7 @@ function DepartureBoard({ stop_id, closest }: Props) {
                         setMsg("");
                         setLoading(false);
                     }
-
-                    const liveResult = await fetchDepartures(id, "live");
-                    if (liveResult) {
-                        setBuses((prev) =>
-                            mergeLive(prev, liveResult.updatedBuses)
-                        );
-                        setRefreshed(liveResult.timestamp);
-                    }
                     firstFetch.current = false;
-                } else {
-                    const departures = await departuresPromise;
-
-                    if (departures) {
-                        setBuses(departures.updatedBuses);
-                        setRefreshed(departures.timestamp);
-                        setMsg("");
-                        setLoading(false);
-                    }
                 }
                 // else {
                 //     setMsg("Failed to fetch departures.");
@@ -111,31 +93,46 @@ function DepartureBoard({ stop_id, closest }: Props) {
                 setFetching(false);
             }
         };
-        const init = async () => {
+        const init = async (id: string) => {
             try {
+                let stop_id = id;
                 if (closest) {
                     const pos = await getCurrentPosition();
-                    const closest_stop_id = await getClosestStop([
+                    stop_id = await getClosestStop([
                         pos.coords.latitude,
                         pos.coords.longitude,
                     ]);
-                    if (closest_stop_id) {
-                        setStopID(closest_stop_id);
-                        await getData(closest_stop_id);
-                        interval = setInterval(
-                            () => getData(closest_stop_id),
-                            30000
-                        );
-                    } else {
+                    if (!stop_id) {
                         setMsg("No stop found nearby");
                         setLoading(false);
                         setFetching(false);
                     }
-                } else {
-                    setStopID(stop_id);
-                    await getData(stop_id);
-                    interval = setInterval(() => getData(stop_id), 30000);
                 }
+                setStopID(stop_id);
+
+                await getData(stop_id);
+
+                const ws = WebSocketManager.getInstance(`stop/${stop_id}`);
+                ws.connect();
+                ws.onOpen(() => {
+                    console.log("WS connected");
+                });
+
+                ws.onMessage(async (msg) => {
+                    if (msg.type === "departures") {
+                        console.log("Got departures", msg.data);
+                        const buses = await parseDepartures(msg.data);
+
+                        if (buses) {
+                            setBuses(buses.updatedBuses);
+                            setRefreshed(buses.timestamp);
+                            setMsg("");
+                            setLoading(false);
+                        }
+                    }
+                });
+
+                return () => ws.close();
             } catch (error) {
                 console.error("Init error:", error);
                 setMsg("Unable to get location or stop data.");
@@ -144,7 +141,7 @@ function DepartureBoard({ stop_id, closest }: Props) {
             }
         };
 
-        init();
+        init(stop_id);
 
         return () => clearInterval(interval);
     }, [stop_id, closest]);
@@ -394,7 +391,7 @@ function DepartureBoard({ stop_id, closest }: Props) {
                                     ·
                                 </span>
                                 <span className="text-xs text-neutral-400">
-                                    Updates every 30s
+                                    Updates every 20s
                                 </span>
                             </div>
                         </>

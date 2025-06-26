@@ -1,0 +1,53 @@
+import asyncio
+import json
+from fastapi.encoders import jsonable_encoder
+from redis.asyncio import Redis
+from typing import Set
+from datetime import datetime, timezone
+from .get_departures import get_departures  # or wherever your data lives
+
+active: dict[str, Set[str]] = {}
+publish_tasks: dict[str, asyncio.Task] = {}
+
+
+async def publish_loop(channel: str, key: str, redis: Redis):
+    try:
+        while key in active[channel]:
+            departures = await get_departures(key, redis)
+
+            payload = {
+                "type": "departures",
+                "data": {
+                    "timestamp": int(datetime.now(timezone.utc).timestamp()),
+                    "buses": jsonable_encoder(departures),
+                },
+            }
+
+            await redis.publish(f"stop:departures:{key}", json.dumps(payload))
+            await redis.set(f"stop:departures:{key}", json.dumps(payload), ex=21)
+
+            await asyncio.sleep(20)
+    except asyncio.CancelledError:
+        pass
+    finally:
+        publish_tasks.pop(key, None)
+        active[channel].discard(key)
+
+
+async def start_publishing(channel: str, key: str, redis: Redis):
+    active.setdefault(channel, set())
+    if key not in active[channel]:
+        active[channel].add(key)
+        print(f"starting pub task for {key}")
+        task = asyncio.create_task(publish_loop(channel, key, redis))
+        publish_tasks[key] = task
+    else:
+        print("task already started")
+
+
+async def stop_publishing(key: str):
+    task = publish_tasks.get(key)
+    if task:
+        print(f"stopping pub task for {key}")
+
+        task.cancel()
