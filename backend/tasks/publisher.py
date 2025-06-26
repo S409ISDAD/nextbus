@@ -35,7 +35,7 @@ async def publish_loop(channel: str, key: str, redis: Redis):
             }
 
             await redis.publish(f"stop:departures:{key}", json.dumps(payload))
-            await redis.set(f"stop:departures:{key}", json.dumps(payload), ex=21)
+            await redis.set(f"stop:departures:{key}", json.dumps(payload), ex=40)
 
             await asyncio.sleep(20 - avg)
     except asyncio.CancelledError:
