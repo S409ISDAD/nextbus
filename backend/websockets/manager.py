@@ -31,9 +31,9 @@ class MultiChannelManager:
         self.connections[channel][key].remove(websocket)
         if not self.connections[channel][key]:
             del self.connections[channel][key]
-        task = self.tasks.pop(key, None)
-        if task:
-            task.cancel()
+            task = self.tasks.pop(key, None)
+            if task:
+                task.cancel()
 
     async def send(self, channel: str, key: str, message: dict):
         if key in self.connections.get(channel, {}):
