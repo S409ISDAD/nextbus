@@ -1,6 +1,7 @@
 import asyncio
 import json
 from fastapi.encoders import jsonable_encoder
+from time import time
 from redis.asyncio import Redis
 from typing import Set
 from datetime import datetime, timezone
@@ -12,8 +13,18 @@ publish_tasks: dict[str, asyncio.Task] = {}
 
 async def publish_loop(channel: str, key: str, redis: Redis):
     try:
+        times = []
         while key in active[channel]:
+            start = time()
             departures = await get_departures(key, redis)
+            duration = round(time() - start, 2)
+
+            times.append(duration)
+
+            avg = round(sum(times) / len(times), 2)
+
+            if len(times) > 5:
+                times.pop()
 
             payload = {
                 "type": "departures",
@@ -26,7 +37,7 @@ async def publish_loop(channel: str, key: str, redis: Redis):
             await redis.publish(f"stop:departures:{key}", json.dumps(payload))
             await redis.set(f"stop:departures:{key}", json.dumps(payload), ex=21)
 
-            await asyncio.sleep(20)
+            await asyncio.sleep(20 - avg)
     except asyncio.CancelledError:
         pass
     finally:
