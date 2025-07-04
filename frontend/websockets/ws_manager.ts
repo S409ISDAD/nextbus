@@ -81,6 +81,19 @@ export class WebSocketManager {
     close() {
         this.autoReconnect = false;
         this.socket?.close();
+        this.socket = null;
+    }
+
+    clearCallbacks() {
+        this.onMessageCallbacks = [];
+        this.onOpenCallbacks = [];
+        this.onCloseCallbacks = [];
+    }
+
+    reconnect() {
+        this.close();
+        this.autoReconnect = true;
+        this.connect();
     }
 
     isConnected(): boolean {

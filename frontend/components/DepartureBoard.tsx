@@ -59,6 +59,8 @@ function DepartureBoard({ stop_id, closest }: Props) {
 
     useEffect(() => {
         let interval: any;
+        let ws: WebSocketManager | null = null;
+
         const getData = async (id: string) => {
             if (fetching) {
                 return;
@@ -112,8 +114,9 @@ function DepartureBoard({ stop_id, closest }: Props) {
 
                 await getData(stop_id);
 
-                const ws = WebSocketManager.getInstance(`stop/${stop_id}`);
-                ws.connect();
+                ws = WebSocketManager.getInstance(`stop/${stop_id}`);
+                ws.clearCallbacks();
+                ws.reconnect();
                 ws.onOpen(() => {
                     console.log("WS connected");
                 });
@@ -131,8 +134,6 @@ function DepartureBoard({ stop_id, closest }: Props) {
                         }
                     }
                 });
-
-                return () => ws.close();
             } catch (error) {
                 console.error("Init error:", error);
                 setMsg("Unable to get location or stop data.");
@@ -143,7 +144,13 @@ function DepartureBoard({ stop_id, closest }: Props) {
 
         init(stop_id);
 
-        return () => clearInterval(interval);
+        return () => {
+            clearInterval(interval);
+            if (ws) {
+                ws.clearCallbacks();
+                ws.close();
+            }
+        };
     }, [stop_id, closest]);
 
     return (

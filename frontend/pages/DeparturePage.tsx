@@ -62,6 +62,8 @@ const DeparturePage: React.FC = () => {
 
     useEffect(() => {
         let interval: any;
+        let ws: WebSocketManager | null = null;
+
         const getData = async (id: string) => {
             if (fetching) {
                 return;
@@ -107,8 +109,9 @@ const DeparturePage: React.FC = () => {
         const init = async (stop_id: string) => {
             try {
                 await getData(stop_id);
-                const ws = WebSocketManager.getInstance(`stop/${stop_id}`);
-                ws.connect();
+                ws = WebSocketManager.getInstance(`stop/${stop_id}`);
+                ws.clearCallbacks();
+                ws.reconnect();
                 ws.onOpen(() => {
                     console.log("WS connected");
                 });
@@ -126,8 +129,6 @@ const DeparturePage: React.FC = () => {
                         }
                     }
                 });
-
-                return () => ws.close();
             } catch (error) {
                 console.error("Init error:", error);
                 setMsg("Unable to get stop data.");
@@ -140,7 +141,13 @@ const DeparturePage: React.FC = () => {
             init(stop_id);
         }
 
-        return () => clearInterval(interval);
+        return () => {
+            clearInterval(interval);
+            if (ws) {
+                ws.clearCallbacks();
+                ws.close();
+            }
+        };
     }, [stop_id]);
 
     return (
