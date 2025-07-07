@@ -1,14 +1,15 @@
-FROM python:3.13-alpine
+FROM python:3.13.5 AS builder
 
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
 WORKDIR /app
 
-COPY requirements.txt .
 
-RUN pip install --no-cache-dir -r requirements.txt
-
-COPY backend ./backend
-
-EXPOSE 8000
-
-# CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
-CMD ["fastapi", "run", "./backend/main.py", "--proxy-headers",  "--port", "8000", "--workers", "4"]
+RUN python -m venv .venv
+COPY requirements.txt ./
+RUN .venv/bin/pip install -r requirements.txt
+FROM python:3.13.5-slim
+WORKDIR /app
+COPY --from=builder /app/.venv .venv/
+COPY . .
+CMD ["/app/.venv/bin/fastapi", "run"]

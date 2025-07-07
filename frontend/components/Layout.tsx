@@ -8,7 +8,7 @@ export default function Layout() {
                 <div className="flex gap-2">
                     <Link to="/">
                         <div className="flex items-center h-full mx-4">
-                            <span className="text-xl font-bold ">Bus App</span>
+                            <span className="text-xl font-bold ">nextbus</span>
                         </div>
                     </Link>
 
