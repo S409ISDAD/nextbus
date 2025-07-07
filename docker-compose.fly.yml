@@ -7,7 +7,7 @@ services:
     - "80:80"
     - "8000:8000"
     environment:
-      - REDIS_HOST=redis
+      - REDIS_HOST=redis://localhost:6379
     depends_on:
       - redis
 
