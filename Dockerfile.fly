@@ -7,7 +7,7 @@ COPY frontend ./frontend
 RUN cd frontend && npm run build
 
 # === Stage 2: Final container with backend + frontend ===
-FROM python:3.12-alpine
+FROM python:3.13-alpine
 
 # Install dependencies
 RUN apk add --no-cache nginx bash
