@@ -19,6 +19,77 @@ import {
     TileLayer,
     useMap,
 } from "react-leaflet";
+import { LocateControl } from "leaflet.locatecontrol";
+import "leaflet.locatecontrol/dist/L.Control.Locate.min.css";
+
+const LocateControlComponent: React.FC<{ busLatLng: LatLngExpression }> = ({
+    busLatLng,
+}) => {
+    const map = useMap();
+
+    useEffect(() => {
+        // @ts-ignore
+        const locateControl = new LocateControl({
+            position: "topright",
+            showPopup: false,
+            strings: {
+                title: "Show me where I am",
+            },
+            setView: false, // Don't auto-center
+        });
+        locateControl.addTo(map);
+
+        const onLocationFound = (e: any) => {
+            const userLatLng = e.latlng;
+            const bounds = L.latLngBounds([userLatLng, busLatLng]);
+            map.fitBounds(bounds, { padding: [50, 50] });
+        };
+
+        map.on("locationfound", onLocationFound);
+
+        return () => {
+            locateControl.remove();
+            map.off("locationfound", onLocationFound);
+        };
+    }, [map, busLatLng]);
+
+    return null;
+};
+
+const ResetZoomControl: React.FC = () => {
+    const map = useMap();
+
+    useEffect(() => {
+        const control = L.Control.extend({
+            options: { position: "topright" },
+            onAdd: function () {
+                const container = L.DomUtil.create("div", "leaflet-bar");
+
+                const link = L.DomUtil.create("a", "", container);
+                link.innerHTML = "<i class='fa-solid fa-magnifying-glass'></i>";
+                link.href = "#";
+                link.title = "Reset Zoom";
+
+                L.DomEvent.on(link, "click", L.DomEvent.stopPropagation)
+                    .on(link, "click", L.DomEvent.preventDefault)
+                    .on(link, "click", () => {
+                        map.setZoom(15);
+                    });
+
+                return container;
+            },
+        });
+
+        const instance = new control();
+        instance.addTo(map);
+
+        return () => {
+            instance.remove();
+        };
+    }, [map]);
+
+    return null;
+};
 
 type MapInfoProps = {
     text: string;
@@ -32,17 +103,14 @@ const MapInfo: React.FC<MapInfoProps> = ({ text, style }) => {
         const infoControl = new L.Control({ position: "bottomright" });
 
         infoControl.onAdd = () => {
-            const div = L.DomUtil.create("div", "leaflet-control leaflet-bar");
-            Object.assign(div.style, {
-                background: "#151515",
-                padding: "6px 10px",
-                fontSize: "14px",
-                borderRadius: "8px",
-                boxShadow: "0 1px 4px rgba(0,0,0,0.3)",
-                ...style,
-            });
-            div.textContent = text;
-            return div;
+            const container = L.DomUtil.create("div", "leaflet-bar");
+
+            const link = L.DomUtil.create("a", "", container);
+            link.innerHTML = text;
+            link.style.width = "100%";
+            link.style.padding = "0 5px 0 5px";
+            link.style.color = style?.color || "black";
+            return container;
         };
 
         infoControl.addTo(map);
@@ -96,14 +164,6 @@ const busIcon = L.divIcon({
     popupAnchor: [0, -12],
 });
 
-// const pinIcon = L.divIcon({
-//     html: `<i class="fas fa-location-dot fa-2x"></i>`,
-//     className: "text-blue-500",
-//     iconSize: [12, 30],
-//     iconAnchor: [10, 25],
-//     popupAnchor: [-6, -30],
-// });
-
 const pinIcon = L.divIcon({
     html: `<i class="fas fa-circle"></i>`,
     className: "text-blue-500",
@@ -111,6 +171,7 @@ const pinIcon = L.divIcon({
     iconAnchor: [12, 12],
     popupAnchor: [-6, -6],
 });
+
 const MapView: React.FC<MapViewProps> = ({
     lat,
     lng,
@@ -128,10 +189,6 @@ const MapView: React.FC<MapViewProps> = ({
                     attribution='&copy; <a href="https://osm.org/copyright">OpenStreetMap</a>'
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
-                {/* <TileLayer
-                    attribution='&copy; <a href="https://stadiamaps.com/">Stadia Maps</a>, &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors'
-                    url="https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png"
-                /> */}
                 <Marker
                     position={[lat, lng]}
                     icon={busIcon}
@@ -158,7 +215,7 @@ const MapView: React.FC<MapViewProps> = ({
                 <Polyline
                     positions={track}
                     pathOptions={{
-                        color: "black",
+                        color: "white",
                         weight: 4,
                         opacity: 0.7,
                     }}
@@ -171,10 +228,12 @@ const MapView: React.FC<MapViewProps> = ({
                             accuracy === "high"
                                 ? "green"
                                 : accuracy === "med"
-                                ? "orange"
+                                ? "darkorange"
                                 : "red",
                     }}
                 />
+                <LocateControlComponent busLatLng={[lat, lng]} />
+                <ResetZoomControl />
             </MapContainer>
         </div>
     );

@@ -24,3 +24,38 @@ body {
 #root {
     height: 100%;
 }
+
+.leaflet-layer {
+    filter: invert(100%) hue-rotate(180deg) brightness(100%) contrast(80%);
+}
+
+.leaflet-bar {
+    box-shadow: 0 1px 5px rgba(0, 0, 0, 0.65);
+}
+
+.leaflet-bar a,
+.leaflet-bar a:hover {
+    background-color: #fff;
+    border-bottom: 1px solid #ccc;
+    color: black;
+}
+
+.leaflet-bar a:last-child {
+    border-bottom: none;
+}
+
+.leaflet-bar a:hover {
+    background-color: #f4f4f4;
+}
+
+.leaflet-touch .leaflet-bar a {
+    width: 30px;
+    height: 30px;
+    line-height: 30px;
+}
+
+.leaflet-touch .leaflet-bar {
+    box-shadow: none;
+    border: 3px solid rgba(0, 0, 0, 0.2);
+    background-clip: padding-box;
+}
