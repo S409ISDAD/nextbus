@@ -9,6 +9,6 @@ echo "stopping containers..."
 docker compose stop
 
 echo "rebuilding and starting containers..."
-docker compose up --build -d
+docker compose -f docker-compose.fly.yml up --build -d
 
 echo "deployment complete."
