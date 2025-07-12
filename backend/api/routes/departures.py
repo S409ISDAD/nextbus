@@ -4,16 +4,19 @@ import math
 from datetime import datetime as dt
 from datetime import timedelta
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 
-from backend.deps import get_redis
+from backend.deps import get_redis, limiter
 from backend.services import bus, stops
 
 router = APIRouter()
 
 
 @router.get("/scheduled")
-async def departures_scheduled(stop_id: str, redis=Depends(get_redis)):
+@limiter.limit("20/minute")
+async def departures_scheduled(
+    request: Request, stop_id: str, redis=Depends(get_redis)
+):
     times = await stops.get_times(stop_id, redis)
 
     tasks = []
@@ -31,7 +34,8 @@ async def departures_scheduled(stop_id: str, redis=Depends(get_redis)):
 
 
 @router.get("/live")
-async def departures_live(stop_id: str, redis=Depends(get_redis)):
+@limiter.limit("10/minute")
+async def departures_live(request: Request, stop_id: str, redis=Depends(get_redis)):
     services = await stops.get_services_from_stop(stop_id, redis)
 
     service_ids = [service.get("id") for service in services]
@@ -46,7 +50,8 @@ async def departures_live(stop_id: str, redis=Depends(get_redis)):
 
 
 @router.get("/")
-async def departures(stop_id: str, redis=Depends(get_redis)):
+@limiter.limit("20/minute")
+async def departures(request: Request, stop_id: str, redis=Depends(get_redis)):
     services = await stops.get_services_from_stop(stop_id, redis)
 
     service_ids = [service.get("id") for service in services]

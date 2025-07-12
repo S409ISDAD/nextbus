@@ -4,9 +4,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from backend.api.routes import departures, location, stops, buses, livery
 from backend.websockets.routes import ws_router
-from backend.deps import get_redis_client
+from backend.deps import get_redis_client, limiter
 import logging
 from prometheus_fastapi_instrumentator import Instrumentator
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 
 
 log = logging.getLogger(__name__)
@@ -38,6 +40,13 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+)
+
+
+app.state.limiter = limiter
+app.add_exception_handler(
+    RateLimitExceeded,
+    lambda request, exc: _rate_limit_exceeded_handler(request, exc),  # type: ignore
 )
 
 

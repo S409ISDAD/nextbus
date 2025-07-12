@@ -9,3 +9,4 @@ prometheus-fastapi-instrumentator
 prometheus-client
 websockets
 pubsub
+slowapi

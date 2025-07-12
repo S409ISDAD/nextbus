@@ -5,10 +5,12 @@ import JourneyPage from "../pages/JourneyPage";
 import BusPage from "../pages/BusPage";
 import Layout from "../components/Layout";
 import { BrowserRouter, Routes, Route } from "react-router";
+import { Toaster } from "react-hot-toast";
 
 function App() {
     return (
         <div className="h-full">
+            <Toaster position="top-right" reverseOrder={false} />
             <BrowserRouter>
                 <Routes>
                     <Route element={<Layout />}>

@@ -1,6 +1,6 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 
-from backend.deps import get_redis
+from backend.deps import get_redis, limiter
 from backend.models.stop import Stop
 from backend.services import stops
 
@@ -8,7 +8,10 @@ router = APIRouter()
 
 
 @router.get("/")
-async def stop_details(stop_id: str, redis=Depends(get_redis)) -> Stop:
+@limiter.limit("30/minute")
+async def stop_details(
+    request: Request, stop_id: str, redis=Depends(get_redis)
+) -> Stop:
     services = await stops.get_services_from_stop(stop_id, redis)
 
     stop_details = await stops.get_stop_details(stop_id, redis)
