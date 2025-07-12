@@ -7,31 +7,28 @@ const api = axios.create({
     baseURL: '/api/v1',
 })
 
-let rateLimitToastId: string | null = null;
-
 api.interceptors.response.use(
     (response) => {
         return response;
+
     },
     (error) => {
         if (error.response && error.response.status === 429) {
-            if (!rateLimitToastId) {
-                rateLimitToastId = toast.error(
-                    "You are being rate limited. Please slow down.",
-                    {
-                        icon: '⚠️',
-                        style: {
-                            borderRadius: '10px',
-                            background: '#222',
-                            color: '#fff',
-                        },
-                        id: 'rate-limit-toast',
-                        duration: 4000,
-                    }
-                );
-            }
+            toast.error(
+                "You are being rate limited. Please slow down.",
+                {
+                    style: {
+                        borderRadius: '20px',
+                        background: '#222',
+                        color: '#fff',
+                        border: '1px solid #363636',
+                    },
+                    id: 'rate-limit-toast',
+                    duration: 3000,
+                }
+            );
+            return Promise.reject(error);
         }
-        return Promise.reject(error);
     }
 );
 

@@ -187,7 +187,7 @@ const MapView: React.FC<MapViewProps> = ({
                 style={{ height: "200px", width: "100vw" }}>
                 <TileLayer
                     attribution='&copy; <a href="https://osm.org/copyright">OpenStreetMap</a>'
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    url="https://tile-{s}.openstreetmap.fr/hot/{z}/{x}/{y}.png"
                 />
                 <Marker
                     position={[lat, lng]}
@@ -215,7 +215,7 @@ const MapView: React.FC<MapViewProps> = ({
                 <Polyline
                     positions={track}
                     pathOptions={{
-                        color: "white",
+                        color: "black",
                         weight: 4,
                         opacity: 0.7,
                     }}

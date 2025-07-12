@@ -25,9 +25,9 @@ body {
     height: 100%;
 }
 
-.leaflet-layer {
+/* .leaflet-layer {
     filter: invert(100%) hue-rotate(180deg) brightness(100%) contrast(80%);
-}
+} */
 
 .leaflet-bar {
     box-shadow: 0 1px 5px rgba(0, 0, 0, 0.65);
