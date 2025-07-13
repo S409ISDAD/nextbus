@@ -28,7 +28,6 @@ const LocateControlComponent: React.FC<{ busLatLng: LatLngExpression }> = ({
     const map = useMap();
 
     useEffect(() => {
-        // @ts-ignore
         const locateControl = new LocateControl({
             position: "topright",
             showPopup: false,
