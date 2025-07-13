@@ -10,19 +10,12 @@ const api = axios.create({
 api.interceptors.response.use(
     (response) => {
         return response;
-
     },
     (error) => {
         if (error.response && error.response.status === 429) {
             toast.error(
                 "You are being rate limited. Please slow down.",
                 {
-                    style: {
-                        borderRadius: '20px',
-                        background: '#222',
-                        color: '#fff',
-                        border: '1px solid #363636',
-                    },
                     id: 'rate-limit-toast',
                     duration: 3000,
                 }

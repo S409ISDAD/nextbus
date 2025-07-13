@@ -28,6 +28,7 @@ export interface BusResponse {
     timestamp: number;
     destination: string;
     reg: string;
+    bus_type: string;
     fleet_num: string;
     journey_id: number;
     delay: number;

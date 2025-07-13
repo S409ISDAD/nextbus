@@ -178,10 +178,16 @@ async def build_bus(
     destination = this_bus.get("destination")
     progress = this_bus.get("progress", {})
 
-    vehicle_name = vehicle["name"].split(" - ")
+    vehicle_name = vehicle.get("name", "").split(" - ")
     fleet_num = vehicle_name[0] if len(vehicle_name) > 1 else "Unknown"
     reg = vehicle_name[-1]
-
+    bus_type = vehicle.get("features", "")
+    if not bus_type:
+        bus_type = "Single Decker"
+    elif "double" not in bus_type.lower():
+        bus_type = f"Single Decker, {bus_type}"
+    if bus_type:
+        bus_type = bus_type.replace("<br>", ", ")
     livery_id = vehicle.get("livery")
 
     if livery_id:
@@ -228,6 +234,7 @@ async def build_bus(
         timestamp=timestamp,
         destination=destination,
         reg=reg,
+        bus_type=bus_type,
         fleet_num=fleet_num,
         journey_id=journey_id,
         delay=delay,

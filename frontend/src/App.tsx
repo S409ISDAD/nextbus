@@ -10,7 +10,19 @@ import { Toaster } from "react-hot-toast";
 function App() {
     return (
         <div className="h-full">
-            <Toaster position="top-right" reverseOrder={false} />
+            <Toaster
+                position="top-right"
+                reverseOrder={false}
+                toastOptions={{
+                    style: {
+                        borderRadius: "20px",
+                        background: "#222",
+                        color: "#fff",
+                        border: "1px solid #363636",
+                        marginTop: "60px",
+                    },
+                }}
+            />
             <BrowserRouter>
                 <Routes>
                     <Route element={<Layout />}>

@@ -276,54 +276,27 @@ const DeparturePage: React.FC = () => {
                                                 <Card key={bus.reg}>
                                                     <div className="flex flex-row justify-between align-center">
                                                         <div className="flex flex-col justify-around">
-                                                            {bus.service
-                                                                .detail ? (
-                                                                <>
-                                                                    <div className="flex flex-row flex-wrap items-center gap-1">
-                                                                        <span className="text-xl font-bold">
-                                                                            {
-                                                                                bus
-                                                                                    .service
-                                                                                    .line_name
-                                                                            }
-                                                                        </span>
-                                                                        <span>
-                                                                            to
-                                                                        </span>
-                                                                        <span className="font-bold">
-                                                                            {
-                                                                                bus.destination
-                                                                            }
-                                                                        </span>
-                                                                    </div>
-                                                                    <span className="text-sm wrap-anywhere text-neutral-400">
-                                                                        Via:{" "}
-                                                                        {
-                                                                            bus
-                                                                                .service
-                                                                                .detail
-                                                                        }
-                                                                    </span>
-                                                                </>
-                                                            ) : (
-                                                                <div className="flex flex-row flex-wrap items-center gap-1">
-                                                                    <span className="text-2xl font-bold">
-                                                                        {
-                                                                            bus
-                                                                                .service
-                                                                                .line_name
-                                                                        }
-                                                                    </span>
-                                                                    <span className="text-lg">
-                                                                        to
-                                                                    </span>
-                                                                    <span className="text-xl font-bold">
-                                                                        {
-                                                                            bus.destination
-                                                                        }
-                                                                    </span>
-                                                                </div>
-                                                            )}
+                                                            <div className="flex flex-row flex-wrap items-center gap-1">
+                                                                <span className="text-2xl font-bold">
+                                                                    {
+                                                                        bus
+                                                                            .service
+                                                                            .line_name
+                                                                    }
+                                                                </span>
+                                                                <span className="text-lg">
+                                                                    to
+                                                                </span>
+                                                                <span className="text-xl font-bold">
+                                                                    {
+                                                                        bus.destination
+                                                                    }
+                                                                </span>
+                                                            </div>
+                                                            <span className="text-sm wrap-anywhere text-neutral-400">
+                                                                {bus.bus_type}
+                                                            </span>
+
                                                             <div className="flex flex-row items-center text-lg font-semibold gap-x-3 text-nowrap">
                                                                 <div className="flex items-center gap-0.5">
                                                                     <span className="text-sm text-teal-400">

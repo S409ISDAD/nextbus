@@ -28,6 +28,7 @@ class TrackedBus(BaseModel):
     destination: str
     reg: str  # vehicle license plate
     fleet_num: str
+    bus_type: str  # double decker
     journey_id: int
     delay: int  # how many seconds behind/ahead e.g. 120 = 2 min late, -60 = 1 min early
     expected: Optional[int]  # expected arrival time at stop (unix timestamp)
