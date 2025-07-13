@@ -10,8 +10,16 @@ services:
       - REDIS_HOST=redis://localhost:6379
     depends_on:
       - redis
+    networks:
+      - web
 
   redis:
     image: redis:latest
     ports:
       - "6379:6379"
+    networks:
+      - web
+
+  networks:
+    web:
+      driver: bridge
