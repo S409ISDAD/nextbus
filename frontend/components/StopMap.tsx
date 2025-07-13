@@ -133,7 +133,7 @@ const MapView: React.FC<
                     width: "90vw",
                     aspectRatio:
                         typeof window !== "undefined" && window.innerWidth < 640
-                            ? 1 / 1.5
+                            ? 1 / 1.3
                             : 2 / 1,
                     borderRadius: "8px",
                 }}>

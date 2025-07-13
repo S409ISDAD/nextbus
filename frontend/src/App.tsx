@@ -6,6 +6,8 @@ import BusPage from "../pages/BusPage";
 import Layout from "../components/Layout";
 import { BrowserRouter, Routes, Route } from "react-router";
 import { Toaster } from "react-hot-toast";
+import { faXmark } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 function App() {
     return (
@@ -23,6 +25,26 @@ function App() {
                     },
                 }}
             />
+            <div className="fixed z-50 flex items-center justify-center p-3 transform -translate-x-1/2 bg-teal-900 shadow-lg bottom-4 left-1/2 rounded-2xl">
+                <span className="text-center text-gray-200 text-nowrap">
+                    Finding this useful?{" "}
+                    <a
+                        href="https://forms.gle/SxrFyLQ1HedQcLLC7"
+                        className="text-teal-400 underline"
+                        target="_blank"
+                        rel="noopener noreferrer">
+                        Help improve it!
+                    </a>
+                    <button
+                        className="px-2 ml-2 text-gray-100 transition bg-teal-700 rounded-full hover:bg-teal-800"
+                        onClick={(e) => {
+                            (e.target as HTMLElement).closest("div")?.remove();
+                        }}
+                        aria-label="Close">
+                        <FontAwesomeIcon icon={faXmark} size="sm" />
+                    </button>
+                </span>
+            </div>
             <BrowserRouter>
                 <Routes>
                     <Route element={<Layout />}>

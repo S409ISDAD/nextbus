@@ -11,7 +11,7 @@ const Home: React.FC = () => {
     return (
         <div>
             <div className="flex flex-col items-center justify-center gap-6">
-                <div className="flex flex-col items-center justify-center gap-8 p-7">
+                <div className="flex flex-col items-center justify-center gap-5 p-7">
                     {/* <span className="text-5xl font-black text-center">
                         The best way to get the bus.
                     </span> */}
@@ -40,6 +40,7 @@ const Home: React.FC = () => {
                     <span className="text-2xl font-bold text-center">
                         Find your stop on the map:
                     </span>
+
                     <StopMap />
                 </div>
                 {/* <div className="flex flex-row flex-wrap items-center justify-center gap-5 p-5 md:gap-15">
