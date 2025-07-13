@@ -101,7 +101,7 @@ const MapView: React.FC<
     const [zoom, setZoom] = useState(10);
 
     const handleMove = useCallback(
-        (map) => {
+        (map: L.Map) => {
             const bounds = map.getBounds();
             const z = map.getZoom();
             setZoom(z);
