@@ -1,5 +1,6 @@
 import { Link, Outlet } from "react-router";
 import Clock from "../components/Clock";
+import version from "../utils/version";
 
 export default function Layout() {
     return (
@@ -18,8 +19,10 @@ export default function Layout() {
                         </button>
                     </Link>
                 </div>
-
-                <Clock></Clock>
+                <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-400">v{version}</span>
+                    <Clock></Clock>
+                </div>
             </div>
             <main>
                 <div className="h-15"></div>

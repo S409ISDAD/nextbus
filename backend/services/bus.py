@@ -183,9 +183,9 @@ async def build_bus(
     reg = vehicle_name[-1]
     bus_type = vehicle.get("features", "")
     if not bus_type:
-        bus_type = "Single Decker"
+        bus_type = "Single decker"
     elif "double" not in bus_type.lower():
-        bus_type = f"Single Decker, {bus_type}"
+        bus_type = f"Single decker, {bus_type}"
     if bus_type:
         bus_type = bus_type.replace("<br>", ", ")
     livery_id = vehicle.get("livery")
