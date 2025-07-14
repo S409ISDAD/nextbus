@@ -25,7 +25,7 @@ function App() {
                     },
                 }}
             />
-            <div className="fixed z-50 flex items-center justify-center p-3 transform -translate-x-1/2 bg-teal-900 shadow-lg bottom-4 left-1/2 rounded-2xl">
+            <div className="fixed flex items-center justify-center p-3 transform -translate-x-1/2 bg-teal-900 shadow-lg z-[99999] bottom-4 left-1/2 rounded-2xl">
                 <span className="text-center text-gray-200 text-nowrap">
                     Finding this useful?{" "}
                     <a
