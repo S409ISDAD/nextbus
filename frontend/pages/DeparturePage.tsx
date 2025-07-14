@@ -163,7 +163,6 @@ const DeparturePage: React.FC = () => {
                             : ""}
                     </span>
                     <div className="flex flex-wrap items-center justify-center gap-4 gap-y-1">
-                        <span className="text-center">{stop?.stop_id}</span>
                         {closestStop ? (
                             <div
                                 className="flex items-center gap-2 p-2 cursor-pointer bg-neutral-900 w-fit rounded-2xl border-1 border-neutral-800"
@@ -187,11 +186,11 @@ const DeparturePage: React.FC = () => {
                             target="_blank">
                             View on bustimes.org
                         </a>
-                        <a
+                        {/* <a
                             className="px-2 py-1 text-neutral-400 border-1 rounded-xl border-neutral-800 bg-neutral-900"
                             href={`/departureboard/${stop?.stop_id}`}>
                             board
-                        </a>
+                        </a> */}
                     </div>
                 </div>
                 <div className="flex flex-row justify-center gap-1 overflow-x-auto">
@@ -223,108 +222,198 @@ const DeparturePage: React.FC = () => {
                     </span>
                 </div>
 
-                <div className="pt-2 grow">
-                    <div className="flex flex-col gap-3">
-                        {msg ? (
-                            <div className="flex justify-center p-3">
-                                <span className="text-red-400">{msg}</span>
-                            </div>
-                        ) : (
-                            <></>
-                        )}
-                        {loading ? (
-                            <>
-                                {[1, 2, 3, 4, 5].map((i) => (
-                                    <Card key={i}>
-                                        <div className="flex flex-row justify-between align-center">
-                                            <div className="flex flex-col gap-1">
-                                                <Skeleton>
-                                                    <span className="text-xl">
-                                                        123 to Location
-                                                    </span>
-                                                </Skeleton>
-                                                <Skeleton>
-                                                    <span>10:10:10</span>
-                                                </Skeleton>
-                                            </div>
-                                            <div className="flex flex-row gap-3">
-                                                <Skeleton>
-                                                    <div className="p-3">
-                                                        <span>AB12ACB</span>
-                                                    </div>
-                                                </Skeleton>
-                                                <Skeleton>
-                                                    <div className="p-3">
-                                                        <span>5 min</span>
-                                                    </div>
-                                                </Skeleton>
-                                            </div>
+                <div className="flex flex-col gap-3">
+                    {msg ? (
+                        <div className="flex justify-center p-3">
+                            <span className="text-red-400">{msg}</span>
+                        </div>
+                    ) : (
+                        <></>
+                    )}
+                    {loading ? (
+                        <>
+                            {[1, 2, 3, 4, 5].map((i) => (
+                                <Card key={i}>
+                                    <div className="flex flex-row justify-between align-center">
+                                        <div className="flex flex-col gap-1">
+                                            <Skeleton>
+                                                <span className="text-xl">
+                                                    123 to Location
+                                                </span>
+                                            </Skeleton>
+                                            <Skeleton>
+                                                <span>10:10:10</span>
+                                            </Skeleton>
                                         </div>
-                                    </Card>
-                                ))}
-                            </>
-                        ) : (
-                            <>
-                                {buses.map((bus) => (
-                                    <>
-                                        {isTrackedBus(bus) ? (
-                                            <div
-                                                onClick={() =>
-                                                    navigate(`/buses/${bus.id}`)
-                                                }
-                                                className="cursor-pointer">
-                                                <Card key={bus.reg}>
-                                                    <div className="flex flex-row justify-between align-center">
-                                                        <div className="flex flex-col justify-around">
-                                                            <div className="flex flex-row flex-wrap items-center gap-1">
-                                                                <span className="text-2xl font-bold">
-                                                                    {
-                                                                        bus
-                                                                            .service
-                                                                            .line_name
-                                                                    }
-                                                                </span>
-                                                                <span className="text-lg">
-                                                                    to
-                                                                </span>
-                                                                <span className="text-xl font-bold">
-                                                                    {
-                                                                        bus.destination
-                                                                    }
-                                                                </span>
-                                                            </div>
-                                                            <span className="text-sm wrap-anywhere text-neutral-400">
-                                                                {bus.bus_type}
+                                        <div className="flex flex-row gap-3">
+                                            <Skeleton>
+                                                <div className="p-3">
+                                                    <span>AB12ACB</span>
+                                                </div>
+                                            </Skeleton>
+                                            <Skeleton>
+                                                <div className="p-3">
+                                                    <span>5 min</span>
+                                                </div>
+                                            </Skeleton>
+                                        </div>
+                                    </div>
+                                </Card>
+                            ))}
+                        </>
+                    ) : (
+                        <>
+                            {buses.map((bus) => (
+                                <>
+                                    {isTrackedBus(bus) ? (
+                                        <div
+                                            onClick={() =>
+                                                navigate(`/buses/${bus.id}`)
+                                            }
+                                            className="cursor-pointer">
+                                            <Card key={bus.reg} className="p-3">
+                                                <div className="flex flex-row justify-between align-center">
+                                                    <div className="flex flex-col justify-around ml-1">
+                                                        <div className="flex flex-row flex-wrap items-center gap-1">
+                                                            <span className="text-xl font-bold">
+                                                                {
+                                                                    bus.service
+                                                                        .line_name
+                                                                }
                                                             </span>
+                                                            <span className="text">
+                                                                to
+                                                            </span>
+                                                            <span className="text-lg font-bold">
+                                                                {
+                                                                    bus.destination
+                                                                }
+                                                            </span>
+                                                        </div>
+                                                        <span className="text-xs wrap-anywhere text-neutral-400">
+                                                            {bus.bus_type}
+                                                        </span>
 
-                                                            <div className="flex flex-row items-center text-lg font-semibold gap-x-3 text-nowrap">
-                                                                <div className="flex items-center gap-0.5">
-                                                                    <span className="text-sm text-teal-400">
-                                                                        Expt:
-                                                                    </span>
-                                                                    <span className="text-teal-400">
-                                                                        {bus.expected.toLocaleTimeString(
-                                                                            [],
-                                                                            {
-                                                                                hour: "2-digit",
-                                                                                minute: "2-digit",
-                                                                            }
-                                                                        )}
-                                                                    </span>
-                                                                </div>
-                                                                <span
-                                                                    className={`text-${
-                                                                        bus.delay >=
-                                                                        60
-                                                                            ? "red"
-                                                                            : "green"
-                                                                    }-400`}>
-                                                                    {lateness(
-                                                                        bus
-                                                                            ? bus.delay
-                                                                            : 0
+                                                        <div className="flex flex-row items-center font-semibold text gap-x-3 text-nowrap">
+                                                            <div className="flex items-center gap-0.5">
+                                                                <span className="text-xs text-teal-400">
+                                                                    Expt:
+                                                                </span>
+                                                                <span className="text-teal-400">
+                                                                    {bus.expected.toLocaleTimeString(
+                                                                        [],
+                                                                        {
+                                                                            hour: "2-digit",
+                                                                            minute: "2-digit",
+                                                                        }
                                                                     )}
                                                                 </span>
+                                                            </div>
+                                                            <span
+                                                                className={`text-${
+                                                                    bus.delay >=
+                                                                    60
+                                                                        ? "red"
+                                                                        : "green"
+                                                                }-400`}>
+                                                                {lateness(
+                                                                    bus
+                                                                        ? bus.delay
+                                                                        : 0
+                                                                )}
+                                                            </span>
+                                                            <div className="relative w-5 h-5">
+                                                                <FontAwesomeIcon
+                                                                    icon={
+                                                                        faSatelliteDish
+                                                                    }
+                                                                    className={clsx(
+                                                                        "absolute top-0 left-0 w-5 h-5",
+                                                                        {
+                                                                            "text-sky-500":
+                                                                                bus.status ===
+                                                                                "tracking",
+                                                                            "text-emerald-500":
+                                                                                bus.status ===
+                                                                                "user_tracking",
+                                                                        }
+                                                                    )}
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex flex-row flex-wrap items-center justify-end gap-2 md:gap-4">
+                                                        <div className="flex justify-center px-2 py-1 rounded-lg bg-amber-400">
+                                                            <span className="text-xs font-bold align-middle text-neutral-950">
+                                                                {bus.reg}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex items-center justify-center gap-1 p-[0.3rem] w-18 rounded-xl bg-blue-950 h-fit">
+                                                            <span className="text-lg font-bold text-blue-300">
+                                                                {
+                                                                    bus.timeto.split(
+                                                                        " "
+                                                                    )[0]
+                                                                }
+                                                            </span>
+                                                            <span className="self-end h-full mb-[0.15rem] text-sm font-bold text-blue-300">
+                                                                {
+                                                                    bus.timeto.split(
+                                                                        " "
+                                                                    )[1]
+                                                                }
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </Card>
+                                        </div>
+                                    ) : (
+                                        <div
+                                            className="cursor-pointer"
+                                            onClick={() =>
+                                                window.open(
+                                                    `https://bustimes.org/trips/${bus.trip}`,
+                                                    "_blank"
+                                                )
+                                            }>
+                                            <Card
+                                                key={bus.trip}
+                                                className="p-3">
+                                                <div className="flex flex-row justify-between align-center">
+                                                    <div className="flex flex-col justify-around ml-1">
+                                                        <div className="flex flex-row flex-wrap items-center gap-1">
+                                                            <span className="text-xl font-bold">
+                                                                {bus.line}
+                                                            </span>
+                                                            <span className="text">
+                                                                to
+                                                            </span>
+                                                            <span className="text-lg font-bold">
+                                                                {
+                                                                    bus.destination
+                                                                }
+                                                            </span>
+                                                        </div>
+
+                                                        <div className="flex flex-row items-center font-semibold gap-x-3 text-nowrap">
+                                                            <div className="flex items-center gap-0.5">
+                                                                <span className="text-teal-400">
+                                                                    {bus.expected.toLocaleTimeString(
+                                                                        [],
+                                                                        {
+                                                                            hour: "2-digit",
+                                                                            minute: "2-digit",
+                                                                        }
+                                                                    )}
+                                                                </span>
+                                                            </div>
+                                                            {!bus.started && (
+                                                                <span className="text-sm font-medium opacity-70">
+                                                                    Upcoming
+                                                                </span>
+                                                            )}
+                                                            {bus.started && (
                                                                 <div className="relative w-5 h-5">
                                                                     <FontAwesomeIcon
                                                                         icon={
@@ -333,6 +422,9 @@ const DeparturePage: React.FC = () => {
                                                                         className={clsx(
                                                                             "absolute top-0 left-0 w-5 h-5",
                                                                             {
+                                                                                "text-blue-400 opacity-40":
+                                                                                    bus.status ===
+                                                                                    "not_tracking",
                                                                                 "text-sky-500":
                                                                                     bus.status ===
                                                                                     "tracking",
@@ -342,146 +434,52 @@ const DeparturePage: React.FC = () => {
                                                                             }
                                                                         )}
                                                                     />
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        <div className="flex flex-row flex-wrap items-center justify-end gap-2 md:gap-4">
-                                                            <div className="flex justify-center px-2 py-1 rounded-lg bg-amber-400">
-                                                                <span className="text-xs font-bold align-middle text-neutral-950">
-                                                                    {bus.reg}
-                                                                </span>
-                                                            </div>
-                                                            <div className="flex items-center justify-center w-20 gap-1 p-2 rounded-xl bg-blue-950 h-fit">
-                                                                <span className="text-xl font-bold text-blue-300">
-                                                                    {
-                                                                        bus.timeto.split(
-                                                                            " "
-                                                                        )[0]
-                                                                    }
-                                                                </span>
-                                                                <span className="self-end h-full font-bold text-blue-300 ">
-                                                                    {
-                                                                        bus.timeto.split(
-                                                                            " "
-                                                                        )[1]
-                                                                    }
-                                                                </span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </Card>
-                                            </div>
-                                        ) : (
-                                            <div
-                                                className="cursor-pointer"
-                                                onClick={() =>
-                                                    window.open(
-                                                        `https://bustimes.org/trips/${bus.trip}`,
-                                                        "_blank"
-                                                    )
-                                                }>
-                                                <Card key={bus.trip}>
-                                                    <div className="flex flex-row justify-between align-center">
-                                                        <div className="flex flex-col justify-around">
-                                                            <div className="flex flex-row flex-wrap items-center gap-1">
-                                                                <span className="text-2xl font-bold">
-                                                                    {bus.line}
-                                                                </span>
-                                                                <span className="text-lg">
-                                                                    to
-                                                                </span>
-                                                                <span className="text-xl font-bold">
-                                                                    {
-                                                                        bus.destination
-                                                                    }
-                                                                </span>
-                                                            </div>
-
-                                                            <div className="flex flex-row items-center text-lg font-semibold gap-x-3 text-nowrap">
-                                                                <div className="flex items-center gap-0.5">
-                                                                    <span className="text-teal-400">
-                                                                        {bus.expected.toLocaleTimeString(
-                                                                            [],
-                                                                            {
-                                                                                hour: "2-digit",
-                                                                                minute: "2-digit",
-                                                                            }
-                                                                        )}
-                                                                    </span>
-                                                                </div>
-                                                                {!bus.started && (
-                                                                    <span className="font-medium opacity-70">
-                                                                        Upcoming
-                                                                    </span>
-                                                                )}
-                                                                {bus.started && (
-                                                                    <div className="relative w-5 h-5">
+                                                                    {bus.status ===
+                                                                        "not_tracking" && (
                                                                         <FontAwesomeIcon
                                                                             icon={
-                                                                                faSatelliteDish
+                                                                                faSlash
                                                                             }
-                                                                            className={clsx(
-                                                                                "absolute top-0 left-0 w-5 h-5",
-                                                                                {
-                                                                                    "text-blue-400 opacity-40":
-                                                                                        bus.status ===
-                                                                                        "not_tracking",
-                                                                                    "text-sky-500":
-                                                                                        bus.status ===
-                                                                                        "tracking",
-                                                                                    "text-emerald-500":
-                                                                                        bus.status ===
-                                                                                        "user_tracking",
-                                                                                }
-                                                                            )}
+                                                                            className="absolute top-0 left-0 w-5 h-5 text-red-500"
                                                                         />
-                                                                        {bus.status ===
-                                                                            "not_tracking" && (
-                                                                            <FontAwesomeIcon
-                                                                                icon={
-                                                                                    faSlash
-                                                                                }
-                                                                                className="absolute top-0 left-0 w-5 h-5 text-red-500"
-                                                                            />
-                                                                        )}
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                        <div className="flex flex-row flex-wrap items-center justify-end gap-2 md:gap-4">
-                                                            <div className="flex items-center justify-center w-20 gap-1 p-2 rounded-xl bg-blue-950 h-fit">
-                                                                <span className="text-xl font-bold text-blue-300">
-                                                                    {
-                                                                        bus.timeto.split(
-                                                                            " "
-                                                                        )[0]
-                                                                    }
-                                                                </span>
-                                                                <span className="self-end h-full font-bold text-blue-300 ">
-                                                                    {
-                                                                        bus.timeto.split(
-                                                                            " "
-                                                                        )[1]
-                                                                    }
-                                                                </span>
-                                                            </div>
+                                                                    )}
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     </div>
-                                                </Card>
-                                            </div>
-                                        )}
-                                    </>
-                                ))}
-                                {buses.length < 4 && (
-                                    <div className="flex justify-center">
-                                        <span className="text-neutral-400">
-                                            No more departures!
-                                        </span>
-                                    </div>
-                                )}
-                            </>
-                        )}
-                    </div>
+                                                    <div className="flex flex-row flex-wrap items-center justify-end gap-2 md:gap-4">
+                                                        <div className="flex items-center justify-center gap-1 p-[0.3rem] w-18 rounded-xl bg-blue-950 h-fit">
+                                                            <span className="text-lg font-bold text-blue-300">
+                                                                {
+                                                                    bus.timeto.split(
+                                                                        " "
+                                                                    )[0]
+                                                                }
+                                                            </span>
+                                                            <span className="self-end h-full mb-[0.15rem] text-sm font-bold text-blue-300">
+                                                                {
+                                                                    bus.timeto.split(
+                                                                        " "
+                                                                    )[1]
+                                                                }
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </Card>
+                                        </div>
+                                    )}
+                                </>
+                            ))}
+                            {buses.length < 4 && (
+                                <div className="flex justify-center">
+                                    <span className="text-neutral-400">
+                                        No more departures!
+                                    </span>
+                                </div>
+                            )}
+                        </>
+                    )}
                 </div>
             </div>
         </div>
