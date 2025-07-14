@@ -3,6 +3,7 @@ import React, { useEffect } from "react";
 // import { faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
 // import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import StopMap from "../components/StopMap";
+import DepartureBoard from "../components/DepartureBoard";
 
 const Home: React.FC = () => {
     useEffect(() => {
@@ -33,12 +34,14 @@ const Home: React.FC = () => {
                         <button className="mr-2 px-4 py-1.5 font-bold text-black rounded-full bg-teal-400  transition cursor-pointer shadow-[0_0_5px_1px_rgba(0,187,167,0.5)] hover:shadow-[0_0_10px_2px_rgba(0,187,167,0.6)]">
                             Go
                         </button>
-                    </div>
-                    <span className="font-semibold text-gray-400 ">
+                    </div> */}
+                    <span className="text-xl font-bold text-center">
+                        See your nearest bus stop:
+                    </span>
+                    <DepartureBoard stop_id="" closest={true}></DepartureBoard>
+
+                    <span className="text-xl font-bold text-center">
                         Or find your stop on the map:
-                    </span> */}
-                    <span className="text-2xl font-bold text-center">
-                        Find your stop on the map:
                     </span>
 
                     <StopMap />
