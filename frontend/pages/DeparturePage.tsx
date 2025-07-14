@@ -17,10 +17,7 @@ import {
 import clsx from "clsx";
 import { WebSocketManager } from "../websockets/ws_manager";
 
-function BusCard(
-    { bus }: { bus: Departure },
-    { onClick }: { onClick: () => void }
-) {
+function BusCard({ bus, onClick }: { bus: Departure; onClick: () => void }) {
     return (
         <div onClick={onClick} className="cursor-pointer">
             <Card key={bus.trip} className="p-3 rounded-3xl">
@@ -387,26 +384,24 @@ const DeparturePage: React.FC = () => {
                         <>
                             {buses.map((bus) => (
                                 <>
-                                    {isTrackedBus(bus)
-                                        ? BusCard(
-                                              { bus },
-                                              {
-                                                  onClick: () =>
-                                                      navigate(
-                                                          `/buses/${bus.id}`
-                                                      ),
-                                              }
-                                          )
-                                        : BusCard(
-                                              { bus },
-                                              {
-                                                  onClick: () =>
-                                                      window.open(
-                                                          `https://bustimes.org/trips/${bus.trip}`,
-                                                          "_blank"
-                                                      ),
-                                              }
-                                          )}
+                                    {isTrackedBus(bus) ? (
+                                        <BusCard
+                                            bus={bus}
+                                            onClick={() =>
+                                                navigate(`/buses/${bus.id}`)
+                                            }
+                                        />
+                                    ) : (
+                                        <BusCard
+                                            bus={bus}
+                                            onClick={() =>
+                                                window.open(
+                                                    `https://bustimes.org/trips/${bus.trip}`,
+                                                    "_blank"
+                                                )
+                                            }
+                                        />
+                                    )}
                                 </>
                             ))}
                             {buses.length === 0 && (

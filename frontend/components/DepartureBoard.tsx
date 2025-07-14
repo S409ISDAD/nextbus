@@ -11,6 +11,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSatelliteDish, faSlash } from "@fortawesome/free-solid-svg-icons";
 import clsx from "clsx";
 import { WebSocketManager } from "../websockets/ws_manager";
+import React from "react";
 
 interface Props {
     stop_id: string;
@@ -195,7 +196,7 @@ function DepartureBoard({ stop_id, closest }: Props) {
                                     ) : (
                                         <>
                                             {buses.map((bus, idx) => (
-                                                <>
+                                                <React.Fragment key={bus.trip}>
                                                     {isTrackedBus(bus) ? (
                                                         <div
                                                             className="cursor-pointer"
@@ -375,7 +376,7 @@ function DepartureBoard({ stop_id, closest }: Props) {
                                                         buses.length - 1 && (
                                                         <div className="min-h-[1px] m-1 mx-0 bg-neutral-700"></div>
                                                     )}
-                                                </>
+                                                </React.Fragment>
                                             ))}
                                             {buses.length === 0 ? (
                                                 <div className="flex justify-center">
