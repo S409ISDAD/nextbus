@@ -14,13 +14,12 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-            node-version: "24"
-
-      - name: Enter frontend directory
-        run: cd frontend
+          node-version: "24"
 
       - name: Install dependencies
         run: npm install
+        working-directory: frontend
 
       - name: Build frontend
         run: npm run build
+        working-directory: frontend
