@@ -9,9 +9,17 @@ updates:
     directory: "/frontend" # Location of package manifests
     schedule:
       interval: "daily"
+      time: "08:00"
   - package-ecosystem: "docker"
     # Look for a `Dockerfile` in the `root` directory
     directory: "/"
     # Check for updates once a week
     schedule:
       interval: "weekly"
+      time: "08:00"
+
+  - package-ecosystem: "pip"
+    directory: "/"  # requirements.txt is in the root
+    schedule:
+      interval: "daily"
+      time: "08:00"
