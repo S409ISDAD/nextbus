@@ -42,12 +42,12 @@ function BusCard({ bus, onClick }: { bus: Departure; onClick: () => void }) {
                         </div>
                     </div>
 
-                    <div className="flex flex-row items-center pl-2 font-semibold text gap-x-3 text-nowrap">
+                    <div className="flex flex-row items-center pl-2 font-semibold text-sky-400 text gap-x-3 text-nowrap">
                         <div className="flex gap-0.5 items-center">
-                            <span className="text-xs text-teal-400 ">
+                            <span className="text-xs">
                                 {isTrackedBus(bus) ? "Expt:" : "Schd:"}
                             </span>
-                            <span className="text-teal-400">
+                            <span>
                                 {bus.expected.toLocaleTimeString([], {
                                     hour: "2-digit",
                                     minute: "2-digit",
@@ -63,7 +63,7 @@ function BusCard({ bus, onClick }: { bus: Departure; onClick: () => void }) {
                             </span>
                         )}
                         {!bus.started && !isTrackedBus(bus) && (
-                            <span className="text-sm font-medium opacity-70">
+                            <span className="text-sm font-medium opacity-70 text-neutral-50">
                                 Upcoming
                             </span>
                         )}
@@ -115,20 +115,7 @@ function BusCard({ bus, onClick }: { bus: Departure; onClick: () => void }) {
                         )}
                     </div>
                 </div>
-                {/* {isTrackedBus(bus) && (
-                    <div className="flex flex-col items-stretch mb-1">
-                        <div className="flex justify-center p-2 py-1 bg-amber-400 rounded-t-2xl">
-                            <span className="text-sm font-semibold text-neutral-900">
-                                {bus.reg}
-                            </span>
-                        </div>
-                        <div className="flex flex-col justify-center px-3 py-1 bg-neutral-800/50 rounded-b-2xl">
-                            <span className="mb-0.5 text-xs text-neutral-400">
-                                {bus.bus_type}
-                            </span>
-                        </div>
-                    </div>
-                )} */}
+
                 <div className="flex flex-row flex-wrap items-center justify-end gap-2 md:gap-4 w-min md:w-auto">
                     {isTrackedBus(bus) && (
                         <div className="flex justify-center px-2 py-1 rounded-lg bg-amber-400">
@@ -397,11 +384,11 @@ const DeparturePage: React.FC = () => {
                             {buses.map((bus, idx) => (
                                 <>
                                     <div className="flex items-center gap-2 mb-0.5">
-                                        <div className="flex-grow border-t border-dashed border-neutral-700"></div>
-                                        <span className="text-[10px] text-neutral-700">
+                                        <div className="flex-grow border-t border-dashed border-neutral-600"></div>
+                                        <span className="text-[10px] text-neutral-600">
                                             nextbus
                                         </span>
-                                        <div className="flex-grow border-t border-dashed border-neutral-700"></div>
+                                        <div className="flex-grow border-t border-dashed border-neutral-600"></div>
                                     </div>
 
                                     <BusCard
@@ -417,11 +404,11 @@ const DeparturePage: React.FC = () => {
                                     />
                                     {idx === buses.length - 1 && (
                                         <div className="flex items-center gap-2 mb-0.5">
-                                            <div className="flex-grow border-t border-dashed border-neutral-700"></div>
-                                            <span className="text-[10px] text-neutral-700">
+                                            <div className="flex-grow border-t border-dashed border-neutral-600"></div>
+                                            <span className="text-[10px] text-neutral-600">
                                                 nextbus
                                             </span>
-                                            <div className="flex-grow border-t border-dashed border-neutral-700"></div>
+                                            <div className="flex-grow border-t border-dashed border-neutral-600"></div>
                                         </div>
                                     )}
                                 </>

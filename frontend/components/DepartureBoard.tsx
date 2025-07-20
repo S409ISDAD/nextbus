@@ -316,11 +316,11 @@ function DepartureBoard({ stop_id, closest }: Props) {
                                                     {idx !==
                                                         buses.length - 1 && (
                                                         <div className="flex items-center gap-2 mb-0.5">
-                                                            <div className="flex-grow border-t border-dashed border-neutral-700"></div>
-                                                            <span className="text-[10px] text-neutral-700">
+                                                            <div className="flex-grow border-t border-dashed border-neutral-600"></div>
+                                                            <span className="text-[10px] text-neutral-600">
                                                                 nextbus
                                                             </span>
-                                                            <div className="flex-grow border-t border-dashed border-neutral-700"></div>
+                                                            <div className="flex-grow border-t border-dashed border-neutral-600"></div>
                                                         </div>
                                                     )}
                                                 </React.Fragment>
