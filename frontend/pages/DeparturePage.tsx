@@ -60,7 +60,7 @@ function BusCard({ bus, onClick }: { bus: Departure; onClick: () => void }) {
                                     {lateness(bus ? bus.delay : 0)}
                                 </span>
                             )}
-                            {!bus.started && (
+                            {!bus.started && !isTrackedBus(bus) && (
                                 <span className="text-sm font-medium opacity-70">
                                     Upcoming
                                 </span>

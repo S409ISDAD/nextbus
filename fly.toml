@@ -8,7 +8,7 @@ primary_region = 'lhr'
 
 
 [build]
-dockerfile = "Dockerfile.fly"
+dockerfile = "Dockerfile.prod"
 
 [[services]]
 internal_port = 80
