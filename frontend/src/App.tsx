@@ -23,23 +23,23 @@ function UsefulBanner() {
 
     if (location.pathname === "/" || !visible) return null;
     return (
-        <div className="fixed flex items-center justify-center p-3 transform -translate-x-1/2 bg-teal-900 shadow-lg z-[99999] bottom-4 left-1/2 rounded-2xl">
+        <div className="fixed flex gap-2 items-center justify-center p-3 transform -translate-x-1/2 bg-neutral-800 shadow-lg z-[99999] bottom-4 left-1/2 rounded-2xl">
             <span className="text-center text-gray-200 text-nowrap">
                 Finding this useful?{" "}
                 <a
                     href="https://forms.gle/SxrFyLQ1HedQcLLC7"
-                    className="text-teal-400 underline"
+                    className="underline text-sky-500"
                     target="_blank"
                     rel="noopener noreferrer">
                     Help improve it!
                 </a>
-                <button
-                    className="px-2 ml-2 text-gray-100 transition bg-teal-700 rounded-full cursor-pointer hover:bg-teal-800"
-                    onClick={() => setVisible(false)}>
-                    {" "}
-                    <FontAwesomeIcon icon={faXmark} size="sm" />
-                </button>
             </span>
+            <button
+                className="flex items-center justify-center px-2 cursor-pointer aspect-square bg-neutral-900/50 rounded-2xl hover:bg-neutral-900"
+                onClick={() => setVisible(false)}>
+                {" "}
+                <FontAwesomeIcon icon={faXmark} size="sm" />
+            </button>
         </div>
     );
 }
