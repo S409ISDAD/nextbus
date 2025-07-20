@@ -8,7 +8,7 @@ router = APIRouter()
 
 
 @router.get("/")
-@limiter.limit("30/minute")
+@limiter.limit("45/minute")
 async def stop_details(
     request: Request, stop_id: str, redis=Depends(get_redis)
 ) -> Stop:
