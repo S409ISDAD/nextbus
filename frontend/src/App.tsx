@@ -25,7 +25,11 @@ function UsefulBanner() {
                     rel="noopener noreferrer">
                     Help improve it!
                 </a>
-                <button className="px-2 ml-2 text-gray-100 transition bg-teal-700 rounded-full hover:bg-teal-800">
+                <button
+                    className="px-2 ml-2 text-gray-100 transition bg-teal-700 rounded-full cursor-pointer hover:bg-teal-800"
+                    onClick={(e) => {
+                        (e.target as HTMLElement).closest("div")?.remove();
+                    }}>
                     {" "}
                     <FontAwesomeIcon icon={faXmark} size="sm" />
                 </button>
