@@ -40,7 +40,7 @@ function UsefulBanner() {
 
 function App() {
     return (
-        <div className="h-full">
+        <div className="flex flex-col min-h-screen">
             <Toaster
                 position="top-right"
                 reverseOrder={false}
@@ -77,7 +77,17 @@ function App() {
                         element={<DepartureScreen />}
                     />
                 </Routes>
-            </BrowserRouter>{" "}
+            </BrowserRouter>
+            <footer className="flex flex-row justify-center w-full gap-2 p-3 text-sm text-gray-200 border-t-2 border-neutral-800 grow">
+                <span>© 2025 nextbus</span>|
+                <a href="/privacy" className="underline">
+                    Privacy
+                </a>
+                |
+                <a href="/terms" className="underline">
+                    Terms
+                </a>
+            </footer>
         </div>
     );
 }

@@ -53,16 +53,6 @@ const Home: React.FC = () => {
                     <DepartureBoard stop_id="1990PH130449"></DepartureBoard>
                 </div> */}
             </div>
-            <footer className=" p-1 w-full  text-sm text-gray-200 bg-neutral-800 z-[999999]">
-                © 2025 nextbus |{" "}
-                <a href="/privacy" className="underline">
-                    Privacy
-                </a>{" "}
-                |{" "}
-                <a href="/terms" className="underline">
-                    Terms
-                </a>
-            </footer>
         </div>
     );
 };

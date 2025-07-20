@@ -20,17 +20,18 @@ import { WebSocketManager } from "../websockets/ws_manager";
 function BusCard({ bus, onClick }: { bus: Departure; onClick: () => void }) {
     return (
         <div onClick={onClick} className="cursor-pointer">
-            <Card key={bus.trip} className="p-3 rounded-3xl">
+            <div
+                key={bus.trip}
+                className="p-3 pb-2 rounded-[1.2rem] bg-neutral-900">
                 <div className="flex flex-row justify-between align-center">
-                    <div className="flex flex-col justify-around ml-1">
-                        <div className="flex flex-row flex-wrap items-center gap-1">
-                            <span className="text-xl font-bold">
+                    <div className="flex flex-col justify-around">
+                        <div className="flex flex-row flex-wrap items-center gap-2">
+                            <span className="flex items-center justify-center p-2 text-center text-xl font-bold transition-all duration-200 bg-teal-950 rounded-full text-neutral-100 min-w-[2rem] min-h-[2rem] h-[2rem] w-fit whitespace-nowrap">
                                 {isTrackedBus(bus)
                                     ? bus.service.line_name
                                     : bus.line}
                             </span>
-                            <span className="text">to</span>
-                            <span className="text-lg font-bold">
+                            <span className="font-semibold text">
                                 {bus.destination}
                             </span>
                         </div>
@@ -133,7 +134,7 @@ function BusCard({ bus, onClick }: { bus: Departure; onClick: () => void }) {
                         </div>
                     </div>
                 </div>
-            </Card>
+            </div>
         </div>
     );
 }
