@@ -11,9 +11,17 @@ import { Toaster } from "react-hot-toast";
 import { faXmark } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
+import { useState, useEffect } from "react";
+
 function UsefulBanner() {
     const location = useLocation();
-    if (location.pathname === "/") return null;
+    const [visible, setVisible] = useState(true);
+
+    useEffect(() => {
+        setVisible(true);
+    }, []);
+
+    if (location.pathname === "/" || !visible) return null;
     return (
         <div className="fixed flex items-center justify-center p-3 transform -translate-x-1/2 bg-teal-900 shadow-lg z-[99999] bottom-4 left-1/2 rounded-2xl">
             <span className="text-center text-gray-200 text-nowrap">
@@ -27,9 +35,7 @@ function UsefulBanner() {
                 </a>
                 <button
                     className="px-2 ml-2 text-gray-100 transition bg-teal-700 rounded-full cursor-pointer hover:bg-teal-800"
-                    onClick={(e) => {
-                        (e.target as HTMLElement).closest("div")?.remove();
-                    }}>
+                    onClick={() => setVisible(false)}>
                     {" "}
                     <FontAwesomeIcon icon={faXmark} size="sm" />
                 </button>
@@ -40,7 +46,7 @@ function UsefulBanner() {
 
 function App() {
     return (
-        <div className="h-full">
+        <div className="flex flex-col min-h-screen">
             <Toaster
                 position="top-right"
                 reverseOrder={false}
@@ -77,7 +83,17 @@ function App() {
                         element={<DepartureScreen />}
                     />
                 </Routes>
-            </BrowserRouter>{" "}
+            </BrowserRouter>
+            <footer className="flex flex-row justify-center w-full gap-2 p-3 text-sm text-gray-200 border-t-2 border-neutral-800 grow">
+                <span>© 2025 nextbus</span>|
+                <a href="/privacy" className="underline">
+                    Privacy
+                </a>
+                |
+                <a href="/terms" className="underline">
+                    Terms
+                </a>
+            </footer>
         </div>
     );
 }

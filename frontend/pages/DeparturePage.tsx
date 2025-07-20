@@ -19,121 +19,121 @@ import { WebSocketManager } from "../websockets/ws_manager";
 
 function BusCard({ bus, onClick }: { bus: Departure; onClick: () => void }) {
     return (
-        <div onClick={onClick} className="cursor-pointer">
-            <Card key={bus.trip} className="p-3 rounded-3xl">
-                <div className="flex flex-row justify-between align-center">
-                    <div className="flex flex-col justify-around ml-1">
-                        <div className="flex flex-row flex-wrap items-center gap-1">
-                            <span className="text-xl font-bold">
+        <div key={bus.trip} onClick={onClick} className="cursor-pointer">
+            <div className="flex flex-row items-center justify-between">
+                <div className="flex flex-col justify-around">
+                    <div className="flex flex-row items-stretch mb-1">
+                        <div className="flex items-center px-3 py-1 bg-blue-800 rounded-l-2xl">
+                            <span className="flex items-center justify-center text-xl font-bold text-center">
                                 {isTrackedBus(bus)
                                     ? bus.service.line_name
                                     : bus.line}
                             </span>
-                            <span className="text">to</span>
-                            <span className="text-lg font-bold">
+                        </div>
+                        <div className="flex flex-col justify-center px-3 bg-neutral-800/50 rounded-r-2xl">
+                            <span className="font-semibold text">
                                 {bus.destination}
                             </span>
-                        </div>
-                        {isTrackedBus(bus) && (
-                            <span className="text-xs wrap-anywhere text-neutral-400">
-                                {bus.bus_type}
-                            </span>
-                        )}
-
-                        <div className="flex flex-row items-center font-semibold text gap-x-3 text-nowrap">
-                            <div className="flex items-center gap-0.5">
-                                <span className="text-xs text-teal-400">
-                                    {isTrackedBus(bus) ? "Expt:" : "Schd:"}
-                                </span>
-                                <span className="text-teal-400">
-                                    {bus.expected.toLocaleTimeString([], {
-                                        hour: "2-digit",
-                                        minute: "2-digit",
-                                    })}
-                                </span>
-                            </div>
                             {isTrackedBus(bus) && (
-                                <span
-                                    className={`text-${
-                                        bus.delay >= 60 ? "red" : "green"
-                                    }-400`}>
-                                    {lateness(bus ? bus.delay : 0)}
+                                <span className="mb-0.5 text-xs text-neutral-400">
+                                    {bus.bus_type}
                                 </span>
-                            )}
-                            {!bus.started && !isTrackedBus(bus) && (
-                                <span className="text-sm font-medium opacity-70">
-                                    Upcoming
-                                </span>
-                            )}
-                            {isTrackedBus(bus) ? (
-                                <div className="relative w-5 h-5">
-                                    <FontAwesomeIcon
-                                        icon={faSatelliteDish}
-                                        className={clsx(
-                                            "absolute top-0 left-0 w-5 h-5",
-                                            {
-                                                "text-sky-500":
-                                                    bus.status === "tracking",
-                                                "text-emerald-500":
-                                                    bus.status ===
-                                                    "user_tracking",
-                                            }
-                                        )}
-                                    />
-                                </div>
-                            ) : (
-                                <>
-                                    {bus.started && (
-                                        <div className="relative w-5 h-5">
-                                            <FontAwesomeIcon
-                                                icon={faSatelliteDish}
-                                                className={clsx(
-                                                    "absolute top-0 left-0 w-5 h-5",
-                                                    {
-                                                        "text-blue-400 opacity-40":
-                                                            bus.status ===
-                                                            "not_tracking",
-                                                        "text-sky-500":
-                                                            bus.status ===
-                                                            "tracking",
-                                                        "text-emerald-500":
-                                                            bus.status ===
-                                                            "user_tracking",
-                                                    }
-                                                )}
-                                            />
-                                            {bus.status === "not_tracking" && (
-                                                <FontAwesomeIcon
-                                                    icon={faSlash}
-                                                    className="absolute top-0 left-0 w-5 h-5 text-red-500"
-                                                />
-                                            )}
-                                        </div>
-                                    )}
-                                </>
                             )}
                         </div>
                     </div>
-                    <div className="flex flex-row flex-wrap items-center justify-end gap-2 md:gap-4">
-                        {isTrackedBus(bus) && (
-                            <div className="flex justify-center px-2 py-1 rounded-lg bg-amber-400">
-                                <span className="text-xs font-bold align-middle text-neutral-950">
-                                    {bus.reg}
-                                </span>
-                            </div>
-                        )}
 
-                        <div className="flex items-center justify-center gap-1 p-[0.3rem] w-18 rounded-xl bg-blue-950 h-fit">
-                            <span className="text-lg font-bold text-blue-300">
-                                {bus.timeto.split(" ")[0]}
+                    <div className="flex flex-row items-center font-semibold text gap-x-3 text-nowrap">
+                        <div className="flex gap-0.5 items-center">
+                            <span className="text-xs text-teal-400 ">
+                                {isTrackedBus(bus) ? "Expt:" : "Schd:"}
                             </span>
-                            <span className="self-end h-full mb-[0.15rem] text-sm font-bold text-blue-300">
-                                {bus.timeto.split(" ")[1]}
+                            <span className="text-teal-400">
+                                {bus.expected.toLocaleTimeString([], {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                })}
                             </span>
                         </div>
+                        {isTrackedBus(bus) && (
+                            <span
+                                className={`text-${
+                                    bus.delay >= 60 ? "red" : "green"
+                                }-400`}>
+                                {lateness(bus ? bus.delay : 0)}
+                            </span>
+                        )}
+                        {!bus.started && !isTrackedBus(bus) && (
+                            <span className="text-sm font-medium opacity-70">
+                                Upcoming
+                            </span>
+                        )}
+                        {isTrackedBus(bus) ? (
+                            <div className="relative w-5 h-5">
+                                <FontAwesomeIcon
+                                    icon={faSatelliteDish}
+                                    className={clsx(
+                                        "absolute top-0 left-0 w-5 h-5",
+                                        {
+                                            "text-sky-500":
+                                                bus.status === "tracking",
+                                            "text-emerald-500":
+                                                bus.status === "user_tracking",
+                                        }
+                                    )}
+                                />
+                            </div>
+                        ) : (
+                            <>
+                                {bus.started && (
+                                    <div className="relative w-5 h-5">
+                                        <FontAwesomeIcon
+                                            icon={faSatelliteDish}
+                                            className={clsx(
+                                                "absolute top-0 left-0 w-5 h-5",
+                                                {
+                                                    "text-blue-400 opacity-40":
+                                                        bus.status ===
+                                                        "not_tracking",
+                                                    "text-sky-500":
+                                                        bus.status ===
+                                                        "tracking",
+                                                    "text-emerald-500":
+                                                        bus.status ===
+                                                        "user_tracking",
+                                                }
+                                            )}
+                                        />
+                                        {bus.status === "not_tracking" && (
+                                            <FontAwesomeIcon
+                                                icon={faSlash}
+                                                className="absolute top-0 left-0 w-5 h-5 text-red-500"
+                                            />
+                                        )}
+                                    </div>
+                                )}
+                            </>
+                        )}
                     </div>
                 </div>
-            </Card>
+                <div className="flex flex-row flex-wrap items-center justify-end gap-2 md:gap-4 w-min">
+                    {isTrackedBus(bus) && (
+                        <div className="flex justify-center px-2 py-1 rounded-lg bg-amber-400">
+                            <span className="text-xs font-bold align-middle text-neutral-950 text-nowrap">
+                                {bus.reg}
+                            </span>
+                        </div>
+                    )}
+
+                    <div className="flex items-center justify-center gap-1 p-[0.3rem] w-18 rounded-xl bg-blue-950 h-fit">
+                        <span className="text-lg font-bold text-blue-300">
+                            {bus.timeto.split(" ")[0]}
+                        </span>
+                        <span className="self-end h-full mb-[0.15rem] text-sm font-bold text-blue-300">
+                            {bus.timeto.split(" ")[1]}
+                        </span>
+                    </div>
+                </div>
+            </div>
         </div>
     );
 }
@@ -274,8 +274,8 @@ const DeparturePage: React.FC = () => {
     return (
         <div className="p-5 md:mx-20">
             <div className="flex flex-col gap-4">
-                <div className="flex flex-col items-center justify-center gap-3">
-                    <span className="text-4xl font-bold text-center">
+                <div className="flex flex-col items-start justify-center gap-3 md:items-center">
+                    <span className="text-3xl font-bold md:text-4xl text-start">
                         {stop?.name}{" "}
                         {stop?.indicator
                             ? `(${stop.indicator})`
@@ -312,7 +312,7 @@ const DeparturePage: React.FC = () => {
                         </a> */}
                     </div>
                 </div>
-                <div className="flex flex-row justify-center gap-1 overflow-x-auto">
+                <div className="flex flex-row justify-start gap-1 overflow-x-auto md:justify-center">
                     {stop?.services
                         .sort((a, b) =>
                             new Intl.Collator(undefined, {
@@ -321,13 +321,11 @@ const DeparturePage: React.FC = () => {
                             }).compare(a.line_name, b.line_name)
                         )
                         .map((service) => (
-                            <div
-                                className="p-2 bg-neutral-900 rounded-xl border-1 border-neutral-800"
-                                key={service.id}>
-                                <span className="font-semibold ">
-                                    {service.line_name}
-                                </span>
-                            </div>
+                            <span
+                                key={service.id}
+                                className="flex items-center justify-center px-3 py-1 text-lg font-bold text-center rounded-xl bg-neutral-800/50">
+                                {service.line_name}
+                            </span>
                         ))}
                 </div>
 
@@ -341,9 +339,9 @@ const DeparturePage: React.FC = () => {
                     </span>
                 </div>
 
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-1">
                     {msg ? (
-                        <div className="flex justify-center p-3">
+                        <div className="flex justify-center gap-1 p-3">
                             <span className="text-red-400">{msg}</span>
                         </div>
                     ) : (
@@ -382,25 +380,27 @@ const DeparturePage: React.FC = () => {
                         </>
                     ) : (
                         <>
-                            {buses.map((bus) => (
+                            {buses.map((bus, idx) => (
                                 <>
-                                    {isTrackedBus(bus) ? (
-                                        <BusCard
-                                            bus={bus}
-                                            onClick={() =>
-                                                navigate(`/buses/${bus.id}`)
-                                            }
-                                        />
-                                    ) : (
-                                        <BusCard
-                                            bus={bus}
-                                            onClick={() =>
-                                                window.open(
-                                                    `https://bustimes.org/trips/${bus.trip}`,
-                                                    "_blank"
-                                                )
-                                            }
-                                        />
+                                    <BusCard
+                                        bus={bus}
+                                        onClick={() => {
+                                            isTrackedBus(bus)
+                                                ? navigate(`/buses/${bus.id}`)
+                                                : window.open(
+                                                      `https://bustimes.org/trips/${bus.trip}`,
+                                                      "_blank"
+                                                  );
+                                        }}
+                                    />
+                                    {idx !== buses.length - 1 && (
+                                        <div className="flex items-center gap-2 mb-0.5">
+                                            <div className="flex-grow border-t border-dashed border-neutral-700"></div>
+                                            <span className="text-[10px] text-neutral-700">
+                                                nextbus
+                                            </span>
+                                            <div className="flex-grow border-t border-dashed border-neutral-700"></div>
+                                        </div>
                                     )}
                                 </>
                             ))}
