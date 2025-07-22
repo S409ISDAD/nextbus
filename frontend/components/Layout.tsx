@@ -14,7 +14,7 @@ export default function Layout() {
                     </Link>
 
                     <Link to="/buses">
-                        <button className="p-2 px-3 transition-all cursor-pointer border-neutral-800 h-max rounded-2xl border-1 hover:border-teal-700 ">
+                        <button className="p-2 px-3 transition-all cursor-pointer border-neutral-800 h-max rounded-2xl border-1 hover:border-blue-700 ">
                             Buses
                         </button>
                     </Link>

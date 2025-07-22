@@ -24,7 +24,7 @@ function BusCard({ bus, onClick }: { bus: Departure; onClick: () => void }) {
             <div className="flex flex-row items-center justify-between gap-2">
                 <div className="flex flex-col justify-around">
                     <div className="flex flex-row items-stretch mb-1">
-                        <div className="flex items-center px-2 bg-blue-800 rounded-l-2xl">
+                        <div className="flex items-center px-2 bg-blue-700 rounded-l-2xl">
                             <span className="flex items-center justify-center text-lg font-bold text-center">
                                 {isTrackedBus(bus)
                                     ? bus.service.line_name
@@ -111,8 +111,8 @@ function BusCard({ bus, onClick }: { bus: Departure; onClick: () => void }) {
                     </div>
                 </div>
 
-                <div className="flex items-center justify-center gap-1 p-1 ml-5 rounded-lg w-15 bg-blue-950 h-fit">
-                    <span className="text-sm font-bold text-blue-300 text-nowrap">
+                <div className="flex items-center justify-center gap-1 p-1 ml-5 rounded-lg bg-neutral-800/50 w-15 h-fit">
+                    <span className="text-sm font-bold text-nowrap">
                         {bus.timeto}
                     </span>
                 </div>
@@ -265,8 +265,8 @@ function DepartureBoard({ stop_id, closest }: Props) {
                         className="flex flex-col justify-center gap-1 cursor-pointer"
                         onClick={() => navigate(`/departures/${stopID}`)}>
                         {closest && (
-                            <div className="flex items-center justify-center gap-1 p-1 rounded-lg w-fit bg-blue-950 h-fit">
-                                <span className="text-xs font-bold text-blue-300">
+                            <div className="flex items-center justify-center gap-1 p-1 bg-indigo-800 rounded-lg w-fit h-fit">
+                                <span className="text-xs font-bold ">
                                     Closest Stop
                                 </span>
                             </div>
@@ -316,11 +316,11 @@ function DepartureBoard({ stop_id, closest }: Props) {
                                                     {idx !==
                                                         buses.length - 1 && (
                                                         <div className="flex items-center gap-2 mb-0.5">
-                                                            <div className="flex-grow border-t border-dashed border-neutral-700"></div>
-                                                            <span className="text-[10px] text-neutral-700">
+                                                            <div className="flex-grow border-t border-dashed border-neutral-600"></div>
+                                                            <span className="text-[10px] text-neutral-600">
                                                                 nextbus
                                                             </span>
-                                                            <div className="flex-grow border-t border-dashed border-neutral-700"></div>
+                                                            <div className="flex-grow border-t border-dashed border-neutral-600"></div>
                                                         </div>
                                                     )}
                                                 </React.Fragment>

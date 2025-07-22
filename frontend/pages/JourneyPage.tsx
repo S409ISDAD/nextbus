@@ -150,7 +150,7 @@ const busIcon = L.divIcon({
     display: flex;
     align-items: center;
     justify-content: center;
-    background-color: #f87171;
+    background-color: #ff2056;
     border-radius: 9999px;
     width: 24px;
     height: 24px;
@@ -267,7 +267,7 @@ const JourneyPage: React.FC = () => {
                     className="absolute transition-all duration-300 ease-in-out  translate-x-[-15px]"
                     style={{ transform: `translateY(${translateY}px)` }}>
                     <div
-                        className="flex items-center justify-center p-2 bg-red-400 rounded-full w-9 h-9"
+                        className="flex items-center justify-center p-2 rounded-full bg-rose-500 w-9 h-9"
                         ref={busRef}>
                         <FontAwesomeIcon icon={faBus} />
                     </div>
@@ -436,11 +436,21 @@ const JourneyPage: React.FC = () => {
                 <div className="flex flex-col gap-2 top-0 grow p-5 pb-1 pt-15 z-12  bg-[#111111] rounded-b-2xl fixed w-full">
                     {bus ? (
                         <div className="flex flex-col items-center justify-center gap-2">
-                            <div className="fixed flex items-center gap-3 p-2 px-3 my-1 shadow-2xl z-10000000 top-15 bg-neutral-800 rounded-2xl">
-                                <span className="text-3xl font-bold text-white wrap-normal">
-                                    {journey?.route_name} to{" "}
-                                    {journey?.destination}
-                                </span>
+                            <div className="fixed flex flex-row items-stretch p-2 px-3 my-1 mb-1 z-10000000 top-15">
+                                <div className="flex items-center px-3 py-1 bg-blue-700 rounded-l-2xl">
+                                    <span className="flex items-center justify-center text-xl font-bold text-center">
+                                        {bus.service.line_name}
+                                    </span>
+                                </div>
+                                <div className="flex flex-col justify-center px-3 py-1 bg-neutral-800 rounded-r-2xl">
+                                    <span className="font-semibold text">
+                                        {bus.destination}
+                                    </span>
+
+                                    <span className="mb-0.5 text-xs text-neutral-400">
+                                        {bus.bus_type}
+                                    </span>
+                                </div>
                             </div>
                             <MapView
                                 lat={location[0]}
@@ -452,7 +462,7 @@ const JourneyPage: React.FC = () => {
                                 )}></MapView>
                             <div className="flex gap-3">
                                 <a
-                                    className="text-teal-500 underline"
+                                    className="underline text-sky-500"
                                     href={`https://bustimes.org/vehicles/${bus?.id}#journeys/${bus?.journey_id}`}
                                     target="_blank">
                                     View on bustimes.org
@@ -487,8 +497,8 @@ const JourneyPage: React.FC = () => {
                                                 "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 200' fill='none' xmlns:xlink='http://www.w3.org/1999/xlink'><rect width='300' height='200' fill='%23222222'/><text x='150' y='110' text-anchor='middle' fill='%23999999' font-size='80' font-family='sans-serif' dy='.35em'>?</text></svg>\")",
                                         }}></div>
                                 </div>
-                                <div className="flex justify-center px-2 py-1 rounded-lg bg-blue-950">
-                                    <span className="font-bold text-blue-300 align-middle text">
+                                <div className="flex justify-center px-2 py-1 rounded-lg bg-neutral-800/50">
+                                    <span className="font-bold align-middle text">
                                         {lateness(bus ? bus.delay : 0)}
                                     </span>
                                 </div>
@@ -565,7 +575,7 @@ const JourneyPage: React.FC = () => {
                                         className="flex flex-row items-center">
                                         <div className="w-4 bg-neutral-700 rounded-r-full h-[4px]"></div>
                                         <div
-                                            className="p-2 w-fit h-17 "
+                                            className="p-2 w-fit h-17"
                                             onClick={() =>
                                                 navigate(
                                                     `/departures/${stop.stop_id}`
@@ -575,15 +585,57 @@ const JourneyPage: React.FC = () => {
                                                 cursor: "pointer",
                                             }}>
                                             <div
-                                                className={` ${
+                                                className={`flex items-stretch flex-col ${
                                                     idx < sequence
                                                         ? "opacity-40"
                                                         : ""
                                                 }`}>
+                                                {/* <span className="px-2 py-1 font-bold bg-indigo-800 rounded-t-2xl">
+                                                    {stop.name}
+                                                </span> */}
                                                 <span className="font-bold">
                                                     {stop.name}
                                                 </span>
-                                                <div className="flex flex-row gap-6">
+                                                {/* <div className="flex flex-row gap-6 px-2 py-1 font-bold bg-neutral-800/50 rounded-b-2xl">
+                                                    <span>
+                                                        {stop.aimed_time.toLocaleTimeString(
+                                                            [],
+                                                            {
+                                                                hour: "2-digit",
+                                                                minute: "2-digit",
+                                                            }
+                                                        )}
+                                                    </span>
+                                                    {sequence >= idx ? (
+                                                        <span className="font-bold">
+                                                            {sequence == 0 &&
+                                                            !bus?.started
+                                                                ? "Waiting to Start"
+                                                                : "Departed"}
+                                                        </span>
+                                                    ) : stop.expt_time &&
+                                                      bus?.started &&
+                                                      Math.abs(
+                                                          stop.expt_time.getTime() -
+                                                              stop.aimed_time.getTime()
+                                                      ) > 60000 ? (
+                                                        <span className="font-bold text-blue-400">
+                                                            Expt:{" "}
+                                                            {stop.expt_time.toLocaleTimeString(
+                                                                [],
+                                                                {
+                                                                    hour: "2-digit",
+                                                                    minute: "2-digit",
+                                                                }
+                                                            )}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="font-bold text-green-400 ">
+                                                            On Time
+                                                        </span>
+                                                    )}
+                                                </div> */}
+                                                <div className="flex flex-row gap-6 font-bold ">
                                                     <span>
                                                         {stop.aimed_time.toLocaleTimeString(
                                                             [],

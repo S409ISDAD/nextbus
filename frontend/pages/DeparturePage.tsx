@@ -21,9 +21,9 @@ function BusCard({ bus, onClick }: { bus: Departure; onClick: () => void }) {
     return (
         <div key={bus.trip} onClick={onClick} className="cursor-pointer">
             <div className="flex flex-row items-center justify-between">
-                <div className="flex flex-col justify-around">
+                <div className="flex flex-col justify-around gap-1">
                     <div className="flex flex-row items-stretch mb-1">
-                        <div className="flex items-center px-3 py-1 bg-blue-800 rounded-l-2xl">
+                        <div className="flex items-center px-3 py-1 bg-blue-700 rounded-l-2xl">
                             <span className="flex items-center justify-center text-xl font-bold text-center">
                                 {isTrackedBus(bus)
                                     ? bus.service.line_name
@@ -42,12 +42,12 @@ function BusCard({ bus, onClick }: { bus: Departure; onClick: () => void }) {
                         </div>
                     </div>
 
-                    <div className="flex flex-row items-center font-semibold text gap-x-3 text-nowrap">
+                    <div className="flex flex-row items-center pl-2 font-semibold text-sky-400 text gap-x-3 text-nowrap">
                         <div className="flex gap-0.5 items-center">
-                            <span className="text-xs text-teal-400 ">
+                            <span className="text-xs">
                                 {isTrackedBus(bus) ? "Expt:" : "Schd:"}
                             </span>
-                            <span className="text-teal-400">
+                            <span>
                                 {bus.expected.toLocaleTimeString([], {
                                     hour: "2-digit",
                                     minute: "2-digit",
@@ -63,7 +63,7 @@ function BusCard({ bus, onClick }: { bus: Departure; onClick: () => void }) {
                             </span>
                         )}
                         {!bus.started && !isTrackedBus(bus) && (
-                            <span className="text-sm font-medium opacity-70">
+                            <span className="text-sm font-medium opacity-70 text-neutral-50">
                                 Upcoming
                             </span>
                         )}
@@ -115,7 +115,8 @@ function BusCard({ bus, onClick }: { bus: Departure; onClick: () => void }) {
                         )}
                     </div>
                 </div>
-                <div className="flex flex-row flex-wrap items-center justify-end gap-2 md:gap-4 w-min">
+
+                <div className="flex flex-row flex-wrap items-center justify-end gap-2 md:gap-4 w-min md:w-auto">
                     {isTrackedBus(bus) && (
                         <div className="flex justify-center px-2 py-1 rounded-lg bg-amber-400">
                             <span className="text-xs font-bold align-middle text-neutral-950 text-nowrap">
@@ -124,11 +125,11 @@ function BusCard({ bus, onClick }: { bus: Departure; onClick: () => void }) {
                         </div>
                     )}
 
-                    <div className="flex items-center justify-center gap-1 p-[0.3rem] w-18 rounded-xl bg-blue-950 h-fit">
-                        <span className="text-lg font-bold text-blue-300">
+                    <div className="flex items-center justify-center gap-1 p-[0.3rem] w-18 rounded-xl bg-neutral-800/50  h-fit">
+                        <span className="text-lg font-bold ">
                             {bus.timeto.split(" ")[0]}
                         </span>
-                        <span className="self-end h-full mb-[0.15rem] text-sm font-bold text-blue-300">
+                        <span className="self-end h-full mb-[0.15rem] text-sm font-bold ">
                             {bus.timeto.split(" ")[1]}
                         </span>
                     </div>
@@ -274,7 +275,7 @@ const DeparturePage: React.FC = () => {
     return (
         <div className="p-5 md:mx-20">
             <div className="flex flex-col gap-4">
-                <div className="flex flex-col items-start justify-center gap-3 md:items-center">
+                <div className="flex flex-col items-center justify-center gap-3">
                     <span className="text-3xl font-bold md:text-4xl text-start">
                         {stop?.name}{" "}
                         {stop?.indicator
@@ -286,7 +287,7 @@ const DeparturePage: React.FC = () => {
                     <div className="flex flex-wrap items-center justify-center gap-4 gap-y-1">
                         {closestStop && (
                             <div
-                                className="flex items-center gap-2 p-2 cursor-pointer bg-neutral-900 w-fit rounded-2xl border-1 border-neutral-800"
+                                className="flex items-center gap-2 p-2 cursor-pointer bg-neutral-800/50 w-fit rounded-2xl"
                                 onClick={() => {
                                     setBuses([]);
                                     setLoading(true);
@@ -300,7 +301,7 @@ const DeparturePage: React.FC = () => {
                             </div>
                         )}
                         <a
-                            className="text-teal-500 underline"
+                            className="underline text-sky-500"
                             href={`https://bustimes.org/stops/${stop?.stop_id}`}
                             target="_blank">
                             View on bustimes.org
@@ -312,7 +313,7 @@ const DeparturePage: React.FC = () => {
                         </a> */}
                     </div>
                 </div>
-                <div className="flex flex-row justify-start gap-1 overflow-x-auto md:justify-center">
+                <div className="flex flex-row justify-center gap-1 overflow-x-auto">
                     {stop?.services
                         .sort((a, b) =>
                             new Intl.Collator(undefined, {
@@ -382,6 +383,14 @@ const DeparturePage: React.FC = () => {
                         <>
                             {buses.map((bus, idx) => (
                                 <>
+                                    <div className="flex items-center gap-2 mb-0.5">
+                                        <div className="flex-grow border-t border-dashed border-neutral-600"></div>
+                                        <span className="text-[10px] text-neutral-600">
+                                            nextbus
+                                        </span>
+                                        <div className="flex-grow border-t border-dashed border-neutral-600"></div>
+                                    </div>
+
                                     <BusCard
                                         bus={bus}
                                         onClick={() => {
@@ -393,13 +402,13 @@ const DeparturePage: React.FC = () => {
                                                   );
                                         }}
                                     />
-                                    {idx !== buses.length - 1 && (
+                                    {idx === buses.length - 1 && (
                                         <div className="flex items-center gap-2 mb-0.5">
-                                            <div className="flex-grow border-t border-dashed border-neutral-700"></div>
-                                            <span className="text-[10px] text-neutral-700">
+                                            <div className="flex-grow border-t border-dashed border-neutral-600"></div>
+                                            <span className="text-[10px] text-neutral-600">
                                                 nextbus
                                             </span>
-                                            <div className="flex-grow border-t border-dashed border-neutral-700"></div>
+                                            <div className="flex-grow border-t border-dashed border-neutral-600"></div>
                                         </div>
                                     )}
                                 </>
