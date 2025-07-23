@@ -189,7 +189,7 @@ const StopMap: React.FC = () => {
     const [stops, setStops] = useState<Stop[]>([]);
     const [loading, setLoading] = useState(true);
     const [center, setCenter] = useState<[number, number]>([51, -1]);
-    const fetchedBoundsRef = useRef<any>(null);
+    // const fetchedBoundsRef = useRef<any>(null);
     const stopsTimeout = useRef<number | null>(null);
 
     // Store last bounds to avoid unnecessary fetches
