@@ -38,11 +38,11 @@ function BusCard({ bus, onClick }: { bus: Departure; onClick: () => void }) {
                         </div>
                     </div>
                     <div className="flex flex-row items-center gap-3 font-semibold text-nowrap">
-                        <div className="flex gap-0.5 items-center">
-                            <span className="text-xs text-teal-400 ">
+                        <div className="flex gap-0.5 items-center text-sky-400">
+                            <span className="text-xs">
                                 {isTrackedBus(bus) ? "Expt:" : "Schd:"}
                             </span>
-                            <span className="text-teal-400">
+                            <span>
                                 {bus.expected.toLocaleTimeString([], {
                                     hour: "2-digit",
                                     minute: "2-digit",

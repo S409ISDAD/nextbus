@@ -42,8 +42,8 @@ function BusCard({ bus, onClick }: { bus: Departure; onClick: () => void }) {
                         </div>
                     </div>
 
-                    <div className="flex flex-row items-center pl-2 font-semibold text-sky-400 text gap-x-3 text-nowrap">
-                        <div className="flex gap-0.5 items-center">
+                    <div className="flex flex-row items-center pl-2 font-semibold text gap-x-3 text-nowrap">
+                        <div className="flex gap-0.5 items-center text-sky-400">
                             <span className="text-xs">
                                 {isTrackedBus(bus) ? "Expt:" : "Schd:"}
                             </span>
@@ -63,7 +63,7 @@ function BusCard({ bus, onClick }: { bus: Departure; onClick: () => void }) {
                             </span>
                         )}
                         {!bus.started && !isTrackedBus(bus) && (
-                            <span className="text-sm font-medium opacity-70 text-neutral-50">
+                            <span className="text-sm font-medium opacity-70">
                                 Upcoming
                             </span>
                         )}
