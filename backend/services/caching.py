@@ -14,6 +14,7 @@ SERVICE_CACHE = DAY
 STOPS_CACHE = DAY
 TIMETABLE_CACHE = 3600
 LIVERY_CACHE = DAY
+TRAIN_CACHE = 29
 
 
 async def get_cached(key: str, func, args: tuple, exp: int, r: redis.Redis):

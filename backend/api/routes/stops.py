@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, Request
+import logging
+from fastapi import APIRouter, Depends, HTTPException, Request
 
 from backend.deps import get_redis, limiter
 from backend.models.stop import Stop
@@ -6,30 +7,45 @@ from backend.services import stops
 
 router = APIRouter()
 
+log = logging.getLogger(__name__)
 
-@router.get("/")
+
+@router.get("/", response_model=Stop)
 @limiter.limit("45/minute")
-async def stop_details(
-    request: Request, stop_id: str, redis=Depends(get_redis)
-) -> Stop:
-    services = await stops.get_services_from_stop(stop_id, redis)
-
-    stop_details = await stops.get_stop_details(stop_id, redis)
-
-    location = stop_details.get("location")
+async def stop_details(request: Request, stop_id: str, redis=Depends(get_redis)):
     try:
-        coords = list(location)
-    except TypeError:
-        coords = [0.0, 0.0]
-    coords.reverse()
+        services = await stops.get_services_from_stop(stop_id, redis)
 
-    return Stop(
-        stop_id=stop_id,
-        name=stop_details.get("name"),
-        long_name=stop_details.get("long_name"),
-        active=stop_details.get("active"),
-        coords=coords,
-        indicator=stop_details.get("indicator", ""),
-        bearing=stop_details.get("bearing", ""),
-        services=services,
-    )
+        stop_details = await stops.get_stop_details(stop_id, redis)
+
+        location = stop_details.get("location")
+        try:
+            coords = list(location)
+        except TypeError:
+            coords = [0.0, 0.0]
+        coords.reverse()
+
+        bearing = stop_details.get("bearing", None)
+        if bearing in (None, ""):
+            bearing = None
+        elif isinstance(bearing, int):
+            pass
+        elif isinstance(bearing, str) and bearing.isnumeric():
+            bearing = int(bearing)
+        else:
+            bearing = None
+
+        return Stop(
+            stop_id=stop_id,
+            name=stop_details.get("name"),
+            long_name=stop_details.get("long_name"),
+            active=stop_details.get("active"),
+            coords=coords,
+            indicator=stop_details.get("indicator", ""),
+            bearing=bearing,
+            services=services,
+        )
+
+    except Exception as e:
+        log.error(f"Unexpected error: {e}")
+        raise HTTPException(500, detail="An unexpected error occured")

@@ -5,7 +5,9 @@ import JourneyPage from "../pages/JourneyPage";
 import PrivacyPolicy from "../pages/Privacy";
 import Terms from "../pages/Terms";
 import BusPage from "../pages/BusPage";
+import ServicePage from "../pages/ServicePage";
 import Layout from "../components/Layout";
+import StationPage from "../pages/StationPage";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router";
 import { Toaster } from "react-hot-toast";
 import { faXmark } from "@fortawesome/free-solid-svg-icons";
@@ -45,27 +47,27 @@ function UsefulBanner() {
 }
 
 function App() {
+    const currentYear = new Date().getFullYear();
     return (
-        <div className="flex flex-col min-h-screen">
-            <Toaster
-                position="top-right"
-                reverseOrder={false}
-                toastOptions={{
-                    style: {
-                        borderRadius: "20px",
-                        background: "#222",
-                        color: "#fff",
-                        border: "1px solid #363636",
-                        marginTop: "60px",
-                    },
-                }}
-            />
-            <BrowserRouter>
+        <BrowserRouter>
+            <div className="flex flex-col min-h-screen">
+                <Toaster
+                    position="top-right"
+                    reverseOrder={false}
+                    toastOptions={{
+                        style: {
+                            borderRadius: "20px",
+                            background: "#222",
+                            color: "#fff",
+                            border: "1px solid #363636",
+                            marginTop: "60px",
+                        },
+                    }}
+                />
                 <UsefulBanner />
                 <Routes>
                     <Route element={<Layout />}>
                         <Route path="/" element={<Home />} />
-                        <Route path="/buses" element={<BusPage />} />
                         <Route path="/privacy" element={<PrivacyPolicy />} />
                         <Route path="/terms" element={<Terms />} />
                         <Route path="/buses" element={<BusPage />} />
@@ -77,24 +79,54 @@ function App() {
                             path="/buses/:bus_id"
                             element={<JourneyPage />}
                         />
+                        <Route
+                            path="/services/:service_id"
+                            element={<ServicePage />}
+                        />
+                        <Route
+                            path="/stations/:station_id"
+                            element={<StationPage />}
+                        />
                     </Route>
                     <Route
                         path="departureboard/:stop_id"
                         element={<DepartureScreen />}
                     />
                 </Routes>
-            </BrowserRouter>
-            <footer className="flex flex-row justify-center w-full gap-2 p-3 text-sm text-gray-200 border-t-2 border-neutral-800 grow">
-                <span>© 2025 nextbus</span>|
-                <a href="/privacy" className="underline">
-                    Privacy
-                </a>
-                |
-                <a href="/terms" className="underline">
-                    Terms
-                </a>
-            </footer>
-        </div>
+                <footer className="flex flex-row flex-wrap justify-center w-full gap-3 p-3 text-sm text-gray-200 border-t-2 max-h-fit border-neutral-800 grow">
+                    <span>© {currentYear} nextbus</span>
+                    <a href="/privacy" className="underline text-sky-400">
+                        Privacy
+                    </a>
+
+                    <a href="/terms" className="underline text-sky-400">
+                        Terms
+                    </a>
+
+                    <div className="flex gap-1">
+                        <span>Bus data:</span>
+                        <a
+                            href="https://bustimes.org"
+                            className="underline text-sky-400"
+                            target="_blank"
+                            rel="noopener noreferrer">
+                            bustimes.org
+                        </a>
+                    </div>
+
+                    <div className="flex gap-1">
+                        <span>Train data:</span>
+                        <a
+                            href="https://realtimetrains.co.uk"
+                            className="underline text-sky-400"
+                            target="_blank"
+                            rel="noopener noreferrer">
+                            realtimetrains.co.uk
+                        </a>
+                    </div>
+                </footer>
+            </div>
+        </BrowserRouter>
     );
 }
 

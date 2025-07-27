@@ -187,7 +187,7 @@ const MapView: React.FC<
 
 const StopMap: React.FC = () => {
     const [stops, setStops] = useState<Stop[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
     const [center, setCenter] = useState<[number, number]>([51, -1]);
     // const fetchedBoundsRef = useRef<any>(null);
     const stopsTimeout = useRef<number | null>(null);

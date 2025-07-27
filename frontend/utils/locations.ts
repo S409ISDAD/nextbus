@@ -14,3 +14,9 @@ export function toLatLngArray(track?: number[][]): L.LatLngExpression[] {
 export default function generateWholeTrack(stops: StopTime[]): L.LatLngExpression[] {
     return stops.flatMap(stop => toLatLngArray(stop.track));
 }
+
+export function getCurrentPosition(): Promise<GeolocationPosition> {
+    return new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject);
+    });
+}

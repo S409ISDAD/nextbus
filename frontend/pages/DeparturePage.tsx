@@ -7,7 +7,7 @@ import { useNavigate, useParams } from "react-router";
 import { Skeleton } from "@radix-ui/themes";
 import { Card } from "../components/ui/Card";
 import timeTo, { lateness } from "../utils/timeTo";
-import getClosestStop from "../utils/closestStop";
+import { getClosestStop } from "../utils/closestStop";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
     faSatelliteDish,
