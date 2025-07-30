@@ -1,6 +1,6 @@
 import api from "../src/api"
 import type { Bus, ScheduledBus } from "../models/Bus"
-import { generateTimeTo } from "./timeTo";
+import { generateTimeTo } from "./timeUtils";
 
 interface DeparturesResponse {
     timestamp: number;

@@ -10,23 +10,23 @@ export default function timeTo(bus: Departure) {
 }
 
 export function generateTimeTo(diffSec: number) {
-    if (diffSec <= 0) {
+    if (diffSec < 30) {
         return 'Due';
-    } else if (diffSec < 60) {
-        return '1 min';
     } else if (diffSec < 3600) {
         const min = Math.floor(diffSec / 60);
         return `${min} min`;
     } else {
         const hr = Math.floor(diffSec / 3600);
-        const min = Math.floor(diffSec / 60) - hr * 60;
-        if (min == 0) {
+        const min = Math.floor((diffSec % 3600) / 60);
+        if (min === 0) {
             return `${hr}h`;
-
         }
         return `${hr}h ${min}m`;
     }
 }
+
+export const toTime = (iso: string | undefined) =>
+    iso ? new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
 
 export function lateness(delay: number) {
     const n_delay = Math.abs(delay)

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { fetchTrain } from "../utils/getTrain";
 import { useNavigate, useParams } from "react-router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { lateness } from "../utils/timeTo";
+import { lateness } from "../utils/timeUtils";
 import { Pulse } from "../components/ui/Pulse";
 import {
     faCalendarXmark,
@@ -11,6 +11,33 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import type { Prediction } from "../models/Bus";
 import type { TrainService } from "../models/Trains";
+import React from "react";
+
+export const TrainProgress: React.FC<{
+    sequence: number;
+    progress: number;
+    trainRef: React.RefObject<HTMLDivElement | null>;
+}> = React.memo(({ sequence, progress, trainRef }) => {
+    const sectionLength = 72;
+    const translateY = (sequence + progress) * sectionLength;
+
+    return (
+        <div className="absolute top-0 left-0 h-full mt-[15px] z-11 w-9">
+            <div
+                className="absolute transition-all duration-1000 ease-in-out translate-x-[-16px]"
+                style={{ transform: `translateY(${translateY}px)` }}>
+                <div className="relative flex items-center justify-center">
+                    <Pulse size={36} color="bg-rose-400" duration={2} />
+                    <div
+                        className="relative z-10 flex items-center justify-center p-2 rounded-full bg-rose-500 w-9 h-9"
+                        ref={trainRef}>
+                        <FontAwesomeIcon icon={faTrainSubway} />
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+});
 
 const TrainPage: React.FC = () => {
     const { service_id } = useParams();
@@ -28,28 +55,6 @@ const TrainPage: React.FC = () => {
     const [elapsed, setElapsed] = useState<string>("0s");
     const [msg, setMsg] = useState<string>("");
 
-    const TrainProgress = () => {
-        const sectionLength = 72;
-        const translateY = (sequence + progress) * sectionLength;
-
-        return (
-            <div className="absolute top-0 left-0 h-full mt-[15px] z-11 w-9">
-                <div
-                    className="absolute transition-all duration-300 ease-in-out translate-x-[-15px]"
-                    style={{ transform: `translateY(${translateY}px)` }}>
-                    <div className="relative flex items-center justify-center">
-                        <Pulse size={36} color="bg-rose-400" duration={2} />
-                        <div
-                            className="relative z-10 flex items-center justify-center p-2 rounded-full bg-rose-500 w-9 h-9"
-                            ref={busRef}>
-                            <FontAwesomeIcon icon={faTrainSubway} />
-                        </div>
-                    </div>
-                </div>
-            </div>
-        );
-    };
-
     useEffect(() => {
         const interval = setInterval(() => {
             const now = new Date();
@@ -62,7 +67,7 @@ const TrainPage: React.FC = () => {
             setElapsed(min > 0 ? `${min}m ${sec}s` : `${sec}s`);
         }, 1000);
         return () => clearInterval(interval);
-    }, [lastRefreshed]);
+    }, []);
 
     useEffect(() => {
         const interval = setInterval(() => {
@@ -123,12 +128,12 @@ const TrainPage: React.FC = () => {
         return () => clearInterval(interval);
     }, [predictions, train?.sequence]);
 
-    const busRef = useRef<HTMLDivElement>(null);
+    const trainRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        if (busRef.current) {
+        if (trainRef.current) {
             requestAnimationFrame(() => {
-                busRef.current?.scrollIntoView({
+                trainRef.current?.scrollIntoView({
                     behavior: "smooth",
                     block: "center",
                 });
@@ -193,20 +198,17 @@ const TrainPage: React.FC = () => {
     }
 
     return (
-        <div className="px-3 md:px-0">
+        <div className="">
             <div className="flex flex-col">
-                <div className="fixed flex flex-col w-full gap-2 p-3 top-0 mt-12 grow bg-[#111111] z-15 rounded-b-2xl">
+                <div className="fixed flex flex-col w-full gap-2 p-3 top-0 mt-13 grow bg-[#111111] z-15 rounded-b-2xl">
                     {train ? (
                         <div className="flex flex-col items-center justify-center gap-2">
-                            <div className="flex flex-row items-stretch p-2">
-                                <div className="flex items-center gap-2 text-2xl font-bold">
-                                    <span>{train.origin[0].description}</span>
-                                    <span>to</span>
-                                    <span>
-                                        {train.destination[0].description}
-                                    </span>
-                                </div>
+                            <div className="flex flex-wrap items-center justify-center w-full gap-2 text-2xl font-bold">
+                                <span>{train.origin[0].description}</span>
+                                <span>to</span>
+                                <span>{train.destination[0].description}</span>
                             </div>
+
                             <div className="flex gap-3">
                                 <a
                                     className="underline text-sky-500"
@@ -283,10 +285,13 @@ const TrainPage: React.FC = () => {
                         </span>
                     </div>
                 ) : (
-                    <div className="flex flex-row gap-2">
+                    <div className="flex flex-row gap-2 px-3 md:px-0">
                         <div className="relative flex mx-5 mt-44 md:mx-40">
                             <div className="relative flex flex-col items-center py-8">
-                                <TrainProgress></TrainProgress>
+                                <TrainProgress
+                                    sequence={sequence}
+                                    progress={progress}
+                                    trainRef={trainRef}></TrainProgress>
                                 {train.locations.map((stop, idx) => (
                                     <div
                                         key={stop.crs}

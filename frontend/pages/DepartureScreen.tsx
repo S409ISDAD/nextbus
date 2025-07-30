@@ -4,7 +4,7 @@ import fetchDepartures from "../utils/getDepartures";
 
 import { useParams } from "react-router";
 
-import timeTo from "../utils/timeTo";
+import timeTo from "../utils/timeUtils";
 import mergeLive from "../utils/mergeLive";
 
 const DepartureScreen: React.FC = () => {

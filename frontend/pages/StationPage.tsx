@@ -4,7 +4,7 @@ import { useNavigate, useParams } from "react-router";
 import { Skeleton } from "@radix-ui/themes";
 import { Card } from "../components/ui/Card";
 import type { Location, Train } from "../models/Trains";
-import { generateTimeTo, lateness } from "../utils/timeTo";
+import { generateTimeTo, lateness } from "../utils/timeUtils";
 
 function TrainCard({
     train,

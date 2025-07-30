@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { isTrackedBus, type Departure } from "../models/Bus";
 import fetchDepartures, { parseDepartures } from "../utils/getDepartures";
 import { useNavigate } from "react-router";
-import timeTo, { lateness } from "../utils/timeTo";
+import timeTo, { lateness } from "../utils/timeUtils";
 import { Card } from "./ui/Card";
 import { getClosestStop } from "../utils/closestStop";
 import { getCurrentPosition } from "../utils/locations";

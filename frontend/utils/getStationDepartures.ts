@@ -1,5 +1,5 @@
 import api from "../src/api"
-import { generateTimeTo } from "./timeTo";
+import { generateTimeTo } from "./timeUtils";
 import type { Train, TrainResponse } from "../models/Trains";
 
 export const operatorMap: Record<string, { code: string, color: string }> = {

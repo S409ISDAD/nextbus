@@ -1,7 +1,7 @@
 import type { ServiceLocation, TrainService } from "../models/Trains";
 import api from "../src/api";
 import { operatorMap } from "../utils/getStationDepartures";
-import { generateTimeTo } from "./timeTo";
+import { generateTimeTo } from "./timeUtils";
 
 export const parseTrain = async (train: TrainService) => {
     try {

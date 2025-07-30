@@ -3,7 +3,7 @@ import type { Journey } from "../models/Journey";
 import getBus from "../utils/getBus";
 import { useNavigate, useParams } from "react-router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { lateness } from "../utils/timeTo";
+import { lateness } from "../utils/timeUtils";
 import generateWholeTrack from "../utils/locations";
 import {
     faBus,
@@ -144,6 +144,8 @@ const MapCenterUpdater: React.FC<{ lat: number; lng: number }> = ({
 };
 
 import L, { type LatLngExpression } from "leaflet";
+import React from "react";
+import { Pulse } from "../components/ui/Pulse";
 // import { Pulse } from "../components/ui/Pulse";
 
 const busIcon = L.divIcon({
@@ -239,6 +241,32 @@ const MapView: React.FC<MapViewProps> = ({
     );
 };
 
+export const BusProgress: React.FC<{
+    sequence: number;
+    progress: number;
+    busRef: React.RefObject<HTMLDivElement | null>;
+}> = React.memo(({ sequence, progress, busRef }) => {
+    const sectionLength = 72;
+    const translateY = (sequence + progress) * sectionLength;
+
+    return (
+        <div className="absolute top-0 left-0 h-full mt-[15px] z-11 w-9">
+            <div
+                className="absolute transition-all duration-500 ease-in-out translate-x-[-16px]"
+                style={{ transform: `translateY(${translateY}px)` }}>
+                <div className="relative flex items-center justify-center">
+                    <Pulse size={36} color="bg-rose-400" duration={2} />
+                    <div
+                        className="relative z-10 flex items-center justify-center p-2 rounded-full bg-rose-500 w-9 h-9"
+                        ref={busRef}>
+                        <FontAwesomeIcon icon={faBus} />
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+});
+
 const JourneyPage: React.FC = () => {
     const { bus_id } = useParams();
 
@@ -256,29 +284,6 @@ const JourneyPage: React.FC = () => {
     const [lastRefreshed, setRefreshed] = useState(new Date());
     const [elapsed, setElapsed] = useState<string>("0s");
     const [msg, setMsg] = useState<string>("");
-
-    const BusProgress = () => {
-        const sectionLength = 72;
-        const translateY = (sequence + progress) * sectionLength;
-
-        return (
-            <div className="absolute top-0 left-0 h-full mt-[15px] z-11 w-9">
-                <div
-                    className="absolute translate-x-[-15px]"
-                    style={{
-                        transform: `translateY(${translateY}px)`,
-                        transition: "transform 0.3s ease-in-out",
-                    }}>
-                    <div className="relative flex items-center justify-center">
-                        {/* <Pulse size={70} color="bg-rose-400" duration={2} /> */}
-                        <div className="relative z-10 flex items-center justify-center p-2 rounded-full bg-rose-500 w-9 h-9">
-                            <FontAwesomeIcon icon={faBus} />
-                        </div>
-                    </div>
-                </div>
-            </div>
-        );
-    };
 
     useEffect(() => {
         const interval = setInterval(() => {
@@ -401,6 +406,14 @@ const JourneyPage: React.FC = () => {
                     document.title = `${bus_response.journey.route_name} to ${bus_response.journey.destination} - ${bus_response.reg}`;
                     setMsg("");
                     setRefreshed(now);
+                    setTimeout(() => {
+                        requestAnimationFrame(() => {
+                            busRef.current?.scrollIntoView({
+                                behavior: "smooth",
+                                block: "center",
+                            });
+                        });
+                    }, 1000);
                 } else {
                     setMsg("Failed to fetch bus. Try reloading the page");
                 }
@@ -548,10 +561,13 @@ const JourneyPage: React.FC = () => {
                         </span>
                     </div>
                 ) : (
-                    <div className="flex flex-row gap-2">
+                    <div className="flex flex-row gap-2 px-3 md:px-0">
                         <div className="relative flex mx-5 mt-48 md:mx-40">
                             <div className="relative flex flex-col items-center py-8">
-                                <BusProgress></BusProgress>
+                                <BusProgress
+                                    sequence={sequence}
+                                    progress={progress}
+                                    busRef={busRef}></BusProgress>
                                 {journey?.stops.map((stop, idx) => (
                                     <div
                                         key={stop.stop_id}
