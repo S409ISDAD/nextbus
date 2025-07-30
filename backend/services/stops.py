@@ -1,5 +1,7 @@
 from geopy.distance import geodesic
 from backend.config import API_BASE, BASE, STOPS_BASE
+from backend.models.stop import Stop
+from backend.models.service import Service
 from backend.services.caching import (
     SERVICES_CACHE,
     STOPS_CACHE,
@@ -92,7 +94,7 @@ async def get_times(stop_id, r: Redis):
     return times
 
 
-async def get_closest_stop(lat, lng, ignore, dist=0.005):
+async def get_nearby_stops(lat, lng, dist=0.005):
     xmin = lng - dist
     xmax = lng + dist
     ymin = lat - dist
@@ -103,30 +105,131 @@ async def get_closest_stop(lat, lng, ignore, dist=0.005):
     )
 
     if not stops:
-        return None
+        return []
 
-    closest_stop = None
-    min_dist = float("inf")
-
+    nearby_stops = []
     for stop in stops.get("features", []):
         stop_lat = stop["geometry"]["coordinates"][1]
         stop_lng = stop["geometry"]["coordinates"][0]
 
+        bearing = stop["properties"].get("bearing", None)
+        indicator = stop["properties"].get("indicator", "")
+
+        nearby_stops.append(
+            Stop(
+                stop_id=stop["properties"]["url"].split("/")[2],
+                coords=[stop_lng, stop_lat],
+                long_name="",
+                name=stop["properties"]["name"],
+                indicator=indicator,
+                bearing=bearing,
+                active=stop["properties"].get("active", True),
+                services=None,  # Services will be fetched separately if needed
+            )
+        )
+
+    return nearby_stops
+
+
+async def get_closest_stop(lat, lng, ignore, dist=0.005):
+    stops = await get_nearby_stops(lat, lng, dist)
+
+    closest_stop = None
+    min_dist = float("inf")
+
+    for stop in stops:
+        stop_lat = stop.coords[1]
+        stop_lng = stop.coords[0]
+
         dist = geodesic((lat, lng), (stop_lat, stop_lng)).meters
 
-        if dist < min_dist and ignore != stop["properties"]["url"].split("/")[2]:
+        if dist < min_dist and ignore != stop.stop_id:
             min_dist = dist
             closest_stop = stop
 
     if closest_stop is None:
         return {"stop_id": "", "dist": 0, "lat": 0, "lng": 0}
 
-    stop_id = closest_stop["properties"]["url"].split("/")[2]
+    stop_id = closest_stop.stop_id
     print(stop_id)
 
     return {
         "stop_id": stop_id,
         "dist": min_dist,
-        "lat": closest_stop["geometry"]["coordinates"][0],
-        "lng": closest_stop["geometry"]["coordinates"][1],
+        "lat": closest_stop.coords[1],
+        "lng": closest_stop.coords[0],
+    }
+
+
+async def get_nearby_services(lat, lng, r, dist=0.005):
+    stops = await get_nearby_stops(lat, lng, dist)
+
+    nearby_services = []
+    seen_services = set()
+
+    for stop in stops:
+        stop_lat = stop.coords[1]
+        stop_lng = stop.coords[0]
+
+        dist = geodesic((lat, lng), (stop_lat, stop_lng)).meters
+
+        stop_id = stop.stop_id
+
+        services = await get_services_from_stop(stop_id, r=r)
+
+        if not services:
+            continue
+
+        for service in services:
+            service_id = service.get("id")
+            if service_id in seen_services:
+                continue
+            seen_services.add(service_id)
+
+            nearby_service = Service(
+                id=service_id,
+                line_name=service.get("line_name"),
+                detail=service.get("detail"),
+            )
+            nearby_services.append(nearby_service)
+
+    if not nearby_services:
+        return []
+
+    return nearby_services
+
+
+async def get_closest_stop_for_service(lat, lng, service_id, r, dist=0.005):
+    stops = await get_nearby_stops(lat, lng, dist)
+
+    closest_stop = None
+    min_dist = float("inf")
+
+    for stop in stops:
+        stop_lat = stop.coords[1]
+        stop_lng = stop.coords[0]
+
+        dist = geodesic((lat, lng), (stop_lat, stop_lng)).meters
+
+        stop_id = stop.stop_id
+
+        services = await get_services_from_stop(stop_id, r=r)
+
+        if not services:
+            continue
+
+        service_ids = {service.get("id") for service in services}
+        if service_id in service_ids:
+            if dist < min_dist:
+                min_dist = dist
+                closest_stop = stop
+
+    if not closest_stop:
+        return None
+
+    return {
+        "stop_id": closest_stop.stop_id,
+        "dist": min_dist,
+        "lat": closest_stop.coords[1],
+        "lng": closest_stop.coords[0],
     }

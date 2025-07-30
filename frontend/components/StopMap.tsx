@@ -37,11 +37,20 @@ type MapViewProps = {
     loading?: boolean;
 };
 
-const getPinIcon = (bearing?: number) =>
+const getPinIcon = (bearing: number) =>
     L.divIcon({
         html: `<i class="fas fa-location-dot fa-xl" style="transform: rotate(${
-            bearing !== undefined ? bearing + 180 : 0
+            bearing + 180
         }deg);"></i>`,
+        className: "text-red-500 opacity-80",
+        iconSize: [24, 24],
+        iconAnchor: [12, 12],
+        popupAnchor: [-6, -6],
+    });
+
+const getStopIcon = () =>
+    L.divIcon({
+        html: `<i class="fas fa-circle-dot"></i>`,
         className: "text-red-500 opacity-80",
         iconSize: [24, 24],
         iconAnchor: [12, 12],
@@ -146,7 +155,11 @@ const MapView: React.FC<
                     <Marker
                         key={stop.stop_id}
                         position={[stop.coords[0], stop.coords[1]]}
-                        icon={getPinIcon(stop.bearing)}>
+                        icon={
+                            stop.bearing != null
+                                ? getPinIcon(stop.bearing)
+                                : getStopIcon()
+                        }>
                         <Popup>
                             <div className="flex flex-col">
                                 <span>{stop.name}</span>
@@ -174,8 +187,10 @@ const MapView: React.FC<
 
 const StopMap: React.FC = () => {
     const [stops, setStops] = useState<Stop[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
     const [center, setCenter] = useState<[number, number]>([51, -1]);
+    // const fetchedBoundsRef = useRef<any>(null);
+    const stopsTimeout = useRef<number | null>(null);
 
     // Store last bounds to avoid unnecessary fetches
     const lastBoundsRef = useRef<any>(null);
@@ -192,12 +207,9 @@ const StopMap: React.FC = () => {
         }
     }, []);
 
-    const fetchStops = useCallback(async (bounds: any, zoom: number) => {
+    const fetchStops = useCallback(async (bounds: any) => {
         setLoading(true);
         try {
-            if (zoom < 13) {
-                return;
-            }
             // bounds: { _northEast: {lat, lng}, _southWest: {lat, lng} }
             const ymax = bounds._northEast.lat;
             const ymin = bounds._southWest.lat;
@@ -215,7 +227,7 @@ const StopMap: React.FC = () => {
                     feature.geometry.coordinates[0],
                 ],
                 services: feature.properties.services || [],
-                bearing: feature.properties.bearing || 0,
+                bearing: feature.properties.bearing,
             }));
             setStops(stopsData);
         } catch (err) {
@@ -225,11 +237,86 @@ const StopMap: React.FC = () => {
         }
     }, []);
 
-    // Handler for map bounds change
+    // function containsBounds(outer: any, inner: any) {
+    //     if (!outer) return false;
+
+    //     const BUFFER = 0.0005; // about ~50m buffer
+
+    //     return (
+    //         outer._southWest.lat - BUFFER <= inner._southWest.lat &&
+    //         outer._southWest.lng - BUFFER <= inner._southWest.lng &&
+    //         outer._northEast.lat + BUFFER >= inner._northEast.lat &&
+    //         outer._northEast.lng + BUFFER >= inner._northEast.lng
+    //     );
+    // }
+
+    // function mergeBounds(a: any, b: any) {
+    //     return L.latLngBounds([
+    //         [
+    //             Math.min(a._southWest.lat, b._southWest.lat),
+    //             Math.min(a._southWest.lng, b._southWest.lng),
+    //         ],
+    //         [
+    //             Math.max(a._northEast.lat, b._northEast.lat),
+    //             Math.max(a._northEast.lng, b._northEast.lng),
+    //         ],
+    //     ]);
+    // }
+
+    // const handleBoundsChange = useCallback(
+    //     (bounds: any, zoom: number) => {
+    //         const prev = lastBoundsRef.current;
+
+    //         if (!prev) {
+    //             lastBoundsRef.current = { bounds, zoom };
+    //             fetchedBoundsRef.current = bounds;
+    //             fetchStops(bounds, zoom);
+    //             return;
+    //         }
+
+    //         const prevZoom = prev.zoom;
+
+    //         const zoomOut = zoom < prevZoom;
+    //         const zoomIn = zoom > prevZoom;
+
+    //         const needsMore = !containsBounds(fetchedBoundsRef.current, bounds);
+
+    //         console.log(
+    //             "ZoomOut:",
+    //             zoomOut,
+    //             "ZoomIn:",
+    //             zoomIn,
+    //             "NeedsMore:",
+    //             needsMore
+    //         );
+
+    //         const shouldFetch = zoomOut || (needsMore && !zoomIn);
+
+    //         if (shouldFetch) {
+    //             lastBoundsRef.current = { bounds, zoom };
+
+    //             // grow the fetched bounds
+    //             fetchedBoundsRef.current = mergeBounds(
+    //                 fetchedBoundsRef.current,
+    //                 bounds
+    //             );
+
+    //             if (stopsTimeout.current) clearTimeout(stopsTimeout.current);
+    //             stopsTimeout.current = window.setTimeout(() => {
+    //                 fetchStops(bounds, zoom);
+    //             }, 200);
+    //         }
+    //     },
+    //     [fetchStops]
+    // );
+
     const handleBoundsChange = useCallback(
         (bounds: any, zoom: number) => {
-            // Only fetch if bounds changed
-            if (
+            if (zoom < 13) {
+                setStops([]);
+                return;
+            }
+            const hasBoundsChanged =
                 !lastBoundsRef.current ||
                 lastBoundsRef.current._northEast.lat !==
                     bounds._northEast.lat ||
@@ -237,10 +324,15 @@ const StopMap: React.FC = () => {
                     bounds._northEast.lng ||
                 lastBoundsRef.current._southWest.lat !==
                     bounds._southWest.lat ||
-                lastBoundsRef.current._southWest.lng !== bounds._southWest.lng
-            ) {
+                lastBoundsRef.current._southWest.lng !== bounds._southWest.lng;
+
+            if (hasBoundsChanged) {
                 lastBoundsRef.current = bounds;
-                fetchStops(bounds, zoom);
+
+                if (stopsTimeout.current) clearTimeout(stopsTimeout.current);
+                stopsTimeout.current = window.setTimeout(() => {
+                    fetchStops(bounds);
+                }, 400);
             }
         },
         [fetchStops]

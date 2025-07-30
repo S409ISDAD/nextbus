@@ -4,7 +4,8 @@ import fetchDepartures, { parseDepartures } from "../utils/getDepartures";
 import { useNavigate } from "react-router";
 import timeTo, { lateness } from "../utils/timeTo";
 import { Card } from "./ui/Card";
-import getClosestStop, { getCurrentPosition } from "../utils/closestStop";
+import { getClosestStop } from "../utils/closestStop";
+import { getCurrentPosition } from "../utils/locations";
 import getStopData from "../utils/getStopData";
 import type { Stop } from "../models/Stop";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -16,6 +17,7 @@ import React from "react";
 interface Props {
     stop_id: string;
     closest?: boolean;
+    filter?: string;
 }
 
 function BusCard({ bus, onClick }: { bus: Departure; onClick: () => void }) {
@@ -121,7 +123,7 @@ function BusCard({ bus, onClick }: { bus: Departure; onClick: () => void }) {
     );
 }
 
-function DepartureBoard({ stop_id, closest }: Props) {
+function DepartureBoard({ stop_id, closest, filter }: Props) {
     const [buses, setBuses] = useState<Departure[]>([]);
     const [stop, setStop] = useState<Stop>();
     const [stopID, setStopID] = useState<string>("");
@@ -172,7 +174,11 @@ function DepartureBoard({ stop_id, closest }: Props) {
             setFetching(true);
             try {
                 const stopPromise = getStopData(id);
-                const schedDeparturesPromise = fetchDepartures(id, "scheduled");
+                const schedDeparturesPromise = fetchDepartures(
+                    id,
+                    "scheduled",
+                    filter
+                );
 
                 if (firstFetch.current) {
                     const stopData = await stopPromise;
@@ -228,7 +234,7 @@ function DepartureBoard({ stop_id, closest }: Props) {
                 ws.onMessage(async (msg) => {
                     if (msg.type === "departures") {
                         console.log("Got departures", msg.data);
-                        const buses = await parseDepartures(msg.data);
+                        const buses = await parseDepartures(msg.data, filter);
 
                         if (buses) {
                             setBuses(buses.updatedBuses);

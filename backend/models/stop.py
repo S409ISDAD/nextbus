@@ -9,7 +9,7 @@ class Stop(BaseModel):
     name: str
     long_name: str
     indicator: Optional[str]
-    bearing: Optional[str]
+    bearing: Optional[int | str]
     active: bool
     coords: list[float]
     services: Optional[list[Service]]
