@@ -2,7 +2,7 @@ import api from "../src/api"
 import { generateTimeTo } from "./timeTo";
 import type { Train, TrainResponse } from "../models/Trains";
 
-const operatorMap: Record<string, { code: string, color: string }> = {
+export const operatorMap: Record<string, { code: string, color: string }> = {
     "South Western Railway": { code: "SWR", color: "#007CAD" },
     "CrossCountry": { code: "XC", color: "#6e2067" },
     "Great Western Railway": { code: "GWR", color: "#0A493E" },
@@ -49,6 +49,10 @@ export const parseTrains = async (trains: TrainResponse) => {
             }
             return date;
         };
+
+        if (!trains.services) {
+            return { ...trains, services: [] };
+        }
 
         const updatedTrains: Train[] = trains.services
             .map((train) => {
@@ -103,12 +107,14 @@ export const parseTrains = async (trains: TrainResponse) => {
                     scheduledDeparture,
                     expectedArrival,
                     scheduledArrival,
-                    atocName: operator.code,
+                    atocCode: operator.code,
                     atocColor: operator.color,
                     timeto: generateTimeTo(diffSec),
                     delay,
                 };
-            })
+            }).filter((train) => train.serviceType === "train")
+
+
         return {
             ...trains,
             services: updatedTrains
@@ -171,7 +177,7 @@ export const filterArrivals = (trains) => {
 export const fetchDepartures = async (station_id: string) => {
     try {
         const response = await api.get<TrainResponse>(
-            `/trains/?station_code=${station_id}?type=departures`
+            `/trains/station/?station_code=${station_id}&type=departures`
         );
         const trains = await parseTrains(response.data);
         return await filterDepartures(trains);
@@ -185,7 +191,7 @@ export const fetchDepartures = async (station_id: string) => {
 export const fetchArrivals = async (station_id: string) => {
     try {
         const response = await api.get<TrainResponse>(
-            `/trains/?station_code=${station_id}?type=arrivals`
+            `/trains/station/?station_code=${station_id}&type=arrivals`
         );
         const trains = await parseTrains(response.data);
         return await filterArrivals(trains);

@@ -29,25 +29,33 @@ function TrainCard({
             className="cursor-pointer">
             <div className="flex flex-row items-center justify-between">
                 <div className="flex flex-col justify-around gap-1 mr-5">
-                    <div className="flex flex-row items-stretch mb-1">
+                    <div className="flex flex-row items-stretch mb-1 text-sm sm:text-base">
                         <div
                             className="flex items-center px-3 py-1 rounded-l-2xl"
                             style={{ backgroundColor: train.atocColor }}>
-                            <span className="flex items-center justify-center font-bold text-center">
-                                {
-                                    train.locationDetail.destination[0]
-                                        .description
-                                }
-                            </span>
+                            {type === "departures" ? (
+                                <span className="flex items-center justify-center font-bold text-center">
+                                    to{" "}
+                                    {
+                                        train.locationDetail.destination[0]
+                                            .description
+                                    }
+                                </span>
+                            ) : (
+                                <span className="flex items-center justify-center font-bold text-center">
+                                    from{" "}
+                                    {train.locationDetail.origin[0].description}
+                                </span>
+                            )}
                         </div>
                         <div className="flex flex-col justify-center px-3 bg-neutral-800/50 rounded-r-2xl">
                             <span className="font-semibold text">
-                                {train.atocName}
+                                {train.atocCode}
                             </span>
                         </div>
                     </div>
 
-                    <div className="flex flex-row items-center pl-2 font-semibold text gap-x-3 text-nowrap">
+                    <div className="flex flex-row items-center pl-2 text-sm font-semibold text gap-x-3 text-nowrap sm:text-base">
                         <div className="flex gap-0.5 items-center ">
                             <span>
                                 {(type === "departures"
@@ -81,7 +89,7 @@ function TrainCard({
                     </div>
                 </div>
 
-                <div className="flex flex-row flex-wrap items-center justify-end gap-2 md:gap-4 w-min md:w-auto">
+                <div className="flex flex-row flex-wrap items-center justify-end gap-2 text-sm md:gap-4 w-min md:w-auto sm:text-base">
                     <div className="flex justify-center px-2 py-1 bg-blue-500 rounded-lg">
                         <span className="text-xs font-bold align-middle text-neutral-950 text-nowrap">
                             Platform{" "}
@@ -91,11 +99,11 @@ function TrainCard({
                         </span>
                     </div>
 
-                    <div className="flex items-center justify-center gap-1 p-[0.3rem] w-18 rounded-xl bg-neutral-800/50  h-fit">
-                        <span className="text-lg font-bold ">
+                    <div className="flex items-center justify-center gap-1 p-[0.2rem] w-16 sm:w-18 rounded-xl bg-neutral-800/50  h-fit">
+                        <span className="text-base font-bold sm:text-lg ">
                             {train.timeto.split(" ")[0]}
                         </span>
-                        <span className="self-end h-full mb-[0.15rem] text-sm font-bold ">
+                        <span className="self-end h-full mb-[0.15rem] text-xs sm:text-sm font-bold ">
                             {train.timeto.split(" ")[1]}
                         </span>
                     </div>
@@ -132,56 +140,59 @@ const StationPage: React.FC = () => {
 
             setElapsed(min > 0 ? `${min}m ${sec}s` : `${sec}s`);
 
-            const newTrains = trains
-                .map((train) => {
-                    return {
-                        ...train,
-                        timeto: generateTimeTo(
-                            ((
-                                type === "departures"
-                                    ? train.expectedDeparture
-                                    : train.expectedArrival
-                            )
-                                ? (
-                                      (type === "departures"
-                                          ? train.expectedDeparture
-                                          : train.expectedArrival) as Date
-                                  ).getTime() - now.getTime()
-                                : 0) / 1000
-                        ),
-                    };
-                })
-                .filter((train) => {
-                    const expectedTime =
-                        type === "departures"
-                            ? train.expectedDeparture
-                            : train.expectedArrival;
-                    if (!expectedTime) return false;
-                    return new Date(expectedTime.getTime() + 60 * 1000) > now;
-                });
-
-            setTrains(newTrains);
+            setTrains((prevTrains) =>
+                prevTrains
+                    .map((train) => {
+                        return {
+                            ...train,
+                            timeto: generateTimeTo(
+                                ((
+                                    type === "departures"
+                                        ? train.expectedDeparture
+                                        : train.expectedArrival
+                                )
+                                    ? (
+                                          (type === "departures"
+                                              ? train.expectedDeparture
+                                              : train.expectedArrival) as Date
+                                      ).getTime() - now.getTime()
+                                    : 0) / 1000
+                            ),
+                        };
+                    })
+                    .filter((train) => {
+                        const expectedTime =
+                            type === "departures"
+                                ? train.expectedDeparture
+                                : train.expectedArrival;
+                        if (!expectedTime) return false;
+                        return (
+                            new Date(expectedTime.getTime() + 60 * 1000) > now
+                        );
+                    })
+            );
         }, 1000);
         return () => clearInterval(interval);
-    }, [lastRefreshed, trains]);
+    }, [lastRefreshed, type]);
 
     useEffect(() => {
-        let interval: any;
+        if (!station_id) return;
 
-        const getData = async (id: string) => {
-            if (fetching) {
-                return;
-            }
+        let cancelled = false;
+        let interval: NodeJS.Timeout;
+
+        const getData = async () => {
+            if (cancelled) return;
+
             setFetching(true);
             try {
                 let trainData;
                 if (type === "departures") {
-                    trainData = await fetchDepartures(id);
+                    trainData = await fetchDepartures(station_id);
                 } else {
-                    trainData = await fetchArrivals(id);
+                    trainData = await fetchArrivals(station_id);
                 }
-                console.log("trainData", trainData);
-                if (trainData) {
+                if (!cancelled && trainData) {
                     setTrains(trainData.services);
                     setStation(trainData.location);
                     document.title = `${trainData.location.name} Station | nextbus`;
@@ -189,34 +200,21 @@ const StationPage: React.FC = () => {
                     setMsg("");
                     setLoading(false);
                 }
-
-                // else {
-                //     setMsg("Failed to fetch departures.");
-                // }
-            } catch {
-                console.log("uh oh");
+            } catch (err) {
+                if (!cancelled) {
+                    console.error(err);
+                    setMsg("Failed to fetch data.");
+                }
             } finally {
-                setLoading(false);
-                setFetching(false);
-            }
-        };
-        const init = async (station_id: string) => {
-            try {
-                await getData(station_id);
-                interval = setInterval(() => getData(station_id), 30000);
-            } catch (error) {
-                console.error("Init error:", error);
-                setMsg("Unable to get station data.");
-                setLoading(false);
-                setFetching(false);
+                if (!cancelled) setFetching(false);
             }
         };
 
-        if (station_id) {
-            init(station_id);
-        }
+        getData();
+        interval = setInterval(getData, 30000);
 
         return () => {
+            cancelled = true;
             clearInterval(interval);
         };
     }, [station_id, type]);
@@ -275,6 +273,7 @@ const StationPage: React.FC = () => {
                         }`}
                         onClick={() => {
                             setType("departures");
+                            setLoading(true);
                             setTrains([]);
                         }}
                         disabled={type === "departures"}>
@@ -288,6 +287,7 @@ const StationPage: React.FC = () => {
                         }`}
                         onClick={() => {
                             setType("arrivals");
+                            setLoading(true);
                             setTrains([]);
                         }}
                         disabled={type === "arrivals"}>

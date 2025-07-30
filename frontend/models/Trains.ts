@@ -55,5 +55,62 @@ export interface Train {
 export interface TrainResponse {
     location: Location;
     filter?: string | null;
-    services: Train[];
+    services: Train[] | null;
+}
+
+export interface ServiceLocation {
+    realtimeActivated: boolean;
+    tiploc: string | string[];
+    crs: string;
+    description: string;
+
+    gbttBookedArrival?: string;
+    gbttBookedDeparture?: string;
+
+    wttBookedArrival?: string;
+    wttBookedDeparture?: string;
+
+    origin: OriginDestination[];
+    destination: OriginDestination[];
+
+    isCall: boolean;
+    isPublicCall: boolean;
+
+    realtimeArrival?: string;
+    realtimeArrivalActual?: boolean;
+    realtimeDeparture?: string;
+    realtimeDepartureActual?: boolean;
+
+    platform?: string;
+    platformConfirmed?: boolean;
+    platformChanged?: boolean;
+
+    line?: string;
+    lineConfirmed?: boolean;
+
+    serviceLocation?: string;
+    displayAs: string;
+}
+
+export interface TrainService {
+    serviceUid: string;
+    runDate: string;
+    serviceType: string;
+    isPassenger: boolean;
+    trainIdentity: string;
+
+    powerType?: string;
+    trainClass?: string;
+
+    atocCode: string;
+    atocName: string;
+
+    performanceMonitored?: boolean;
+
+    origin: OriginDestination[];
+    destination: OriginDestination[];
+    locations: ServiceLocation[];
+
+    realtimeActivated?: boolean;
+    runningIdentity?: string;
 }

@@ -52,7 +52,65 @@ class Train(BaseModel):
     isPassenger: bool
 
 
-class TrainResponse(BaseModel):
+class StationResponse(BaseModel):
     location: Location
     filter: Optional[str]
-    services: List[Train]
+    services: Optional[List[Train]]
+
+
+class ServiceLocation(BaseModel):
+    realtimeActivated: bool
+    tiploc: Union[str, List[str]]
+    crs: str
+    description: str
+
+    gbttBookedArrival: Optional[str] = None
+    gbttBookedDeparture: Optional[str] = None
+
+    wttBookedArrival: Optional[str] = None
+    wttBookedDeparture: Optional[str] = None
+
+    origin: List[OriginDestination]
+    destination: List[OriginDestination]
+
+    isCall: bool
+    isPublicCall: bool
+
+    realtimeArrival: Optional[str] = None
+    realtimeArrivalActual: Optional[bool] = None
+    realtimeDeparture: Optional[str] = None
+    realtimeDepartureActual: Optional[bool] = None
+
+    platform: Optional[str] = None
+    platformConfirmed: Optional[bool] = None
+    platformChanged: Optional[bool] = None
+
+    line: Optional[str] = None
+    lineConfirmed: Optional[bool] = None
+
+    serviceLocation: Optional[str] = None
+    displayAs: str
+
+
+class TrainService(BaseModel):
+    serviceUid: str
+    runDate: str
+    serviceType: str
+    isPassenger: bool
+    trainIdentity: str
+
+    powerType: Optional[str] = None
+    trainClass: Optional[str] = None
+
+    atocCode: str
+    atocName: str
+
+    performanceMonitored: Optional[bool] = None
+
+    origin: List[OriginDestination]
+    destination: List[OriginDestination]
+
+    locations: List[ServiceLocation]
+
+    realtimeActivated: Optional[bool] = None
+    runningIdentity: Optional[str] = None

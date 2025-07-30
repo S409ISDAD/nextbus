@@ -8,6 +8,7 @@ import BusPage from "../pages/BusPage";
 import ServicePage from "../pages/ServicePage";
 import Layout from "../components/Layout";
 import StationPage from "../pages/StationPage";
+import TrainPage from "../pages/TrainPage";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router";
 import { Toaster } from "react-hot-toast";
 import { faXmark } from "@fortawesome/free-solid-svg-icons";
@@ -87,6 +88,10 @@ function App() {
                             path="/stations/:station_id"
                             element={<StationPage />}
                         />
+                        <Route
+                            path="/trains/:service_id"
+                            element={<TrainPage />}
+                        />
                     </Route>
                     <Route
                         path="departureboard/:stop_id"
@@ -95,15 +100,15 @@ function App() {
                 </Routes>
                 <footer className="flex flex-row flex-wrap justify-center w-full gap-3 p-3 text-sm text-gray-200 border-t-2 max-h-fit border-neutral-800 grow">
                     <span>© {currentYear} nextbus</span>
-                    <a href="/privacy" className="underline text-sky-400">
+                    <a href="/privacy" className="underline text-sky-400 h-fit">
                         Privacy
                     </a>
 
-                    <a href="/terms" className="underline text-sky-400">
+                    <a href="/terms" className="underline text-sky-400 h-fit">
                         Terms
                     </a>
 
-                    <div className="flex gap-1">
+                    <div className="flex gap-1 h-fit">
                         <span>Bus data:</span>
                         <a
                             href="https://bustimes.org"
@@ -114,7 +119,7 @@ function App() {
                         </a>
                     </div>
 
-                    <div className="flex gap-1">
+                    <div className="flex gap-1 h-fit">
                         <span>Train data:</span>
                         <a
                             href="https://realtimetrains.co.uk"

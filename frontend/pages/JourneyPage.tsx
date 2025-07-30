@@ -144,6 +144,7 @@ const MapCenterUpdater: React.FC<{ lat: number; lng: number }> = ({
 };
 
 import L, { type LatLngExpression } from "leaflet";
+import { Pulse } from "../components/ui/Pulse";
 
 const busIcon = L.divIcon({
     html: `<div style="
@@ -258,18 +259,21 @@ const JourneyPage: React.FC = () => {
 
     const BusProgress = () => {
         const sectionLength = 72;
-
         const translateY = (sequence + progress) * sectionLength;
 
         return (
-            <div className="absolute top-0 left-0 h-full mt-[15px] z-11 w-9 ">
+            <div className="absolute top-0 left-0 h-full mt-[15px] z-11 w-9">
                 <div
-                    className="absolute transition-all duration-300 ease-in-out  translate-x-[-15px]"
-                    style={{ transform: `translateY(${translateY}px)` }}>
-                    <div
-                        className="flex items-center justify-center p-2 rounded-full bg-rose-500 w-9 h-9"
-                        ref={busRef}>
-                        <FontAwesomeIcon icon={faBus} />
+                    className="absolute translate-x-[-15px]"
+                    style={{
+                        transform: `translateY(${translateY}px)`,
+                        transition: "transform 0.3s ease-in-out",
+                    }}>
+                    <div className="relative flex items-center justify-center">
+                        {/* <Pulse size={70} color="bg-rose-400" duration={2} /> */}
+                        <div className="relative z-10 flex items-center justify-center p-2 rounded-full bg-rose-500 w-9 h-9">
+                            <FontAwesomeIcon icon={faBus} />
+                        </div>
                     </div>
                 </div>
             </div>
