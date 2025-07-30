@@ -1,4 +1,4 @@
-import React, { use, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 // import DepartureBoard from "../components/DepartureBoard";
 // import { faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
 // import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -66,7 +66,7 @@ const ServicePage: React.FC = () => {
 
     return (
         <div className="p-5 md:mx-20">
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col items-center gap-4">
                 <div className="flex flex-col items-center justify-center gap-6">
                     <div className="flex flex-col items-center justify-center gap-3">
                         <span className="text-4xl font-bold md:text-4xl text-start">
@@ -85,6 +85,10 @@ const ServicePage: React.FC = () => {
                         </div>
                     </div>
                 </div>
+                {msg && <span className="text-red-500 ">{msg}</span>}
+                {loading && (
+                    <span className="text-neutral-300">Loading...</span>
+                )}
                 {stopID && (
                     <DepartureBoard
                         stop_id={stopID}

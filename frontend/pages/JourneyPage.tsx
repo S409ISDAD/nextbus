@@ -144,7 +144,7 @@ const MapCenterUpdater: React.FC<{ lat: number; lng: number }> = ({
 };
 
 import L, { type LatLngExpression } from "leaflet";
-import { Pulse } from "../components/ui/Pulse";
+// import { Pulse } from "../components/ui/Pulse";
 
 const busIcon = L.divIcon({
     html: `<div style="

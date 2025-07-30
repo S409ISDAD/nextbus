@@ -1,17 +1,10 @@
-import { useEffect, useRef, useState } from "react";
-import {
-    fetchDepartures,
-    fetchArrivals,
-    parseTrains,
-    filterDepartures,
-    filterArrivals,
-} from "../utils/getStationDepartures";
+import { useEffect, useState } from "react";
+import { fetchDepartures, fetchArrivals } from "../utils/getStationDepartures";
 import { useNavigate, useParams } from "react-router";
 import { Skeleton } from "@radix-ui/themes";
 import { Card } from "../components/ui/Card";
-import { WebSocketManager } from "../websockets/ws_manager";
 import type { Location, Train } from "../models/Trains";
-import timeTo, { generateTimeTo, lateness } from "../utils/timeTo";
+import { generateTimeTo, lateness } from "../utils/timeTo";
 
 function TrainCard({
     train,
@@ -82,9 +75,9 @@ function TrainCard({
 
                         <span
                             className={`text-${
-                                train.delay >= 60 ? "red" : "green"
+                                (train.delay ?? 0) >= 60 ? "red" : "green"
                             }-400`}>
-                            {lateness(train ? train.delay : 0)}
+                            {lateness(train.delay ?? 0)}
                         </span>
                     </div>
                 </div>
@@ -101,10 +94,10 @@ function TrainCard({
 
                     <div className="flex items-center justify-center gap-1 p-[0.2rem] w-16 sm:w-18 rounded-xl bg-neutral-800/50  h-fit">
                         <span className="text-base font-bold sm:text-lg ">
-                            {train.timeto.split(" ")[0]}
+                            {train.timeto?.split(" ")[0] ?? "--"}
                         </span>
                         <span className="self-end h-full mb-[0.15rem] text-xs sm:text-sm font-bold ">
-                            {train.timeto.split(" ")[1]}
+                            {train.timeto?.split(" ")[1]}
                         </span>
                     </div>
                 </div>
@@ -118,12 +111,9 @@ const StationPage: React.FC = () => {
 
     const navigate = useNavigate();
 
-    const firstFetch = useRef(true);
-
     const [trains, setTrains] = useState<Train[]>([]);
     const [station, setStation] = useState<Location>();
     const [loading, setLoading] = useState(true);
-    const [fetching, setFetching] = useState(false);
     const [lastRefreshed, setRefreshed] = useState(new Date());
     const [elapsed, setElapsed] = useState<string>("0s");
     const [msg, setMsg] = useState<string>("");
@@ -179,12 +169,11 @@ const StationPage: React.FC = () => {
         if (!station_id) return;
 
         let cancelled = false;
-        let interval: NodeJS.Timeout;
+        let interval: ReturnType<typeof setInterval>;
 
         const getData = async () => {
             if (cancelled) return;
 
-            setFetching(true);
             try {
                 let trainData;
                 if (type === "departures") {
@@ -205,8 +194,6 @@ const StationPage: React.FC = () => {
                     console.error(err);
                     setMsg("Failed to fetch data.");
                 }
-            } finally {
-                if (!cancelled) setFetching(false);
             }
         };
 

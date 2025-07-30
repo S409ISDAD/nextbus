@@ -1,3 +1,5 @@
+import type { Prediction } from "./Bus";
+
 export interface Location {
     name: string;
     crs: string;
@@ -43,7 +45,10 @@ export interface Train {
     trainIdentity: string;
     runningIdentity?: string;
     atocCode: string;
+    atocColor?: string;
     atocName: string;
+    delay?: number;
+    timeto?: string;
     serviceType: string;
     isPassenger: boolean;
     expectedDeparture?: Date;
@@ -80,6 +85,13 @@ export interface ServiceLocation {
     realtimeArrivalActual?: boolean;
     realtimeDeparture?: string;
     realtimeDepartureActual?: boolean;
+    expectedArrival?: Date;
+    expectedDeparture?: Date;
+    scheduledArrival?: Date;
+    scheduledDeparture?: Date;
+
+    departed?: boolean;
+    delay?: number;
 
     platform?: string;
     platformConfirmed?: boolean;
@@ -104,6 +116,15 @@ export interface TrainService {
 
     atocCode: string;
     atocName: string;
+
+    sequence?: number;
+
+    atocColor?: string;
+    delay?: number;
+
+    predictions?: Prediction[];
+
+    finished?: boolean;
 
     performanceMonitored?: boolean;
 

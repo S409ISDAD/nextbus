@@ -1,10 +1,10 @@
-import type { TrainService } from "../models/Trains";
+import type { ServiceLocation, TrainService } from "../models/Trains";
 import api from "../src/api";
 import { operatorMap } from "../utils/getStationDepartures";
+import { generateTimeTo } from "./timeTo";
 
 export const parseTrain = async (train: TrainService) => {
     try {
-        const now = new Date();
         const parseOperator = (atocName: string) => {
             if (!atocName) return { code: "Unknown", color: "#888888" };
             if (atocName == "Unknown") return { code: "Unknown", color: "#888888" };
@@ -25,7 +25,7 @@ export const parseTrain = async (train: TrainService) => {
             const minutes = parseInt(padded.slice(2, 4), 10);
             const seconds = parseInt(padded.slice(4, 6), 10);
             const currentDate = new Date();
-            let date = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate(), hours, minutes, seconds);
+            const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate(), hours, minutes, seconds);
             // If the time is more than 12 hours behind now, assume it's for the next day (overnight trains)
             if (date.getTime() - currentDate.getTime() < -12 * 60 * 60 * 1000) {
                 date.setDate(date.getDate() + 1);
@@ -38,11 +38,11 @@ export const parseTrain = async (train: TrainService) => {
         const updatedStops: ServiceLocation[] = train.locations
             .map((location) => {
 
-                let expectedDeparture = parseTime(location?.realtimeDeparture ?? "");
-                const scheduledDeparture = parseTime(location?.gbttBookedDeparture ?? "");
+                let expectedDeparture = parseTime(location?.realtimeDeparture ?? "") || undefined;
+                const scheduledDeparture = parseTime(location?.gbttBookedDeparture ?? "") || undefined;
 
-                let expectedArrival = parseTime(location?.realtimeArrival ?? "");
-                const scheduledArrival = parseTime(location?.gbttBookedArrival ?? "");
+                let expectedArrival = parseTime(location?.realtimeArrival ?? "") || undefined;
+                const scheduledArrival = parseTime(location?.gbttBookedArrival ?? "") || undefined;
 
                 if (!expectedDeparture) {
                     expectedDeparture = scheduledDeparture;
@@ -83,12 +83,15 @@ export const parseTrain = async (train: TrainService) => {
                     scheduledArrival,
                     delay,
                     departed,
+                    timeTo: generateTimeTo(diffSec),
                 };
             })
 
         const nextStation = updatedStops.find(stop => !stop.departed);
         const sequence = nextStation ? updatedStops.indexOf(nextStation) : updatedStops.length;
         const delay = nextStation ? nextStation.delay : updatedStops[updatedStops.length - 1].delay;
+
+
 
         return {
             ...train,

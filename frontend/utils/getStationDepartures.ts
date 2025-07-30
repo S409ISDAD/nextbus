@@ -32,17 +32,16 @@ export const operatorMap: Record<string, { code: string, color: string }> = {
 
 export const parseTrains = async (trains: TrainResponse) => {
     try {
-        const now = new Date();
         const parseTime = (timeStr: string) => {
             if (!timeStr) {
-                return null;
+                return undefined;
             }
             const padded = timeStr.padEnd(6, "0");
             const hours = parseInt(padded.slice(0, 2), 10);
             const minutes = parseInt(padded.slice(2, 4), 10);
             const seconds = parseInt(padded.slice(4, 6), 10);
             const currentDate = new Date();
-            let date = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate(), hours, minutes, seconds);
+            const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate(), hours, minutes, seconds);
             // If the time is more than 12 hours behind now, assume it's for the next day (overnight trains)
             if (date.getTime() - currentDate.getTime() < -12 * 60 * 60 * 1000) {
                 date.setDate(date.getDate() + 1);
@@ -126,9 +125,9 @@ export const parseTrains = async (trains: TrainResponse) => {
     }
 };
 
-export const filterDepartures = (trains) => {
+export const filterDepartures = (trains: TrainResponse) => {
     const now = new Date();
-    const newTrains = trains.services
+    const newTrains = (trains.services ?? [])
         .filter((train) => {
             if (!train.expectedDeparture && !train.scheduledDeparture) {
                 return false; // Skip this train if no departure info
@@ -136,12 +135,19 @@ export const filterDepartures = (trains) => {
             return true;
         })
         .filter(
-            (train) => train.expectedDeparture.getTime() - now.getTime() < 43200000
+            (train) => ((train.expectedDeparture ?? train.scheduledDeparture)?.getTime?.() ?? 0) - now.getTime() < 43200000
         )
         .filter(
-            (train) => new Date(train.expectedDeparture.getTime() + 60 * 1000) > now
+            (train) => {
+                const departure = train.expectedDeparture ?? train.scheduledDeparture;
+                return departure && new Date(departure.getTime() + 60 * 1000) > now;
+            }
         ).sort(
-            (a, b) => a.expectedDeparture.getTime() - b.expectedDeparture.getTime()
+            (a, b) => {
+                const aTime = (a.expectedDeparture ?? a.scheduledDeparture)?.getTime?.() ?? 0;
+                const bTime = (b.expectedDeparture ?? b.scheduledDeparture)?.getTime?.() ?? 0;
+                return aTime - bTime;
+            }
         );
 
     return {
@@ -150,9 +156,9 @@ export const filterDepartures = (trains) => {
     };
 };
 
-export const filterArrivals = (trains) => {
+export const filterArrivals = (trains: TrainResponse) => {
     const now = new Date();
-    const newTrains = trains.services
+    const newTrains = (trains.services ?? [])
         .filter((train) => {
             if (!train.expectedArrival && !train.scheduledArrival) {
                 return false; // Skip this train if no arrival info
@@ -160,12 +166,19 @@ export const filterArrivals = (trains) => {
             return true;
         })
         .filter(
-            (train) => train.expectedArrival.getTime() - now.getTime() < 43200000
+            (train) => ((train.expectedArrival ?? train.scheduledArrival)?.getTime?.() ?? 0) - now.getTime() < 43200000
         )
         .filter(
-            (train) => new Date(train.expectedArrival.getTime() + 60 * 1000) > now
+            (train) => {
+                const arrival = train.expectedArrival ?? train.scheduledArrival;
+                return arrival && new Date(arrival.getTime() + 60 * 1000) > now;
+            }
         ).sort(
-            (a, b) => a.expectedArrival.getTime() - b.expectedArrival.getTime()
+            (a, b) => {
+                const aTime = (a.expectedArrival ?? a.scheduledArrival)?.getTime?.() ?? 0;
+                const bTime = (b.expectedArrival ?? b.scheduledArrival)?.getTime?.() ?? 0;
+                return aTime - bTime;
+            }
         );
 
     return {
@@ -180,7 +193,10 @@ export const fetchDepartures = async (station_id: string) => {
             `/trains/station/?station_code=${station_id}&type=departures`
         );
         const trains = await parseTrains(response.data);
-        return await filterDepartures(trains);
+        if (!trains) {
+            return null;
+        }
+        return filterDepartures(trains);
 
     } catch (error) {
         console.error("failed to get departures", error);
@@ -194,7 +210,10 @@ export const fetchArrivals = async (station_id: string) => {
             `/trains/station/?station_code=${station_id}&type=arrivals`
         );
         const trains = await parseTrains(response.data);
-        return await filterArrivals(trains);
+        if (!trains) {
+            return null;
+        }
+        return filterArrivals(trains);
 
     } catch (error) {
         console.error("failed to get arrivals", error);

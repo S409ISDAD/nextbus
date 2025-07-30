@@ -3,15 +3,13 @@ import React, { useEffect } from "react";
 // import { faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
 // import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import StopMap from "../components/StopMap";
-import DepartureBoard from "../components/DepartureBoard";
 import { Card } from "../components/ui/Card";
-import { useNavigate } from "react-router";
 import { getCurrentPosition } from "../utils/locations";
 import type { ServiceInfo } from "../models/ServiceInfo";
 import getNearby from "../utils/getNearby";
 
 const Home: React.FC = () => {
-    const navigate = useNavigate();
+    // const navigate = useNavigate();
 
     const [services, setServices] = React.useState<ServiceInfo[]>([]);
 

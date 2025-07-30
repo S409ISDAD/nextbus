@@ -1,27 +1,15 @@
 import { useEffect, useRef, useState } from "react";
-import type { Journey } from "../models/Journey";
 import { fetchTrain } from "../utils/getTrain";
 import { useNavigate, useParams } from "react-router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { lateness } from "../utils/timeTo";
 import { Pulse } from "../components/ui/Pulse";
-import generateWholeTrack from "../utils/locations";
 import {
     faCalendarXmark,
     faTrainSubway,
     faWarning,
 } from "@fortawesome/free-solid-svg-icons";
-import type { Bus, Prediction } from "../models/Bus";
-import {
-    MapContainer,
-    Marker,
-    Polyline,
-    Popup,
-    TileLayer,
-    useMap,
-} from "react-leaflet";
-import { LocateControl } from "leaflet.locatecontrol";
-import "leaflet.locatecontrol/dist/L.Control.Locate.min.css";
+import type { Prediction } from "../models/Bus";
 import type { TrainService } from "../models/Trains";
 
 const TrainPage: React.FC = () => {
@@ -33,9 +21,7 @@ const TrainPage: React.FC = () => {
     const [predictions, setPredictions] = useState<Prediction[]>();
     const [sequence, setSeq] = useState<number>(0);
     const [progress, setProg] = useState<number>(0);
-    const [location, setLoc] = useState<number[]>([0, 0]);
-    const [accuracy, setAccuracy] = useState<string>("unknown");
-    const [journey, setJourney] = useState<Journey>();
+    // const [location, setLoc] = useState<number[]>([0, 0]);
     const [loading, setLoading] = useState(true);
     const [fetching, setFetching] = useState(false);
     const [lastRefreshed, setRefreshed] = useState(new Date());
@@ -67,7 +53,30 @@ const TrainPage: React.FC = () => {
     useEffect(() => {
         const interval = setInterval(() => {
             const now = new Date();
+            const diffSec = Math.floor(
+                (now.getTime() - lastRefreshed.getTime()) / 1000
+            );
+            const min = Math.floor(diffSec / 60);
+            const sec = diffSec % 60;
 
+            setElapsed(min > 0 ? `${min}m ${sec}s` : `${sec}s`);
+        }, 1000);
+        return () => clearInterval(interval);
+    }, [lastRefreshed]);
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            const now = new Date();
+            if (train && train.locations && train.locations.length > 0) {
+                const lastStop = train.locations[train.locations.length - 1];
+                if (
+                    lastStop.scheduledArrival &&
+                    now.getTime() > lastStop.scheduledArrival.getTime()
+                ) {
+                    setProg(0);
+                    return;
+                }
+            }
             if (!predictions || predictions.length < 2) {
                 setSeq(train?.sequence ? train.sequence - 1 : 0);
                 if (train?.sequence === 0) {
@@ -97,9 +106,6 @@ const TrainPage: React.FC = () => {
             const newProgress = upcoming.progress;
             const prevProgress = prev.progress;
 
-            const newCoords = upcoming.location;
-            const prevCoords = prev.location;
-
             const progressDelta = newProgress - prevProgress;
 
             const timeDelta = upcoming.timestamp * 1000 - now.getTime();
@@ -113,17 +119,6 @@ const TrainPage: React.FC = () => {
             setProg(interpolatedProgress);
 
             setSeq(upcoming.sequence);
-
-            const latDelta = newCoords[0] - prevCoords[0];
-            const lngDelta = newCoords[1] - prevCoords[1];
-
-            const lat =
-                prevCoords[0] + latDelta * (-timeDelta / predictionDuration);
-
-            const lng =
-                prevCoords[1] + lngDelta * (-timeDelta / predictionDuration);
-
-            setLoc([lat, lng]);
         }, 200);
         return () => clearInterval(interval);
     }, [predictions, train?.sequence]);
@@ -149,7 +144,7 @@ const TrainPage: React.FC = () => {
             }
             setFetching(true);
             try {
-                const train_response: TrainService = await fetchTrain(
+                const train_response: TrainService | null = await fetchTrain(
                     service_id
                 );
 
@@ -157,7 +152,8 @@ const TrainPage: React.FC = () => {
 
                 if (train_response) {
                     setTrain(train_response);
-                    setSeq(train.sequence);
+                    setSeq(train_response.sequence ?? 0);
+                    setPredictions(train_response.predictions ?? undefined);
                     setProg(0.5);
                     // setPredictions(bus_response.predictions);
                     document.title = `${train_response.origin[0].description} to ${train_response.destination[0].description} | nextbus`;
@@ -214,7 +210,7 @@ const TrainPage: React.FC = () => {
                             <div className="flex gap-3">
                                 <a
                                     className="underline text-sky-500"
-                                    href={`https://realtimetrains.co.uk/train/${train.service_id}`}
+                                    href={`https://realtimetrains.co.uk/train/${train.serviceUid}`}
                                     target="_blank">
                                     View on realtimetrains
                                 </a>
@@ -240,7 +236,9 @@ const TrainPage: React.FC = () => {
                                 </div>
                                 <div className="flex justify-center px-2 py-1 rounded-lg bg-neutral-800/50">
                                     <span className="font-bold align-middle text">
-                                        {lateness(train ? train.delay : 0)}
+                                        {lateness(
+                                            train.delay ? train.delay : 0
+                                        )}
                                     </span>
                                 </div>
                             </div>
