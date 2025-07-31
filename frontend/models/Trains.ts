@@ -32,6 +32,10 @@ export interface LocationDetail {
     realtimeArrivalActual?: boolean;
     realtimeDeparture?: string;
     realtimeDepartureActual?: boolean;
+    expectedDeparture?: string;
+    expectedArrival?: string;
+    scheduledDeparture?: string;
+    scheduledArrival?: string;
     platform?: string;
     platformConfirmed?: boolean;
     platformChanged?: boolean;
@@ -41,7 +45,7 @@ export interface LocationDetail {
 export interface Train {
     locationDetail: LocationDetail;
     serviceUid: string;
-    runDate: string;
+    runstring: string;
     trainIdentity: string;
     runningIdentity?: string;
     atocCode: string;
@@ -51,10 +55,6 @@ export interface Train {
     timeto?: string;
     serviceType: string;
     isPassenger: boolean;
-    expectedDeparture?: Date;
-    expectedArrival?: Date;
-    scheduledDeparture?: Date;
-    scheduledArrival?: Date;
 }
 
 export interface TrainResponse {
@@ -85,10 +85,10 @@ export interface ServiceLocation {
     realtimeArrivalActual?: boolean;
     realtimeDeparture?: string;
     realtimeDepartureActual?: boolean;
-    expectedArrival?: Date;
-    expectedDeparture?: Date;
-    scheduledArrival?: Date;
-    scheduledDeparture?: Date;
+    expectedArrival?: string;
+    expectedDeparture?: string;
+    scheduledArrival?: string;
+    scheduledDeparture?: string;
 
     departed?: boolean;
     delay?: number;
@@ -106,7 +106,7 @@ export interface ServiceLocation {
 
 export interface TrainService {
     serviceUid: string;
-    runDate: string;
+    runstring: string;
     serviceType: string;
     isPassenger: boolean;
     trainIdentity: string;
@@ -118,6 +118,9 @@ export interface TrainService {
     atocName: string;
 
     sequence?: number;
+    progress?: number;
+
+    nextStation?: ServiceLocation;
 
     atocColor?: string;
     delay?: number;

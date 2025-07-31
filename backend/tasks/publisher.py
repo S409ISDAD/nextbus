@@ -5,7 +5,8 @@ from time import time
 from redis.asyncio import Redis
 from typing import Set
 from datetime import datetime, timezone
-from .get_departures import get_departures  # or wherever your data lives
+from .get_departures import get_departures
+from backend.deps import DateTimeEncoder
 
 active: dict[str, Set[str]] = {}
 publish_tasks: dict[str, asyncio.Task] = {}
@@ -29,13 +30,19 @@ async def publish_loop(channel: str, key: str, redis: Redis):
             payload = {
                 "type": "departures",
                 "data": {
-                    "timestamp": int(datetime.now(timezone.utc).timestamp()),
+                    "timestamp": datetime.now(timezone.utc),
                     "buses": jsonable_encoder(departures),
                 },
             }
 
-            await redis.publish(f"stop:departures:{key}", json.dumps(payload))
-            await redis.set(f"stop:departures:{key}", json.dumps(payload), ex=40)
+            await redis.publish(
+                f"stop:departures:{key}", json.dumps(payload, cls=DateTimeEncoder)
+            )
+            await redis.set(
+                f"stop:departures:{key}",
+                json.dumps(payload, cls=DateTimeEncoder),
+                ex=40,
+            )
 
             await asyncio.sleep(20 - avg)
     except asyncio.CancelledError:

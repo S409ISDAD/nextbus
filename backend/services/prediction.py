@@ -9,12 +9,10 @@ from backend.services.journeys import get_trip, get_vehicle_journey
 from datetime import datetime as dt
 
 
-async def calculate_sequence(
-    stops: list[StopTime], future_time: int, extra: int
-) -> int:
+async def calculate_sequence(stops: list[StopTime], future_time: dt, extra: int) -> int:
     sequence = 0
     for stop in stops:
-        if stop.expt_time and stop.expt_time + extra > future_time:
+        if stop.expt_time and stop.expt_time + timedelta(seconds=extra) > future_time:
             return sequence - 1
 
         sequence += 1
@@ -22,10 +20,10 @@ async def calculate_sequence(
     return max(0, sequence)
 
 
-async def calculate_progress(prev_expt: int, next_expt: int, future_time: int) -> float:
-    stops_diff = abs(next_expt - prev_expt - 5)
+async def calculate_progress(prev_expt: dt, next_expt: dt, future_time: dt) -> float:
+    stops_diff = abs(next_expt - prev_expt - timedelta(seconds=5))
 
-    current_diff = abs(future_time - prev_expt + 5)
+    current_diff = abs(future_time - prev_expt + timedelta(seconds=5))
 
     if stops_diff == 0:
         return 0
@@ -95,7 +93,7 @@ async def predict_future(
     max_offset = 20  # cap adjustment to ±20s
 
     for seconds_ahead in range(ahead + 1):
-        future_time = int(current_time.timestamp() + seconds_ahead)
+        future_time = current_time + timedelta(seconds=seconds_ahead)
 
         timestamp = None
 
@@ -117,8 +115,8 @@ async def predict_future(
         if sequence >= len(stops) - 1:
             break
 
-        prev_expt = stops[sequence].expt_time + extra
-        next_expt = stops[sequence + 1].expt_time + extra
+        prev_expt = stops[sequence].expt_time + timedelta(seconds=extra)
+        next_expt = stops[sequence + 1].expt_time + timedelta(seconds=extra)
 
         if prev_expt and next_expt:
             progress = await calculate_progress(prev_expt, next_expt, future_time)
@@ -157,9 +155,7 @@ async def calculate_expected(delay, sequence, stop_id, journey_id, r):
 
     for stop_time in journey.stops:
         if stop_idx == 0:
-            scheduled_time_start = dt.fromtimestamp(stop_time.aimed_time).astimezone(
-                uk_timezone
-            )
+            scheduled_time_start = stop_time.aimed_time
 
             if (scheduled_time_start > current_time) and (sequence < 2):
                 not_started = True
@@ -169,7 +165,7 @@ async def calculate_expected(delay, sequence, stop_id, journey_id, r):
             if not aimed:
                 include = False
                 break
-            scheduled_time = dt.fromtimestamp(aimed).astimezone(uk_timezone)
+            scheduled_time = aimed
 
             if not_started:
                 delay = 0
@@ -180,20 +176,12 @@ async def calculate_expected(delay, sequence, stop_id, journey_id, r):
                 include = False
                 break
         if stop_idx == len(journey.stops) - 1:
-            scheduled_time_end = dt.fromtimestamp(stop_time.aimed_time).astimezone(
-                uk_timezone
-            )
+            scheduled_time_end = stop_time.aimed_time
 
             if scheduled_time_end + timedelta(seconds=delay + 60) < current_time:
                 finished = True
 
         stop_idx += 1
-
-    if expected_time:
-        expected_time = int(expected_time.timestamp())
-
-    if scheduled_time:
-        scheduled_time = int(scheduled_time.timestamp())
 
     return Times(
         expected=expected_time,
@@ -217,17 +205,13 @@ async def get_started_finished(trip_id, r):
 
     for stop_time in trip.stops:
         if stop_idx == 0:
-            scheduled_time_start = dt.fromtimestamp(stop_time.aimed_time).astimezone(
-                uk_timezone
-            )
+            scheduled_time_start = stop_time.aimed_time
 
             if scheduled_time_start > current_time:
                 not_started = True
 
         if stop_idx == len(trip.stops) - 1:
-            scheduled_time_end = dt.fromtimestamp(stop_time.aimed_time).astimezone(
-                uk_timezone
-            )
+            scheduled_time_end = stop_time.aimed_time
 
             if scheduled_time_end + timedelta(seconds=60) < current_time:
                 finished = True

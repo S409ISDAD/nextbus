@@ -6,7 +6,7 @@ import getStopData from "../utils/getStopData";
 import { useNavigate, useParams } from "react-router";
 import { Skeleton } from "@radix-ui/themes";
 import { Card } from "../components/ui/Card";
-import timeTo, { lateness } from "../utils/timeTo";
+import timeTo, { lateness, toTime } from "../utils/timeUtils";
 import { getClosestStop } from "../utils/closestStop";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -47,12 +47,7 @@ function BusCard({ bus, onClick }: { bus: Departure; onClick: () => void }) {
                             <span className="text-xs">
                                 {isTrackedBus(bus) ? "Expt:" : "Schd:"}
                             </span>
-                            <span>
-                                {bus.expected.toLocaleTimeString([], {
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                })}
-                            </span>
+                            <span>{toTime(bus.expected)}</span>
                         </div>
                         {isTrackedBus(bus) && (
                             <span
@@ -174,7 +169,9 @@ const DeparturePage: React.FC = () => {
                     };
                 })
                 .filter(
-                    (bus) => new Date(bus.expected.getTime() + 60 * 1000) > now
+                    (bus) =>
+                        new Date(new Date(bus.expected).getTime() + 60 * 1000) >
+                        now
                 );
 
             setBuses(newBuses);

@@ -31,8 +31,11 @@ async def departures_scheduled(
         buses = [bus for bus in buses if bus is not None]
 
         uk_timezone = datetime.timezone(timedelta(hours=1))
-        current_time = math.floor(
-            dt.now(datetime.timezone.utc).astimezone(uk_timezone).timestamp()
+        current_time = (
+            dt.now(datetime.timezone.utc)
+            .astimezone(uk_timezone)
+            .isoformat()
+            .replace("+00:00", "Z")
         )
         return {"buses": buses, "timestamp": current_time}
     except Exception as e:
@@ -51,8 +54,11 @@ async def departures_live(request: Request, stop_id: str, redis=Depends(get_redi
         buses = await bus.fetch_buses_live(service_ids, stop_id, redis)
 
         uk_timezone = datetime.timezone(timedelta(hours=1))
-        current_time = math.floor(
-            dt.now(datetime.timezone.utc).astimezone(uk_timezone).timestamp()
+        current_time = (
+            dt.now(datetime.timezone.utc)
+            .astimezone(uk_timezone)
+            .isoformat()
+            .replace("+00:00", "Z")
         )
         return {"buses": buses, "timestamp": current_time}
     except Exception as e:
@@ -73,9 +79,13 @@ async def departures(request: Request, stop_id: str, redis=Depends(get_redis)):
         buses = await bus.fetch_buses(service_ids, stop_id, times, redis)
 
         uk_timezone = datetime.timezone(timedelta(hours=1))
-        current_time = math.floor(
-            dt.now(datetime.timezone.utc).astimezone(uk_timezone).timestamp()
+        current_time = (
+            dt.now(datetime.timezone.utc)
+            .astimezone(uk_timezone)
+            .isoformat()
+            .replace("+00:00", "Z")
         )
+
         return {"buses": buses, "timestamp": current_time}
     except Exception as e:
         log.error(f"Unexpected error: {e}")

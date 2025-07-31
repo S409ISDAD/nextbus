@@ -63,8 +63,8 @@ async def get_vehicle_journey(journey_id, delay, r) -> Journey:
 
                 prev_time = old_expt
 
-                stop["aimed_time"] = scheduled_time.timestamp()
-                stop["expt_time"] = expt_time.timestamp()
+                stop["aimed_time"] = scheduled_time
+                stop["expt_time"] = expt_time
 
         # data["stops"] = await recalculate_timetable(data["stops"], journey_id, r)
 
@@ -94,12 +94,16 @@ async def get_vehicle_journey(journey_id, delay, r) -> Journey:
 
         coords = [coords[1], coords[0]]
 
+        expt = stop.get("expt_time")
+        if type(expt) is str:
+            expt = dt.fromisoformat(expt)
+
         stops.append(
             StopTime(
                 stop_id=stop["stop"].get("atco_code"),
                 name=stop["stop"].get("name"),
                 aimed_time=stop.get("aimed_time"),
-                expt_time=stop.get("expt_time") + delay,
+                expt_time=expt + timedelta(seconds=delay),
                 track=track,
                 coords=coords,
                 set_down=stop.get("set_down"),
@@ -162,8 +166,8 @@ async def get_trip(trip_id, delay, r) -> Trip:
 
                 prev_time = old_expt
 
-                stop["aimed_time"] = scheduled_time.timestamp()
-                stop["expt_time"] = expt_time.timestamp()
+                stop["aimed_time"] = scheduled_time
+                stop["expt_time"] = expt_time
 
         # data["stops"] = await recalculate_timetable(data["stops"], journey_id, r)
 
@@ -193,12 +197,16 @@ async def get_trip(trip_id, delay, r) -> Trip:
 
         coords = [coords[1], coords[0]]
 
+        expt = stop.get("expt_time")
+        if type(expt) is str:
+            expt = dt.fromisoformat(expt)
+
         stops.append(
             StopTime(
                 stop_id=stop["stop"].get("atco_code"),
                 name=stop["stop"].get("name"),
                 aimed_time=stop.get("aimed_time"),
-                expt_time=stop.get("expt_time") + delay,
+                expt_time=(expt + timedelta(seconds=delay)),
                 track=track,
                 coords=coords,
                 set_down=stop.get("set_down"),

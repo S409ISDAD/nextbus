@@ -101,9 +101,11 @@ async def fetch_buses_live(services, stop_id, r: Redis) -> list[TrackedBus]:
 
 
 async def build_scheduled(time, r, include_started=True):
-    scheduled = int(parser.isoparse(time.get("aimed_departure_time")).timestamp())
+    scheduled = parser.isoparse(time.get("aimed_departure_time"))
+
     if time.get("expected_departure_time"):
-        expected = int(parser.isoparse(time.get("expected_departure_time")).timestamp())
+        expected = parser.isoparse(time.get("expected_departure_time"))
+
     else:
         expected = scheduled
 
@@ -166,11 +168,7 @@ async def build_bus(
     if not delay:
         return None
 
-    timestamp = (
-        int(parser.isoparse(this_bus.get("datetime")).timestamp())
-        if this_bus.get("datetime")
-        else None
-    )
+    timestamp = this_bus.get("datetime")
 
     coords = this_bus.get("coordinates", [0, 0])
     vehicle = this_bus.get("vehicle", {})

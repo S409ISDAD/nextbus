@@ -7,8 +7,8 @@ export interface ScheduledBus {
     type: string;
     line: string;
     destination: string;
-    expected: Date;
-    scheduled: Date;
+    expected: string;
+    scheduled: string;
     timeto: string;
     started: boolean;
     trip: number;
@@ -19,7 +19,7 @@ export interface Bus {
     type: string;
     id: number;
     trip: number;
-    timestamp: Date;
+    timestamp: string;
     service: ServiceInfo;
     destination: string;
     reg: string;
@@ -27,8 +27,8 @@ export interface Bus {
     fleet_num: string;
     journey_id: number;
     delay: number;
-    expected: Date;
-    scheduled: Date;
+    expected: string;
+    scheduled: string;
     started: boolean;
     finished: boolean;
     progress?: ProgressInfo;
@@ -41,7 +41,7 @@ export interface Bus {
 }
 
 export interface Prediction {
-    timestamp: number;
+    timestamp: string;
     sequence: number;
     progress: number;
     location: number[];

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { fetchTrain } from "../utils/getTrain";
 import { useNavigate, useParams } from "react-router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { lateness } from "../utils/timeTo";
+import { lateness, toTime } from "../utils/timeUtils";
 import { Pulse } from "../components/ui/Pulse";
 import {
     faCalendarXmark,
@@ -11,6 +11,33 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import type { Prediction } from "../models/Bus";
 import type { TrainService } from "../models/Trains";
+import React from "react";
+
+export const TrainProgress: React.FC<{
+    sequence: number;
+    progress: number;
+    trainRef: React.RefObject<HTMLDivElement | null>;
+}> = React.memo(({ sequence, progress, trainRef }) => {
+    const sectionLength = 72;
+    const translateY = (sequence + progress) * sectionLength;
+
+    return (
+        <div className="absolute top-0 left-0 h-full mt-[15px] z-11 w-9">
+            <div
+                className="absolute transition-all duration-500 ease-in-out translate-x-[-16px]"
+                style={{ transform: `translateY(${translateY}px)` }}>
+                <div className="relative flex items-center justify-center">
+                    <Pulse size={36} color="bg-rose-400" duration={2} />
+                    <div
+                        className="relative z-10 flex items-center justify-center p-2 rounded-full bg-rose-500 w-9 h-9"
+                        ref={trainRef}>
+                        <FontAwesomeIcon icon={faTrainSubway} />
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+});
 
 const TrainPage: React.FC = () => {
     const { service_id } = useParams();
@@ -28,28 +55,6 @@ const TrainPage: React.FC = () => {
     const [elapsed, setElapsed] = useState<string>("0s");
     const [msg, setMsg] = useState<string>("");
 
-    const TrainProgress = () => {
-        const sectionLength = 72;
-        const translateY = (sequence + progress) * sectionLength;
-
-        return (
-            <div className="absolute top-0 left-0 h-full mt-[15px] z-11 w-9">
-                <div
-                    className="absolute transition-all duration-300 ease-in-out translate-x-[-15px]"
-                    style={{ transform: `translateY(${translateY}px)` }}>
-                    <div className="relative flex items-center justify-center">
-                        <Pulse size={36} color="bg-rose-400" duration={2} />
-                        <div
-                            className="relative z-10 flex items-center justify-center p-2 rounded-full bg-rose-500 w-9 h-9"
-                            ref={busRef}>
-                            <FontAwesomeIcon icon={faTrainSubway} />
-                        </div>
-                    </div>
-                </div>
-            </div>
-        );
-    };
-
     useEffect(() => {
         const interval = setInterval(() => {
             const now = new Date();
@@ -62,21 +67,11 @@ const TrainPage: React.FC = () => {
             setElapsed(min > 0 ? `${min}m ${sec}s` : `${sec}s`);
         }, 1000);
         return () => clearInterval(interval);
-    }, [lastRefreshed]);
+    }, []);
 
     useEffect(() => {
         const interval = setInterval(() => {
             const now = new Date();
-            if (train && train.locations && train.locations.length > 0) {
-                const lastStop = train.locations[train.locations.length - 1];
-                if (
-                    lastStop.scheduledArrival &&
-                    now.getTime() > lastStop.scheduledArrival.getTime()
-                ) {
-                    setProg(0);
-                    return;
-                }
-            }
             if (!predictions || predictions.length < 2) {
                 setSeq(train?.sequence ? train.sequence - 1 : 0);
                 if (train?.sequence === 0) {
@@ -84,33 +79,40 @@ const TrainPage: React.FC = () => {
                 } else {
                     setProg(0.5);
                 }
-                // setProg(train?.progress ? train.progress.progress : 0);
 
-                // const lat = train?.coords?.[1] ?? 0;
-                // const lng = train?.coords?.[0] ?? 0;
-                // setLoc([lat, lng]);
+                if (
+                    train?.nextStation?.expectedArrival &&
+                    now.getTime() >
+                        new Date(train?.nextStation?.expectedArrival).getTime()
+                ) {
+                    setProg(1);
+                }
+                setProg(train?.progress ? train.progress : 0);
                 return;
             }
 
             const upcoming = predictions.find((pred) => {
-                const nextTime = pred.timestamp * 1000;
+                const nextTime = new Date(pred.timestamp).getTime();
                 return nextTime > now.getTime();
             });
 
             if (!upcoming) return;
 
+            const upcoming_timestamp = new Date(upcoming.timestamp);
+
             const idx = predictions.indexOf(upcoming);
 
             const prev = predictions[idx - 1];
+            const prev_timestamp = new Date(prev.timestamp);
 
             const newProgress = upcoming.progress;
             const prevProgress = prev.progress;
 
             const progressDelta = newProgress - prevProgress;
 
-            const timeDelta = upcoming.timestamp * 1000 - now.getTime();
+            const timeDelta = upcoming_timestamp.getTime() - now.getTime();
             const predictionDuration =
-                (upcoming.timestamp - prev.timestamp) * 1000;
+                upcoming_timestamp.getTime() - prev_timestamp.getTime();
 
             const interpolatedProgress =
                 prevProgress +
@@ -123,12 +125,12 @@ const TrainPage: React.FC = () => {
         return () => clearInterval(interval);
     }, [predictions, train?.sequence]);
 
-    const busRef = useRef<HTMLDivElement>(null);
+    const trainRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        if (busRef.current) {
+        if (trainRef.current) {
             requestAnimationFrame(() => {
-                busRef.current?.scrollIntoView({
+                trainRef.current?.scrollIntoView({
                     behavior: "smooth",
                     block: "center",
                 });
@@ -152,13 +154,18 @@ const TrainPage: React.FC = () => {
 
                 if (train_response) {
                     setTrain(train_response);
-                    setSeq(train_response.sequence ?? 0);
-                    setPredictions(train_response.predictions ?? undefined);
-                    setProg(0.5);
-                    // setPredictions(bus_response.predictions);
+                    setPredictions(train_response.predictions);
                     document.title = `${train_response.origin[0].description} to ${train_response.destination[0].description} | nextbus`;
                     setMsg("");
                     setRefreshed(now);
+                    setTimeout(() => {
+                        requestAnimationFrame(() => {
+                            trainRef.current?.scrollIntoView({
+                                behavior: "smooth",
+                                block: "center",
+                            });
+                        });
+                    }, 1000);
                 } else {
                     setMsg("Failed to fetch bus. Try reloading the page");
                 }
@@ -175,7 +182,7 @@ const TrainPage: React.FC = () => {
                 interval = setInterval(() => getData(service_id), 30000);
             } catch (error) {
                 console.error("Init error:", error);
-                setMsg("Unable to get journey data.");
+                setMsg("Unable to get train service data.");
                 setLoading(false);
                 setFetching(false);
             }
@@ -193,20 +200,17 @@ const TrainPage: React.FC = () => {
     }
 
     return (
-        <div className="px-3 md:px-0">
+        <div className="">
             <div className="flex flex-col">
-                <div className="fixed flex flex-col w-full gap-2 p-3 top-0 mt-12 grow bg-[#111111] z-15 rounded-b-2xl">
+                <div className="fixed flex flex-col w-full gap-2 p-3 top-0 mt-13 grow bg-[#111111] z-15 rounded-b-2xl">
                     {train ? (
                         <div className="flex flex-col items-center justify-center gap-2">
-                            <div className="flex flex-row items-stretch p-2">
-                                <div className="flex items-center gap-2 text-2xl font-bold">
-                                    <span>{train.origin[0].description}</span>
-                                    <span>to</span>
-                                    <span>
-                                        {train.destination[0].description}
-                                    </span>
-                                </div>
+                            <div className="flex flex-wrap items-center justify-center w-full gap-2 text-2xl font-bold">
+                                <span>{train.origin[0].description}</span>
+                                <span>to</span>
+                                <span>{train.destination[0].description}</span>
                             </div>
+
                             <div className="flex gap-3">
                                 <a
                                     className="underline text-sky-500"
@@ -283,10 +287,13 @@ const TrainPage: React.FC = () => {
                         </span>
                     </div>
                 ) : (
-                    <div className="flex flex-row gap-2">
+                    <div className="flex flex-row gap-2 px-3 md:px-0">
                         <div className="relative flex mx-5 mt-44 md:mx-40">
                             <div className="relative flex flex-col items-center py-8">
-                                <TrainProgress></TrainProgress>
+                                <TrainProgress
+                                    sequence={sequence}
+                                    progress={progress}
+                                    trainRef={trainRef}></TrainProgress>
                                 {train.locations.map((stop, idx) => (
                                     <div
                                         key={stop.crs}
@@ -343,6 +350,37 @@ const TrainPage: React.FC = () => {
                                                             ? stop.platform
                                                             : "-"}
                                                     </span>
+
+                                                    {/* Show "At station" if current time is after arrival but before departure */}
+                                                    {(() => {
+                                                        const now = new Date();
+                                                        const arrival =
+                                                            stop.expectedArrival
+                                                                ? new Date(
+                                                                      stop.expectedArrival
+                                                                  )
+                                                                : null;
+                                                        const departure =
+                                                            stop.expectedDeparture
+                                                                ? new Date(
+                                                                      stop.expectedDeparture
+                                                                  )
+                                                                : null;
+                                                        if (
+                                                            arrival &&
+                                                            departure &&
+                                                            now >= arrival &&
+                                                            now <= departure &&
+                                                            !stop.departed
+                                                        ) {
+                                                            return (
+                                                                <span className="px-2 py-1 ml-2 text-xs font-bold text-blue-400 rounded-full bg-blue-500/20">
+                                                                    At station
+                                                                </span>
+                                                            );
+                                                        }
+                                                        return null;
+                                                    })()}
                                                 </div>
 
                                                 {/* <div className="flex flex-row gap-6 px-2 py-1 font-bold bg-neutral-800/50 rounded-b-2xl">
@@ -389,19 +427,13 @@ const TrainPage: React.FC = () => {
                                                         {idx ===
                                                         train.locations.length -
                                                             1
-                                                            ? stop.scheduledArrival?.toLocaleTimeString(
-                                                                  [],
-                                                                  {
-                                                                      hour: "2-digit",
-                                                                      minute: "2-digit",
-                                                                  }
-                                                              )
-                                                            : stop.scheduledDeparture?.toLocaleTimeString(
-                                                                  [],
-                                                                  {
-                                                                      hour: "2-digit",
-                                                                      minute: "2-digit",
-                                                                  }
+                                                            ? stop.scheduledArrival
+                                                                ? toTime(
+                                                                      stop.scheduledArrival
+                                                                  )
+                                                                : "-"
+                                                            : toTime(
+                                                                  stop.scheduledDeparture
                                                               )}
                                                     </span>
 
@@ -419,17 +451,17 @@ const TrainPage: React.FC = () => {
                                                                     stop.expectedArrival &&
                                                                     stop.scheduledArrival &&
                                                                     Math.abs(
-                                                                        stop.expectedArrival.getTime() -
-                                                                            stop.scheduledArrival.getTime()
+                                                                        new Date(
+                                                                            stop.expectedArrival
+                                                                        ).getTime() -
+                                                                            new Date(
+                                                                                stop.scheduledArrival
+                                                                            ).getTime()
                                                                     ) >
                                                                         60000 ? (
                                                                         <span className="font-bold text-blue-400">
-                                                                            {stop.expectedArrival.toLocaleTimeString(
-                                                                                [],
-                                                                                {
-                                                                                    hour: "2-digit",
-                                                                                    minute: "2-digit",
-                                                                                }
+                                                                            {toTime(
+                                                                                stop.expectedArrival
                                                                             )}
                                                                         </span>
                                                                     ) : (
@@ -441,16 +473,16 @@ const TrainPage: React.FC = () => {
                                                                 ) : stop.expectedDeparture &&
                                                                   stop.scheduledDeparture &&
                                                                   Math.abs(
-                                                                      stop.expectedDeparture.getTime() -
-                                                                          stop.scheduledDeparture.getTime()
+                                                                      new Date(
+                                                                          stop.expectedDeparture
+                                                                      ).getTime() -
+                                                                          new Date(
+                                                                              stop.scheduledDeparture
+                                                                          ).getTime()
                                                                   ) > 60000 ? (
                                                                     <span className="font-bold text-red-400">
-                                                                        {stop.expectedDeparture.toLocaleTimeString(
-                                                                            [],
-                                                                            {
-                                                                                hour: "2-digit",
-                                                                                minute: "2-digit",
-                                                                            }
+                                                                        {toTime(
+                                                                            stop.expectedDeparture
                                                                         )}
                                                                     </span>
                                                                 ) : (
@@ -468,19 +500,19 @@ const TrainPage: React.FC = () => {
                                                                     stop.expectedArrival &&
                                                                     stop.scheduledArrival &&
                                                                     Math.abs(
-                                                                        stop.expectedArrival.getTime() -
-                                                                            stop.scheduledArrival.getTime()
+                                                                        new Date(
+                                                                            stop.expectedArrival
+                                                                        ).getTime() -
+                                                                            new Date(
+                                                                                stop.scheduledArrival
+                                                                            ).getTime()
                                                                     ) >
                                                                         60000 ? (
                                                                         <>
                                                                             <span className="font-bold text-blue-400">
                                                                                 Exptected{" "}
-                                                                                {stop.expectedArrival.toLocaleTimeString(
-                                                                                    [],
-                                                                                    {
-                                                                                        hour: "2-digit",
-                                                                                        minute: "2-digit",
-                                                                                    }
+                                                                                {toTime(
+                                                                                    stop.expectedArrival
                                                                                 )}
                                                                             </span>
                                                                         </>
@@ -493,18 +525,18 @@ const TrainPage: React.FC = () => {
                                                                 ) : stop.expectedDeparture &&
                                                                   stop.scheduledDeparture &&
                                                                   Math.abs(
-                                                                      stop.expectedDeparture.getTime() -
-                                                                          stop.scheduledDeparture.getTime()
+                                                                      new Date(
+                                                                          stop.expectedDeparture
+                                                                      ).getTime() -
+                                                                          new Date(
+                                                                              stop.scheduledDeparture
+                                                                          ).getTime()
                                                                   ) > 60000 ? (
                                                                     <>
                                                                         <span className="font-bold text-blue-400">
                                                                             Expected{" "}
-                                                                            {stop.expectedDeparture.toLocaleTimeString(
-                                                                                [],
-                                                                                {
-                                                                                    hour: "2-digit",
-                                                                                    minute: "2-digit",
-                                                                                }
+                                                                            {toTime(
+                                                                                stop.expectedDeparture
                                                                             )}
                                                                         </span>
                                                                     </>

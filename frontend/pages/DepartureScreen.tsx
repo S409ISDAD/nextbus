@@ -4,8 +4,7 @@ import fetchDepartures from "../utils/getDepartures";
 
 import { useParams } from "react-router";
 
-import timeTo from "../utils/timeTo";
-import mergeLive from "../utils/mergeLive";
+import timeTo, { toTime } from "../utils/timeUtils";
 
 const DepartureScreen: React.FC = () => {
     const { stop_id } = useParams();
@@ -28,7 +27,9 @@ const DepartureScreen: React.FC = () => {
                     };
                 })
                 .filter(
-                    (bus) => new Date(bus.expected.getTime() + 60 * 1000) > now
+                    (bus) =>
+                        new Date(new Date(bus.expected).getTime() + 60 * 1000) >
+                        now
                 );
 
             setBuses(newBuses);
@@ -57,9 +58,8 @@ const DepartureScreen: React.FC = () => {
 
                     const liveResult = await fetchDepartures(id, "live");
                     if (liveResult) {
-                        setBuses((prev) =>
-                            mergeLive(prev, liveResult.updatedBuses)
-                        );
+                        setBuses(liveResult.updatedBuses);
+
                         setRefreshed(liveResult.timestamp);
                     }
                     firstFetch.current = false;
@@ -107,12 +107,10 @@ const DepartureScreen: React.FC = () => {
                     </span>
 
                     <span>
-                        {bus.expected.getTime() - new Date().getTime() >
+                        {new Date(bus.expected).getTime() -
+                            new Date().getTime() >
                         45 * 60 * 1000
-                            ? bus.expected.toLocaleTimeString([], {
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                              })
+                            ? toTime(bus.expected)
                             : bus.timeto}
                     </span>
                 </div>

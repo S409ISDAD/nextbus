@@ -1,5 +1,6 @@
 from typing import Optional
 from pydantic import BaseModel
+from datetime import datetime
 
 from backend.models.journey import Journey
 from backend.models.livery import Livery
@@ -12,8 +13,8 @@ class ScheduledBus(BaseModel):
     type: str = "scheduled"
     destination: str
     line: str
-    scheduled: int
-    expected: int
+    scheduled: datetime
+    expected: datetime
     started: bool
     trip: int
     status: str
@@ -23,7 +24,7 @@ class TrackedBus(BaseModel):
     type: str = "tracked"
     id: int
     trip: int
-    timestamp: Optional[int]
+    timestamp: Optional[datetime]
     service: Optional[Service]
     destination: str
     reg: str  # vehicle license plate
@@ -31,8 +32,8 @@ class TrackedBus(BaseModel):
     bus_type: str  # double decker
     journey_id: int
     delay: int  # how many seconds behind/ahead e.g. 120 = 2 min late, -60 = 1 min early
-    expected: Optional[int]  # expected arrival time at stop (unix timestamp)
-    scheduled: Optional[int]  # scheduled arrival time at stop (unix timestamp)
+    expected: Optional[datetime]  # expected arrival time at stop (iso string)
+    scheduled: Optional[datetime]  # scheduled arrival time at stop (iso string)
     started: bool  # if the bus has started the route or is waiting at the first stop
     finished: bool  # if the bus has finished the route
     speed: Optional[float]  # how fast the bus is going

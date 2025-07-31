@@ -1,5 +1,8 @@
+from datetime import datetime
 from pydantic import BaseModel
 from typing import List, Optional, Union
+
+from backend.models.prediction import Prediction
 
 
 class Location(BaseModel):
@@ -22,18 +25,24 @@ class LocationDetail(BaseModel):
     tiploc: Union[str, List[str]]
     crs: str
     description: str
-    wttBookedArrival: Optional[str] = None
-    wttBookedDeparture: Optional[str] = None
-    gbttBookedArrival: Optional[str] = None
-    gbttBookedDeparture: Optional[str] = None
+    wttBookedArrival: Optional[datetime] = None
+    wttBookedDeparture: Optional[datetime] = None
+    gbttBookedArrival: Optional[datetime] = None
+    gbttBookedDeparture: Optional[datetime] = None
     origin: List[OriginDestination]
     destination: List[OriginDestination]
     isCall: bool
     isPublicCall: bool
-    realtimeArrival: Optional[str] = None
+    delay: Optional[int] = 0
+    timeto: Optional[str] = None
+    realtimeArrival: Optional[datetime] = None
     realtimeArrivalActual: Optional[bool] = None
-    realtimeDeparture: Optional[str] = None
+    realtimeDeparture: Optional[datetime] = None
     realtimeDepartureActual: Optional[bool] = None
+    expectedDeparture: Optional[datetime] = None
+    expectedArrival: Optional[datetime] = None
+    scheduledDeparture: Optional[datetime] = None
+    scheduledArrival: Optional[datetime] = None
     platform: Optional[str] = None
     platformConfirmed: Optional[bool] = None
     platformChanged: Optional[bool] = None
@@ -46,6 +55,7 @@ class Train(BaseModel):
     runDate: str
     trainIdentity: str
     runningIdentity: Optional[str] = None
+    atocColor: Optional[str]
     atocCode: str
     atocName: str
     serviceType: str
@@ -64,11 +74,11 @@ class ServiceLocation(BaseModel):
     crs: str
     description: str
 
-    gbttBookedArrival: Optional[str] = None
-    gbttBookedDeparture: Optional[str] = None
+    gbttBookedArrival: Optional[datetime] = None
+    gbttBookedDeparture: Optional[datetime] = None
 
-    wttBookedArrival: Optional[str] = None
-    wttBookedDeparture: Optional[str] = None
+    wttBookedArrival: Optional[datetime] = None
+    wttBookedDeparture: Optional[datetime] = None
 
     origin: List[OriginDestination]
     destination: List[OriginDestination]
@@ -76,10 +86,21 @@ class ServiceLocation(BaseModel):
     isCall: bool
     isPublicCall: bool
 
-    realtimeArrival: Optional[str] = None
+    timeTo: Optional[str] = None
+
+    realtimeArrival: Optional[datetime] = None
     realtimeArrivalActual: Optional[bool] = None
-    realtimeDeparture: Optional[str] = None
+    realtimeDeparture: Optional[datetime] = None
     realtimeDepartureActual: Optional[bool] = None
+
+    expectedDeparture: Optional[datetime] = None
+    expectedArrival: Optional[datetime] = None
+
+    scheduledDeparture: Optional[datetime] = None
+    scheduledArrival: Optional[datetime] = None
+
+    delay: int = 0
+    departed: bool = False
 
     platform: Optional[str] = None
     platformConfirmed: Optional[bool] = None
@@ -104,6 +125,19 @@ class TrainService(BaseModel):
 
     atocCode: str
     atocName: str
+    atocColor: str
+
+    sequence: int = 0
+    progress: float = 0
+
+    started: bool = True
+    finished: bool = False
+
+    predictions: Optional[List[Prediction]] = None
+
+    delay: int
+
+    nextStation: Optional[ServiceLocation]
 
     performanceMonitored: Optional[bool] = None
 
