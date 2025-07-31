@@ -1,7 +1,8 @@
+from datetime import datetime
+import json
 import redis.asyncio as redis
 import os
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.errors import RateLimitExceeded
+from slowapi import Limiter
 from slowapi.util import get_remote_address
 
 
@@ -33,3 +34,16 @@ limiter = Limiter(
     storage_uri=get_redis_url(),
     default_limits=["100/minute"],
 )
+
+
+class DateTimeEncoder(json.JSONEncoder):
+    def default(self, o):
+        if isinstance(o, datetime):
+            return {"__datetime__": True, "iso": o.isoformat()}
+        return super().default(o)
+
+
+def datetime_decoder(obj):
+    if "__datetime__" in obj:
+        return datetime.fromisoformat(obj["iso"])
+    return obj

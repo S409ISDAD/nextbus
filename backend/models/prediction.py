@@ -1,8 +1,9 @@
 from pydantic import BaseModel
+from datetime import datetime
 
 
 class Prediction(BaseModel):
-    timestamp: int
+    timestamp: datetime
     sequence: int
     progress: float
     location: list[float]

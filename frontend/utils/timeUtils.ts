@@ -2,7 +2,7 @@ import type { Departure } from "../models/Bus";
 
 export default function timeTo(bus: Departure) {
     const now = new Date()
-    const diffMs = bus.expected.getTime() - now.getTime();
+    const diffMs = new Date(bus.expected).getTime() - now.getTime();
     const diffSec = Math.floor(diffMs / 1000);
 
     return generateTimeTo(diffSec)

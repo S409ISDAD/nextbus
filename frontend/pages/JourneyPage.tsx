@@ -3,7 +3,7 @@ import type { Journey } from "../models/Journey";
 import getBus from "../utils/getBus";
 import { useNavigate, useParams } from "react-router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { lateness } from "../utils/timeUtils";
+import { lateness, toTime } from "../utils/timeUtils";
 import generateWholeTrack from "../utils/locations";
 import {
     faBus,
@@ -205,11 +205,7 @@ const MapView: React.FC<MapViewProps> = ({
                         <Popup>
                             <div className="flex flex-col">
                                 <span>{stop.name}</span>
-                                Expt:{" "}
-                                {stop.expt_time?.toLocaleTimeString([], {
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                })}
+                                Expt: {toTime(stop.expt_time)}
                             </div>
                         </Popup>
                     </Marker>
@@ -298,7 +294,7 @@ const JourneyPage: React.FC = () => {
 
             if (bus?.timestamp) {
                 const age = Math.floor(
-                    (now.getTime() - bus?.timestamp.getTime()) / 1000
+                    (now.getTime() - new Date(bus?.timestamp).getTime()) / 1000
                 );
                 let accuracy = "unknown";
 
@@ -330,8 +326,8 @@ const JourneyPage: React.FC = () => {
             }
 
             const upcoming = predictions.find((pred) => {
-                const nextTime = pred.timestamp * 1000;
-                return nextTime > now.getTime();
+                const nextTime = new Date(pred.timestamp);
+                return nextTime > now;
             });
 
             if (!upcoming) return;
@@ -348,9 +344,12 @@ const JourneyPage: React.FC = () => {
 
             const progressDelta = newProgress - prevProgress;
 
-            const timeDelta = upcoming.timestamp * 1000 - now.getTime();
+            const timeDelta =
+                new Date(upcoming.timestamp).getTime() - now.getTime();
             const predictionDuration =
-                (upcoming.timestamp - prev.timestamp) * 1000;
+                (new Date(upcoming.timestamp).getTime() -
+                    new Date(prev.timestamp).getTime()) *
+                1000;
 
             const interpolatedProgress =
                 prevProgress +
@@ -657,12 +656,8 @@ const JourneyPage: React.FC = () => {
                                                 </div> */}
                                                 <div className="flex flex-row gap-6 font-bold ">
                                                     <span>
-                                                        {stop.aimed_time.toLocaleTimeString(
-                                                            [],
-                                                            {
-                                                                hour: "2-digit",
-                                                                minute: "2-digit",
-                                                            }
+                                                        {toTime(
+                                                            stop.aimed_time
                                                         )}
                                                     </span>
                                                     {sequence >= idx ? (
@@ -675,17 +670,17 @@ const JourneyPage: React.FC = () => {
                                                     ) : stop.expt_time &&
                                                       bus?.started &&
                                                       Math.abs(
-                                                          stop.expt_time.getTime() -
-                                                              stop.aimed_time.getTime()
+                                                          new Date(
+                                                              stop.expt_time
+                                                          ).getTime() -
+                                                              new Date(
+                                                                  stop.aimed_time
+                                                              ).getTime()
                                                       ) > 60000 ? (
                                                         <span className="font-bold text-blue-400">
                                                             Expt:{" "}
-                                                            {stop.expt_time.toLocaleTimeString(
-                                                                [],
-                                                                {
-                                                                    hour: "2-digit",
-                                                                    minute: "2-digit",
-                                                                }
+                                                            {toTime(
+                                                                stop.expt_time
                                                             )}
                                                         </span>
                                                     ) : (

@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel
 
@@ -18,8 +19,8 @@ class Stop(BaseModel):
 class StopTime(BaseModel):
     stop_id: str
     name: str
-    aimed_time: int
-    expt_time: Optional[int]
+    aimed_time: datetime
+    expt_time: Optional[datetime]
     coords: list[float]
     track: Optional[list[list[float]]]
     set_down: bool

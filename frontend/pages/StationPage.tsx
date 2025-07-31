@@ -4,7 +4,7 @@ import { useNavigate, useParams } from "react-router";
 import { Skeleton } from "@radix-ui/themes";
 import { Card } from "../components/ui/Card";
 import type { Location, Train } from "../models/Trains";
-import { generateTimeTo, lateness } from "../utils/timeUtils";
+import { generateTimeTo, lateness, toTime } from "../utils/timeUtils";
 
 function TrainCard({
     train,
@@ -51,25 +51,22 @@ function TrainCard({
                     <div className="flex flex-row items-center pl-2 text-sm font-semibold text gap-x-3 text-nowrap sm:text-base">
                         <div className="flex gap-0.5 items-center ">
                             <span>
-                                {(type === "departures"
-                                    ? train.scheduledDeparture
-                                    : train.scheduledArrival
-                                )?.toLocaleTimeString([], {
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                })}
+                                {toTime(
+                                    type === "departures"
+                                        ? train.locationDetail
+                                              .scheduledDeparture
+                                        : train.locationDetail.scheduledArrival
+                                )}
                             </span>
                         </div>
                         <div className="flex gap-0.5 items-center text-sky-400">
                             <span className="text-xs">Expt:</span>
                             <span>
-                                {(type === "departures"
-                                    ? train.expectedDeparture
-                                    : train.expectedArrival
-                                )?.toLocaleTimeString([], {
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                })}
+                                {toTime(
+                                    type === "departures"
+                                        ? train.locationDetail.expectedDeparture
+                                        : train.locationDetail.expectedArrival
+                                )}
                             </span>
                         </div>
 
@@ -136,28 +133,37 @@ const StationPage: React.FC = () => {
                         return {
                             ...train,
                             timeto: generateTimeTo(
-                                ((
-                                    type === "departures"
-                                        ? train.expectedDeparture
-                                        : train.expectedArrival
-                                )
-                                    ? (
-                                          (type === "departures"
-                                              ? train.expectedDeparture
-                                              : train.expectedArrival) as Date
-                                      ).getTime() - now.getTime()
-                                    : 0) / 1000
+                                (() => {
+                                    const expected =
+                                        type === "departures"
+                                            ? train.locationDetail
+                                                  .expectedDeparture
+                                            : train.locationDetail
+                                                  .expectedArrival;
+                                    if (!expected) return 0;
+                                    const expectedDate =
+                                        typeof expected === "string"
+                                            ? new Date(expected)
+                                            : expected;
+                                    return (
+                                        (expectedDate.getTime() -
+                                            now.getTime()) /
+                                        1000
+                                    );
+                                })()
                             ),
                         };
                     })
                     .filter((train) => {
                         const expectedTime =
                             type === "departures"
-                                ? train.expectedDeparture
-                                : train.expectedArrival;
+                                ? train.locationDetail.expectedDeparture
+                                : train.locationDetail.expectedArrival;
                         if (!expectedTime) return false;
                         return (
-                            new Date(expectedTime.getTime() + 60 * 1000) > now
+                            new Date(
+                                new Date(expectedTime).getTime() + 60 * 1000
+                            ) > now
                         );
                     })
             );

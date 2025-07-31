@@ -1,11 +1,23 @@
 import asyncio
+import datetime
 import json
 
 import redis.asyncio as redis
 from fastapi import WebSocket, WebSocketDisconnect
 
+from backend.deps import datetime_decoder
 from backend.tasks.publisher import start_publishing, stop_publishing
 from backend.websockets.manager import manager
+
+
+def convert(obj):
+    if isinstance(obj, dict):
+        return {k: convert(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [convert(i) for i in obj]
+    elif isinstance(obj, datetime.datetime):
+        return obj.isoformat()
+    return obj
 
 
 async def stop_subscribe(stop_id: str, redis: redis.Redis):
@@ -21,13 +33,15 @@ async def stop_subscribe(stop_id: str, redis: redis.Redis):
                 continue
 
             try:
-                data = json.loads(message["data"])
+                data = json.loads(message["data"], object_hook=datetime_decoder)
             except Exception:
                 continue
 
+            data_serializable = convert(data)
+
             for ws in list(manager.get_connections("stop", stop_id)):
                 try:
-                    await ws.send_json(data)
+                    await ws.send_json(data_serializable)
                 except Exception:
                     manager.disconnect("stop", stop_id, ws)
     except asyncio.CancelledError:
@@ -48,7 +62,10 @@ async def handle_departures(channel: str, key: str, websocket: WebSocket, redis)
 
         if cached:
             print(f"sending cached on first conn {key}")
-            await websocket.send_json(json.loads(cached))
+            data = json.loads(cached, object_hook=datetime_decoder)
+            data_serializable = convert(data)
+
+            await websocket.send_json(data_serializable)
         while True:
             await websocket.receive_text()
 

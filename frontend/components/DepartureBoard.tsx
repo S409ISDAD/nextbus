@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { isTrackedBus, type Departure } from "../models/Bus";
 import fetchDepartures, { parseDepartures } from "../utils/getDepartures";
 import { useNavigate } from "react-router";
-import timeTo, { lateness } from "../utils/timeUtils";
+import timeTo, { lateness, toTime } from "../utils/timeUtils";
 import { Card } from "./ui/Card";
 import { getClosestStop } from "../utils/closestStop";
 import { getCurrentPosition } from "../utils/locations";
@@ -44,12 +44,7 @@ function BusCard({ bus, onClick }: { bus: Departure; onClick: () => void }) {
                             <span className="text-xs">
                                 {isTrackedBus(bus) ? "Expt:" : "Schd:"}
                             </span>
-                            <span>
-                                {bus.expected.toLocaleTimeString([], {
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                })}
-                            </span>
+                            <span>{toTime(bus.expected)}</span>
                         </div>
                         {isTrackedBus(bus) && (
                             <span
@@ -155,7 +150,9 @@ function DepartureBoard({ stop_id, closest, filter }: Props) {
                     };
                 })
                 .filter(
-                    (bus) => new Date(bus.expected.getTime() + 60 * 1000) > now
+                    (bus) =>
+                        new Date(new Date(bus.expected).getTime() + 60 * 1000) >
+                        now
                 );
 
             setBuses(newBuses);
