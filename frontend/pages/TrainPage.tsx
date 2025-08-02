@@ -48,6 +48,32 @@ export const TrainProgress: React.FC<{
     );
 });
 
+const BoardAlightLabel: React.FC<{
+    idx: number;
+    startIdx: number;
+    endIdx: number;
+}> = ({ idx, startIdx, endIdx }) => {
+    if (idx === startIdx) {
+        return (
+            <div className="text-sm font-semibold text-neutral-400 text-nowrap md:hidden">
+                <span className="z-10 flex items-center justify-center">
+                    board at
+                </span>
+            </div>
+        );
+    }
+    if (idx === endIdx) {
+        return (
+            <div className="text-sm font-semibold text-neutral-400 text-nowrap md:hidden">
+                <span className="z-10 flex items-center justify-center">
+                    alight at
+                </span>
+            </div>
+        );
+    }
+    return null;
+};
+
 const TrainPage: React.FC = () => {
     const { service_id } = useParams();
 
@@ -467,22 +493,19 @@ const TrainPage: React.FC = () => {
                                                         : ""
                                                 }`}>
                                                 <div className="flex flex-wrap items-center min-w-full gap-2 gap-y-0">
-                                                    <div className="text-sm font-semibold text-neutral-400 text-nowrap md:hidden">
-                                                        {idx == startIdx &&
-                                                            showRoute && (
-                                                                <span className="z-10 flex items-center justify-center">
-                                                                    board at
-                                                                </span>
-                                                            )}
-                                                        {idx == endIdx &&
-                                                            showRoute && (
-                                                                <span className="z-10 flex items-center justify-center">
-                                                                    alight at
-                                                                </span>
-                                                            )}
-                                                    </div>
+                                                    {showRoute &&
+                                                        (idx == startIdx ||
+                                                            idx == endIdx) && (
+                                                            <BoardAlightLabel
+                                                                idx={idx}
+                                                                startIdx={
+                                                                    startIdx
+                                                                }
+                                                                endIdx={endIdx}
+                                                            />
+                                                        )}
 
-                                                    <span className="font-bold text-nowrap">
+                                                    <span className="block overflow-hidden font-bold truncate text-nowrap max-w-55 md:max-w-full">
                                                         {stop.description}
                                                     </span>
                                                     <span className="font-bold text-neutral-400 min-h-fit">
