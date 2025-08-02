@@ -84,7 +84,12 @@ async def get_vehicle_journey(journey_id, delay, r) -> Journey:
     json_stops = journey.get("times")
     stops: list[StopTime] = []
 
-    for stop in json_stops:
+    uk_timezone = datetime.timezone(datetime.timedelta(hours=1))
+    current_time = dt.now(datetime.timezone.utc).astimezone(uk_timezone)
+
+    started = False
+
+    for stop_idx, stop in enumerate(json_stops):
         if stop.get("track"):
             track = [[lng_lat[1], lng_lat[0]] for lng_lat in stop.get("track")]
         else:
@@ -98,12 +103,28 @@ async def get_vehicle_journey(journey_id, delay, r) -> Journey:
         if type(expt) is str:
             expt = dt.fromisoformat(expt)
 
+        aimed = stop.get("aimed_time")
+        if type(aimed) is str:
+            aimed = dt.fromisoformat(aimed)
+
+        if stop_idx == 0:
+            if aimed < current_time:
+                started = True
+
+        if started:
+            expt += timedelta(seconds=delay)
+
+        departed = False
+        if expt < current_time:
+            departed = True
+
         stops.append(
             StopTime(
                 stop_id=stop["stop"].get("atco_code"),
                 name=stop["stop"].get("name"),
                 aimed_time=stop.get("aimed_time"),
-                expt_time=expt + timedelta(seconds=delay),
+                expt_time=expt,
+                departed=departed,
                 track=track,
                 coords=coords,
                 set_down=stop.get("set_down"),
@@ -187,7 +208,11 @@ async def get_trip(trip_id, delay, r) -> Trip:
     json_stops = journey.get("times")
     stops: list[StopTime] = []
 
-    for stop in json_stops:
+    uk_timezone = datetime.timezone(datetime.timedelta(hours=1))
+    current_time = dt.now(datetime.timezone.utc).astimezone(uk_timezone)
+    started = False
+
+    for stop_idx, stop in enumerate(json_stops):
         if stop.get("track"):
             track = [[lng_lat[1], lng_lat[0]] for lng_lat in stop.get("track")]
         else:
@@ -201,12 +226,28 @@ async def get_trip(trip_id, delay, r) -> Trip:
         if type(expt) is str:
             expt = dt.fromisoformat(expt)
 
+        aimed = stop.get("aimed_time")
+        if type(aimed) is str:
+            aimed = dt.fromisoformat(aimed)
+
+        if stop_idx == 0:
+            if aimed < current_time:
+                started = True
+
+        if started:
+            expt += timedelta(seconds=delay)
+
+        departed = False
+        if expt < current_time:
+            departed = True
+
         stops.append(
             StopTime(
                 stop_id=stop["stop"].get("atco_code"),
                 name=stop["stop"].get("name"),
                 aimed_time=stop.get("aimed_time"),
-                expt_time=(expt + timedelta(seconds=delay)),
+                expt_time=expt,
+                departed=departed,
                 track=track,
                 coords=coords,
                 set_down=stop.get("set_down"),

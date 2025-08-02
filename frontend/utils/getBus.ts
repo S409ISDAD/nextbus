@@ -12,7 +12,7 @@ const getBus = async (bus_id: string) => {
 
         return {
             ...bus,
-            timeto: ""
+            timeTo: ""
         };
 
     } catch (error) {

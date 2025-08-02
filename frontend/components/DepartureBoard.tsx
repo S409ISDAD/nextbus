@@ -110,7 +110,7 @@ function BusCard({ bus, onClick }: { bus: Departure; onClick: () => void }) {
 
                 <div className="flex items-center justify-center gap-1 p-1 ml-5 rounded-lg bg-neutral-800/50 w-15 h-fit">
                     <span className="text-sm font-bold text-nowrap">
-                        {bus.timeto}
+                        {bus.timeTo}
                     </span>
                 </div>
             </div>
@@ -146,7 +146,7 @@ function DepartureBoard({ stop_id, closest, filter }: Props) {
                 .map((bus) => {
                     return {
                         ...bus,
-                        timeto: timeTo(bus),
+                        timeTo: timeTo(bus),
                     };
                 })
                 .filter(

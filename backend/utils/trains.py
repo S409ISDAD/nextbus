@@ -1,11 +1,11 @@
 operator_map = {
-    "South Western Railway": {"code": "SWR", "color": "#007CAD"},
+    "South Western Railway": {"code": "SWR", "color": "#0092CB"},
     "CrossCountry": {"code": "XC", "color": "#6e2067"},
     "Great Western Railway": {"code": "GWR", "color": "#0A493E"},
     "LNER": {"code": "LNER", "color": "#d50032"},
-    "Avanti West Coast": {"code": "AWC", "color": "#00747a"},
+    "Avanti West Coast": {"code": "AWC", "color": "#004F59"},
     "TransPennine Express": {"code": "TPE", "color": "#512698"},
-    "Northern": {"code": "NT", "color": "#1d1d1b"},
+    "Northern": {"code": "NT", "color": "#262262"},
     "East Midlands Railway": {"code": "EMR", "color": "#660099"},
     "Greater Anglia": {"code": "GA", "color": "#e41f13"},
     "West Midlands Trains": {"code": "WMT", "color": "#ff8200"},
@@ -24,4 +24,6 @@ operator_map = {
     "Elizabeth line": {"code": "EL", "color": "#6950a1"},
     "Great Northern": {"code": "GN", "color": "#43165C"},
     "Lumo": {"code": "LMO", "color": "#0047CB"},
+    "Caledonian Sleeper": {"code": "CS", "color": "#1d2e35"},
+    "Transpennine Express": {"code": "TPE", "color": "#009DDB"},
 }

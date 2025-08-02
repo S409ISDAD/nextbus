@@ -45,7 +45,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(lifespan=lifespan, redirect_slashes=False)
 
 Instrumentator().instrument(app).expose(app)
 
@@ -56,6 +56,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.router.redirect_slashes = False
 
 
 app.state.limiter = limiter

@@ -91,10 +91,10 @@ function TrainCard({
 
                     <div className="flex items-center justify-center gap-1 p-[0.2rem] w-16 sm:w-18 rounded-xl bg-neutral-800/50  h-fit">
                         <span className="text-base font-bold sm:text-lg ">
-                            {train.timeto?.split(" ")[0] ?? "--"}
+                            {train.timeTo?.split(" ")[0] ?? "--"}
                         </span>
                         <span className="self-end h-full mb-[0.15rem] text-xs sm:text-sm font-bold ">
-                            {train.timeto?.split(" ")[1]}
+                            {train.timeTo?.split(" ")[1]}
                         </span>
                     </div>
                 </div>
@@ -132,7 +132,7 @@ const StationPage: React.FC = () => {
                     .map((train) => {
                         return {
                             ...train,
-                            timeto: generateTimeTo(
+                            timeTo: generateTimeTo(
                                 (() => {
                                     const expected =
                                         type === "departures"

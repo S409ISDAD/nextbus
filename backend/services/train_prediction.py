@@ -11,6 +11,8 @@ async def calculate_sequence(
 ) -> int:
     sequence = 0
     for stop in stops:
+        if sequence >= len(stops) - 1:
+            return sequence - 1
         if stop.expectedDeparture and stop.expectedDeparture > future_time:
             return sequence - 1
 
@@ -60,9 +62,14 @@ async def predict_future(
 
         prev_dep = stops[sequence].expectedDeparture
         next_arr = stops[sequence + 1].expectedArrival
+        if not next_arr:
+            next_arr = stops[sequence + 1].expectedDeparture
 
         if prev_dep and next_arr:
-            progress = await calculate_progress(prev_dep, next_arr, future_time)
+            if not stops[sequence].departed:
+                progress = 0
+            else:
+                progress = await calculate_progress(prev_dep, next_arr, future_time)
 
             prediction = Prediction(
                 timestamp=future_time,
@@ -72,7 +79,6 @@ async def predict_future(
             )
 
             predictions.append(prediction)
-
     return predictions
 
 
@@ -89,13 +95,16 @@ async def get_started_finished(service: TrainService, r):
         if stop_idx == 0:
             scheduled_time_start = stop_time.expectedDeparture
 
-            if scheduled_time_start > current_time:
+            if scheduled_time_start and scheduled_time_start > current_time:
                 not_started = True
 
         if stop_idx == len(service.locations) - 1:
             scheduled_time_end = stop_time.expectedArrival
 
-            if scheduled_time_end + timedelta(seconds=60) < current_time:
+            if (
+                scheduled_time_end
+                and scheduled_time_end + timedelta(seconds=60) < current_time
+            ):
                 finished = True
 
         stop_idx += 1

@@ -3,7 +3,13 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 
 from backend.deps import get_redis, limiter
 from backend.models.trains import TrainService, StationResponse
-from backend.services.trains import get_departures, get_arrivals, get_service
+from backend.services.trains import (
+    get_departures,
+    get_arrivals,
+    get_detailed_route_trains,
+    get_service,
+    get_route_trains,
+)
 from enum import Enum
 
 router = APIRouter()
@@ -16,7 +22,7 @@ class TrainDataType(str, Enum):
     arrivals = "arrivals"
 
 
-@router.get("/station/", response_model=StationResponse)
+@router.get("/station/{station_code}", response_model=StationResponse)
 @limiter.limit("45/minute")
 async def train_departures(
     request: Request,
@@ -31,11 +37,31 @@ async def train_departures(
             trains = await get_arrivals(station_code, redis)
         return trains
     except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
         log.error(f"Unexpected error: {e}")
         raise HTTPException(500, detail="An unexpected error occured")
 
 
-@router.get("/service/", response_model=TrainService)
+@router.get("/{from_station}/to/{to_station}", response_model=list[TrainService])
+@limiter.limit("45/minute")
+async def train_route(
+    request: Request,
+    from_station: str,
+    to_station: str,
+    redis=Depends(get_redis),
+):
+    try:
+        trains = await get_detailed_route_trains(from_station, to_station, redis)
+        return trains
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
+        log.error(f"Unexpected error: {e}")
+        raise HTTPException(500, detail="An unexpected error occured")
+
+
+@router.get("/service/{service_id}", response_model=TrainService)
 @limiter.limit("45/minute")
 async def train_details(
     request: Request,
@@ -46,5 +72,7 @@ async def train_details(
         trains = await get_service(service_id, redis)
         return trains
     except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
         log.error(f"Unexpected error: {e}")
         raise HTTPException(500, detail="An unexpected error occured")

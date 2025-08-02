@@ -37,7 +37,7 @@ export const parseTrain = async (train: TrainService) => {
 export const fetchTrain = async (service_id: string) => {
     try {
         const response = await api.get<TrainService>(
-            `/trains/service/?service_id=${service_id}`
+            `/trains/service/${service_id}`
         );
 
         console.log("train", response.data);

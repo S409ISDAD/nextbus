@@ -52,14 +52,20 @@ export interface Train {
     atocColor?: string;
     atocName: string;
     delay?: number;
-    timeto?: string;
+    timeTo?: string;
     serviceType: string;
     isPassenger: boolean;
 }
 
-export interface TrainResponse {
+
+export interface Filter {
+    destination?: Location | null;
+    origin?: Location | null;
+}
+
+export interface StationResponse {
     location: Location;
-    filter?: string | null;
+    filter?: Filter | null;
     services: Train[] | null;
 }
 
@@ -106,13 +112,20 @@ export interface ServiceLocation {
 
 export interface TrainService {
     serviceUid: string;
-    runstring: string;
+    runDate: string;
     serviceType: string;
     isPassenger: boolean;
     trainIdentity: string;
 
+    fromStop?: ServiceLocation;
+    toStop?: ServiceLocation;
+    duration?: number;
+    fastest?: boolean;
+
     powerType?: string;
     trainClass?: string;
+
+    timeTo?: string;
 
     atocCode: string;
     atocName: string;

@@ -23,7 +23,7 @@ const DepartureScreen: React.FC = () => {
                 .map((bus) => {
                     return {
                         ...bus,
-                        timeto: timeTo(bus),
+                        timeTo: timeTo(bus),
                     };
                 })
                 .filter(
@@ -111,7 +111,7 @@ const DepartureScreen: React.FC = () => {
                             new Date().getTime() >
                         45 * 60 * 1000
                             ? toTime(bus.expected)
-                            : bus.timeto}
+                            : bus.timeTo}
                     </span>
                 </div>
             ))}

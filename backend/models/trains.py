@@ -33,8 +33,7 @@ class LocationDetail(BaseModel):
     destination: List[OriginDestination]
     isCall: bool
     isPublicCall: bool
-    delay: Optional[int] = 0
-    timeto: Optional[str] = None
+
     realtimeArrival: Optional[datetime] = None
     realtimeArrivalActual: Optional[bool] = None
     realtimeDeparture: Optional[datetime] = None
@@ -59,12 +58,19 @@ class Train(BaseModel):
     atocCode: str
     atocName: str
     serviceType: str
+    delay: Optional[int] = 0
+    timeTo: Optional[str] = None
     isPassenger: bool
+
+
+class Filter(BaseModel):
+    destination: Optional[Location] = None
+    origin: Optional[Location] = None
 
 
 class StationResponse(BaseModel):
     location: Location
-    filter: Optional[str]
+    filter: Optional[Filter] = None
     services: Optional[List[Train]]
 
 
@@ -109,6 +115,10 @@ class ServiceLocation(BaseModel):
     line: Optional[str] = None
     lineConfirmed: Optional[bool] = None
 
+    cancelReasonCode: Optional[str] = None
+    cancelReasonShortText: Optional[str] = None
+    cancelReasonLongText: Optional[str] = None
+
     serviceLocation: Optional[str] = None
     displayAs: str
 
@@ -122,6 +132,10 @@ class TrainService(BaseModel):
 
     powerType: Optional[str] = None
     trainClass: Optional[str] = None
+
+    fromStop: Optional[ServiceLocation] = None
+    toStop: Optional[ServiceLocation] = None
+    duration: Optional[int] = None
 
     atocCode: str
     atocName: str
