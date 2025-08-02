@@ -1,6 +1,7 @@
 from typing import List
+
+from fastapi import HTTPException
 from backend.models.trains import (
-    LocationDetail,
     ServiceLocation,
     StationResponse,
     Train,
@@ -21,7 +22,7 @@ async def parse_operator(atocName: str):
         return {"code": "Unknown", "color": "#888888"}
     if atocName == "Unknown":
         return {"code": "Unknown", "color": "#888888"}
-    if operator_map[atocName]:
+    if operator_map.get(atocName):
         return operator_map[atocName]
     code = "".join([w[:1].upper() for w in atocName.split(" ")])
     print("Unknown operator:", atocName)
@@ -54,12 +55,21 @@ def parse_time(time_str: str):
 async def parse_trains(trains: dict) -> StationResponse | None:
     try:
         if not trains.get("services"):
-            return StationResponse(**trains, services=[])
+            trains_dict = dict(trains)
+            trains_dict.update(
+                {
+                    "services": [],
+                }
+            )
+            return StationResponse(**trains_dict)
 
         updated_trains = []
 
         for train in trains["services"]:
             atoc_name = train.get("atocName")
+            if atoc_name == "Unknown" and train.get("atocCode") == "LD":
+                atoc_name = "Lumo"
+
             operator = await parse_operator(atoc_name)
 
             location = train.get("locationDetail", {})
@@ -74,16 +84,16 @@ async def parse_trains(trains: dict) -> StationResponse | None:
             if not expected_arrival:
                 expected_arrival = scheduled_arrival
 
-            if not expected_departure or not scheduled_departure:
+            if not expected_arrival or not scheduled_arrival:
                 delay = (
-                    (expected_arrival - scheduled_arrival).total_seconds()
-                    if expected_arrival and scheduled_arrival
+                    (expected_departure - scheduled_departure).total_seconds()
+                    if expected_departure and scheduled_departure
                     else 0
                 )
             else:
                 delay = (
-                    (expected_departure - scheduled_departure).total_seconds()
-                    if expected_departure and scheduled_departure
+                    (expected_arrival - scheduled_arrival).total_seconds()
+                    if expected_arrival and scheduled_arrival
                     else 0
                 )
 
@@ -93,6 +103,8 @@ async def parse_trains(trains: dict) -> StationResponse | None:
                     {
                         "atocCode": operator["code"],
                         "atocColor": operator["color"],
+                        "delay": round(delay),
+                        "timeTo": "",
                     }
                 )
                 train_dict["locationDetail"].update(
@@ -101,8 +113,6 @@ async def parse_trains(trains: dict) -> StationResponse | None:
                         "scheduledDeparture": scheduled_departure,
                         "expectedArrival": expected_arrival,
                         "scheduledArrival": scheduled_arrival,
-                        "timeto": "",
-                        "delay": round(delay),
                     }
                 )
                 updated_trains.append(Train(**train_dict))
@@ -121,7 +131,11 @@ async def parse_trains(trains: dict) -> StationResponse | None:
 
 async def parse_train(train) -> TrainService | None:
     try:
-        operator = await parse_operator(train.get("atocName", ""))
+        atoc_name = train.get("atocName", "")
+        if atoc_name == "Unknown" and train.get("atocCode") == "LD":
+            atoc_name = "Lumo"
+            train["atocName"] = atoc_name
+        operator = await parse_operator(atoc_name)
 
         updated_stops: List[ServiceLocation] = []
         uk_timezone = timezone(timedelta(hours=1))
@@ -141,17 +155,27 @@ async def parse_train(train) -> TrainService | None:
                 expected_arrival = scheduled_arrival
 
             departed = False
-            if expected_departure and expected_departure < now:
-                departed = True
+            departure_actual = location.get("realtimeDepartureActual")
+            if departure_actual is not None:
+                departed = departure_actual
+            else:
+                if expected_departure and expected_departure < now:
+                    departed = True
 
             delay = 0
 
-            if not expected_departure or not scheduled_departure:
-                if expected_arrival and scheduled_arrival:
-                    delay = (expected_arrival - scheduled_arrival).total_seconds()
+            if not expected_arrival or not scheduled_arrival:
+                delay = (
+                    (expected_departure - scheduled_departure).total_seconds()
+                    if expected_departure and scheduled_departure
+                    else 0
+                )
             else:
-                if expected_departure and scheduled_departure:
-                    delay = (expected_departure - scheduled_departure).total_seconds()
+                delay = (
+                    (expected_arrival - scheduled_arrival).total_seconds()
+                    if expected_arrival and scheduled_arrival
+                    else 0
+                )
 
             stop = ServiceLocation(
                 **location,
@@ -176,6 +200,18 @@ async def parse_train(train) -> TrainService | None:
         )
 
         train_dict = dict(train)
+        # Ensure all required fields are present with default values if missing
+        required_fields = {
+            "serviceUid": train.get("serviceUid", ""),
+            "runDate": train.get("runDate", ""),
+            "serviceType": train.get("serviceType", ""),
+            "isPassenger": train.get("isPassenger", False),
+            "trainIdentity": train.get("trainIdentity", ""),
+            "atocName": train.get("atocName", ""),
+            "origin": train.get("origin", []),
+            "destination": train.get("destination", []),
+        }
+        train_dict.update(required_fields)
         train_dict.update(
             {
                 "locations": updated_stops,
@@ -192,13 +228,13 @@ async def parse_train(train) -> TrainService | None:
         return None
 
 
-async def get_departures(station_code: str, r: Redis):
+async def get_departures(station_code: str, r: Redis) -> StationResponse | None:
     async def fetch(station_code):
         url = f"https://api.rtt.io/api/v1/json/search/{station_code}"
         trains = await fetch_rtt_json(url)
 
         if not trains:
-            return None
+            raise HTTPException(status_code=404, detail="No departures found")
 
         updated_trains = await parse_trains(trains)
 
@@ -215,13 +251,13 @@ async def get_departures(station_code: str, r: Redis):
     return trains
 
 
-async def get_arrivals(station_code: str, r: Redis):
+async def get_arrivals(station_code: str, r: Redis) -> StationResponse | None:
     async def fetch(station_code):
         url = f"https://api.rtt.io/api/v1/json/search/{station_code}/arrivals"
         trains = await fetch_rtt_json(url)
 
         if not trains:
-            return None
+            raise HTTPException(status_code=404, detail="No arrivals found")
 
         updated_trains = await parse_trains(trains)
 
@@ -238,7 +274,83 @@ async def get_arrivals(station_code: str, r: Redis):
     return trains
 
 
-async def get_service(service_id: str, r: Redis):
+async def get_detailed_route_trains(from_station: str, to_station: str, r: Redis):
+    route_result = await get_route_trains(from_station, to_station, r)
+
+    if not route_result or not route_result.services:
+        return []
+
+    services = route_result.services[:10]
+
+    detailed_services: List[TrainService] = []
+    for train in services:
+        service_id = train.serviceUid
+        full_train = await get_service(service_id, r, do_predictions=False)
+        if not full_train:
+            continue
+
+        locations = full_train.locations
+
+        from_stop = next((loc for loc in locations if loc.crs == from_station), None)
+        to_stop = next((loc for loc in locations if loc.crs == to_station), None)
+        if not from_stop or not to_stop:
+            continue
+
+        if locations.index(from_stop) >= locations.index(to_stop):
+            continue
+
+        dep = from_stop.expectedDeparture or from_stop.scheduledDeparture
+        arr = to_stop.expectedArrival or to_stop.scheduledArrival
+
+        duration = round((arr - dep).total_seconds()) if dep and arr else None
+
+        full_train.fromStop = from_stop
+        full_train.toStop = to_stop
+        full_train.duration = duration
+
+        detailed_services.append(full_train)
+
+    def get_sort_time(x):
+        if not x.toStop or not x.toStop.expectedDeparture:
+            return datetime.max.replace(tzinfo=timezone.utc)
+        return x.toStop.expectedDeparture or x.toStop.scheduledDeparture
+
+    detailed_services.sort(key=get_sort_time)
+
+    return detailed_services
+
+
+async def get_route_trains(
+    from_station: str, to_station: str, r: Redis
+) -> StationResponse | None:
+    async def fetch(from_station, to_station):
+        url = f"https://api.rtt.io/api/v1/json/search/{from_station}/to/{to_station}"
+        trains = await fetch_rtt_json(url)
+
+        if not trains:
+            raise HTTPException(status_code=404, detail="No route found")
+
+        updated_trains = await parse_trains(trains)
+
+        return updated_trains
+
+    trains = await get_cached(
+        f"trains:route:{from_station}:to:{to_station}",
+        fetch,
+        (from_station, to_station),
+        TRAIN_CACHE,
+        r,
+    )
+
+    if type(trains) is dict:
+        trains = StationResponse(**trains)
+
+    return trains
+
+
+async def get_service(
+    service_id: str, r: Redis, do_predictions: bool = True
+) -> TrainService | None:
     async def fetch(service_id):
         today = datetime.now()
         date_str = today.strftime("%Y/%m/%d")
@@ -246,7 +358,7 @@ async def get_service(service_id: str, r: Redis):
         train = await fetch_rtt_json(url)
 
         if not train:
-            return None
+            raise HTTPException(status_code=404, detail="Train service not found")
 
         updated_train = await parse_train(train)
 
@@ -255,7 +367,9 @@ async def get_service(service_id: str, r: Redis):
 
         started, finished = await get_started_finished(updated_train, r)
 
-        predictions = await predict_future(updated_train, None, started, 35, r)
+        predictions = None
+        if do_predictions:
+            predictions = await predict_future(updated_train, None, started, 35, r)
 
         updated_train.started = started
         updated_train.finished = finished
@@ -263,7 +377,7 @@ async def get_service(service_id: str, r: Redis):
 
         return updated_train
 
-    trains = await get_cached(
+    train = await get_cached(
         f"trains:service:{service_id}",
         fetch,
         (service_id,),
@@ -271,4 +385,7 @@ async def get_service(service_id: str, r: Redis):
         r,
     )
 
-    return trains
+    if type(train) is dict:
+        train = TrainService(**train)
+
+    return train

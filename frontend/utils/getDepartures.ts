@@ -22,7 +22,7 @@ export const parseDepartures = async (departures: Departures, filter?: string) =
                 return {
                     ...bus,
                     timestamp: departures.timestamp,
-                    timeto: generateTimeTo(diffSec),
+                    timeTo: generateTimeTo(diffSec),
                 };
             })
             .filter((bus) => {

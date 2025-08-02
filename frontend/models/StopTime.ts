@@ -3,6 +3,7 @@ export interface StopTime {
     name: string;
     aimed_time: string;
     expt_time?: string;
+    departed?: boolean;
     coords: number[];
     track: number[][];
     set_down: boolean;

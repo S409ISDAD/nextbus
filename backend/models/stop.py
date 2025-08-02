@@ -21,6 +21,7 @@ class StopTime(BaseModel):
     name: str
     aimed_time: datetime
     expt_time: Optional[datetime]
+    departed: bool = False
     coords: list[float]
     track: Optional[list[list[float]]]
     set_down: bool

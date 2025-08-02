@@ -9,6 +9,7 @@ import ServicePage from "../pages/ServicePage";
 import Layout from "../components/Layout";
 import StationPage from "../pages/StationPage";
 import TrainPage from "../pages/TrainPage";
+import TrainSearchPage from "../pages/TrainSearchPage";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router";
 import { Toaster } from "react-hot-toast";
 import { faXmark } from "@fortawesome/free-solid-svg-icons";
@@ -87,6 +88,10 @@ function App() {
                         <Route
                             path="/stations/:station_id"
                             element={<StationPage />}
+                        />
+                        <Route
+                            path="/search/trains/:fromStationCode/to/:toStationCode"
+                            element={<TrainSearchPage />}
                         />
                         <Route
                             path="/trains/:service_id"

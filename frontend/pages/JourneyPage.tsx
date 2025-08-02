@@ -7,6 +7,7 @@ import { lateness, toTime } from "../utils/timeUtils";
 import generateWholeTrack from "../utils/locations";
 import {
     faBus,
+    faCalendarCheck,
     faCalendarXmark,
     faWarning,
 } from "@fortawesome/free-solid-svg-icons";
@@ -251,7 +252,7 @@ export const BusProgress: React.FC<{
                 className="absolute transition-all duration-500 ease-in-out translate-x-[-16px]"
                 style={{ transform: `translateY(${translateY}px)` }}>
                 <div className="relative flex items-center justify-center">
-                    <Pulse size={36} color="bg-rose-400" duration={2} />
+                    <Pulse size={34} color="bg-rose-400" duration={2} />
                     <div
                         className="relative z-10 flex items-center justify-center p-2 rounded-full bg-rose-500 w-9 h-9"
                         ref={busRef}>
@@ -371,7 +372,7 @@ const JourneyPage: React.FC = () => {
             setLoc([lat, lng]);
         }, 200);
         return () => clearInterval(interval);
-    }, [predictions, bus?.progress]);
+    }, [predictions]);
 
     const busRef = useRef<HTMLDivElement>(null);
 
@@ -588,7 +589,7 @@ const JourneyPage: React.FC = () => {
                                 ))}
                             </div>
                             <div className="flex flex-col gap-1">
-                                {journey?.stops.map((stop, idx) => (
+                                {journey?.stops.map((stop) => (
                                     <div
                                         key={stop.stop_id}
                                         className="flex flex-row items-center">
@@ -605,7 +606,7 @@ const JourneyPage: React.FC = () => {
                                             }}>
                                             <div
                                                 className={`flex items-stretch flex-col ${
-                                                    idx < sequence
+                                                    stop.departed
                                                         ? "opacity-40"
                                                         : ""
                                                 }`}>
@@ -654,39 +655,68 @@ const JourneyPage: React.FC = () => {
                                                         </span>
                                                     )}
                                                 </div> */}
-                                                <div className="flex flex-row gap-6 font-bold ">
-                                                    <span>
-                                                        {toTime(
-                                                            stop.aimed_time
-                                                        )}
-                                                    </span>
-                                                    {sequence >= idx ? (
-                                                        <span className="font-bold">
-                                                            {sequence == 0 &&
-                                                            !bus?.started
-                                                                ? "Waiting to Start"
-                                                                : "Departed"}
-                                                        </span>
-                                                    ) : stop.expt_time &&
-                                                      bus?.started &&
-                                                      Math.abs(
-                                                          new Date(
-                                                              stop.expt_time
-                                                          ).getTime() -
-                                                              new Date(
-                                                                  stop.aimed_time
-                                                              ).getTime()
-                                                      ) > 60000 ? (
-                                                        <span className="font-bold text-blue-400">
-                                                            Expt:{" "}
-                                                            {toTime(
-                                                                stop.expt_time
-                                                            )}
-                                                        </span>
+                                                <div className="flex flex-row gap-6 font-bold text-purple-500">
+                                                    {stop.departed ? (
+                                                        <div className="flex items-center gap-2">
+                                                            <FontAwesomeIcon
+                                                                icon={
+                                                                    faCalendarCheck
+                                                                }
+                                                            />
+                                                            <span className="text-neutral-200">
+                                                                {toTime(
+                                                                    stop.aimed_time
+                                                                )}
+                                                            </span>
+                                                            <span className="font-semibold text-green-400">
+                                                                departed
+                                                            </span>
+                                                        </div>
                                                     ) : (
-                                                        <span className="font-bold text-green-400 ">
-                                                            On Time
-                                                        </span>
+                                                        <div className="flex items-center gap-2">
+                                                            {stop.expt_time &&
+                                                            stop.aimed_time ? (
+                                                                <div className="flex gap-3">
+                                                                    {new Date(
+                                                                        stop.expt_time
+                                                                    ).getTime() >
+                                                                        new Date(
+                                                                            stop.aimed_time
+                                                                        ).getTime() && (
+                                                                        <span className="line-through text-neutral-500">
+                                                                            {toTime(
+                                                                                stop.aimed_time
+                                                                            )}
+                                                                        </span>
+                                                                    )}
+                                                                    <span
+                                                                        className={
+                                                                            new Date(
+                                                                                stop.expt_time
+                                                                            ).getTime() >
+                                                                            new Date(
+                                                                                stop.aimed_time
+                                                                            ).getTime()
+                                                                                ? "text-red-400"
+                                                                                : "text-green-400"
+                                                                        }>
+                                                                        {new Date(
+                                                                            stop.expt_time
+                                                                        ).getTime() >
+                                                                        new Date(
+                                                                            stop.aimed_time
+                                                                        ).getTime()
+                                                                            ? "expt: "
+                                                                            : ""}
+                                                                        {toTime(
+                                                                            stop.expt_time
+                                                                        )}
+                                                                    </span>
+                                                                </div>
+                                                            ) : (
+                                                                "-"
+                                                            )}
+                                                        </div>
                                                     )}
                                                 </div>
                                             </div>

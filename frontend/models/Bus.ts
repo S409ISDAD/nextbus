@@ -9,7 +9,7 @@ export interface ScheduledBus {
     destination: string;
     expected: string;
     scheduled: string;
-    timeto: string;
+    timeTo: string;
     started: boolean;
     trip: number;
     status: string;
@@ -36,7 +36,7 @@ export interface Bus {
     predictions: Prediction[];
     livery?: Livery
     journey: Journey
-    timeto: string;
+    timeTo: string;
     status: string;
 }
 

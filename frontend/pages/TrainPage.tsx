@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { fetchTrain } from "../utils/getTrain";
-import { useNavigate, useParams } from "react-router";
+import { useNavigate, useParams, useSearchParams } from "react-router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { lateness, toTime } from "../utils/timeUtils";
 import { Pulse } from "../components/ui/Pulse";
 import {
+    faCalendarCheck,
     faCalendarXmark,
+    faRightFromBracket,
+    faRightToBracket,
     faTrainSubway,
     faWarning,
 } from "@fortawesome/free-solid-svg-icons";
@@ -17,7 +20,8 @@ export const TrainProgress: React.FC<{
     sequence: number;
     progress: number;
     trainRef: React.RefObject<HTMLDivElement | null>;
-}> = React.memo(({ sequence, progress, trainRef }) => {
+    finished?: boolean;
+}> = React.memo(({ sequence, progress, trainRef, finished }) => {
     const sectionLength = 72;
     const translateY = (sequence + progress) * sectionLength;
 
@@ -27,12 +31,17 @@ export const TrainProgress: React.FC<{
                 className="absolute transition-all duration-500 ease-in-out translate-x-[-16px]"
                 style={{ transform: `translateY(${translateY}px)` }}>
                 <div className="relative flex items-center justify-center">
-                    <Pulse size={36} color="bg-rose-400" duration={2} />
+                    {!finished && (
+                        <Pulse size={34} color="bg-rose-400" duration={2} />
+                    )}
                     <div
-                        className="relative z-10 flex items-center justify-center p-2 rounded-full bg-rose-500 w-9 h-9"
+                        className={`relative z-10 flex items-center justify-center p-2 rounded-full w-9 h-9 ${
+                            finished ? "bg-neutral-700" : "bg-rose-500"
+                        }`}
                         ref={trainRef}>
                         <FontAwesomeIcon icon={faTrainSubway} />
                     </div>
+                    {/* {sequence} {progress} */}
                 </div>
             </div>
         </div>
@@ -41,6 +50,14 @@ export const TrainProgress: React.FC<{
 
 const TrainPage: React.FC = () => {
     const { service_id } = useParams();
+
+    const [searchParams] = useSearchParams();
+    const fromStationCode = searchParams.get("from");
+    const toStationCode = searchParams.get("to");
+
+    const [startIdx, setStartIdx] = useState<number>(0);
+    const [endIdx, setEndIdx] = useState<number>(0);
+    const [showRoute, setShowRoute] = useState<boolean>(false);
 
     const navigate = useNavigate();
 
@@ -73,21 +90,28 @@ const TrainPage: React.FC = () => {
         const interval = setInterval(() => {
             const now = new Date();
             if (!predictions || predictions.length < 2) {
-                setSeq(train?.sequence ? train.sequence - 1 : 0);
-                if (train?.sequence === 0) {
-                    setProg(0);
-                } else {
-                    setProg(0.5);
-                }
+                setSeq(
+                    typeof train?.sequence === "number"
+                        ? Math.max(train.sequence - 1, 0)
+                        : 0
+                );
 
-                if (
+                let prog = 0;
+                if (train?.sequence === 0) {
+                    prog = 0;
+                } else if (
                     train?.nextStation?.expectedArrival &&
                     now.getTime() >
-                        new Date(train?.nextStation?.expectedArrival).getTime()
+                        new Date(train.nextStation.expectedArrival).getTime()
                 ) {
-                    setProg(1);
+                    prog = 1;
+                } else if (typeof train?.progress === "number") {
+                    prog = train.progress;
+                } else {
+                    // Fallback to 0.5 (midpoint) if progress cannot be determined
+                    prog = 0.5;
                 }
-                setProg(train?.progress ? train.progress : 0);
+                setProg(prog);
                 return;
             }
 
@@ -138,6 +162,25 @@ const TrainPage: React.FC = () => {
         }
     }, [sequence]);
 
+    const findStartEndIdx = () => {
+        train?.locations.forEach((stop) => {
+            if (stop.crs == fromStationCode?.toUpperCase()) {
+                setStartIdx(train.locations.indexOf(stop));
+            }
+            if (stop.crs == toStationCode?.toUpperCase()) {
+                setEndIdx(train.locations.indexOf(stop));
+            }
+        });
+    };
+
+    useEffect(() => {
+        if (train && fromStationCode && toStationCode) {
+            setShowRoute(true);
+            findStartEndIdx();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [train, fromStationCode, toStationCode]);
+
     useEffect(() => {
         let interval: any;
         const getData = async (service_id: string) => {
@@ -150,14 +193,12 @@ const TrainPage: React.FC = () => {
                     service_id
                 );
 
-                const now = new Date();
-
                 if (train_response) {
                     setTrain(train_response);
                     setPredictions(train_response.predictions);
                     document.title = `${train_response.origin[0].description} to ${train_response.destination[0].description} | nextbus`;
                     setMsg("");
-                    setRefreshed(now);
+                    setRefreshed(new Date());
                     setTimeout(() => {
                         requestAnimationFrame(() => {
                             trainRef.current?.scrollIntoView({
@@ -167,7 +208,7 @@ const TrainPage: React.FC = () => {
                         });
                     }, 1000);
                 } else {
-                    setMsg("Failed to fetch bus. Try reloading the page");
+                    setMsg("Failed to fetch train. Try reloading the page");
                 }
             } catch (error) {
                 console.log("uh oh", error);
@@ -202,20 +243,40 @@ const TrainPage: React.FC = () => {
     return (
         <div className="">
             <div className="flex flex-col">
-                <div className="fixed flex flex-col w-full gap-2 p-3 top-0 mt-13 grow bg-[#111111] z-15 rounded-b-2xl">
+                <div className="fixed flex flex-col w-full gap-2 p-3 pb-1 top-0 mt-13 grow bg-[#111111] z-15 rounded-b-2xl">
                     {train ? (
                         <div className="flex flex-col items-center justify-center gap-2">
                             <div className="flex flex-wrap items-center justify-center w-full gap-2 text-2xl font-bold">
-                                <span>{train.origin[0].description}</span>
+                                {train.origin.map((o, i) => (
+                                    <span key={o.description}>
+                                        {o.description}
+                                        {i < train.origin.length - 2
+                                            ? ", "
+                                            : ""}
+                                        {i === train.origin.length - 2
+                                            ? " and "
+                                            : ""}
+                                    </span>
+                                ))}
                                 <span>to</span>
-                                <span>{train.destination[0].description}</span>
+                                {train.destination.map((d, i) => (
+                                    <span key={d.description}>
+                                        {d.description}
+                                        {i < train.destination.length - 2
+                                            ? ", "
+                                            : ""}
+                                        {i === train.destination.length - 2
+                                            ? " and "
+                                            : ""}
+                                    </span>
+                                ))}
                             </div>
-
                             <div className="flex gap-3">
                                 <a
                                     className="underline text-sky-500"
-                                    href={`https://realtimetrains.co.uk/train/${train.serviceUid}`}
-                                    target="_blank">
+                                    href={`https://www.realtimetrains.co.uk/service/gb-nr:${train.serviceUid}/${train.runDate}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer">
                                     View on realtimetrains
                                 </a>
                                 <span className="text-center">
@@ -238,6 +299,7 @@ const TrainPage: React.FC = () => {
                                         {train.atocName}
                                     </span>
                                 </div>
+
                                 <div className="flex justify-center px-2 py-1 rounded-lg bg-neutral-800/50">
                                     <span className="font-bold align-middle text">
                                         {lateness(
@@ -245,6 +307,16 @@ const TrainPage: React.FC = () => {
                                         )}
                                     </span>
                                 </div>
+                                {showRoute && (
+                                    <button
+                                        className="flex justify-center text-sm font-bold underline"
+                                        onClick={() => {
+                                            setShowRoute(false);
+                                        }}
+                                        type="button">
+                                        View full route
+                                    </button>
+                                )}
                             </div>
                         </div>
                     ) : (
@@ -265,6 +337,22 @@ const TrainPage: React.FC = () => {
                     ) : (
                         <></>
                     )}
+                    <div className="flex flex-row items-center justify-center gap-2 text-sm font-semibold text-neutral-300/75">
+                        <span>
+                            <FontAwesomeIcon
+                                icon={faRightToBracket}
+                                className="text-cyan-400"
+                            />{" "}
+                            = Arrival
+                        </span>
+                        <span>
+                            <FontAwesomeIcon
+                                icon={faRightFromBracket}
+                                className="text-purple-500"
+                            />{" "}
+                            = Departure
+                        </span>
+                    </div>
 
                     <div className="flex justify-center gap-2">
                         <span className="text-xs text-neutral-400">
@@ -276,30 +364,27 @@ const TrainPage: React.FC = () => {
                         </span>
                     </div>
                 </div>
-                {train?.finished || !train ? (
-                    <div className="flex flex-col gap-3 mt-4 grow h-[60vh] md:max-h-[80vh] items-center justify-center">
-                        <FontAwesomeIcon
-                            icon={faCalendarXmark}
-                            size="5x"
-                            className="text-neutral-400"></FontAwesomeIcon>
-                        <span className="text-xl font-bold text-neutral-500">
-                            This service has ended.
-                        </span>
-                    </div>
-                ) : (
+                {train && (
                     <div className="flex flex-row gap-2 px-3 md:px-0">
-                        <div className="relative flex mx-5 mt-44 md:mx-40">
+                        <div className="relative flex mx-5 mt-50 md:mx-40">
                             <div className="relative flex flex-col items-center py-8">
                                 <TrainProgress
                                     sequence={sequence}
                                     progress={progress}
-                                    trainRef={trainRef}></TrainProgress>
+                                    trainRef={trainRef}
+                                    finished={train.finished}></TrainProgress>
                                 {train.locations.map((stop, idx) => (
                                     <div
                                         key={stop.crs}
                                         className="relative flex flex-col items-center">
                                         <div
-                                            className={`z-10 w-1 h-1 bg-neutral-700 ${
+                                            className={`z-10 w-1 h-1 ${
+                                                idx >= startIdx &&
+                                                idx <= endIdx &&
+                                                showRoute
+                                                    ? "bg-slate-400"
+                                                    : "bg-neutral-700"
+                                            } ${
                                                 idx == 0
                                                     ? "rounded-tl-full"
                                                     : idx ==
@@ -307,9 +392,44 @@ const TrainPage: React.FC = () => {
                                                     ? "rounded-bl-full"
                                                     : ""
                                             }`}></div>
+                                        {idx == startIdx && showRoute && (
+                                            <>
+                                                <span className="absolute z-10 font-semibold text-neutral-400 text-nowrap translate-y-[-45%] translate-x-[-80%] items-center justify-center hidden md:flex">
+                                                    board here
+                                                </span>
+                                                <div className="absolute z-10 w-6 h-6 translate-y-[-40%] rounded-full bg-slate-400 flex items-center justify-center">
+                                                    <FontAwesomeIcon
+                                                        icon={faRightToBracket}
+                                                        className="text-neutral-900"
+                                                    />
+                                                </div>
+                                            </>
+                                        )}
 
+                                        {idx == endIdx && showRoute && (
+                                            <>
+                                                <span className="absolute z-10 font-semibold text-neutral-400 text-nowrap translate-y-[-45%] translate-x-[-80%] items-center justify-center hidden md:flex">
+                                                    alight here
+                                                </span>
+                                                <div className="absolute z-10 w-6 h-6 translate-y-[-40%] rounded-full bg-slate-400 flex items-center justify-center">
+                                                    <FontAwesomeIcon
+                                                        icon={
+                                                            faRightFromBracket
+                                                        }
+                                                        className="text-neutral-900"
+                                                    />
+                                                </div>
+                                            </>
+                                        )}
                                         {idx < train.locations.length - 1 && (
-                                            <div className="w-[4px] bg-neutral-700 flex-1 min-h-[68px]"></div>
+                                            <div
+                                                className={`w-[4px] ${
+                                                    idx >= startIdx &&
+                                                    idx < endIdx &&
+                                                    showRoute
+                                                        ? "bg-slate-400"
+                                                        : "bg-neutral-700"
+                                                } flex-1 min-h-[68px]`}></div>
                                         )}
                                     </div>
                                 ))}
@@ -319,7 +439,14 @@ const TrainPage: React.FC = () => {
                                     <div
                                         key={stop.crs}
                                         className="flex flex-row items-center">
-                                        <div className="w-4 bg-neutral-700 rounded-r-full h-[4px]"></div>
+                                        <div
+                                            className={`w-4 ${
+                                                idx >= startIdx &&
+                                                idx <= endIdx &&
+                                                showRoute
+                                                    ? "bg-slate-400"
+                                                    : "bg-neutral-700"
+                                            } rounded-r-full h-[4px]`}></div>
                                         <div
                                             className="p-2 w-fit h-17"
                                             onClick={() =>
@@ -331,224 +458,349 @@ const TrainPage: React.FC = () => {
                                                 cursor: "pointer",
                                             }}>
                                             <div
-                                                className={`flex items-stretch flex-col ${
-                                                    stop.departed
+                                                className={`flex flex-col items-stretch ${
+                                                    stop.departed ||
+                                                    ((idx < startIdx ||
+                                                        idx > endIdx) &&
+                                                        showRoute)
                                                         ? "opacity-50"
                                                         : ""
                                                 }`}>
-                                                {/* <span className="px-2 py-1 font-bold bg-indigo-800 rounded-t-2xl">
-                                                    {stop.name}
-                                                </span> */}
-                                                <div className="flex items-center gap-4">
-                                                    <span className="font-bold">
+                                                <div className="flex flex-wrap items-center min-w-full gap-2 gap-y-0">
+                                                    <span className="font-bold text-nowrap">
                                                         {stop.description}
+                                                    </span>
+                                                    <span className="font-bold text-neutral-400 min-h-fit">
+                                                        ·
                                                     </span>
 
                                                     <span className="text-xs font-bold text-neutral-400 text-nowrap">
                                                         Plat.{" "}
-                                                        {stop.platform
-                                                            ? stop.platform
-                                                            : "-"}
+                                                        {stop.platform || "-"}
                                                     </span>
 
-                                                    {/* Show "At station" if current time is after arrival but before departure */}
-                                                    {(() => {
-                                                        const now = new Date();
-                                                        const arrival =
-                                                            stop.expectedArrival
-                                                                ? new Date(
-                                                                      stop.expectedArrival
-                                                                  )
-                                                                : null;
-                                                        const departure =
-                                                            stop.expectedDeparture
-                                                                ? new Date(
-                                                                      stop.expectedDeparture
-                                                                  )
-                                                                : null;
-                                                        if (
-                                                            arrival &&
-                                                            departure &&
-                                                            now >= arrival &&
-                                                            now <= departure &&
-                                                            !stop.departed
-                                                        ) {
-                                                            return (
-                                                                <span className="px-2 py-1 ml-2 text-xs font-bold text-blue-400 rounded-full bg-blue-500/20">
-                                                                    At station
+                                                    {stop.serviceLocation && (
+                                                        <>
+                                                            {stop.serviceLocation ===
+                                                                "APPR_STAT" && (
+                                                                <span className="px-2 py-1 text-xs font-bold text-yellow-400 rounded-full bg-yellow-500/20">
+                                                                    Approaching
+                                                                    station
                                                                 </span>
-                                                            );
-                                                        }
-                                                        return null;
-                                                    })()}
+                                                            )}
+                                                            {stop.serviceLocation ===
+                                                                "APPR_PLAT" && (
+                                                                <span className="px-2 py-1 text-xs font-bold text-orange-400 rounded-full bg-orange-500/20">
+                                                                    Arriving
+                                                                </span>
+                                                            )}
+                                                            {stop.serviceLocation ===
+                                                                "AT_PLAT" && (
+                                                                <span className="px-2 py-1 text-xs font-bold text-blue-400 rounded-full bg-blue-500/20">
+                                                                    At platform
+                                                                </span>
+                                                            )}
+                                                            {stop.serviceLocation ===
+                                                                "DEP_PREP" && (
+                                                                <span className="px-2 py-1 text-xs font-bold text-purple-400 rounded-full bg-purple-500/20">
+                                                                    Preparing to
+                                                                    depart
+                                                                </span>
+                                                            )}
+                                                            {stop.serviceLocation ===
+                                                                "DEP_READY" && (
+                                                                <span className="px-2 py-1 text-xs font-bold text-green-400 rounded-full bg-green-500/20">
+                                                                    Ready to
+                                                                    depart
+                                                                </span>
+                                                            )}
+                                                        </>
+                                                    )}
+
+                                                    {idx == startIdx &&
+                                                        showRoute && (
+                                                            <>
+                                                                <span className="font-bold text-neutral-400 min-h-fit lg:hidden">
+                                                                    ·
+                                                                </span>
+                                                                <span className="z-10 flex items-center justify-center text-sm font-semibold text-green-400 text-nowrap md:hidden">
+                                                                    board here
+                                                                </span>
+                                                            </>
+                                                        )}
+                                                    {idx == endIdx &&
+                                                        showRoute && (
+                                                            <>
+                                                                <span className="font-bold text-neutral-400 min-h-fit lg:hidden">
+                                                                    ·
+                                                                </span>
+                                                                <span className="z-10 flex items-center justify-center text-sm font-semibold text-green-400 text-nowrap md:hidden">
+                                                                    alight here
+                                                                </span>
+                                                            </>
+                                                        )}
                                                 </div>
 
-                                                {/* <div className="flex flex-row gap-6 px-2 py-1 font-bold bg-neutral-800/50 rounded-b-2xl">
-                                                    <span>
-                                                        {stop.aimed_time.toLocaleTimeString(
-                                                            [],
-                                                            {
-                                                                hour: "2-digit",
-                                                                minute: "2-digit",
-                                                            }
-                                                        )}
-                                                    </span>
-                                                    {sequence >= idx ? (
-                                                        <span className="font-bold">
-                                                            {sequence == 0 &&
-                                                            !bus?.started
-                                                                ? "Waiting to Start"
-                                                                : "Departed"}
-                                                        </span>
-                                                    ) : stop.expt_time &&
-                                                      bus?.started &&
-                                                      Math.abs(
-                                                          stop.expt_time.getTime() -
-                                                              stop.aimed_time.getTime()
-                                                      ) > 60000 ? (
-                                                        <span className="font-bold text-blue-400">
-                                                            Expt:{" "}
-                                                            {stop.expt_time.toLocaleTimeString(
-                                                                [],
-                                                                {
-                                                                    hour: "2-digit",
-                                                                    minute: "2-digit",
-                                                                }
-                                                            )}
-                                                        </span>
-                                                    ) : (
-                                                        <span className="font-bold text-green-400 ">
-                                                            On Time
-                                                        </span>
-                                                    )}
-                                                </div> */}
-                                                <div className="flex flex-row gap-6 font-bold ">
-                                                    <span>
-                                                        {idx ===
-                                                        train.locations.length -
-                                                            1
-                                                            ? stop.scheduledArrival
-                                                                ? toTime(
-                                                                      stop.scheduledArrival
-                                                                  )
-                                                                : "-"
-                                                            : toTime(
-                                                                  stop.scheduledDeparture
-                                                              )}
-                                                    </span>
-
-                                                    <span className="flex gap-2">
-                                                        {stop.departed ? (
-                                                            <>
-                                                                <span className="font-bold">
-                                                                    Departed
-                                                                </span>
-                                                                {idx ===
-                                                                train.locations
-                                                                    .length -
-                                                                    1 ? (
-                                                                    // Last stop: arrival
-                                                                    stop.expectedArrival &&
-                                                                    stop.scheduledArrival &&
-                                                                    Math.abs(
-                                                                        new Date(
-                                                                            stop.expectedArrival
-                                                                        ).getTime() -
-                                                                            new Date(
-                                                                                stop.scheduledArrival
-                                                                            ).getTime()
-                                                                    ) >
-                                                                        60000 ? (
-                                                                        <span className="font-bold text-blue-400">
-                                                                            {toTime(
-                                                                                stop.expectedArrival
-                                                                            )}
-                                                                        </span>
-                                                                    ) : (
-                                                                        <span className="font-bold text-green-400">
-                                                                            On
-                                                                            Time
-                                                                        </span>
-                                                                    )
-                                                                ) : stop.expectedDeparture &&
-                                                                  stop.scheduledDeparture &&
-                                                                  Math.abs(
-                                                                      new Date(
-                                                                          stop.expectedDeparture
-                                                                      ).getTime() -
-                                                                          new Date(
-                                                                              stop.scheduledDeparture
-                                                                          ).getTime()
-                                                                  ) > 60000 ? (
-                                                                    <span className="font-bold text-red-400">
+                                                {stop.displayAs ===
+                                                "CANCELLED_CALL" ? (
+                                                    <div className="flex flex-row gap-6 font-semibold text-red-500">
+                                                        <div className="flex gap-2">
+                                                            <div className="flex items-center gap-2">
+                                                                <FontAwesomeIcon
+                                                                    icon={
+                                                                        faCalendarXmark
+                                                                    }
+                                                                />
+                                                                <div className="flex gap-2">
+                                                                    <span className="line-through text-neutral-500">
                                                                         {toTime(
-                                                                            stop.expectedDeparture
+                                                                            stop.scheduledDeparture
                                                                         )}
                                                                     </span>
-                                                                ) : (
-                                                                    <span className="font-bold text-green-400">
-                                                                        On Time
+                                                                    <span className="text-red-500 ">
+                                                                        CANCELLED
                                                                     </span>
-                                                                )}
-                                                            </>
-                                                        ) : (
-                                                            <>
-                                                                {idx ===
-                                                                train.locations
-                                                                    .length -
-                                                                    1 ? (
-                                                                    stop.expectedArrival &&
-                                                                    stop.scheduledArrival &&
-                                                                    Math.abs(
-                                                                        new Date(
-                                                                            stop.expectedArrival
-                                                                        ).getTime() -
-                                                                            new Date(
-                                                                                stop.scheduledArrival
-                                                                            ).getTime()
-                                                                    ) >
-                                                                        60000 ? (
-                                                                        <>
-                                                                            <span className="font-bold text-blue-400">
-                                                                                Exptected{" "}
-                                                                                {toTime(
-                                                                                    stop.expectedArrival
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex flex-row gap-6 font-semibold text-purple-500">
+                                                        {stop.departed && (
+                                                            <div className="flex gap-2">
+                                                                <div className="flex items-center gap-2">
+                                                                    <FontAwesomeIcon
+                                                                        icon={
+                                                                            faCalendarCheck
+                                                                        }
+                                                                    />
+                                                                    <div className="flex">
+                                                                        {stop.expectedDeparture &&
+                                                                        stop.scheduledDeparture ? (
+                                                                            <div className="flex gap-1">
+                                                                                {new Date(
+                                                                                    stop.expectedDeparture
+                                                                                ).getTime() >
+                                                                                    new Date(
+                                                                                        stop.scheduledDeparture
+                                                                                    ).getTime() && (
+                                                                                    <span className="line-through text-neutral-500">
+                                                                                        {toTime(
+                                                                                            stop.scheduledDeparture
+                                                                                        )}
+                                                                                    </span>
                                                                                 )}
-                                                                            </span>
-                                                                        </>
-                                                                    ) : (
-                                                                        <span className="font-bold text-green-400">
-                                                                            On
-                                                                            Time
-                                                                        </span>
-                                                                    )
-                                                                ) : stop.expectedDeparture &&
-                                                                  stop.scheduledDeparture &&
-                                                                  Math.abs(
-                                                                      new Date(
-                                                                          stop.expectedDeparture
-                                                                      ).getTime() -
-                                                                          new Date(
-                                                                              stop.scheduledDeparture
-                                                                          ).getTime()
-                                                                  ) > 60000 ? (
-                                                                    <>
-                                                                        <span className="font-bold text-blue-400">
-                                                                            Expected{" "}
-                                                                            {toTime(
-                                                                                stop.expectedDeparture
-                                                                            )}
-                                                                        </span>
-                                                                    </>
-                                                                ) : (
-                                                                    <span className="font-bold text-green-400">
-                                                                        On Time
-                                                                    </span>
-                                                                )}
-                                                            </>
+                                                                                <span
+                                                                                    className={
+                                                                                        new Date(
+                                                                                            stop.expectedDeparture
+                                                                                        ).getTime() >
+                                                                                        new Date(
+                                                                                            stop.scheduledDeparture
+                                                                                        ).getTime()
+                                                                                            ? "text-red-400"
+                                                                                            : "text-green-400"
+                                                                                    }>
+                                                                                    {toTime(
+                                                                                        stop.expectedDeparture
+                                                                                    )}
+                                                                                </span>
+                                                                            </div>
+                                                                        ) : (
+                                                                            "-"
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
                                                         )}
-                                                    </span>
-                                                </div>
+
+                                                        {!stop.departed &&
+                                                            idx ===
+                                                                train?.locations
+                                                                    .length -
+                                                                    1 &&
+                                                            stop.expectedArrival &&
+                                                            (() => {
+                                                                const now =
+                                                                    new Date();
+                                                                const arrival =
+                                                                    new Date(
+                                                                        stop.expectedArrival
+                                                                    );
+                                                                if (
+                                                                    now >
+                                                                    arrival
+                                                                ) {
+                                                                    return (
+                                                                        <div className="flex gap-2">
+                                                                            <div className="flex items-center gap-2">
+                                                                                <FontAwesomeIcon
+                                                                                    icon={
+                                                                                        faCalendarCheck
+                                                                                    }
+                                                                                />
+                                                                                <div className="flex">
+                                                                                    {stop.expectedArrival &&
+                                                                                    stop.scheduledArrival ? (
+                                                                                        <div className="flex gap-1">
+                                                                                            {new Date(
+                                                                                                stop.expectedArrival
+                                                                                            ).getTime() >
+                                                                                                new Date(
+                                                                                                    stop.scheduledArrival
+                                                                                                ).getTime() && (
+                                                                                                <span className="line-through text-neutral-500">
+                                                                                                    {toTime(
+                                                                                                        stop.scheduledArrival
+                                                                                                    )}
+                                                                                                </span>
+                                                                                            )}
+                                                                                            <span
+                                                                                                className={
+                                                                                                    new Date(
+                                                                                                        stop.expectedArrival
+                                                                                                    ).getTime() >
+                                                                                                    new Date(
+                                                                                                        stop.scheduledArrival
+                                                                                                    ).getTime()
+                                                                                                        ? "text-red-400"
+                                                                                                        : "text-green-400"
+                                                                                                }>
+                                                                                                {toTime(
+                                                                                                    stop.expectedArrival
+                                                                                                )}
+                                                                                            </span>
+                                                                                        </div>
+                                                                                    ) : (
+                                                                                        "-"
+                                                                                    )}
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    );
+                                                                }
+                                                                return null;
+                                                            })()}
+
+                                                        {!stop.departed &&
+                                                            !(
+                                                                idx ===
+                                                                    train
+                                                                        ?.locations
+                                                                        .length -
+                                                                        1 &&
+                                                                stop.expectedArrival &&
+                                                                new Date() >
+                                                                    new Date(
+                                                                        stop.expectedArrival
+                                                                    )
+                                                            ) && (
+                                                                <>
+                                                                    {idx !==
+                                                                        0 && (
+                                                                        <div className="flex items-center gap-2 ">
+                                                                            <FontAwesomeIcon
+                                                                                icon={
+                                                                                    faRightToBracket
+                                                                                }
+                                                                                className="text-cyan-400"
+                                                                            />
+                                                                            {stop.expectedArrival &&
+                                                                            stop.scheduledArrival ? (
+                                                                                <div className="flex gap-1">
+                                                                                    {new Date(
+                                                                                        stop.expectedArrival
+                                                                                    ).getTime() >
+                                                                                        new Date(
+                                                                                            stop.scheduledArrival
+                                                                                        ).getTime() && (
+                                                                                        <span className="line-through text-neutral-500">
+                                                                                            {toTime(
+                                                                                                stop.scheduledArrival
+                                                                                            )}
+                                                                                        </span>
+                                                                                    )}
+                                                                                    <span
+                                                                                        className={
+                                                                                            new Date(
+                                                                                                stop.expectedArrival
+                                                                                            ).getTime() >
+                                                                                            new Date(
+                                                                                                stop.scheduledArrival
+                                                                                            ).getTime()
+                                                                                                ? "text-red-400"
+                                                                                                : "text-green-400"
+                                                                                        }>
+                                                                                        {toTime(
+                                                                                            stop.expectedArrival
+                                                                                        )}
+                                                                                    </span>
+                                                                                </div>
+                                                                            ) : (
+                                                                                <span className="text-sm text-neutral-500">
+                                                                                    pick
+                                                                                    up
+                                                                                    only
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
+                                                                    )}
+
+                                                                    {idx !==
+                                                                        train
+                                                                            ?.locations
+                                                                            .length -
+                                                                            1 && (
+                                                                        <div className="flex items-center gap-2">
+                                                                            <FontAwesomeIcon
+                                                                                icon={
+                                                                                    faRightFromBracket
+                                                                                }
+                                                                            />
+                                                                            {stop.expectedDeparture &&
+                                                                            stop.scheduledDeparture ? (
+                                                                                <div className="flex gap-1">
+                                                                                    {new Date(
+                                                                                        stop.expectedDeparture
+                                                                                    ).getTime() >
+                                                                                        new Date(
+                                                                                            stop.scheduledDeparture
+                                                                                        ).getTime() && (
+                                                                                        <span className="line-through text-neutral-500">
+                                                                                            {toTime(
+                                                                                                stop.scheduledDeparture
+                                                                                            )}
+                                                                                        </span>
+                                                                                    )}
+                                                                                    <span
+                                                                                        className={
+                                                                                            new Date(
+                                                                                                stop.expectedDeparture
+                                                                                            ).getTime() >
+                                                                                            new Date(
+                                                                                                stop.scheduledDeparture
+                                                                                            ).getTime()
+                                                                                                ? "text-red-400"
+                                                                                                : "text-green-400"
+                                                                                        }>
+                                                                                        {toTime(
+                                                                                            stop.expectedDeparture
+                                                                                        )}
+                                                                                    </span>
+                                                                                </div>
+                                                                            ) : (
+                                                                                <span className="text-sm text-neutral-500">
+                                                                                    drop
+                                                                                    off
+                                                                                    only
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
+                                                                    )}
+                                                                </>
+                                                            )}
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     </div>

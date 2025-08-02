@@ -3,6 +3,7 @@ import React, { useEffect } from "react";
 // import { faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
 // import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import StopMap from "../components/StopMap";
+import TrainSearchCard from "../components/TrainSearch";
 import { Card } from "../components/ui/Card";
 import { getCurrentPosition } from "../utils/locations";
 import type { ServiceInfo } from "../models/ServiceInfo";
@@ -49,7 +50,7 @@ const Home: React.FC = () => {
     return (
         <div>
             <div className="flex flex-col items-center justify-center gap-6">
-                <div className="flex flex-col items-center justify-center gap-5 p-7">
+                <div className="flex flex-col items-center justify-center gap-5 pt-0 p-7">
                     {/* <span className="text-5xl font-black text-center">
                         The best way to get the bus.
                     </span> */}
@@ -77,21 +78,34 @@ const Home: React.FC = () => {
                     </span> */}
                     {/* <DepartureBoard stop_id="" closest={true}></DepartureBoard> */}
 
-                    <Card className="max-w-[90vw]">
-                        <span className="w-full text-center">
-                            Nearby Services
-                        </span>
-                        <div className="flex flex-row items-center justify-center gap-2 overflow-x-scroll">
-                            {services.map((service) => (
-                                <a
-                                    key={service.id}
-                                    className="flex items-center justify-center px-3 py-1 text-lg font-bold text-center cursor-pointer rounded-xl bg-neutral-800/50"
-                                    href={`/services/${service.id}`}>
-                                    {service.line_name}
-                                </a>
-                            ))}
+                    <div className="flex flex-row flex-wrap items-center justify-center w-full gap-3 p-5">
+                        <div className="flex flex-col items-center justify-center w-full gap-3">
+                            <span className="text-xl font-bold text-center">
+                                Find your train:
+                            </span>
+                            <TrainSearchCard></TrainSearchCard>
                         </div>
-                    </Card>
+                        <div className="flex flex-col items-center justify-center w-full gap-3">
+                            <span className="text-xl font-bold text-center">
+                                See nearby bus services:
+                            </span>
+                            <Card className="max-w-[90vw]">
+                                <span className="w-full text-center">
+                                    Nearby Services
+                                </span>
+                                <div className="flex flex-row items-center justify-center gap-2 overflow-x-auto">
+                                    {services.map((service) => (
+                                        <a
+                                            key={service.id}
+                                            className="flex items-center justify-center px-3 py-1 text-lg font-bold text-center cursor-pointer rounded-xl bg-neutral-800/50"
+                                            href={`/services/${service.id}`}>
+                                            {service.line_name}
+                                        </a>
+                                    ))}
+                                </div>
+                            </Card>
+                        </div>
+                    </div>
 
                     <span className="text-xl font-bold text-center">
                         Or find your stop on the map:

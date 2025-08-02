@@ -13,7 +13,7 @@ export function generateTimeTo(diffSec: number) {
     if (diffSec < 30) {
         return 'Due';
     } else if (diffSec < 3600) {
-        const min = Math.floor(diffSec / 60);
+        const min = Math.ceil(diffSec / 60);
         return `${min} min`;
     } else {
         const hr = Math.floor(diffSec / 3600);
