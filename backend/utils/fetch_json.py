@@ -33,5 +33,7 @@ async def fetch_rtt_json(url: str):
         ) as response:
             if response.status != 200 or "error" in (await response.json()):
                 print(f"RTT API failed: {response.status}")
+                print(url)
+                print(await response.json())
                 return None
             return await response.json()
