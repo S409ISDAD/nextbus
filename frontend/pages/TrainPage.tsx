@@ -467,6 +467,21 @@ const TrainPage: React.FC = () => {
                                                         : ""
                                                 }`}>
                                                 <div className="flex flex-wrap items-center min-w-full gap-2 gap-y-0">
+                                                    <div className="text-sm font-semibold text-neutral-400 text-nowrap md:hidden">
+                                                        {idx == startIdx &&
+                                                            showRoute && (
+                                                                <span className="z-10 flex items-center justify-center">
+                                                                    board at
+                                                                </span>
+                                                            )}
+                                                        {idx == endIdx &&
+                                                            showRoute && (
+                                                                <span className="z-10 flex items-center justify-center">
+                                                                    alight at
+                                                                </span>
+                                                            )}
+                                                    </div>
+
                                                     <span className="font-bold text-nowrap">
                                                         {stop.description}
                                                     </span>
@@ -516,29 +531,6 @@ const TrainPage: React.FC = () => {
                                                             )}
                                                         </>
                                                     )}
-
-                                                    {idx == startIdx &&
-                                                        showRoute && (
-                                                            <>
-                                                                <span className="font-bold text-neutral-400 min-h-fit lg:hidden">
-                                                                    ·
-                                                                </span>
-                                                                <span className="z-10 flex items-center justify-center text-sm font-semibold text-green-400 text-nowrap md:hidden">
-                                                                    board here
-                                                                </span>
-                                                            </>
-                                                        )}
-                                                    {idx == endIdx &&
-                                                        showRoute && (
-                                                            <>
-                                                                <span className="font-bold text-neutral-400 min-h-fit lg:hidden">
-                                                                    ·
-                                                                </span>
-                                                                <span className="z-10 flex items-center justify-center text-sm font-semibold text-green-400 text-nowrap md:hidden">
-                                                                    alight here
-                                                                </span>
-                                                            </>
-                                                        )}
                                                 </div>
 
                                                 {stop.displayAs ===
