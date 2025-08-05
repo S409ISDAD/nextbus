@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 import logging
 from backend.deps import get_redis, limiter
-from backend.models.livery import Livery
+from backend.schemas.livery import Livery
 from backend.services.livery import get_livery
 
 

@@ -3,8 +3,8 @@ from dateutil import parser
 from redis.asyncio import Redis
 
 from backend.config import VEHICLES_BASE
-from backend.models.livery import Livery
-from backend.models.bus import ScheduledBus, TrackedBus
+from backend.schemas.livery import Livery
+from backend.schemas.bus import ScheduledBus, TrackedBus
 from backend.services.caching import BUS_CACHE, get_cached
 from backend.services.livery import get_livery
 from backend.services.prediction import (

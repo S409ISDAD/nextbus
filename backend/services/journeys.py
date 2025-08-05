@@ -5,8 +5,8 @@ from datetime import timedelta
 from geopy.distance import geodesic
 
 from backend.config import API_BASE
-from backend.models.journey import Journey, Trip
-from backend.models.stop import StopTime
+from backend.schemas.journey import Journey, Trip
+from backend.schemas.stop import StopTime
 from backend.services.caching import (
     JOURNEY_CACHE,
     get_cached,

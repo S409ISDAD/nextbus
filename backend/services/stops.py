@@ -1,7 +1,7 @@
 from geopy.distance import geodesic
 from backend.config import API_BASE, BASE, STOPS_BASE
-from backend.models.stop import Stop
-from backend.models.service import Service
+from backend.schemas.stop import Stop
+from backend.schemas.service import Service
 from backend.services.caching import (
     SERVICES_CACHE,
     STOPS_CACHE,

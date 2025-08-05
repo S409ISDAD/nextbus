@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 
-from backend.models.stop import StopTime
+from backend.schemas.stop import StopTime
 
 
 class Journey(BaseModel):

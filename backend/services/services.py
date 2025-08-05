@@ -1,5 +1,5 @@
 from backend.config import API_BASE, VEHICLES_BASE
-from backend.models.service import Service
+from backend.schemas.service import Service
 from backend.services.caching import SERVICE_CACHE, TRIPS_CACHE, get_cached
 from backend.utils.fetch_json import fetch_json
 from redis.asyncio import Redis

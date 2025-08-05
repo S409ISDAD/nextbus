@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel
 
-from backend.models.service import Service
+from backend.schemas.service import Service
 
 
 class Stop(BaseModel):

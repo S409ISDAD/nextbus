@@ -2,7 +2,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from backend.deps import get_redis, limiter
-from backend.models.trains import TrainService, StationResponse
+from backend.schemas.trains import TrainService, StationResponse
 from backend.services.trains import (
     get_departures,
     get_arrivals,

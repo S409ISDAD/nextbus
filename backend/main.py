@@ -1,5 +1,5 @@
 import time
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from backend.api.routes import (
@@ -11,12 +11,15 @@ from backend.api.routes import (
     livery,
     trains,
 )
+from sqlalchemy.orm import Session
+from backend.models import Base
 from backend.websockets.routes import ws_router
-from backend.deps import get_redis_client, limiter
+from backend.deps import get_redis_client, get_redis, limiter
 import logging
 from prometheus_fastapi_instrumentator import Instrumentator
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from .core.db import engine, get_db
 
 
 log = logging.getLogger(__name__)
@@ -38,9 +41,12 @@ async def lifespan(app: FastAPI):
         else:
             log.warning("Redis did not respond.")
         await redis.close()
+        log.info("Setting up database...")
+        Base.metadata.create_all(bind=engine)
+        log.info("Database setup complete.")
 
     except Exception as e:
-        log.error(f"Redis connection failed: {e}")
+        log.error(f"connection failed: {e}")
 
     yield
 
@@ -74,6 +80,19 @@ async def timing_middleware(request: Request, call_next):
     duration = time.time() - start
     print(f"{request.method} {request.url} completed in {duration:.3f}s")
     return response
+
+
+@app.get("/health")
+async def health_check(db: Session = Depends(get_db), redis=Depends(get_redis)):
+    try:
+        # Simple test query
+        from sqlalchemy import text
+
+        db.execute(text("SELECT 1"))
+        await redis.ping()
+        return {"status": "healthy"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 app.include_router(ws_router)

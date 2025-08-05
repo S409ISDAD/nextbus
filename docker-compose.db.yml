@@ -1,0 +1,18 @@
+
+services:
+  db:
+    image: nickblah/postgis:13-bullseye-postgis-3
+    container_name: nextbus_db
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: nextbus
+      POSTGRES_PASSWORD: secretpassword
+      POSTGRES_DB: nextbus_geodb
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/core/init_db:/docker-entrypoint-initdb.d
+
+volumes:
+  postgres_data:

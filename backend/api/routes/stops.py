@@ -2,7 +2,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from backend.deps import get_redis, limiter
-from backend.models.stop import Stop
+from backend.schemas.stop import Stop
 from backend.services import stops
 
 router = APIRouter()

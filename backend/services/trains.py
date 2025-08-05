@@ -1,7 +1,7 @@
 from typing import List
 
 from fastapi import HTTPException
-from backend.models.trains import (
+from backend.schemas.trains import (
     ServiceLocation,
     StationResponse,
     Train,

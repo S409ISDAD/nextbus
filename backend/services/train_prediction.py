@@ -1,7 +1,7 @@
 from datetime import timedelta
 import datetime
-from backend.models.prediction import Prediction
-from backend.models.trains import ServiceLocation, TrainService
+from backend.schemas.prediction import Prediction
+from backend.schemas.trains import ServiceLocation, TrainService
 from datetime import datetime as dt
 
 

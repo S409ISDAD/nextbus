@@ -1,10 +1,10 @@
 from datetime import timedelta
 import datetime
 from geopy.distance import geodesic
-from backend.models.journey import Journey
-from backend.models.prediction import Prediction
-from backend.models.stop import StopTime
-from backend.models.times import Times
+from backend.schemas.journey import Journey
+from backend.schemas.prediction import Prediction
+from backend.schemas.stop import StopTime
+from backend.schemas.times import Times
 from backend.services.journeys import get_trip, get_vehicle_journey
 from datetime import datetime as dt
 

@@ -2,10 +2,10 @@ from typing import Optional
 from pydantic import BaseModel
 from datetime import datetime
 
-from backend.models.journey import Journey
-from backend.models.livery import Livery
-from backend.models.prediction import Prediction
-from backend.models.service import Service
+from backend.schemas.journey import Journey
+from backend.schemas.livery import Livery
+from backend.schemas.prediction import Prediction
+from backend.schemas.service import Service
 from .progress import Progress
 
 

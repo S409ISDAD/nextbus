@@ -10,3 +10,12 @@ prometheus-client
 websockets
 pubsub
 slowapi
+sqlalchemy
+asyncpg
+psycopg2-binary
+geoalchemy2
+alembic
+python-dotenv
+shapely
+isodate
+partridge

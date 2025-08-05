@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 import logging
 from backend.deps import get_redis, limiter
-from backend.models.service import Service
+from backend.schemas.service import Service
 from backend.services import stops
 import traceback
 

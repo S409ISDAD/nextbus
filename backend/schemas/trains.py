@@ -2,7 +2,7 @@ from datetime import datetime
 from pydantic import BaseModel
 from typing import List, Optional, Union
 
-from backend.models.prediction import Prediction
+from backend.schemas.prediction import Prediction
 
 
 class Location(BaseModel):
