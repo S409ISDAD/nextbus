@@ -11,7 +11,7 @@ log = logging.getLogger(__name__)
 
 
 @router.get("/", response_model=Livery | None)
-@limiter.limit("5/minute")
+@limiter.limit("20/minute")
 async def livery(request: Request, id: int, redis=Depends(get_redis)):
     try:
         livery = await get_livery(id, redis)

@@ -95,7 +95,7 @@ function BusCard({
                                             className={clsx(
                                                 "absolute top-0 left-0 w-5 h-5",
                                                 gettingLiveData
-                                                    ? "text-neutral-600"
+                                                    ? "text-neutral-500"
                                                     : {
                                                           "text-blue-400 opacity-40":
                                                               bus.status ===
@@ -201,6 +201,7 @@ const DeparturePage: React.FC = () => {
                 return;
             }
             setFetching(true);
+            setGettingLiveData(true);
             try {
                 const stopPromise = getStopData(id);
                 const schedDeparturesPromise = fetchDepartures(id, "scheduled");
