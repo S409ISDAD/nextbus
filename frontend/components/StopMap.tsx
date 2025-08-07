@@ -42,7 +42,7 @@ const getPinIcon = (bearing: number) =>
         html: `<i class="fas fa-location-dot fa-xl" style="transform: rotate(${
             bearing + 180
         }deg);"></i>`,
-        className: "text-red-500 opacity-80",
+        className: "text-blue-500 opacity-80",
         iconSize: [24, 24],
         iconAnchor: [12, 12],
         popupAnchor: [-6, -6],
@@ -51,7 +51,7 @@ const getPinIcon = (bearing: number) =>
 const getStopIcon = () =>
     L.divIcon({
         html: `<i class="fas fa-circle-dot"></i>`,
-        className: "text-red-500 opacity-80",
+        className: "text-blue-500 opacity-80",
         iconSize: [24, 24],
         iconAnchor: [12, 12],
         popupAnchor: [-6, -6],
@@ -134,7 +134,7 @@ const MapView: React.FC<
     }
 
     return (
-        <div className="" style={{ position: "relative" }}>
+        <div className="" style={{ position: "relative", zIndex: 0 }}>
             <MapContainer
                 center={[lat, lng]}
                 zoom={zoom}
@@ -168,7 +168,7 @@ const MapView: React.FC<
                                 </span>
                                 <a
                                     href={`/departures/${stop.stop_id}`}
-                                    className="text-blue-500 hover:underline">
+                                    className="text-sky-500 hover:underline">
                                     View Stop
                                 </a>
                             </div>

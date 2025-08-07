@@ -66,7 +66,7 @@ export default function TrainSearchCard() {
             <span className="flex flex-col items-center text-lg font-semibold text-neutral-300">
                 Enter your journey details{" "}
                 <span className="text-xs font-semibold text-center text-neutral-400">
-                    direct trains only - no changes or transfers
+                    direct trains only! no changes or transfers
                 </span>
             </span>
 

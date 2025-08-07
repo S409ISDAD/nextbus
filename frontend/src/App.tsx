@@ -16,6 +16,13 @@ import { faXmark } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 import { useState, useEffect } from "react";
+import {
+    Description,
+    Dialog,
+    DialogBackdrop,
+    DialogPanel,
+    DialogTitle,
+} from "@headlessui/react";
 
 function UsefulBanner() {
     const location = useLocation();
@@ -50,6 +57,15 @@ function UsefulBanner() {
 
 function App() {
     const currentYear = new Date().getFullYear();
+    const [isOpen, setIsOpen] = useState(false);
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("from") === "fly") {
+        setIsOpen(true);
+        const url = new URL(window.location.href);
+        url.searchParams.delete("from");
+        window.history.replaceState({}, document.title, url.toString());
+    }
+
     return (
         <BrowserRouter>
             <div className="flex flex-col min-h-screen">
@@ -66,6 +82,43 @@ function App() {
                         },
                     }}
                 />
+                <Dialog
+                    open={isOpen}
+                    as="div"
+                    className="relative z-10 focus:outline-none"
+                    onClose={close}>
+                    <DialogBackdrop className="fixed inset-0 bg-black/60" />
+                    <div className="fixed inset-0 z-10 w-screen overflow-y-auto">
+                        <div className="flex items-center justify-center min-h-full p-4">
+                            <DialogPanel
+                                transition
+                                className="w-full max-w-md rounded-3xl bg-[#1e1e1e] p-6 duration-300 ease-out data-closed:transform-[scale(95%)] data-closed:opacity-0">
+                                <DialogTitle
+                                    as="h3"
+                                    className="text-2xl font-bold">
+                                    We've Moved!
+                                </DialogTitle>
+                                <p className="mt-2 text-neutral-200/80">
+                                    You were redirected from{" "}
+                                    <b>nextbus.fly.dev</b> because that address
+                                    is no longer in use.
+                                </p>
+                                <p className="mt-2 text-neutral-200/80">
+                                    Please use <b>nextbus.orbitix.dev</b> from
+                                    now on, and update any bookmarks you may
+                                    have.
+                                </p>
+                                <div className="mt-4">
+                                    <div
+                                        className="inline-flex cursor-pointer items-center gap-2 rounded-md bg-blue-500 px-3 py-1.5 text-sm/6 font-semibold text-white  transition-all focus:not-data-focus:outline-none hover:bg-blue-600 data-focus:outline data-focus:outline-white data-hover:bg-gray-600 data-open:bg-gray-700"
+                                        onClick={() => setIsOpen(false)}>
+                                        Got it, thanks!
+                                    </div>
+                                </div>
+                            </DialogPanel>
+                        </div>
+                    </div>
+                </Dialog>
                 <UsefulBanner />
                 <Routes>
                     <Route element={<Layout />}>
