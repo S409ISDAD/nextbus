@@ -28,7 +28,7 @@ services:
       - web
 
   db:
-    image: postgis/postgis
+    image: imresamu/postgis
     container_name: nextbus_db
     restart: unless-stopped
     ports:
