@@ -9,6 +9,7 @@ import ServicePage from "../pages/ServicePage";
 import Layout from "../components/Layout";
 import StationPage from "../pages/StationPage";
 import TrainPage from "../pages/TrainPage";
+import NotFound from "../pages/NotFound";
 import TrainSearchPage from "../pages/TrainSearchPage";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router";
 import { Toaster } from "react-hot-toast";
@@ -121,6 +122,7 @@ function App() {
                 <UsefulBanner />
                 <Routes>
                     <Route element={<Layout />}>
+                        <Route path="*" element={<NotFound />} />
                         <Route path="/" element={<Home />} />
                         <Route path="/privacy" element={<PrivacyPolicy />} />
                         <Route path="/terms" element={<Terms />} />
