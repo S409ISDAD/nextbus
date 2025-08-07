@@ -9,7 +9,12 @@ import { getCurrentPosition } from "../utils/locations";
 import getStopData from "../utils/getStopData";
 import type { Stop } from "../models/Stop";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSatelliteDish, faSlash } from "@fortawesome/free-solid-svg-icons";
+import {
+    faCircleNotch,
+    faSatelliteDish,
+    faSlash,
+    faSpinner,
+} from "@fortawesome/free-solid-svg-icons";
 import clsx from "clsx";
 import { WebSocketManager } from "../websockets/ws_manager";
 import React from "react";
@@ -20,7 +25,15 @@ interface Props {
     filter?: string;
 }
 
-function BusCard({ bus, onClick }: { bus: Departure; onClick: () => void }) {
+function BusCard({
+    bus,
+    onClick,
+    gettingLiveData,
+}: {
+    bus: Departure;
+    onClick: () => void;
+    gettingLiveData: boolean;
+}) {
     return (
         <div className="cursor-pointer" key={bus.trip} onClick={onClick}>
             <div className="flex flex-row items-center justify-between gap-2">
@@ -80,27 +93,31 @@ function BusCard({ bus, onClick }: { bus: Departure; onClick: () => void }) {
                                     <div className="relative w-5 h-5">
                                         <FontAwesomeIcon
                                             icon={faSatelliteDish}
+                                            beatFade={gettingLiveData}
                                             className={clsx(
                                                 "absolute top-0 left-0 w-5 h-5",
-                                                {
-                                                    "text-blue-400 opacity-40":
-                                                        bus.status ===
-                                                        "not_tracking",
-                                                    "text-sky-500":
-                                                        bus.status ===
-                                                        "tracking",
-                                                    "text-emerald-500":
-                                                        bus.status ===
-                                                        "user_tracking",
-                                                }
+                                                gettingLiveData
+                                                    ? "text-neutral-600"
+                                                    : {
+                                                          "text-blue-400 opacity-40":
+                                                              bus.status ===
+                                                              "not_tracking",
+                                                          "text-sky-500":
+                                                              bus.status ===
+                                                              "tracking",
+                                                          "text-emerald-500":
+                                                              bus.status ===
+                                                              "user_tracking",
+                                                      }
                                             )}
                                         />
-                                        {bus.status === "not_tracking" && (
-                                            <FontAwesomeIcon
-                                                icon={faSlash}
-                                                className="absolute top-0 left-0 w-5 h-5 text-red-500"
-                                            />
-                                        )}
+                                        {!gettingLiveData &&
+                                            bus.status === "not_tracking" && (
+                                                <FontAwesomeIcon
+                                                    icon={faSlash}
+                                                    className="absolute top-0 left-0 w-5 h-5 text-red-500"
+                                                />
+                                            )}
                                     </div>
                                 )}
                             </>
@@ -123,6 +140,7 @@ function DepartureBoard({ stop_id, closest, filter }: Props) {
     const [stop, setStop] = useState<Stop>();
     const [stopID, setStopID] = useState<string>("");
     const [loading, setLoading] = useState(true);
+    const [gettingLiveData, setGettingLiveData] = useState(true);
     const [fetching, setFetching] = useState(false);
     const [lastRefreshed, setRefreshed] = useState(new Date());
     const [elapsed, setElapsed] = useState<string>("0s");
@@ -238,6 +256,7 @@ function DepartureBoard({ stop_id, closest, filter }: Props) {
                             setRefreshed(buses.timestamp);
                             setMsg("");
                             setLoading(false);
+                            setGettingLiveData(false);
                         }
                     }
                 });
@@ -315,6 +334,9 @@ function DepartureBoard({ stop_id, closest, filter }: Props) {
                                                                       "_blank"
                                                                   );
                                                         }}
+                                                        gettingLiveData={
+                                                            gettingLiveData
+                                                        }
                                                     />
                                                     {idx !==
                                                         buses.length - 1 && (

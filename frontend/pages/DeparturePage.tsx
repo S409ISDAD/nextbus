@@ -17,7 +17,15 @@ import {
 import clsx from "clsx";
 import { WebSocketManager } from "../websockets/ws_manager";
 
-function BusCard({ bus, onClick }: { bus: Departure; onClick: () => void }) {
+function BusCard({
+    bus,
+    onClick,
+    gettingLiveData,
+}: {
+    bus: Departure;
+    onClick: () => void;
+    gettingLiveData: boolean;
+}) {
     return (
         <div key={bus.trip} onClick={onClick} className="cursor-pointer">
             <div className="flex flex-row items-center justify-between">
@@ -83,27 +91,31 @@ function BusCard({ bus, onClick }: { bus: Departure; onClick: () => void }) {
                                     <div className="relative w-5 h-5">
                                         <FontAwesomeIcon
                                             icon={faSatelliteDish}
+                                            beatFade={gettingLiveData}
                                             className={clsx(
                                                 "absolute top-0 left-0 w-5 h-5",
-                                                {
-                                                    "text-blue-400 opacity-40":
-                                                        bus.status ===
-                                                        "not_tracking",
-                                                    "text-sky-500":
-                                                        bus.status ===
-                                                        "tracking",
-                                                    "text-emerald-500":
-                                                        bus.status ===
-                                                        "user_tracking",
-                                                }
+                                                gettingLiveData
+                                                    ? "text-neutral-600"
+                                                    : {
+                                                          "text-blue-400 opacity-40":
+                                                              bus.status ===
+                                                              "not_tracking",
+                                                          "text-sky-500":
+                                                              bus.status ===
+                                                              "tracking",
+                                                          "text-emerald-500":
+                                                              bus.status ===
+                                                              "user_tracking",
+                                                      }
                                             )}
                                         />
-                                        {bus.status === "not_tracking" && (
-                                            <FontAwesomeIcon
-                                                icon={faSlash}
-                                                className="absolute top-0 left-0 w-5 h-5 text-red-500"
-                                            />
-                                        )}
+                                        {!gettingLiveData &&
+                                            bus.status === "not_tracking" && (
+                                                <FontAwesomeIcon
+                                                    icon={faSlash}
+                                                    className="absolute top-0 left-0 w-5 h-5 text-red-500"
+                                                />
+                                            )}
                                     </div>
                                 )}
                             </>
@@ -145,6 +157,7 @@ const DeparturePage: React.FC = () => {
     const [stop, setStop] = useState<Stop>();
     const [closestStop, setClosest] = useState<string>();
     const [loading, setLoading] = useState(true);
+    const [gettingLiveData, setGettingLiveData] = useState(true);
     const [fetching, setFetching] = useState(false);
     const [lastRefreshed, setRefreshed] = useState(new Date());
     const [elapsed, setElapsed] = useState<string>("0s");
@@ -244,6 +257,7 @@ const DeparturePage: React.FC = () => {
                             setBuses(buses.updatedBuses);
                             setRefreshed(buses.timestamp);
                             setMsg("");
+                            setGettingLiveData(false);
                             setLoading(false);
                         }
                     }
@@ -398,6 +412,7 @@ const DeparturePage: React.FC = () => {
                                                       "_blank"
                                                   );
                                         }}
+                                        gettingLiveData={gettingLiveData}
                                     />
                                     {idx === buses.length - 1 && (
                                         <div className="flex items-center gap-2 mb-0.5">
