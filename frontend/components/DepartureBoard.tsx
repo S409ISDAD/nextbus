@@ -9,12 +9,7 @@ import { getCurrentPosition } from "../utils/locations";
 import getStopData from "../utils/getStopData";
 import type { Stop } from "../models/Stop";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-    faCircleNotch,
-    faSatelliteDish,
-    faSlash,
-    faSpinner,
-} from "@fortawesome/free-solid-svg-icons";
+import { faSatelliteDish, faSlash } from "@fortawesome/free-solid-svg-icons";
 import clsx from "clsx";
 import { WebSocketManager } from "../websockets/ws_manager";
 import React from "react";
