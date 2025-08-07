@@ -1,3 +1,4 @@
+import datetime
 import partridge as ptg
 import pandas as pd
 from geoalchemy2.shape import from_shape
@@ -9,11 +10,10 @@ from backend.models import (
     FeedInfo,
     Frequency,
     Route,
-    Service,
     Calendar,
     CalendarDate,
+    Service,
     Shape,
-    ShapePoint,
     Trip,
     Stop,
     StopTime,
@@ -74,7 +74,7 @@ def upsert(
     rows: pd.DataFrame,
     conflict_columns: list,
     mapping: dict,
-    batch_size: int = 5000,
+    batch_size: int = 10000,
 ):
     """
     Perform an upsert operation for a given SQLAlchemy model using a list of JSON-like dictionaries, in batches.
@@ -226,67 +226,51 @@ def import_routes(db: Session, routes: pd.DataFrame):
     print(f"Imported {len(routes)} routes.")
 
 
-def import_calendar(db: Session, file_path: str):
-    total_rows = sum(1 for _ in open(file_path)) - 1  # subtract header
-    total_calendar_entries = 0
-    print(f"Importing {total_rows} calendar entries...")
+def import_calendar(db: Session, calendar_df: pd.DataFrame):
+    print(f"Importing {len(calendar_df)} calendar entries...")
 
-    for calendar_df in pd.read_csv(file_path, chunksize=10000):
-        calendar_df = calendar_df.where(pd.notnull(calendar_df), None)
-        calendar_df["start_date"] = pd.to_datetime(
-            calendar_df["start_date"], format="%Y%m%d"
-        )
-        calendar_df["end_date"] = pd.to_datetime(
-            calendar_df["end_date"], format="%Y%m%d"
-        )
+    calendar_df = calendar_df.where(pd.notnull(calendar_df), None)
+    calendar_df["start_date"] = pd.to_datetime(
+        calendar_df["start_date"], format="%Y%m%d"
+    )
+    calendar_df["end_date"] = pd.to_datetime(calendar_df["end_date"], format="%Y%m%d")
 
-        all_service_ids = {service.id for service in db.query(Service).all()}
-        service_ids = set(calendar_df["service_id"].dropna().unique())
-        new_service_ids = service_ids - all_service_ids
+    mapping = {
+        "service_id": "service_id",
+        "monday": "monday",
+        "tuesday": "tuesday",
+        "wednesday": "wednesday",
+        "thursday": "thursday",
+        "friday": "friday",
+        "saturday": "saturday",
+        "sunday": "sunday",
+        "start_date": "start_date",
+        "end_date": "end_date",
+    }
 
-        service_rows = [{"id": service_id} for service_id in new_service_ids]
-        if service_rows:
-            print(f"Upserting {len(service_rows)} new services.")
-            upsert(db, Service, service_rows, ["id"])
-
-        rows = calendar_df.to_dict(orient="records")
-        total_calendar_entries += len(rows)
-
-        upsert(db, Calendar, rows, ["service_id"])
-        percent = (total_calendar_entries / total_rows) * 100 if total_rows > 0 else 100
-        print(f"Imported {total_calendar_entries} calendar entries. ({percent:.2f}%)")
+    upsert(db, Calendar, calendar_df, ["service_id"], mapping)
+    print(f"Imported {len(calendar_df)} calendar entries.")
 
 
-def import_calendar_dates(db: Session, file_path: str):
-    total_rows = sum(1 for _ in open(file_path)) - 1  # subtract header
-    total_calendar_dates = 0
-    print(f"Importing {total_rows} calendar dates...")
+def import_calendar_dates(db: Session, calendar_dates_df: pd.DataFrame):
+    print(f"Importing {len(calendar_dates_df)} calendar dates...")
 
-    for calendar_dates_df in pd.read_csv(file_path, chunksize=10000):
-        calendar_dates_df = calendar_dates_df.where(pd.notnull(calendar_dates_df), None)
-        calendar_dates_df["date"] = pd.to_datetime(
-            calendar_dates_df["date"], format="%Y%m%d"
-        )
-        calendar_dates_df["exception_type"] = calendar_dates_df["exception_type"].apply(
-            ExceptionType
-        )
+    calendar_dates_df = calendar_dates_df.where(pd.notnull(calendar_dates_df), None)
+    calendar_dates_df["date"] = pd.to_datetime(
+        calendar_dates_df["date"], format="%Y%m%d"
+    )
+    calendar_dates_df["exception_type"] = calendar_dates_df["exception_type"].map(
+        ExceptionType
+    )
 
-        all_service_ids = {service.id for service in db.query(Service).all()}
-        service_ids = set(calendar_dates_df["service_id"].dropna().unique())
-        new_service_ids = service_ids - all_service_ids
+    mapping = {
+        "service_id": "service_id",
+        "date": "date",
+        "exception_type": "exception_type",
+    }
 
-        service_rows = [{"id": service_id} for service_id in new_service_ids]
-        if service_rows:
-            print(f"Upserting {len(service_rows)} new services.")
-            upsert(db, Service, service_rows, ["id"])
-
-        rows = calendar_dates_df.to_dict(orient="records")
-        total_calendar_dates += len(rows)
-        percent = (total_calendar_dates / total_rows) * 100 if total_rows > 0 else 100
-        upsert(db, CalendarDate, rows, ["service_id", "date"])
-        print(
-            f"Imported {total_calendar_dates} calendar date entries. ({percent:.2f}%)"
-        )
+    upsert(db, CalendarDate, calendar_dates_df, ["service_id", "date"], mapping)
+    print(f"Imported {len(calendar_dates_df)} calendar date entries.")
 
 
 def import_shapes(db: Session, shapes: pd.DataFrame):
@@ -303,72 +287,47 @@ def import_shapes(db: Session, shapes: pd.DataFrame):
     print(f"Imported {len(shapes)} shapes.")
 
 
-def import_stops(db: Session, file_path: str):
-    total_rows = sum(1 for _ in open(file_path)) - 1  # subtract header
-    total_stops = 0
-    print(f"Importing {total_rows} stops...")
-
-    stops_df = pd.read_csv(file_path, low_memory=False)
+def import_stops(db: Session, stops_df: pd.DataFrame):
+    print(f"Importing {len(stops_df)} stops...")
 
     stops_df = stops_df.where(pd.notnull(stops_df), None)
-    parent_stops = stops_df[stops_df["parent_station"].notnull()]
-    child_stops = stops_df[stops_df["parent_station"].isnull()]
 
-    parent_rows = [
-        {
-            "id": row.get("stop_id"),
-            "code": row.get("stop_code"),
-            "name": row.get("stop_name"),
-            "point": generate_point(float(row["stop_lat"]), float(row["stop_lon"])),
-            "zone_id": row.get("zone_id"),
-            "url": row.get("stop_url"),
-            "location_type": LocationType(row.get("location_type"))
-            if not pd.isnull(row.get("location_type"))
-            else LocationType.STOP,
-            "parent_station_id": None,
-            "desc": row.get("stop_desc"),
-            "timezone": row.get("stop_timezone"),
-            "wheelchair_boarding": row.get("wheelchair_boarding"),
-            "level_id": row.get("level_id"),
-            "platform_code": row.get("platform_code"),
-        }
-        for _, row in parent_stops.iterrows()
+    valid_stop_ids = set(stops_df["stop_id"])
+    stops_df = stops_df[
+        stops_df["parent_station"].isnull()
+        | stops_df["parent_station"].isin(valid_stop_ids)
     ]
 
-    rows = [row for row in parent_rows if row["id"] is not None]
+    stops_df["location_type"] = stops_df["location_type"].map(
+        lambda x: LocationType(x) if not pd.isnull(x) else LocationType.STOP
+    )
+    stops_df["wheelchair_boarding"] = stops_df["wheelchair_boarding"].map(
+        lambda x: WheelchairAccessible(x) if not pd.isnull(x) else None
+    )
+    stops_df["point"] = stops_df.apply(
+        lambda row: from_shape(row["geometry"], srid=4326),
+        axis=1,
+    )
 
-    upsert(db, Stop, rows, ["id"])
-    total_stops += len(rows)
-    percent = (total_stops / total_rows) * 100 if total_rows > 0 else 100
-    print(f"Total: {total_stops} parent stops. ({percent:.2f}%)")
+    mapping = {
+        "id": "stop_id",
+        "name": "stop_name",
+        "description": "stop_desc",
+        "point": "point",
+        "location_type": "location_type",
+        "parent_station_id": "parent_station",
+        "wheelchair_boarding": "wheelchair_boarding",
+    }
 
-    child_rows = [
-        {
-            "id": row.get("stop_id"),
-            "code": row.get("stop_code"),
-            "name": row.get("stop_name"),
-            "point": generate_point(float(row["stop_lat"]), float(row["stop_lon"])),
-            "zone_id": row.get("zone_id"),
-            "url": row.get("stop_url"),
-            "location_type": LocationType(row.get("location_type"))
-            if not pd.isnull(row.get("location_type"))
-            else LocationType.STOP,
-            "parent_station_id": row.get("parent_station"),
-            "desc": row.get("stop_desc"),
-            "timezone": row.get("stop_timezone"),
-            "wheelchair_boarding": row.get("wheelchair_boarding"),
-            "level_id": row.get("level_id"),
-            "platform_code": row.get("platform_code"),
-        }
-        for _, row in child_stops.iterrows()
-    ]
+    parent_stops = stops_df[stops_df["parent_station"].isnull()]
+    child_stops = stops_df[stops_df["parent_station"].notnull()]
 
-    rows = [row for row in child_rows if row["id"] is not None]
+    print(f"Found {len(parent_stops)} parent stops and {len(child_stops)} child stops.")
+    upsert(db, Stop, parent_stops, ["id"], mapping)
+    print(f"Imported {len(parent_stops)} parent stops.")
 
-    upsert(db, Stop, rows, ["id"])
-    total_stops += len(rows)
-    percent = (total_stops / total_rows) * 100 if total_rows > 0 else 100
-    print(f"Total: {total_stops} parent and child stops. ({percent:.2f}%)")
+    upsert(db, Stop, child_stops, ["id"], mapping)
+    print(f"Imported {len(child_stops)} child stops.")
 
 
 def import_trips(db: Session, trips: pd.DataFrame, shapes: pd.DataFrame):
@@ -428,31 +387,13 @@ def import_trips(db: Session, trips: pd.DataFrame, shapes: pd.DataFrame):
 def import_stop_times(db: Session, stop_times: pd.DataFrame):
     print(f"Importing {len(stop_times)} stop times...")
 
-    def parse_gtfs_time(time_str):
-        """
-        Parse a GTFS time string (which may be >24:00:00) into a string or timedelta.
-        Returns None if invalid.
-        """
-        if pd.isnull(time_str) or time_str == "":
-            return None
-        try:
-            parts = time_str.split(":")
-            if len(parts) != 3:
-                return None
-            hours, minutes, seconds = map(int, parts)
-            return f"{hours:02}:{minutes:02}:{seconds:02}"
-        except Exception:
-            return None
-
     stop_times = stop_times.where(pd.notnull(stop_times), None)
-    stop_times["arrival_time"] = stop_times["arrival_time"].apply(parse_gtfs_time)
-    stop_times["departure_time"] = stop_times["departure_time"].apply(parse_gtfs_time)
 
     stop_times["pickup_type"] = stop_times["pickup_type"].map(
-        lambda x: PickupDropOffType(x) if not pd.isnull(x) else None
+        lambda x: PickupDropOffType(int(x)) if not pd.isnull(x) else None
     )
     stop_times["drop_off_type"] = stop_times["drop_off_type"].map(
-        lambda x: PickupDropOffType(x) if not pd.isnull(x) else None
+        lambda x: PickupDropOffType(int(x)) if not pd.isnull(x) else None
     )
 
     mapping = {
@@ -468,87 +409,51 @@ def import_stop_times(db: Session, stop_times: pd.DataFrame):
         "timepoint": "timepoint",
     }
 
-    rows = stop_times.to_dict(orient="records")
-    print(f"Total stop times to import: {len(rows)}")
     print("Removing duplicates...")
     # Remove duplicates within the batch based on (trip_id, stop_id) using DataFrame
     unique_stop_times = stop_times.drop_duplicates(subset=["trip_id", "stop_id"])
+    print(f"Total stop times to import: {len(stop_times)}")
 
     upsert(db, StopTime, unique_stop_times, ["trip_id", "stop_id"], mapping)
     print(f"Imported {len(unique_stop_times)} stop times.")
 
 
-def import_frequencies(db: Session, file_path: str):
-    total_rows = sum(1 for _ in open(file_path)) - 1  # subtract header
-    total_frequencies = 0
-    print(f"Importing {total_rows} frequencies...")
+def import_frequencies(db: Session, frequencies_df: pd.DataFrame):
+    print(f"Importing {len(frequencies_df)} frequencies...")
 
-    for frequencies_df in pd.read_csv(file_path, chunksize=10000):
-        frequencies_df = frequencies_df.where(pd.notnull(frequencies_df), None)
+    frequencies_df = frequencies_df.where(pd.notnull(frequencies_df), None)
 
-        rows = [
-            {
-                "trip_id": row.get("trip_id"),
-                "start_time": row.get("start_time"),
-                "end_time": row.get("end_time"),
-                "headway_secs": safe_int(row.get("headway_secs")),
-                "exact_times": row.get("exact_times"),
-            }
-            for _, row in frequencies_df.iterrows()
-        ]
+    mapping = {
+        "trip_id": "trip_id",
+        "start_time": "start_time",
+        "end_time": "end_time",
+        "headway_secs": "headway_secs",
+        "exact_times": "exact_times",
+    }
 
-        rows = [row for row in rows if row["trip_id"] is not None]
-
-        upsert(db, Frequency, rows, ["trip_id"])
-        total_frequencies += len(rows)
-        percent = (total_frequencies / total_rows) * 100 if total_rows > 0 else 100
-        print(f"Total: {total_frequencies} frequencies. ({percent:.2f}%)")
-
-
-def import_line_strings(db: Session):
-    print("Importing line strings for shapes...")
-    shape_ids = db.query(Shape.id).all()
-    for shape_id_tuple in shape_ids:
-        shape_id = shape_id_tuple[0]
-        points = (
-            db.query(ShapePoint)
-            .filter(ShapePoint.shape_id == shape_id)
-            .order_by(ShapePoint.sequence)
-            .all()
-        )
-        coords = [
-            getattr(point, "point", None)
-            for point in points
-            if getattr(point, "point", None) is not None
-        ]
-        shapely_points = []
-        from geoalchemy2.shape import to_shape
-
-        for geom in coords:
-            if hasattr(geom, "geom_type"):
-                shapely_points.append(geom)
-            else:
-                shapely_points.append(to_shape(geom))
-        linestring = build_line_string(shapely_points)
-        if linestring:
-            db.query(Shape).filter(Shape.id == shape_id).update({"line": linestring})
-    db.commit()
+    upsert(db, Frequency, frequencies_df, ["trip_id"], mapping)
+    print(f"Imported {len(frequencies_df)} frequencies.")
 
 
 def import_gtfs(zip_file_path: str):
     print("Starting GTFS import...")
 
-    feed = ptg.load_geo_feed("itm_all_gtfs.zip")
+    config = ptg.config.geo_config()
+    config.remove_edges_from(list(config.out_edges("stops.txt")))
+
+    feed = ptg.load_feed(zip_file_path, config=config)
+
+    # feed = ptg.load_geo_feed(zip_file_path)
 
     if not feed:
         print("No GTFS feed found or feed is empty.")
         return
 
-    print(
-        f"GTFS feed contains {len(feed.agency)} agencies, {len(feed.routes)} routes, and {len(feed.trips)} trips."
-    )
+    print(f"GTFS feed loaded from {zip_file_path}")
 
-    routes = {}
+    # print(
+    #     f"GTFS feed contains {len(feed.agency)} agencies, {len(feed.routes)} routes, and {len(feed.trips)} trips."
+    # )
 
     with SessionLocal() as db:
         try:
@@ -575,15 +480,15 @@ def import_gtfs(zip_file_path: str):
 
             import_trips(db, feed.trips, feed.shapes)
 
-            import_frequencies(db, "gtfs_data/frequencies.txt")
+            import_frequencies(db, feed.frequencies)
 
-            import_calendar(db, "gtfs_data/calendar.txt")
+            import_calendar(db, feed.calendar)
 
-            import_calendar_dates(db, "gtfs_data/calendar_dates.txt")
+            import_calendar_dates(db, feed.calendar_dates)
 
-            import_stops(db, feed)
+            import_stops(db, feed.stops)
 
-            import_stop_times(db, feed)
+            import_stop_times(db, feed.stop_times)
 
             db.commit()
             print("GTFS import completed successfully.")
@@ -592,6 +497,7 @@ def import_gtfs(zip_file_path: str):
             print("An error occurred during GTFS import:")
             error_str = e.__str__()
             print(error_str[:1000])
+            # print(error_str)
             db.rollback()
 
 

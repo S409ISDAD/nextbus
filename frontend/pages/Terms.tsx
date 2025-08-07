@@ -24,7 +24,7 @@ const Terms: React.FC = () => {
                     <strong>
                         <a
                             href="https://bustimes.org"
-                            className="text-teal-500 underline"
+                            className="underline text-sky-500"
                             target="_blank"
                             rel="noopener noreferrer">
                             bustimes.org
@@ -47,7 +47,7 @@ const Terms: React.FC = () => {
                     <strong>
                         <a
                             href="https://forms.gle/SxrFyLQ1HedQcLLC7"
-                            className="text-teal-500 underline"
+                            className="underline text-sky-500"
                             target="_blank"
                             rel="noopener noreferrer">
                             Google Form

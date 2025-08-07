@@ -8,6 +8,8 @@ import { Card } from "../components/ui/Card";
 import { getCurrentPosition } from "../utils/locations";
 import type { ServiceInfo } from "../models/ServiceInfo";
 import getNearby from "../utils/getNearby";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faBus } from "@fortawesome/free-solid-svg-icons";
 
 const Home: React.FC = () => {
     // const navigate = useNavigate();
@@ -51,9 +53,9 @@ const Home: React.FC = () => {
         <div>
             <div className="flex flex-col items-center justify-center gap-6">
                 <div className="flex flex-col items-center justify-center gap-5 pt-0 p-7">
-                    {/* <span className="text-5xl font-black text-center">
-                        The best way to get the bus.
-                    </span> */}
+                    <span className="text-5xl font-black text-center pt-7">
+                        nextbus
+                    </span>
 
                     {/* <div className="flex items-center w-full py-2 rounded-full shadow-2xl border-1 border-neutral-800 bg-neutral-900">
                         <div className="ml-4 mr-2 text-gray-500">
@@ -78,22 +80,30 @@ const Home: React.FC = () => {
                     </span> */}
                     {/* <DepartureBoard stop_id="" closest={true}></DepartureBoard> */}
 
-                    <div className="flex flex-row flex-wrap items-center justify-center w-full gap-3 p-5">
-                        <div className="flex flex-col items-center justify-center w-full gap-3">
+                    <div className="flex flex-row flex-wrap items-start justify-center w-full p-5 gap-y-3 gap-x-10">
+                        <div className="flex flex-col items-center justify-center gap-3 min-w-[350px] ">
                             <span className="text-xl font-bold text-center">
-                                Find your train:
+                                Find your train
+                            </span>
+                            <span className="text-xs text-center text-neutral-600">
+                                yes i know its a bus website but trains are cool
                             </span>
                             <TrainSearchCard></TrainSearchCard>
                         </div>
-                        <div className="flex flex-col items-center justify-center w-full gap-3">
+                        <div className="flex flex-col items-center justify-center gap-3">
                             <span className="text-xl font-bold text-center">
-                                See nearby bus services:
+                                See nearby bus services
                             </span>
-                            <Card className="max-w-[90vw]">
+                            <Card className="max-w-[90vw] flex flex-col items-center gap-2">
                                 <span className="w-full text-center">
                                     Nearby Services
                                 </span>
                                 <div className="flex flex-row items-center justify-center gap-2 overflow-x-auto">
+                                    {services.length === 0 && (
+                                        <span className="text-sm text-neutral-400">
+                                            No nearby services found.
+                                        </span>
+                                    )}
                                     {services.map((service) => (
                                         <a
                                             key={service.id}
@@ -104,6 +114,18 @@ const Home: React.FC = () => {
                                     ))}
                                 </div>
                             </Card>
+                        </div>
+                        <div className="flex flex-col items-center justify-center gap-3">
+                            <span className="text-xl font-bold text-center">
+                                Go to the bus dashboard
+                            </span>
+                            <button
+                                className="w-full p-2 mt-2 font-semibold text-white transition-all bg-blue-500 cursor-pointer rounded-xl hover:bg-blue-600"
+                                onClick={() => {
+                                    window.location.href = `/buses`;
+                                }}>
+                                Bus Dashboard <FontAwesomeIcon icon={faBus} />
+                            </button>
                         </div>
                     </div>
 

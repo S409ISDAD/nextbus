@@ -42,7 +42,7 @@ async def lifespan(app: FastAPI):
             log.warning("Redis did not respond.")
         await redis.close()
         log.info("Setting up database...")
-        Base.metadata.create_all(bind=engine)
+        # Base.metadata.create_all(bind=engine)
         log.info("Database setup complete.")
 
     except Exception as e:

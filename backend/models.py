@@ -1,3 +1,4 @@
+from datetime import timedelta
 import enum
 from sqlalchemy import (
     Column,
@@ -271,8 +272,8 @@ class StopTime(Base):
     stop_id = Column(
         "stop_id", String, ForeignKey("stop.id"), nullable=False
     )  # stop_id
-    arrival_time = Column("arrival_time", String, nullable=True)  # arrival_time
-    departure_time = Column("departure_time", String, nullable=True)  # departure_time
+    arrival_time = Column("arrival_time", Integer, nullable=True)  # arrival_time
+    departure_time = Column("departure_time", Integer, nullable=True)  # departure_time
     stop_sequence = Column("stop_sequence", Integer, nullable=False)  # stop_sequence
     stop_headsign = Column("stop_headsign", String, nullable=True)  # stop_headsign
     pickup_type = Column(
@@ -300,6 +301,29 @@ class StopTime(Base):
     __table_args__ = (
         Index("ix_stoptime_tripid_stopid", "trip_id", "stop_id", unique=True),
     )
+
+    @property
+    def get_arrival_time(self) -> str | None:
+        """Convert arrival_time to a time string (HH:MM)."""
+        if self.arrival_time is None:
+            return None
+        td = timedelta(seconds=self.arrival_time)
+        total_minutes = td.seconds // 60
+        hours = total_minutes // 60
+        minutes = total_minutes % 60
+        return f"{hours:02}:{minutes:02}"
+
+    @property
+    def get_departure_time(self) -> str | None:
+        """Convert departure_time to a time string (HH:MM)."""
+        if self.departure_time is None:
+            return None
+        # Convert seconds to HH:MM format (ignore seconds)
+        td = timedelta(seconds=self.departure_time)
+        total_minutes = td.seconds // 60
+        hours = total_minutes // 60
+        minutes = total_minutes % 60
+        return f"{hours:02}:{minutes:02}"
 
 
 class Frequency(Base):

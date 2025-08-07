@@ -62,10 +62,14 @@ export default function TrainSearchCard() {
     }, [debouncedTo, fuse, stations]);
 
     return (
-        <Card className="flex flex-col items-center justify-center gap-3 p-[12px] w-full md:w-1/3">
-            <span className="text-lg font-semibold text-neutral-300">
-                Enter your journey details
+        <Card className="flex flex-col items-center justify-center gap-3 p-[12px] w-full">
+            <span className="flex flex-col items-center text-lg font-semibold text-neutral-300">
+                Enter your journey details{" "}
+                <span className="text-xs font-semibold text-center text-neutral-400">
+                    direct trains only - no changes or transfers
+                </span>
             </span>
+
             {msg && <span className="font-semibold text-red-500">{msg}</span>}
 
             <div className="flex flex-row w-full gap-[12px]">

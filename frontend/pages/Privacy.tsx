@@ -25,7 +25,7 @@ const Privacy: React.FC = () => {
                     <strong>
                         <a
                             href="https://bustimes.org/privacy"
-                            className="text-teal-500 underline"
+                            className="underline text-sky-500"
                             target="_blank"
                             rel="noopener noreferrer">
                             bustimes.org
@@ -36,7 +36,7 @@ const Privacy: React.FC = () => {
                     <strong>
                         <a
                             href="https://bustimes.org/privacy"
-                            className="text-teal-500 underline"
+                            className="underline text-sky-500"
                             target="_blank"
                             rel="noopener noreferrer">
                             bustimes.org
@@ -59,17 +59,17 @@ const Privacy: React.FC = () => {
                 <span className="text-2xl font-bold">Cookies & Analytics</span>
                 <p>We do not use cookies or analytics services at this time.</p>
             </div>
-            {/* <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2">
                 <span className="text-2xl font-bold">Contact</span>
                 <p>
                     If you have any questions, please contact:{" "}
                     <a
-                        href="mailto:you@example.com"
-                        className="text-teal-500 underline">
-                        you@example.com
+                        href="mailto:contact@orbitix.dev"
+                        className="underline text-sky-500">
+                        contact@orbitix.dev
                     </a>
                 </p>
-            </div> */}
+            </div>
         </div>
     );
 };

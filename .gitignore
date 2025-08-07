@@ -183,3 +183,5 @@ cython_debug/
 
 *.zip
 *.csv
+
+dump.sql
