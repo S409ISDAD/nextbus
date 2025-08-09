@@ -12,6 +12,7 @@ from backend.api.routes import (
     trains,
 )
 from sqlalchemy.orm import Session
+from backend.db.db import sync_search_vectors, engine, get_db
 from backend.models import Base
 from backend.websockets.routes import ws_router
 from backend.deps import get_redis_client, get_redis, limiter
@@ -19,7 +20,6 @@ import logging
 from prometheus_fastapi_instrumentator import Instrumentator
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
-from .core.db import engine, get_db
 
 
 log = logging.getLogger(__name__)
@@ -34,19 +34,16 @@ log = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    try:
-        redis = get_redis_client()
-        if await redis.ping():
-            log.info("Redis Connected.")
-        else:
-            log.warning("Redis did not respond.")
-        await redis.close()
-        log.info("Setting up database...")
-        # Base.metadata.create_all(bind=engine)
-        log.info("Database setup complete.")
-
-    except Exception as e:
-        log.error(f"connection failed: {e}")
+    redis = get_redis_client()
+    if await redis.ping():
+        log.info("Redis Connected.")
+    else:
+        log.warning("Redis did not respond.")
+    await redis.close()
+    log.info("Setting up database...")
+    Base.metadata.create_all(bind=engine)
+    sync_search_vectors()
+    log.info("Database setup complete.")
 
     yield
 

@@ -1,403 +1,49 @@
 import calendar
-import datetime
+import datetime as dt
+from datetime import datetime, timezone, timedelta
 from functools import cache
 import logging
 from shapely import LineString, Point
 from isodate import parse_duration
 import xml.etree.cElementTree as ET
 
-logger = logging.getLogger(__name__)
+uk_timezone = timezone(timedelta(hours=1))
 
 WEEKDAYS = {day: i for i, day in enumerate(calendar.day_name)}
 
 
-@cache
-def warn_once(msg, *args, **kwargs):
-    return logger.warning(msg, *args, **kwargs)
+def to_datetime(date_str):
+    """Convert a date string to a datetime object."""
+    if not date_str:
+        return None
+    try:
+        return datetime.strptime(date_str, "%Y-%m-%d").astimezone(uk_timezone).date()
+    except ValueError:
+        return None
 
 
-def parse_time(string: str) -> datetime.timedelta:
+def parse_time(string: str) -> timedelta:
     hours, minutes, seconds = string.split(":")
-    return datetime.timedelta(
-        hours=int(hours), minutes=int(minutes), seconds=int(seconds)
-    )
+    return timedelta(hours=int(hours), minutes=int(minutes), seconds=int(seconds))
 
 
-class Stop:
+def strip_ns_recursive(elem):
+    if elem.tag.startswith("{"):
+        elem.tag = elem.tag.split("}", 1)[1]
+    for child in elem:
+        strip_ns_recursive(child)
+
+
+class DateRange:
     def __init__(self, element):
-        atco_code = element.findtext("StopPointRef")
-        if not atco_code:
-            atco_code = element.findtext("AtcoCode", "")
-        self.atco_code = atco_code.upper()
-
-        self.common_name = element.findtext("CommonName")
-        if not self.common_name:
-            self.common_name = element.findtext("Descriptor/CommonName")
-
-        self.indicator = element.findtext("Indicator")
-
-        self.locality = element.findtext("LocalityName")
-
-        self.element = element
-
-
-class Route:
-    def __init__(self, element):
-        self.id = element.get("id")
-        self.route_sections = [
-            section.text for section in element.findall("RouteSectionRef")
-        ]
-
-
-class RouteSection:
-    def __init__(self, element):
-        self.id = element.get("id")
-        self.route_links = [RouteLink(link) for link in element.findall("RouteLink")]
-
-
-class RouteLink:
-    @staticmethod
-    def get_point(element):
-        lon = element.findtext("Longitude")
-        if lon is not None:
-            lat = element.findtext("Latitude")
-            return Point(float(lon), float(lat))
-
-        easting = element.findtext("Easting")
-        northing = element.findtext("Northing")
-        return Point(float(easting), float(northing))
-
-    def __init__(self, element):
-        self.id = element.get("id")
-        self.from_stop = element.findtext("From/StopPointRef")
-        self.to_stop = element.findtext("To/StopPointRef")
-        self.distance = float(element.findtext("Distance", "0"))
-        locations = element.findall("Track/Mapping/Location/Translation")
-        if not locations:
-            locations = element.findall("Track/Mapping/Location")
-        locations = [self.get_point(location) for location in locations]
-
-        self.track = LineString([point for point in locations])
-
-
-class JourneyPattern:
-    def __init__(self, element, sections, serviced_organisations):
-        self.id = element.attrib.get("id")
-        self.sections = [
-            sections[section_element.text]
-            for section_element in element.findall("JourneyPatternSectionRefs")
-            if section_element.text in sections
-        ]
-        self.route_ref = element.findtext("RouteRef")
-        self.direction = element.findtext("Direction")
-        if (
-            self.direction
-            and self.direction != "inbound"
-            and self.direction != "outbound"
-        ):
-            self.direction = self.direction.lower()
-
-        self.operating_profile = element.find("OperatingProfile")
-        if self.operating_profile is not None:
-            self.operating_profile = OperatingProfile(
-                self.operating_profile, serviced_organisations
-            )
-
-    def is_inbound(self):
-        return self.direction in ("inbound", "anticlockwise")
-
-    def get_timinglinks(self):
-        for section in self.sections:
-            yield from section.timinglinks
-
-
-class JourneyPatternSection:
-    def __init__(self, element, stops):
-        self.id = element.get("id")
-        self.timinglinks = [
-            JourneyPatternTimingLink(timinglink_element, stops)
-            for timinglink_element in element
-        ]
-
-
-class JourneyPatternStopUsage:
-    def __init__(self, element, stops):
-        self.activity = element.findtext("Activity")
-        self.dynamic_destination_display = element.findtext("DynamicDestinationDisplay")
-
-        self.sequencenumber = element.get("SequenceNumber")
-        if self.sequencenumber is not None:
-            self.sequencenumber = int(self.sequencenumber)
-
-        stop_ref = element.findtext("StopPointRef").upper()
-        try:
-            self.stop = stops[stop_ref]
-        except KeyError:
-            self.stop = Stop(element)
-
-        self.timingstatus = element.findtext("TimingStatus")
-
-        self.wait_time = element.find("WaitTime")
-        if self.wait_time is not None:
-            self.wait_time = parse_duration(self.wait_time.text)
-            if self.wait_time.total_seconds() > 10000:
-                logger.warning(
-                    "long wait time %s at stop %s", self.wait_time, self.stop
-                )
-
-        self.notes = [
-            (note_element.find("NoteCode").text, note_element.find("NoteText").text)
-            for note_element in element.findall("Notes/Note")
-        ]
-        if self.notes:
-            if self.notes == [("R", "Sets down by request to driver only")]:
-                if self.activity != "setDown":
-                    self.activity = "setDown"
-                self.notes = []
-
-        self.row = None
-        self.parent = None
-
-
-class JourneyPatternTimingLink:
-    def __init__(self, element, stops):
-        self.origin = JourneyPatternStopUsage(element.find("From"), stops)
-        self.destination = JourneyPatternStopUsage(element.find("To"), stops)
-        self.origin.parent = self.destination.parent = self
-        self.runtime = parse_duration(element.find("RunTime").text)
-        self.id = element.get("id")
-        self.route_link_ref = element.findtext("RouteLinkRef")
-
-
-def get_deadruns(journey_element):
-    start_element = journey_element.find("StartDeadRun")
-    end_element = journey_element.find("EndDeadRun")
-    return (get_deadrun_ref(start_element), get_deadrun_ref(end_element))
-
-
-def get_deadrun_ref(deadrun_element):
-    if deadrun_element is not None:
-        return deadrun_element.findtext("ShortWorking/JourneyPatternTimingLinkRef")
-
-
-class VehicleJourneyTimingLink:
-    def __init__(self, element):
-        self.id = element.attrib.get("id")
-        self.journeypatterntiminglinkref = element.find(
-            "JourneyPatternTimingLinkRef"
-        ).text
-        self.run_time = element.findtext("RunTime")
-        if self.run_time is not None:
-            self.run_time = parse_duration(self.run_time)
-
-        self.from_wait_time = element.findtext("From/WaitTime")
-        if self.from_wait_time is not None:
-            self.from_wait_time = parse_duration(self.from_wait_time)
-
-        self.to_wait_time = element.findtext("To/WaitTime")
-        if self.to_wait_time is not None:
-            self.to_wait_time = parse_duration(self.to_wait_time)
-
-        self.from_activity = element.findtext("From/Activity")
-        self.to_activity = element.findtext("To/Activity")
-
-        self.notes = [
-            (note_element.find("NoteCode").text, note_element.find("NoteText").text)
-            for note_element in element.findall("Notes/Note")
-        ]
-        assert not self.notes
-
-
-class Block:
-    def __init__(self, element):
-        self.code = element.findtext("BlockNumber")
+        self.start_date = to_datetime(element.findtext("StartDate"))
+        self.end_date = to_datetime(element.findtext("EndDate"))
         self.description = element.findtext("Description")
 
-
-class VehicleJourney:
-    def __str__(self):
-        return str(self.departure_time)
-
-    def __init__(self, element, services, serviced_organisations):
-        self.code = element.find("VehicleJourneyCode").text
-        self.private_code = element.findtext("PrivateCode")
-
-        self.ticket_machine_journey_code = element.findtext(
-            "Operational/TicketMachine/JourneyCode"
+    def is_valid(self, date):
+        return (self.start_date is None or date >= self.start_date) and (
+            self.end_date is None or date <= self.end_date
         )
-        self.ticket_machine_service_code = element.findtext(
-            "Operational/TicketMachine/TicketMachineServiceCode"
-        )
-
-        self.block = element.find("Operational/Block")
-        if self.block is not None:
-            self.block = Block(self.block)
-
-        self.service_ref = element.find("ServiceRef").text.strip()
-        self.line_ref = element.find("LineRef").text
-
-        journeypatternref_element = element.find("JourneyPatternRef")
-        if journeypatternref_element is not None:
-            self.journey_ref = None
-            self.journey_pattern = services[self.service_ref].journey_patterns.get(
-                journeypatternref_element.text
-            )
-        else:
-            self.journey_ref = element.findtext("VehicleJourneyRef")
-            self.journey_pattern = None
-
-        self.operating_profile = element.find("OperatingProfile")
-        if self.operating_profile is not None:
-            self.operating_profile = OperatingProfile(
-                self.operating_profile, serviced_organisations
-            )
-
-        self.departure_time = parse_time(element.findtext("DepartureTime"))
-        departure_day_shift = element.findtext("DepartureDayShift")
-        if departure_day_shift:
-            departure_day_shift = int(departure_day_shift)
-            if (
-                self.departure_time > datetime.timedelta(hours=12)
-                or departure_day_shift > 1
-            ):
-                logger.error(f"{self.departure_time=}, ignoring {departure_day_shift=}")
-            else:
-                self.departure_time += datetime.timedelta(days=departure_day_shift)
-
-        self.start_deadrun, self.end_deadrun = get_deadruns(element)
-
-        self.operator = element.findtext("OperatorRef")
-
-        sequencenumber = element.get("SequenceNumber")
-        self.sequencenumber = sequencenumber and int(sequencenumber)
-
-        timing_links = element.findall("VehicleJourneyTimingLink")
-        self.timing_links = [
-            VehicleJourneyTimingLink(timing_link) for timing_link in timing_links
-        ]
-
-        note_elements = element.findall("Note")
-        if note_elements is not None:
-            self.notes = {
-                note_element.find("NoteCode").text: note_element.find("NoteText").text
-                for note_element in note_elements
-            }
-
-        self.frequency_interval = None
-        frequency = element.find("Frequency")
-        if frequency is not None:
-            interval = frequency.find("Interval")
-            if interval is not None:
-                self.frequency_interval = parse_duration(
-                    interval.findtext("ScheduledFrequency")
-                )
-            self.frequency_end_time = parse_time(frequency.findtext("EndTime"))
-
-    def get_timinglinks(self):
-        pattern_links = self.journey_pattern.get_timinglinks()
-        journey_links = {
-            link.journeypatterntiminglinkref: link for link in self.timing_links
-        }
-        for link in pattern_links:
-            yield link, journey_links.get(link.id)
-
-    def get_times(self):
-        stopusage = None
-        prev_activity = None
-        time = self.departure_time
-        deadrun = self.start_deadrun is not None
-        deadrun_next = False
-        wait_time = None
-        for timinglink, journey_timinglink in self.get_timinglinks():
-            if journey_timinglink and journey_timinglink.from_activity:
-                activity = journey_timinglink.from_activity
-            else:
-                activity = timinglink.origin.activity
-
-            if stopusage and prev_activity != activity:
-                activity = None
-
-            stopusage = timinglink.origin
-
-            if deadrun and self.start_deadrun == timinglink.id:
-                deadrun = False
-
-            if not deadrun:
-                if wait_time is None:
-                    wait_time = datetime.timedelta()
-                if journey_timinglink and journey_timinglink.from_wait_time is not None:
-                    if journey_timinglink.from_wait_time != wait_time:
-                        wait_time += journey_timinglink.from_wait_time
-                    elif wait_time:
-                        warn_once(
-                            "correctly ignored second journey wait time %s at %s",
-                            wait_time,
-                            stopusage.stop.atco_code,
-                        )
-                elif stopusage.wait_time is not None:
-                    if stopusage.wait_time != wait_time:
-                        wait_time += stopusage.wait_time
-                    elif wait_time:
-                        warn_once(
-                            "correctly ignored second journey pattern wait time %s at %s",
-                            wait_time,
-                            stopusage.stop.atco_code,
-                        )
-
-                notes = (
-                    journey_timinglink and journey_timinglink.notes or stopusage.notes
-                )
-
-                if wait_time:
-                    next_time = time + wait_time
-                    yield Cell(stopusage, time, next_time, activity, notes)
-                    time = next_time
-                else:
-                    yield Cell(stopusage, time, time, activity, notes)
-
-                if journey_timinglink and journey_timinglink.run_time is not None:
-                    run_time = journey_timinglink.run_time
-                else:
-                    run_time = timinglink.runtime
-                if run_time:
-                    time += run_time
-
-            if deadrun_next:
-                deadrun = True
-                deadrun_next = False
-            elif self.end_deadrun == timinglink.id:
-                deadrun_next = True
-
-            stopusage = timinglink.destination
-
-            if not deadrun:
-                if journey_timinglink and journey_timinglink.to_wait_time is not None:
-                    wait_time = journey_timinglink.to_wait_time
-                else:
-                    wait_time = stopusage.wait_time
-
-                    if wait_time and wait_time == timinglink.origin.wait_time:
-                        warn_once(
-                            "dodgily ignored second wait time %s from %s to %s",
-                            wait_time,
-                            timinglink.origin.stop.atco_code,
-                            stopusage.stop.atco_code,
-                        )
-                        wait_time = None
-
-            if journey_timinglink and journey_timinglink.to_activity:
-                prev_activity = journey_timinglink.to_activity
-            else:
-                prev_activity = stopusage.activity
-
-        if not deadrun:
-            notes = None
-            if journey_timinglink and journey_timinglink.notes:
-                notes = journey_timinglink.notes
-            else:
-                notes = stopusage.notes
-
-            yield Cell(stopusage, time, time, prev_activity, notes)
 
 
 class ServicedOrganisation:
@@ -417,162 +63,159 @@ class ServicedOrganisation:
         return self.name or self.code
 
 
-class ServicedOrganisationDayType:
-    def __init__(
-        self, serviced_organisations: dict, ref: str, operation: bool, working: bool
-    ):
-        self.ref = ref
-        self.operation = operation
-        self.working = working
-        self.serviced_organisation = serviced_organisations[ref]
-
-    def __repr__(self):
-        if self.operation == self.working:
-            return f"{self.serviced_organisation} days"
-
-        return f"{self.serviced_organisation} holidays"
-
-
-class DayOfWeek:
-    def __init__(self, day):
-        if isinstance(day, int):
-            self.day = day
-        else:
-            self.day = WEEKDAYS[day]
-
-    def __eq__(self, other):
-        if isinstance(other, int):
-            return self.day == other
-        return self.day == other.day
-
-    def __repr__(self):
-        return calendar.day_name[self.day]
-
-
-class OperatingProfile:
-    serviced_organisations = None
-
-    def __init__(self, element, serviced_organisations: dict):
-        element = element
-
-        week_days = element.find("RegularDayType/DaysOfWeek")
-        self.regular_days = []
-        if week_days is not None:
-            week_days = [e.tag for e in week_days]
-            for day in week_days:
-                if "To" in day:
-                    day_range_bounds = [WEEKDAYS[i] for i in day.split("To")]
-                    day_range = range(day_range_bounds[0], day_range_bounds[1] + 1)
-                    self.regular_days += [DayOfWeek(i) for i in day_range]
-                elif day == "Weekend":
-                    self.regular_days += [DayOfWeek(5), DayOfWeek(6)]
-                elif day[:3] == "Not":
-                    self.regular_days += [
-                        DayOfWeek(WEEKDAYS[key]) for key in WEEKDAYS if key != day[3:]
-                    ]
-                else:
-                    self.regular_days.append(DayOfWeek(day))
-
-        self.week_of_month = None
-        periodic_day_type = element.find("PeriodicDayType")
-        if periodic_day_type is not None:
-            logger.info(ET.tostring(periodic_day_type).decode())
-            self.week_of_month = periodic_day_type.findtext("WeekOfMonth/WeekNumber")
-        # Special Days:
-
-        nonoperation_days = element.findall(
-            "SpecialDaysOperation/DaysOfNonOperation/DateRange"
-        )
-        self.nonoperation_days = [DateRange(e) for e in nonoperation_days if len(e)]
-
-        operation_days = element.findall(
-            "SpecialDaysOperation/DaysOfOperation/DateRange"
-        )
-        self.operation_days = [DateRange(e) for e in operation_days if len(e)]
-
-        # Serviced Organisation:
-
-        self.serviced_organisations = []
-
-        if (
-            serviced_organisations
-            and (sodt := element.find("ServicedOrganisationDayType")) is not None
-        ):
-            for path, operation, working in (
-                ("DaysOfOperation/Holidays/ServicedOrganisationRef", True, False),
-                ("DaysOfOperation/WorkingDays/ServicedOrganisationRef", True, True),
-                ("DaysOfNonOperation/Holidays/ServicedOrganisationRef", False, False),
-                ("DaysOfNonOperation/WorkingDays/ServicedOrganisationRef", False, True),
-            ):
-                for e in sodt.findall(path):
-                    self.serviced_organisations.append(
-                        ServicedOrganisationDayType(
-                            serviced_organisations, e.text, operation, working
-                        )
-                    )
-
-        # Bank Holidays:
-
-        self.operation_bank_holidays = element.find(
-            "BankHolidayOperation/DaysOfOperation"
-        )
-        self.nonoperation_bank_holidays = element.find(
-            "BankHolidayOperation/DaysOfNonOperation"
-        )
-
-        if self.operation_bank_holidays is None:
-            if element.find("RegularDayType/HolidaysOnly") is not None:
-                self.operation_bank_holidays = element.find("RegularDayType")
-
-        self.hash = ET.tostring(element)
-        if serviced_organisations:
-            for organisation in serviced_organisations.values():
-                self.hash += organisation.hash
-
-
-class DateRange:
+class StopPoint:
     def __init__(self, element):
-        self.start = element.findtext("StartDate")
-        self.end = element.findtext("EndDate")
-        if self.start:
-            self.start = datetime.date.fromisoformat(self.start.strip())
-        if self.end:
-            self.end = datetime.date.fromisoformat(self.end.strip())
-        self.note = element.findtext("Note", "")
-        self.description = element.findtext("Description", "")
+        atco_code = element.findtext("StopPointRef")
+        if not atco_code:
+            atco_code = element.findtext("AtcoCode", "")
+        self.atco_code = atco_code.upper()
+        self.common_name = element.findtext("CommonName")
+        if not self.common_name:
+            self.common_name = element.findtext("Descriptor/CommonName")
 
-    def __str__(self):
-        if self.start == self.end:
-            return str(self.start)
-        return f"{self.start} to {self.end}"
 
-    def contains(self, date):
-        return self.start <= date and (not self.end or self.end >= date)
+class Location:
+    def __init__(self, element):
+        self.location_id = element.get("id")
+        longitude = element.findtext("Longitude")
+        latitude = element.findtext("Latitude")
+        point = (
+            Point(float(longitude), float(latitude)) if longitude and latitude else None
+        )
+        self.point = point
+
+
+class RouteLink:
+    def __init__(self, element):
+        self.route_link_id = element.get("id")
+        self.from_stop = element.findtext("From/StopPointRef")
+        self.to_stop = element.findtext("To/StopPointRef")
+        self.distance = (
+            float(element.findtext("Distance"))
+            if element.findtext("Distance") is not None
+            else None
+        )
+        locations: list[Location] = []
+        mapping = element.find("Track/Mapping")
+        if mapping is not None:
+            for loc_elem in mapping.findall("Location"):
+                locations.append(Location(loc_elem))
+
+        self.locations = locations
+
+
+class RouteSection:
+    def __init__(self, element):
+        self.section_id = element.get("id")
+        route_links: list[RouteLink] = []
+        for rl_elem in element.findall("RouteLink"):
+            route_links.append(RouteLink(rl_elem))
+        self.route_links = route_links
+
+
+class Route:
+    def __init__(self, element):
+        self.route_id = element.get("id")
+        self.creation_datetime = element.get("CreationDateTime")
+        self.modification_datetime = element.get("ModificationDateTime")
+        self.modification = element.get("Modification")
+        self.revision_number = element.get("RevisionNumber")
+        self.private_code = element.findtext("PrivateCode")
+        self.description = element.findtext("Description")
+        self.route_section_ref = element.findtext("RouteSectionRef")
+
+
+class JourneyPatternTimingLinkFromTo:
+    def __init__(self, element):
+        self.id = element.get("id")
+        self.fromto = (
+            ("from" if element.tag == "From" else "to")
+            if element.tag in ["From", "To"]
+            else None
+        )
+        self.sequence_number = element.get("SequenceNumber")
+        self.activity = element.findtext("Activity")
+        self.dynamic_destination_display = element.findtext("DynamicDestinationDisplay")
+        self.stop_point_ref = element.findtext("StopPointRef")
+        self.timing_status = element.findtext("TimingStatus")
+        self.fare_stage_number = element.findtext("FareStageNumber")
+
+
+class JourneyPatternTimingLink:
+    def __init__(self, element):
+        self.link_id = element.get("id")
+        from_elem = element.find("From")
+        to_elem = element.find("To")
+        self.from_stop = (
+            JourneyPatternTimingLinkFromTo(from_elem) if from_elem is not None else None
+        )
+        self.to_stop = (
+            JourneyPatternTimingLinkFromTo(to_elem) if to_elem is not None else None
+        )
+        self.route_link_ref = element.findtext("RouteLinkRef")
+        self.run_time = element.findtext("RunTime")
+
+
+class JourneyPatternSection:
+    def __init__(self, element):
+        self.section_id = element.get("id")
+        timing_links: dict[str, JourneyPatternTimingLink] = {}
+        for link_elem in element.findall("JourneyPatternTimingLink"):
+            jptl = JourneyPatternTimingLink(link_elem)
+            timing_links[jptl.link_id] = JourneyPatternTimingLink(link_elem)
+        self.timing_links = timing_links
+
+
+class Garage:
+    def __init__(self, element):
+        self.garage_code = element.findtext("GarageCode")
+        self.garage_name = element.findtext("GarageName")
+        location_elem = element.find("Location")
+        self.location = Location(location_elem) if location_elem is not None else None
+
+
+class Operator:
+    def __init__(self, element):
+        self.operator_id = element.get("id")
+        self.national_operator_code = element.findtext("NationalOperatorCode")
+        self.operator_code = element.findtext("OperatorCode")
+        self.operator_short_name = element.findtext("OperatorShortName")
+        self.operator_name_on_licence = element.findtext("OperatorNameOnLicence")
+        self.trading_name = element.findtext("TradingName")
+        self.licence_number = element.findtext("LicenceNumber")
+        garages = []
+        garages_elem = element.find("Garages")
+        if garages_elem is not None:
+            for garage_elem in garages_elem.findall("Garage"):
+                garages.append(Garage(garage_elem))
+        self.garages = garages
 
 
 class Service:
-    def __init__(self, element, serviced_organisations, journey_pattern_sections):
-        self.mode = element.findtext("Mode", "")
-
-        self.operator = element.findtext("RegisteredOperatorRef")
-
-        self.operating_profile = element.find("OperatingProfile")
-        if self.operating_profile is not None:
-            self.operating_profile = OperatingProfile(
-                self.operating_profile, serviced_organisations
-            )
-
-        self.operating_period = DateRange(element.find("OperatingPeriod"))
-
-        self.public_use = element.findtext("PublicUse")
-
-        self.service_code = element.find("ServiceCode").text.strip()
-
-        self.marketing_name = element.findtext("MarketingName")
-
+    def __init__(self, element):
+        self.creation_datetime = element.get("CreationDateTime")
+        self.modification_datetime = element.get("ModificationDateTime")
+        self.modification = element.get("Modification")
+        self.revision_number = element.get("RevisionNumber")
+        self.service_code = element.findtext("ServiceCode")
+        lines: list[Line] = []
+        lines_elem = element.find("Lines")
+        if lines_elem is not None:
+            for line_elem in lines_elem.findall("Line"):
+                lines.append(Line(line_elem))
+        self.lines = lines
+        operating_period_elem = element.find("OperatingPeriod")
+        self.operating_period = (
+            OperatingPeriod(operating_period_elem)
+            if operating_period_elem is not None
+            else None
+        )
         self.description = element.findtext("Description")
         if self.description:
             self.description = self.description.strip()
+        self.ticket_machine_service_code = element.findtext("TicketMachineServiceCode")
+        self.registered_operator_ref = element.findtext("RegisteredOperatorRef")
+        self.public_use = element.findtext("PublicUse") == "true"
 
         self.origin = element.findtext("StandardService/Origin")
         if self.origin:
@@ -582,172 +225,251 @@ class Service:
         if self.destination:
             self.destination = self.destination.replace("`", "'").strip()
 
-        self.vias = element.find("StandardService/Vias")
-        if self.vias is not None:
-            self.vias = [via.text for via in self.vias]
+        vias_elem = element.find("StandardService/Vias")
+        if vias_elem is not None:
+            self.vias = ", ".join(via.text for via in vias_elem if via.text)
+        else:
+            self.vias = ""
 
-        self.journey_patterns = {
-            journey_pattern.id: journey_pattern
-            for journey_pattern in (
-                JourneyPattern(
-                    journey_pattern, journey_pattern_sections, serviced_organisations
-                )
-                for journey_pattern in element.findall("StandardService/JourneyPattern")
-            )
-            if journey_pattern.sections
-        }
+        journey_patterns: dict[str, JourneyPattern] = {}
+        for jp_elem in element.findall("StandardService/JourneyPattern"):
+            jp = JourneyPattern(jp_elem)
 
-        self.lines = [Line(line_element) for line_element in element.find("Lines")]
-
-        self.to_be_marketed_with = [
-            d.text
-            for d in element.findall("ToBeMarketedWith/RelatedService/Description")
-        ]
-        self.associated_operators = [
-            d.text for d in element.findall("AssociatedOperators/OperatorRef")
-        ]
-
-        self.ticket_machine_service_code = element.findtext("TicketMachineServiceCode")
-        self.commercial_basis = element.findtext("CommercialBasis")
-
-        self.notes = [
-            (note_element.find("NoteCode").text, note_element.find("NoteText").text)
-            for note_element in element.findall("Note")
-        ]
-        assert not self.notes
+            journey_patterns[jp.journey_pattern_id] = JourneyPattern(jp_elem)
+        self.journey_patterns = journey_patterns
 
 
 class Line:
     def __init__(self, element):
-        self.id = element.attrib["id"]
-        line_name = element.findtext("LineName") or ""
-        if "|" in line_name:
-            line_name, line_brand = line_name.split("|", 1)
-            self.line_brand = line_brand.strip()
-        else:
-            self.line_brand = ""
-        self.line_name = line_name.strip()
+        self.line_id = element.get("id")
+        self.line_name = element.findtext("LineName")
+        outbound_elem = element.find("OutboundDescription")
+        self.outbound_description = (
+            DirectionDescription(outbound_elem) if outbound_elem is not None else None
+        )
+        inbound_elem = element.find("InboundDescription")
+        self.inbound_description = (
+            DirectionDescription(inbound_elem) if inbound_elem is not None else None
+        )
 
-        self.marketing_name = element.findtext("MarketingName")
 
-        self.colour = element.findtext("LineColour")
-        if element.findtext("LineFontColour") or element.findtext("LineImage"):
-            logger.info(ET.tostring(element).decode())
+class DirectionDescription:
+    def __init__(self, element):
+        self.origin = element.findtext("Origin")
+        self.destination = element.findtext("Destination")
+        vias = []
+        vias_elem = element.find("Vias")
+        if vias_elem is not None:
+            for via_elem in vias_elem.findall("Via"):
+                vias.append(via_elem.text)
+        self.vias = vias
+        self.description = element.findtext("Description")
 
-        self.outbound_description = element.findtext("OutboundDescription/Description")
-        self.inbound_description = element.findtext("InboundDescription/Description")
+
+class OperatingPeriod:
+    def __init__(self, element):
+        self.start_date = to_datetime(element.findtext("StartDate"))
+        self.end_date = to_datetime(element.findtext("EndDate"))
+
+
+class JourneyPattern:
+    def __init__(self, element):
+        self.journey_pattern_id = element.get("id")
+        self.creation_datetime = element.get("CreationDateTime")
+        self.modification_datetime = element.get("ModificationDateTime")
+        self.modification = element.get("Modification")
+        self.revision_number = element.get("RevisionNumber")
+        self.destination_display = element.findtext("DestinationDisplay")
+        self.operator_ref = element.findtext("OperatorRef")
+        self.direction = element.findtext("Direction")
+        self.route_ref = element.findtext("RouteRef")
+        jps_refs_text = element.findtext("JourneyPatternSectionRefs")
+        self.journey_pattern_section_refs: list[str] = (
+            jps_refs_text.split() if jps_refs_text else []
+        )
+
+
+class VehicleJourney:
+    def __init__(self, element):
+        self.sequence_number = element.get("SequenceNumber")
+        self.creation_datetime = to_datetime(element.get("CreationDateTime"))
+        self.modification_datetime = to_datetime(element.get("ModificationDateTime"))
+        self.modification = element.get("Modification")
+        self.revision_number = element.get("RevisionNumber")
+        self.private_code = element.findtext("PrivateCode")
+        self.operator_ref = element.findtext("OperatorRef")
+
+        journey_code = None
+        operational_elem = element.find("Operational")
+        if operational_elem is not None:
+            ticket_machine_elem = operational_elem.find("TicketMachine")
+            if ticket_machine_elem is not None:
+                journey_code = ticket_machine_elem.findtext("JourneyCode")
+        self.journey_code = journey_code
+        operating_profile_elem = element.find("OperatingProfile")
+        self.operating_profile = (
+            OperatingProfile(operating_profile_elem)
+            if operating_profile_elem is not None
+            else None
+        )
+        self.garage_ref = element.findtext("GarageRef")
+        self.vehicle_journey_code = element.findtext("VehicleJourneyCode")
+        self.service_ref = element.findtext("ServiceRef")
+        self.line_ref = element.findtext("LineRef")
+        self.journey_pattern_ref = element.findtext("JourneyPatternRef")
+        self.departure_time = parse_time(element.findtext("DepartureTime"))
+        timing_links: list[VehicleJourneyTimingLink] = []
+        for vjtl_elem in element.findall("VehicleJourneyTimingLink"):
+            timing_links.append(VehicleJourneyTimingLink(vjtl_elem))
+        self.timing_links = timing_links
+
+
+class VehicleJourneyTimingLink:
+    def __init__(self, element):
+        self.link_id = element.get("id")
+        self.journey_pattern_timing_link_ref = element.findtext(
+            "JourneyPatternTimingLinkRef"
+        )
+        self.run_time = element.findtext("RunTime")
+
+
+class OperatingProfile:
+    def __init__(self, element):
+        regular_day_type_elem = element.find("RegularDayType")
+        self.regular_day_type = (
+            RegularDayType(regular_day_type_elem)
+            if regular_day_type_elem is not None
+            else None
+        )
+        bank_holiday_operation_elem = element.find("BankHolidayOperation")
+        self.bank_holiday_operation = (
+            BankHolidayOperation(bank_holiday_operation_elem)
+            if bank_holiday_operation_elem is not None
+            else None
+        )
+
+
+class RegularDayType:
+    def __init__(self, element):
+        days_of_week_elem = element.find("DaysOfWeek")
+        days_of_week = []
+        if days_of_week_elem is not None:
+            for day_elem in days_of_week_elem:
+                days_of_week.append(day_elem.tag)
+        self.days_of_week = days_of_week
+
+
+class BankHolidayOperation:
+    def __init__(self, element):
+        days_of_operation_elem = element.find("DaysOfOperation")
+        days_of_operation = []
+        if days_of_operation_elem is not None:
+            for day_elem in days_of_operation_elem:
+                days_of_operation.append(day_elem.tag)
+        days_of_non_operation_elem = element.find("DaysOfNonOperation")
+        days_of_non_operation = []
+        if days_of_non_operation_elem is not None:
+            for day_elem in days_of_non_operation_elem:
+                days_of_non_operation.append(day_elem.tag)
+        self.days_of_operation = days_of_operation
+        self.days_of_non_operation = days_of_non_operation
 
 
 class TransXChange:
-    def get_journeys(self, service_code, line_id):
+    def get_journeys(self, line_id, service_code=None):
         return [
             journey
-            for journey in self.journeys
+            for journey in self.vehicle_journeys
             if journey.service_ref == service_code and journey.line_ref == line_id
         ]
 
-    def __get_journeys(self, journeys_element, serviced_organisations):
-        journeys = {
-            journey.code: journey
-            for journey in (
-                VehicleJourney(element, self.services, serviced_organisations)
-                for element in journeys_element
-            )
-        }
+    def __init__(
+        self,
+        xml_file,
+    ):
+        self.serviced_organisations: list[ServicedOrganisation] = []
+        self.stop_points: list[StopPoint] = []
+        self.route_sections: dict[str, RouteSection] = {}
+        self.routes: list[Route] = []
+        self.journey_pattern_sections: dict[str, JourneyPatternSection] = {}
+        self.operators: list[Operator] = []
+        self.services: list[Service] = []
+        self.vehicle_journeys: list[VehicleJourney] = []
 
-        # Some Journeys do not have a direct reference to a JourneyPattern,
-        # but rather a reference to another Journey which has a reference to a JourneyPattern
-        for journey in iter(journeys.values()):
-            if journey.journey_ref:
-                referenced_journey = journeys[journey.journey_ref]
-                if journey.journey_pattern is None:
-                    journey.journey_pattern = referenced_journey.journey_pattern
-                if journey.operating_profile is None:
-                    journey.operating_profile = referenced_journey.operating_profile
-
-        return [journey for journey in journeys.values() if journey.journey_pattern]
-
-    def __init__(self, open_file):
-        iterator = ET.iterparse(open_file)
-
-        self.services = {}
-        self.stops = {}
-        self.routes = {}
-        self.route_sections = {}
-        self.journeys = []
-        self.garages = {}
-
-        serviced_organisations = None
-
-        journey_pattern_sections = {}
+        iterator = ET.iterparse(xml_file)
 
         for _, element in iterator:
             if element.tag[:33] == "{http://www.transxchange.org.uk/}":
                 element.tag = element.tag[33:]
-            tag = element.tag
 
-            if tag == "StopPoints":
-                for stop_element in element:
-                    stop = Stop(stop_element)
-                    self.stops[stop.atco_code] = stop
+            if element.tag == "ServicedOrganisations":
+                for org_elem in element:
+                    self.serviced_organisations.append(ServicedOrganisation(org_elem))
                 element.clear()
-            elif tag == "RouteSections":
-                for section_element in element:
-                    section = RouteSection(section_element)
-                    self.route_sections[section.id] = section
+
+            elif element.tag == "StopPoints":
+                for stop_elem in element:
+                    self.stop_points.append(StopPoint(stop_elem))
                 element.clear()
-            elif tag == "Routes":
-                for route_element in element:
-                    route = Route(route_element)
-                    self.routes[route.id] = route
+
+            elif element.tag == "RouteSections":
+                for section_elem in element:
+                    route_section = RouteSection(section_elem)
+                    self.route_sections[route_section.section_id] = route_section
                 element.clear()
-            elif tag == "Operators":
-                self.operators = element
-            elif tag == "JourneyPatternSections":
-                for section in element:
-                    section = JourneyPatternSection(section, self.stops)
-                    if section.timinglinks:
-                        journey_pattern_sections[section.id] = section
+
+            elif element.tag == "Routes":
+                for route_elem in element:
+                    self.routes.append(Route(route_elem))
                 element.clear()
-            elif tag == "ServicedOrganisations":
-                serviced_organisations = (
-                    ServicedOrganisation(child) for child in element
-                )
-                serviced_organisations = {
-                    organisation.code: organisation
-                    for organisation in serviced_organisations
-                }
-            elif tag == "VehicleJourneys":
-                try:
-                    self.journeys = self.__get_journeys(element, serviced_organisations)
-                except (AttributeError, KeyError) as e:
-                    logger.exception(e)
-                    return
+
+            elif element.tag == "JourneyPatternSections":
+                for section_elem in element:
+                    jps = JourneyPatternSection(section_elem)
+                    self.journey_pattern_sections[jps.section_id] = jps
                 element.clear()
-            elif tag == "Service":
-                service = Service(
-                    element, serviced_organisations, journey_pattern_sections
-                )
-                self.services[service.service_code] = service
+            elif element.tag == "Operators":
+                for operator_elem in element:
+                    self.operators.append(Operator(operator_elem))
+                element.clear()
 
-        self.attributes = element.attrib
+            elif element.tag == "Services":
+                for service_elem in element:
+                    self.services.append(Service(service_elem))
+                element.clear()
+
+            elif element.tag == "VehicleJourneys":
+                for vj_elem in element:
+                    self.vehicle_journeys.append(VehicleJourney(vj_elem))
+                element.clear()
 
 
-class Cell:
-    last = False
+def parse_transxchange(xml_file):
+    transxchange = TransXChange(xml_file)
+    return transxchange
 
-    def __init__(self, stopusage, arrival_time, departure_time, activity, notes):
-        self.stopusage = stopusage
-        self.arrival_time = arrival_time
-        self.departure_time = departure_time
-        if (
-            arrival_time is not None
-            and departure_time is not None
-            and arrival_time != departure_time
-        ):
-            self.wait_time = True
-        else:
-            self.wait_time = None
 
-        self.activity = activity
-        self.notes = notes
+if __name__ == "__main__":
+    import sys
+
+    if len(sys.argv) != 2:
+        print("Usage: <path_to_transxchange_xml>")
+        sys.exit(1)
+    xml_file = sys.argv[1]
+    # try:
+    #     transxchange = parse_transxchange(xml_file)
+    #     print(transxchange.operators)
+    #     print(f"Parsed TransXChange data from {xml_file}")
+    # except ET.ParseError as e:
+    #     print(f"Failed to parse XML: {e}")
+    # except Exception as e:
+    #     print(f"An error occurred: {e}")
+
+    transxchange = parse_transxchange(xml_file)
+    print(len(transxchange.serviced_organisations), "serviced organisations found")
+    print(len(transxchange.services), "services found")
+    print(len(transxchange.routes), "routes found")
+    print(len(transxchange.operators), "operators found")
+    print(len(transxchange.stop_points), "stop points found")
+    print(len(transxchange.vehicle_journeys), "vehicle journeys found")
+    print(f"Parsed TransXChange data from {xml_file}")

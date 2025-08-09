@@ -1,366 +1,394 @@
-from datetime import timedelta
 import enum
+
+from geoalchemy2 import Geometry
 from sqlalchemy import (
+    Boolean,
     Column,
     Computed,
     Date,
+    DateTime,
     Enum,
-    Index,
-    String,
-    Integer,
     Float,
-    Boolean,
     ForeignKey,
+    Index,
+    Integer,
+    Interval,
+    String,
+    Text,
     Time,
+    UniqueConstraint,
 )
-from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
-from geoalchemy2 import Geometry
+from sqlalchemy.orm import relationship
+from sqlalchemy_searchable import make_searchable
+from sqlalchemy_utils.types import TSVectorType
+from sqlalchemy.dialects.postgresql import ARRAY, VARCHAR
 
 Base = declarative_base()
+make_searchable(Base.metadata)
 
 
 class RouteType(enum.Enum):
-    TRAM = 0
-    SUBWAY = 1
-    RAIL = 2
-    BUS = 3
-    FERRY = 4
-    CABLE_CAR = 5
-    GONDOLA = 6
-    FUNICULAR = 7
-    TROLLEYBUS = 11
-    MONORAIL = 12
-    TOURIST_RAILWAY = 107
-    COACH = 200
-    RAIL_REPLACEMENT = 714
+    tram = 0
+    subway = 1
+    rail = 2
+    bus = 3
+    ferry = 4
+    cable_car = 5
+    gondola = 6
+    funicular = 7
+    trolleybus = 11
+    monorail = 12
+    tourist_railway = 107
+    coach = 200
+    rail_replacement = 714
 
 
 class PickupDropOffType(enum.Enum):
-    REGULAR = 0
-    NONE = 1
-    PHONE_AGENCY = 2
-    DRIVER_COORDINATED = 3
+    regular = 0
+    none = 1
+    phone_agency = 2
+    driver_coordinated = 3
 
 
 class ContinuousPickupDropOff(enum.Enum):
-    NOT_AVAILABLE = 0
-    CONTINUOUS = 1
-    PHONE_AGENCY = 2
-    DRIVER_COORDINATED = 3
+    not_available = 0
+    continuous = 1
+    phone_agency = 2
+    driver_coordinated = 3
 
 
 class ExceptionType(enum.Enum):
-    ADDITION = 1
-    REMOVAL = 2
+    addition = 1
+    removal = 2
 
 
 class LocationType(enum.Enum):
-    STOP = 0
-    STATION = 1
-    ENTRANCE_EXIT = 2
-    GENERIC = 3
-    BOARDING_AREA = 4
+    stop = 0
+    station = 1
+    entrance_exit = 2
+    generic = 3
+    boarding_area = 4
 
 
 class WheelchairAccessible(enum.Enum):
-    UNKNOWN = 0
-    ACCESSIBLE = 1
-    NOT_ACCESSIBLE = 2
+    unknown = 0
+    accessible = 1
+    not_accessible = 2
 
 
 class BikesAllowed(enum.Enum):
-    UNKNOWN = 0
-    ALLOWED = 1
-    NOT_ALLOWED = 2
+    unknown = 0
+    allowed = 1
+    not_allowed = 2
+
+
+class StopTypeEnum(str, enum.Enum):
+    airport_entrance = "AIR"  # Airport Entrance
+    airside_interchange_area = "GAT"  # Airport airside / interchange area
+
+    ferry_terminal_entrance = "FTD"  # Ferry terminal or dock entrance
+    ferry_interchange_area = "FER"  # Ferry / dock berth area (access area)
+    ferry_berth = "FBT"  # Specific ferry berth / quay
+
+    rail_station_entrance = "RSE"  # Rail station entrance
+    rail_interchange_area = "RLY"  # Rail platform access / interchange area
+    rail_platform = "RPL"  # Specific rail platform
+
+    metro_tram_underground_entrance = "TMU"  # Tram, metro, or underground entrance
+    metro_tram_underground_access = (
+        "MET"  # Tram, metro, or underground interchange area
+    )
+    metro_tram_underground_platform = "PLT"  # Tram, metro, or underground platform
+
+    bus_coach_station_entrance = "BCE"  # Bus or coach station entrance
+    bus_coach_station_access = "BST"  # Bus or coach station non-specific access area
+    bus_coach_variable_bay = "BCQ"
+    bus_coach_bay = "BCS"
+    bus_stop = "BCT"
+
+    taxi_rank = "TXR"  # Taxi rank
+    shared_taxi_rank = "STR"  # Shared taxi rank
+
+
+class BusStopTypeEnum(str, enum.Enum):
+    marked_stop = "MKD"  # Specific bay/stand within a station
+    on_street_unmarked_stop = "CUS"  # Unmarked stop, road-only marking
+    on_street_hail_and_ride_section = "HAR"  # Hail and ride route section
+    on_street_flexible_zone = "FLX"  # Flexible route service zone
+
+
+class StopAreaTypeEnum(str, enum.Enum):
+    on_street_pair = "GPBS"
+    on_street_cluster = "GCLS"
+    airport_building = "GAIR"
+    bus_coach_station = "GBCS"
+    ferry_terminal_dock = "GFTD"
+    tram_metro_station = "GTMU"
+    rail_station = "GRLS"
+    coach_service_coverage = "GCCH"
+
+
+class DirectionType(enum.Enum):
+    outbound = "outbound"
+    inbound = "inbound"
+    circular = "circular"
+    unknown = "unknown"
 
 
 class Stop(Base):
     __tablename__ = "stop"
 
-    id = Column(String, primary_key=True)  # stop_id
-    code = Column("stop_code", String, nullable=True)  # stop_code
-    name = Column("stop_name", String, nullable=False)  # stop_name
+    atco_code = Column(String, primary_key=True)  # atco_code
+    naptan_code = Column(String, nullable=True)  # naptan_code
+    common_name = Column(String, nullable=False)  # stop_name
+    common_short_name = Column(String, nullable=True)  # stop_short_name
+    landmark = Column(String, nullable=True)  # stop_landmark
+    street = Column(String, nullable=True)  # stop_street
+    crossing = Column(String, nullable=True)  # stop_crossing
+    indicator = Column(String, nullable=True)  # stop_indicator
     point = Column(
-        Geometry(geometry_type="POINT", srid=4326), nullable=False
+        Geometry(geometry_type="POINT"), nullable=False
     )  # PostGIS point for (lat, lon)
     lat = Column(Float, Computed("ST_Y(point::geometry)"), nullable=False)
     lon = Column(Float, Computed("ST_X(point::geometry)"), nullable=False)
-    location_type = Column(
-        "location_type",
-        Enum(
-            LocationType,
-        ),
-        default=LocationType.STOP,
-    )  # location_type
-    parent_station_id = Column(
-        "parent_station", String, ForeignKey("stop.id"), nullable=True
-    )  # parent_station
-    wheelchair_boarding = Column(
-        "wheelchair_boarding", Enum(WheelchairAccessible), nullable=True
-    )  # wheelchair_boarding
-    platform_code = Column("platform_code", String, nullable=True)  # platform_code
-    mode_hint = Column("mode_hint", String, nullable=True)  # e.g. bus, train, mixed
+    stop_area_id = Column(String, ForeignKey("stoparea.id"), nullable=True)
 
-    parent_station = relationship("Stop", remote_side=[id], backref="children")
+    suburb = Column(String, nullable=True)
+    town = Column(String, nullable=True)
+
+    heading = Column(Integer, nullable=True)
+    bearing = Column(String, nullable=True)
+    stop_type = Column(Enum(StopTypeEnum), nullable=True)
+    bus_stop_type = Column(Enum(BusStopTypeEnum), nullable=True)
+    timing_status = Column(String, nullable=True)
+    active = Column(Boolean, nullable=False, default=True)
+
+    created_at = Column(DateTime, nullable=True)
+    modified_at = Column(DateTime, nullable=True)
+    revision_number = Column(Integer, nullable=True)
+
+    stop_area = relationship("StopArea", back_populates="stops")
+    stop_times = relationship("StopTime", back_populates="stop")
 
     __table_args__ = (Index("ix_stop_point", "point", postgresql_using="gist"),)
 
-    @property
-    def is_station(self) -> bool:
-        return getattr(self, "location_type") == LocationType.STATION
-
-    @property
-    def is_platform(self) -> bool:
-        return (
-            getattr(self, "location_type") == LocationType.STOP
-            and self.parent_station_id is not None
+    search_vector = Column(
+        TSVectorType(
+            "atco_code",
+            "naptan_code",
+            "common_name",
+            "common_short_name",
+            "landmark",
+            "street",
+            "suburb",
+            "town",
         )
-
-    @property
-    def is_standalone_stop(self) -> bool:
-        return (
-            getattr(self, "location_type") == LocationType.STOP
-            and self.parent_station_id is None
-        )
+    )
 
 
-class Service(Base):
-    __tablename__ = "service"
+class StopArea(Base):
+    __tablename__ = "stoparea"
 
-    id = Column(Integer, primary_key=True)  # service_id
-    calendar = relationship("Calendar", uselist=False, back_populates="service")
-    calendar_dates = relationship("CalendarDate", back_populates="service")
-    trips = relationship("Trip", back_populates="service")
-
-
-class Route(Base):
-    __tablename__ = "route"
-
-    id = Column(Integer, primary_key=True)  # route_id
-    agency_id = Column(String, ForeignKey("agency.id"), nullable=True)  # agency_id
-    short_name = Column(String, nullable=False)  # route_short_name
-    long_name = Column(String, nullable=False)  # route_long_name
-    type = Column(
-        Enum(
-            RouteType,
-        ),
-        nullable=False,
-    )  # route_type
-
-    agency = relationship("Agency", back_populates="routes")
-    trips = relationship("Trip", back_populates="route")
-
-
-class Trip(Base):
-    __tablename__ = "trip"
-
-    id = Column(String, primary_key=True)  # trip_id
-    route_id = Column(Integer, ForeignKey("route.id"), nullable=False)  # route_id
-    service_id = Column(Integer, ForeignKey("service.id"), nullable=False)  # service_id
-    headsign = Column(String, nullable=True)  # trip_headsign
-    direction = Column(Integer, nullable=True)  # direction_id
-    block_id = Column(String, nullable=True)  # block_id
-    geometry = Column(
-        Geometry(geometry_type="LINESTRING", srid=4326, spatial_index=True),
+    id = Column(String, primary_key=True)
+    name = Column(String, nullable=True)
+    point = Column(
+        Geometry(geometry_type="POINT"),
         nullable=True,
     )
-    wheelchair_accessible = Column(
-        Enum(
-            WheelchairAccessible,
-        ),
-        nullable=True,
-    )  # wheelchair_accessible
-    vehicle_journey_code = Column(String, nullable=True)  # vehicle_journey_code
+    lat = Column(Float, Computed("ST_Y(point::geometry)"), nullable=True)
+    lon = Column(Float, Computed("ST_X(point::geometry)"), nullable=True)
+    type = Column(Enum(StopAreaTypeEnum), nullable=True)
+    parent_id = Column(String, ForeignKey("stoparea.id"), nullable=True)
+    active = Column(Boolean, nullable=False)
+    revision_number = Column(Integer, nullable=True)
 
-    route = relationship("Route", back_populates="trips")
-    service = relationship("Service", back_populates="trips")
-    stop_times = relationship("StopTime", back_populates="trip")
-    frequencies = relationship("Frequency", back_populates="trip")
+    parent = relationship("StopArea", remote_side=[id], backref="children")
+
+    stops = relationship("Stop", back_populates="stop_area")
+
+    __table_args__ = (Index("ix_stoparea_point", "point", postgresql_using="gist"),)
+
+
+class Operator(Base):
+    __tablename__ = "operator"
+
+    noc = Column(String, nullable=False, primary_key=True)
+    ref = Column(Integer, nullable=True)
+    name = Column(String, nullable=False)
+
+    services = relationship("Service", back_populates="operator")
+
+    search_vector = Column(TSVectorType("name", "noc"))
 
 
 class Calendar(Base):
+    """
+    days of operation of a journey
+    """
+
     __tablename__ = "calendar"
 
-    service_id = Column(
-        "service_id", Integer, ForeignKey("service.id"), primary_key=True
-    )  # service_id
-    monday = Column("monday", Boolean, default=False)
-    tuesday = Column("tuesday", Boolean, default=False)
-    wednesday = Column("wednesday", Boolean, default=False)
-    thursday = Column("thursday", Boolean, default=False)
-    friday = Column("friday", Boolean, default=False)
-    saturday = Column("saturday", Boolean, default=False)
-    sunday = Column("sunday", Boolean, default=False)
-    start_date = Column("start_date", Date, nullable=False)
-    end_date = Column("end_date", Date, nullable=False)
-
-    service = relationship("Service", back_populates="calendar")
-
-
-class CalendarDate(Base):
-    __tablename__ = "calendardate"
-
-    service_id = Column(
-        "service_id", Integer, ForeignKey("service.id"), primary_key=True
-    )  # service_id
-    date = Column("date", Date, primary_key=True)  # date
-    exception_type = Column(
-        "exception_type",
-        Enum(
-            ExceptionType,
-        ),
-        nullable=False,
-    )  # exception_type
-
-    service = relationship("Service", back_populates="calendar_dates")
-
-
-class Shape(Base):
-    __tablename__ = "shape"
-
-    id = Column(String, primary_key=True)
-    geometry = Column(
-        Geometry(geometry_type="LINESTRING", srid=4326, spatial_index=True),
-        nullable=True,
-    )
-
-    points = relationship("ShapePoint", back_populates="shape")
-
-
-class ShapePoint(Base):
-    __tablename__ = "shapepoint"
-
     id = Column(Integer, primary_key=True, autoincrement=True)
-    shape_id = Column(
-        "shape_id", String, ForeignKey("shape.id"), nullable=False
-    )  # shape_id
-    point = Column(
-        Geometry(geometry_type="POINT", srid=4326, spatial_index=True), nullable=False
-    )
-    lat = Column(
-        Float, Computed("ST_Y(point::geometry)"), nullable=False
-    )  # shape_pt_lat
-    lon = Column(
-        Float, Computed("ST_X(point::geometry)"), nullable=False
-    )  # shape_pt_lon
-    sequence = Column("shape_pt_sequence", Integer, nullable=False)  # shape_pt_sequence
-    distance_traveled = Column(
-        "shape_dist_traveled", Float, nullable=True
-    )  # shape_dist_traveled
+    monday = Column(Boolean, nullable=False, default=False)
+    tuesday = Column(Boolean, nullable=False, default=False)
+    wednesday = Column(Boolean, nullable=False, default=False)
+    thursday = Column(Boolean, nullable=False, default=False)
+    friday = Column(Boolean, nullable=False, default=False)
+    saturday = Column(Boolean, nullable=False, default=False)
+    sunday = Column(Boolean, nullable=False, default=False)
+    start_date = Column(Date, nullable=False)
+    end_date = Column(Date, nullable=False)
 
-    shape = relationship("Shape", back_populates="points")
+    journeys = relationship("Journey", back_populates="calendar")
+
+
+class Service(Base):
+    """
+    Represents a bus service, can have multiple lines e.g 67, 667, 67X
+    """
+
+    __tablename__ = "service"
+    service_code = Column(String, nullable=False, primary_key=True)
+    description = Column(String)
+    origin = Column(String, nullable=True)
+    destination = Column(String, nullable=True)
+
+    vias = Column(String, nullable=True)
+    operator_noc = Column(String, ForeignKey("operator.noc"), nullable=True)
+    line_names = Column(String, nullable=True)  # List of line names
+
+    operator = relationship("Operator", back_populates="services")
+    lines = relationship("Line", back_populates="service")
+    journeys = relationship("Journey", back_populates="service")
+
+    search_vector = Column(
+        TSVectorType(
+            "service_code", "description", "origin", "destination", "vias", "line_names"
+        )
+    )
+
+
+class Line(Base):
+    """
+    A line is a specific route of a service, e.g. 67, 667, 67X
+    """
+
+    __tablename__ = "line"
+    id = Column(String, primary_key=True)
+    line_name = Column(String, nullable=False)
+    inbound_description = Column(String)
+    outbound_description = Column(String)
+    service_code = Column(String, ForeignKey("service.service_code"), nullable=False)
+
+    service = relationship("Service", back_populates="lines")
+    journeys = relationship("Journey", back_populates="line")
 
     __table_args__ = (
-        # Ensure (shape_id, sequence) is unique
-        Index(
-            "ix_shapepoint_shapeid_sequence",
-            "shape_id",
-            "shape_pt_sequence",
-            unique=True,
-        ),
+        UniqueConstraint("line_name", "service_code", name="uq_line_per_service"),
+    )
+
+    search_vector = Column(
+        TSVectorType(
+            "line_name",
+            "inbound_description",
+            "outbound_description",
+        )
+    )
+
+
+class TrackSection(Base):
+    """
+    A point in a track, used to build the geometry of a route. known as RouteLink in TXC.
+    """
+
+    __tablename__ = "track_section"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    from_stop = Column(String, nullable=True)  # if null, it is the first
+    to_stop = Column(String, nullable=True)  # if null, it is the last
+    distance = Column(Float, nullable=False)  # distance in meters
+    geometry = Column(Geometry(geometry_type="LINESTRING", srid=4326), nullable=False)
+    route_link_ref = Column(String, nullable=True)  # Reference to the route link
+    route_section_id = Column(String, ForeignKey("route_section.id"), nullable=False)
+
+    route_section = relationship("RouteSection", back_populates="track")
+
+
+class RouteSection(Base):
+    """
+    A section of a route, used to build the geometry of a route.
+    """
+
+    __tablename__ = "route_section"
+    id = Column(String, primary_key=True)
+    geometry = Column(Geometry(geometry_type="LINESTRING", srid=4326), nullable=True)
+
+    track = relationship(
+        "TrackSection", back_populates="route_section", cascade="all, delete-orphan"
+    )
+    route = relationship("Route", back_populates="route_section")
+
+
+class Route(Base):
+    """
+    container for a route section
+    """
+
+    __tablename__ = "route"
+    id = Column(String, primary_key=True)
+    private_code = Column(String, nullable=True)
+    description = Column(String, nullable=True)
+    route_section_id = Column(String, ForeignKey("route_section.id"), nullable=True)
+
+    route_section = relationship("RouteSection", back_populates="route")
+
+
+class Journey(Base):
+    """
+    full scheduled trip,has a one to many relationship with stop times to generate a schedule
+    """
+
+    __tablename__ = "journey"
+    id = Column(String, primary_key=True)
+    service_code = Column(String, ForeignKey("service.service_code"), nullable=False)
+    line_id = Column(String, ForeignKey("line.id"), nullable=True)
+    direction = Column(Enum(DirectionType))
+    start_time = Column(Interval, nullable=False)
+    end_time = Column(Interval)
+    calendar_id = Column(Integer, ForeignKey("calendar.id"), nullable=True)
+
+    calendar = relationship("Calendar", back_populates="journeys")
+
+    service = relationship("Service", back_populates="journeys")
+    line = relationship("Line", back_populates="journeys")
+    stop_times = relationship(
+        "StopTime", back_populates="journey", cascade="all, delete-orphan"
     )
 
 
 class StopTime(Base):
-    __tablename__ = "stoptime"
+    """
+    every time a journey stops at a stop
+    """
 
+    __tablename__ = "stop_time"
     id = Column(Integer, primary_key=True, autoincrement=True)
-    trip_id = Column(
-        "trip_id", String, ForeignKey("trip.id"), nullable=False
-    )  # trip_id
-    stop_id = Column(
-        "stop_id", String, ForeignKey("stop.id"), nullable=False
-    )  # stop_id
-    arrival_time = Column("arrival_time", Integer, nullable=True)  # arrival_time
-    departure_time = Column("departure_time", Integer, nullable=True)  # departure_time
-    stop_sequence = Column("stop_sequence", Integer, nullable=False)  # stop_sequence
-    stop_headsign = Column("stop_headsign", String, nullable=True)  # stop_headsign
-    pickup_type = Column(
-        "pickup_type",
-        Enum(
-            PickupDropOffType,
-        ),
-        default=PickupDropOffType.REGULAR,
-    )  # pickup_type
-    drop_off_type = Column(
-        "drop_off_type",
-        Enum(
-            PickupDropOffType,
-        ),
-        default=PickupDropOffType.REGULAR,
-    )  # drop_off_type
-    shape_dist_traveled = Column(
-        "shape_dist_traveled", Float, nullable=True
-    )  # shape_dist_traveled
-    timepoint = Column("timepoint", Integer, nullable=True)  # timepoint
+    journey_id = Column(String, ForeignKey("journey.id"), nullable=False)
+    stop_id = Column(String, ForeignKey("stop.atco_code"), nullable=False)
+    stop_sequence = Column(Integer, nullable=False)
+    arrival_time = Column(Interval, nullable=True)
+    departure_time = Column(Interval, nullable=True)
+    timing_status = Column(String, nullable=True)
+    pick_up = Column(Boolean, nullable=True)
+    drop_off = Column(Boolean, nullable=True)
+    wait_time = Column(Interval, nullable=True)  # wait time in seconds
+    distance_traveled = Column(Float, nullable=True)  # distance in meters
 
-    trip = relationship("Trip", back_populates="stop_times")
-    stop = relationship("Stop")
+    journey = relationship("Journey", back_populates="stop_times")
+    stop = relationship("Stop", back_populates="stop_times")
 
     __table_args__ = (
-        Index("ix_stoptime_tripid_stopid", "trip_id", "stop_id", unique=True),
+        UniqueConstraint(
+            "journey_id", "stop_sequence", name="uq_stop_time_journey_sequence"
+        ),
     )
-
-    @property
-    def get_arrival_time(self) -> str | None:
-        """Convert arrival_time to a time string (HH:MM)."""
-        if self.arrival_time is None:
-            return None
-        td = timedelta(seconds=self.arrival_time)
-        total_minutes = td.seconds // 60
-        hours = total_minutes // 60
-        minutes = total_minutes % 60
-        return f"{hours:02}:{minutes:02}"
-
-    @property
-    def get_departure_time(self) -> str | None:
-        """Convert departure_time to a time string (HH:MM)."""
-        if self.departure_time is None:
-            return None
-        # Convert seconds to HH:MM format (ignore seconds)
-        td = timedelta(seconds=self.departure_time)
-        total_minutes = td.seconds // 60
-        hours = total_minutes // 60
-        minutes = total_minutes % 60
-        return f"{hours:02}:{minutes:02}"
-
-
-class Frequency(Base):
-    __tablename__ = "frequency"
-
-    trip_id = Column(
-        "trip_id", String, ForeignKey("trip.id"), primary_key=True
-    )  # trip_id
-    start_time = Column("start_time", String, nullable=False)  # start_time
-    end_time = Column("end_time", String, nullable=False)  # end_time
-    headway_secs = Column("headway_secs", Integer, nullable=False)  # headway_secs
-    exact_times = Column("exact_times", Boolean, default=False)  # exact_times
-
-    trip = relationship("Trip", back_populates="frequencies")
-
-
-class Agency(Base):
-    __tablename__ = "agency"
-
-    id = Column(String, primary_key=True)
-    name = Column(String)
-    url = Column(String)
-    timezone = Column(String)
-    lang = Column(String)
-    phone = Column(String)
-    noc = Column(String)
-
-    routes = relationship("Route", back_populates="agency")
-
-
-class FeedInfo(Base):
-    __tablename__ = "feed_info"
-
-    id = Column(Integer, primary_key=True)
-    publisher_name = Column(String, unique=True)
-    publisher_url = Column(String)
-    lang = Column(String)
-    start_date = Column(Date)
-    end_date = Column(Date)
-    version = Column(String)

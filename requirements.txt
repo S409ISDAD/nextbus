@@ -20,3 +20,5 @@ shapely
 isodate
 geopandas
 partridge
+SQLAlchemy-Searchable
+lxml

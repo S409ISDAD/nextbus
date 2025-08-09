@@ -287,49 +287,6 @@ def import_shapes(db: Session, shapes: pd.DataFrame):
     print(f"Imported {len(shapes)} shapes.")
 
 
-def import_stops(db: Session, stops_df: pd.DataFrame):
-    print(f"Importing {len(stops_df)} stops...")
-
-    stops_df = stops_df.where(pd.notnull(stops_df), None)
-
-    valid_stop_ids = set(stops_df["stop_id"])
-    stops_df = stops_df[
-        stops_df["parent_station"].isnull()
-        | stops_df["parent_station"].isin(valid_stop_ids)
-    ]
-
-    stops_df["location_type"] = stops_df["location_type"].map(
-        lambda x: LocationType(x) if not pd.isnull(x) else LocationType.STOP
-    )
-    stops_df["wheelchair_boarding"] = stops_df["wheelchair_boarding"].map(
-        lambda x: WheelchairAccessible(x) if not pd.isnull(x) else None
-    )
-    stops_df["point"] = stops_df.apply(
-        lambda row: from_shape(row["geometry"], srid=4326),
-        axis=1,
-    )
-
-    mapping = {
-        "id": "stop_id",
-        "name": "stop_name",
-        "description": "stop_desc",
-        "point": "point",
-        "location_type": "location_type",
-        "parent_station_id": "parent_station",
-        "wheelchair_boarding": "wheelchair_boarding",
-    }
-
-    parent_stops = stops_df[stops_df["parent_station"].isnull()]
-    child_stops = stops_df[stops_df["parent_station"].notnull()]
-
-    print(f"Found {len(parent_stops)} parent stops and {len(child_stops)} child stops.")
-    upsert(db, Stop, parent_stops, ["id"], mapping)
-    print(f"Imported {len(parent_stops)} parent stops.")
-
-    upsert(db, Stop, child_stops, ["id"], mapping)
-    print(f"Imported {len(child_stops)} child stops.")
-
-
 def import_trips(db: Session, trips: pd.DataFrame, shapes: pd.DataFrame):
     print(f"Importing {len(trips)} trips...")
 
@@ -485,8 +442,6 @@ def import_gtfs(zip_file_path: str):
             import_calendar(db, feed.calendar)
 
             import_calendar_dates(db, feed.calendar_dates)
-
-            import_stops(db, feed.stops)
 
             import_stop_times(db, feed.stop_times)
 

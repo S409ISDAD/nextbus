@@ -1,140 +1,341 @@
-from datetime import datetime, timezone
-import zipfile
+import logging
 import os
 import sys
-
 import xml.etree.ElementTree as ET
-from backend.core.db import SessionLocal
-from backend.models import Service, Stop, Route
+import zipfile
+from datetime import datetime, timedelta, timezone
+import isodate
+
+from geoalchemy2.shape import from_shape
+from shapely import Point
+from shapely.geometry import LineString
+from sqlalchemy.orm import Session
+
+from backend.db.db import SessionLocal
+from backend.models import (
+    Calendar,
+    Journey,
+    Line,
+    Operator,
+    Route,
+    RouteSection,
+    Service,
+    Stop,
+    StopTime,
+    TrackSection,
+)
 from backend.txc import txc
-import logging
 
 logger = logging.getLogger(__name__)
 
 
-not_found = 0
+service_id = ""
 
 
 def import_txc_zip(zip_path):
-    with zipfile.ZipFile(zip_path, "r") as zf, SessionLocal() as db:
+    with zipfile.ZipFile(zip_path, "r") as zf:
         for filename in zf.namelist():
             if filename.endswith(".xml"):
                 with zf.open(filename) as xml_file:
                     print(f"Processing file: {filename}")
-                    handle_txc_file(xml_file, db)
+                    handle_txc_file(xml_file)
                     # break  # only process one for testing
 
 
-def process_stops(txc: txc.TransXChange, db):
-    global not_found
-    db_stops = db.query(Stop).filter(Stop.id.in_(txc.stops.keys())).all()
-    found_stop_ids = {stop.id for stop in db_stops}
-    missing_stops = [stop for stop in txc.stops.keys() if stop not in found_stop_ids]
-    for stop in missing_stops:
-        print(f"Stop {stop} not found in the database.")
-        not_found += 1
-        # stop_obj = Stop(
-        #     id=stop, name=txc.stops[stop].common_name, atco_code=stop
-        # )
-        # db.add(stop_obj)
-        # db.commit()
-        # print(f"Added stop {stop} to the database.")
-    print(f"Found {len(db_stops)} of {len(txc.stops)} stops in the database")
-    if missing_stops:
-        print(f"Stops not found in the database: {sorted(missing_stops)}")
-    return db_stops
+def get_id(id: str) -> str:
+    """Generate a unique ID for the object based on the service code, as e.g. RS3 is only unique within a service."""
+
+    return f"{service_id}:{id}" if service_id else id
 
 
-def process_service(today, 
-    txc: txc.TransXChange, txc_service: txc.Service, stops: list[Stop], db
+def get_description(txc_service: txc.Service):
+    description = txc_service.description
+    if not description:
+        description = f"{txc_service.origin} - {txc_service.destination}"
+
+    return description.strip() if description else "No description available"
+
+
+def parse_runtime(runtime: str) -> timedelta:
+    """Parse the runtime string in ISO 8601 format (e.g., PT1H30M15S) and return a timedelta."""
+    if not runtime or not runtime.startswith("PT"):
+        return timedelta(0)
+    return isodate.parse_duration(runtime)
+
+
+def handle_journey(
+    txc: txc.TransXChange,
+    txc_journey: txc.VehicleJourney,
+    txc_service: txc.Service,
+    service: Service,
+    line: Line,
+    today,
+    db: Session,
 ):
-    if (
-            txc_service.operating_period.end
-            and txc_service.operating_period.end < today
-        ):
-            logger.warning(
-                f"{txc_service.service_code} end {txc_service.operating_period.end} is in the past"
+    journey_code = get_id(txc_journey.journey_code)
+
+    journey_pattern = txc_service.journey_patterns.get(txc_journey.journey_pattern_ref)
+    journey_pattern_section = txc.journey_pattern_sections[
+        journey_pattern.journey_pattern_section_refs[0]
+    ]
+
+    start_time = txc_journey.departure_time
+
+    stop_sequence = {}
+
+    stops: dict[str, dict] = {}
+
+    for timing_link in txc_journey.timing_links:
+        journey_pattern_timing_link = journey_pattern_section.timing_links.get(
+            timing_link.journey_pattern_timing_link_ref
+        )
+        if not journey_pattern_timing_link:
+            continue
+        track_section = (
+            db.query(TrackSection)
+            .filter_by(
+                route_link_ref=get_id(journey_pattern_timing_link.route_link_ref)
             )
-            skip_journeys = True
-    print(
-        f"Processing service {txc_service.service_code} from {txc_service.origin} to {txc_service.destination}"
+            .first()
+        )
+
+        from_stop = journey_pattern_timing_link.from_stop
+        from_seq = journey_pattern_timing_link.from_stop.sequence_number
+        to_stop = journey_pattern_timing_link.to_stop
+        to_seq = journey_pattern_timing_link.to_stop.sequence_number
+
+        if from_stop and to_stop:
+            stop_sequence[from_stop] = int(from_seq)
+            stop_sequence[to_stop] = int(to_seq)
+
+        stops[from_stop.stop_point_ref] = {
+            "activity": from_stop.activity,
+            "timing_status": from_stop.timing_status,
+            "runtime": parse_runtime(timing_link.run_time),
+            "distance": track_section.distance if track_section else 0.0,
+        }
+
+    cumulative_distance = 0.0
+    cumulative_time = start_time
+
+    sorted_stops = sorted(stops.items(), key=lambda item: stop_sequence.get(item[0], 0))
+
+    for i, (stop_ref, stop_data) in enumerate(sorted_stops, start=1):
+        seq = i
+        stop_data = stops.get(stop_ref)
+
+        cumulative_time += (
+            stop_data["runtime"]
+            if stop_data and "runtime" in stop_data
+            else timedelta(0)
+        )
+        cumulative_distance += stop_data["distance"] if stop_data else 0.0
+
+        stoptime = (
+            db.query(StopTime)
+            .filter_by(journey_id=journey_code, stop_sequence=seq)
+            .first()
+        )
+        if not stoptime:
+            activity = stop_data.get("activity") if stop_data else None
+            pick_up = "pickup" in activity.lower() if activity else False
+            drop_off = "setdown" in activity.lower() if activity else False
+            stoptime = StopTime(
+                journey_id=journey_code,
+                stop_id=stop_ref,
+                pick_up=pick_up,
+                drop_off=drop_off,
+                departure_time=cumulative_time,
+                arrival_time=cumulative_time,
+                stop_sequence=seq,
+                distance_traveled=cumulative_distance,
+                timing_status=stop_data["timing_status"]
+                if stop_data and "timing_status" in stop_data
+                else None,
+                wait_time=timedelta(0),
+            )
+            db.add(stoptime)
+
+    journey = db.query(Journey).filter_by(id=journey_code).first()
+
+    if not journey:
+        print(f"Adding journey {journey_code}")
+        journey = Journey(
+            id=journey_code,
+            service_code=service.service_code,
+            line_id=line.id,
+            direction=journey_pattern.direction if journey_pattern else None,
+            start_time=start_time,
+            end_time=cumulative_time,
+        )
+        db.add(journey)
+        db.commit()
+
+
+def handle_service(txc: txc.TransXChange, txc_service: txc.Service, today, db: Session):
+    skip_journeys = False
+
+    end_date = (
+        txc_service.operating_period.end_date if txc_service.operating_period else None
     )
-    for line in txc_service.lines:
-        print(f"Processing line {line.line_name}")
 
-        journeys = txc.get_journeys(txc_service.service_code, line.id)
+    if end_date and end_date < today.date():
+        print(f"Skipping service {txc_service.service_code} as it ended on {end_date}")
+        skip_journeys = True
 
-        print(f"Found {len(journeys)} journeys for service {txc_service.service_code}")
+    description = get_description(txc_service)
+    print(f"{txc_service.lines[0].line_name} {description}")
 
-        for journey in journeys:
-            times = journey.get_times()
-            # for time in times:
-            #     print(f"Processing time {time.activity} {time.departure_time}")
+    service_id = txc_service.service_code
 
-        route = Route(
-            id=line.id,
-            agency_id=None,
+    service = db.query(Service).filter_by(service_code=txc_service.service_code).first()
+    operator = (
+        db.query(Operator).filter_by(ref=txc_service.registered_operator_ref).first()
+    )
+    if not service:
+        print(f"Adding service {txc_service.service_code}")
+        service = Service(
             service_code=txc_service.service_code,
-            mode=txc_service.mode,
-            name=txc_service.lines[0].line_name,
+            description=description,
             origin=txc_service.origin,
             destination=txc_service.destination,
-            colour=None,
-            text_color=None,
+            vias=txc_service.vias,
+            line_names=", ".join(
+                line.line_name for line in txc_service.lines if line.line_name
+            ),
+            operator_noc=operator.noc if operator else None,
         )
-        print(f"Adding route {route.name} to the database")
-        existing_route = db.query(Route).filter_by(id=route.id).first()
-        if existing_route:
-            needs_update = (
-                existing_route.name != route.name
-                or existing_route.origin != route.origin
-                or existing_route.destination != route.destination
-                or existing_route.colour != route.colour
-                or existing_route.text_color != route.text_color
-                or existing_route.mode != route.mode
-                or existing_route.agency_id != route.agency_id
+        db.add(service)
+        db.commit()
+
+    for txc_line in txc_service.lines:
+        line = db.query(Line).filter_by(id=txc_line.line_id).first()
+        if not line:
+            print(f"Adding line {txc_line.line_id}")
+            line = Line(
+                id=txc_line.line_id,
+                line_name=txc_line.line_name,
+                inbound_description=txc_line.inbound_description.description
+                if txc_line.inbound_description
+                else None,
+                outbound_description=txc_line.outbound_description.description
+                if txc_line.outbound_description
+                else None,
+                service_code=txc_service.service_code,
             )
-            if needs_update:
-                print(f"Route {route.name} already exists, updating.")
-                existing_route.name = route.name
-                existing_route.origin = route.origin
-                existing_route.destination = route.destination
-                existing_route.colour = route.colour
-                existing_route.text_color = route.text_color
-                existing_route.mode = route.mode
-                existing_route.agency_id = route.agency_id
-                db.merge(existing_route)
-            else:
-                print(f"Route {route.name} already exists, no update needed.")
-        else:
-            print(f"Route {route.name} does not exist, adding.")
-            db.add(route)
-            
-    calendar = 
-    service = Service(
-        id=txc_service.service_code,
-    )
-    db.add(service)
+            db.add(line)
+            db.commit()
+
+        if skip_journeys:
+            continue
+        for txc_journey in txc.get_journeys(txc_line.line_id, txc_service.service_code):
+            if not txc_journey.journey_code:
+                print(
+                    f"Skipping journey for service {txc_service.service_code} on line {txc_line.line_id} due to missing journey code"
+                )
+                continue
+            handle_journey(txc, txc_journey, txc_service, service, line, today, db)
 
 
-def handle_txc_file(xml_file, db):
+def handle_route_section(txc_route_section: txc.RouteSection, db: Session):
+    track_points: list[Point] = []
+    track_points_to_create = []
+    route_links = txc_route_section.route_links
+    rs_id = get_id(txc_route_section.section_id)
+    for link in route_links:
+        points = [location.point for location in link.locations if location.point]
+        track_points.extend(points)
+        trackpoint = TrackSection(
+            from_stop=link.from_stop,
+            to_stop=link.to_stop,
+            distance=link.distance,
+            geometry=from_shape(LineString([pt.coords[0] for pt in points])),
+            route_link_ref=get_id(link.route_link_id),
+            route_section_id=rs_id,
+        )
+        track_points_to_create.append(trackpoint)
+
+    if track_points:
+        coords = [pt.coords[0] for pt in track_points]
+        geometry = from_shape(LineString(coords))
+    else:
+        geometry = None
+
+    route_section = db.query(RouteSection).filter_by(id=rs_id).first()
+    if not route_section:
+        print(f"Adding route section {rs_id}")
+        route_section = RouteSection(
+            id=rs_id,
+            geometry=geometry,
+        )
+        db.add(route_section)
+        db.commit()
+
+    db.bulk_save_objects(track_points_to_create)
+    db.commit()
+
+
+def handle_txc_file(xml_file):
     txc_data = txc.TransXChange(xml_file)
-    stops = process_stops(txc_data, db)
-
     today = datetime.now(timezone.utc).astimezone(timezone.utc)
 
-    for txc_service in txc_data.services.values():
-        process_service(today, txc_data, txc_service, stops, db)
+    global service_id
 
-    db.commit()  # Commit once after processing all services for this file
+    with SessionLocal() as db:
+        for txc_operator in txc_data.operators:
+            operator = (
+                db.query(Operator)
+                .filter_by(noc=txc_operator.national_operator_code)
+                .first()
+            )
+            if not operator:
+                print(f"Adding operator {txc_operator.operator_name_on_licence}")
+                operator = Operator(
+                    noc=txc_operator.national_operator_code,
+                    ref=txc_operator.operator_id,
+                    name=txc_operator.operator_name_on_licence
+                    or txc_operator.trading_name,
+                )
+                db.add(operator)
+        db.commit()
 
-    print("Import completed successfully.")
-    print(f"Total stops not found: {not_found}")
+        for txc_service in txc_data.services:
+            service_id = txc_service.service_code
+
+        for txc_route in txc_data.routes:
+            route_id = get_id(txc_route.route_id)
+            route = db.query(Route).filter_by(id=route_id).first()
+            if not route:
+                print(f"Adding route {route_id}")
+                route_section_ref = txc_route.route_section_ref
+
+                if route_section_ref:
+                    route_section = txc_data.route_sections.get(route_section_ref)
+                    if route_section:
+                        handle_route_section(route_section, db)
+
+                route = Route(
+                    id=route_id,
+                    private_code=txc_route.private_code,
+                    description=txc_route.description,
+                    route_section_id=get_id(route_section_ref),
+                )
+                db.add(route)
+
+        for txc_service in txc_data.services:
+            handle_service(txc_data, txc_service, today, db)
 
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        print("Usage: python import_txc.py <path_to_zip>")
+        print("Usage: python import_txc.py <path_to_zip_or_xml>")
         exit(1)
-    import_txc_zip(sys.argv[1])
-    print(f"Total stops not found: {not_found}")
+    input_path = sys.argv[1]
+    if input_path.lower().endswith(".zip"):
+        import_txc_zip(input_path)
+    elif input_path.lower().endswith(".xml"):
+        with open(input_path, "rb") as xml_file:
+            handle_txc_file(xml_file)
+    else:
+        print("Error: Input must be a .zip or .xml file")
+        exit(1)

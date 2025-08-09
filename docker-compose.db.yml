@@ -1,7 +1,7 @@
 
 services:
   db:
-    image: nickblah/postgis:13-bullseye-postgis-3
+    image: imresamu/postgis
     container_name: nextbus_db
     restart: unless-stopped
     ports:
@@ -12,7 +12,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./backend/core/init_db:/docker-entrypoint-initdb.d
+      - ./backend/db/init_db:/docker-entrypoint-initdb.d
 
 volumes:
   postgres_data:
