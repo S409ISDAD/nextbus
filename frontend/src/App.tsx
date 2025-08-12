@@ -167,6 +167,14 @@ function App() {
                         Terms
                     </a>
 
+                    <a
+                        href="https://discord.gg/dyEmZSkwge"
+                        className="underline text-sky-400"
+                        target="_blank"
+                        rel="noopener noreferrer">
+                        Join the Discord!{" "}
+                    </a>
+
                     <div className="flex gap-1 h-fit">
                         <span>Bus data:</span>
                         <a

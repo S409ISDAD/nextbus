@@ -18,8 +18,6 @@ new_stops = []
 updated_stops = []
 new_stop_areas = []
 updated_stop_areas = []
-existing_stops = {}
-stop_areas = {}
 
 
 def generate_point(lat, lon):
@@ -102,6 +100,9 @@ def get_stop(element, atco_code):
 def get_stop_area(element: ET.Element):
     code = element.findtext("StopAreaCode")
 
+    if element.attrib.get("Status") != "active":
+        return None
+
     if code:
         point = get_point(element.find("Location"))
 
@@ -125,11 +126,7 @@ def handle_stop_area(element: ET.Element):
     stop_area = get_stop_area(element)
 
     if stop_area:
-        if (
-            getattr(stop_area, "id") in stop_areas
-            and getattr(stop_area, "revision_number")
-            > existing_stop_areas[getattr(stop_area, "id")]
-        ):
+        if getattr(stop_area, "id") in stop_area_ids:
             updated_stop_areas.append(stop_area)
         else:
             new_stop_areas.append(stop_area)
@@ -137,6 +134,9 @@ def handle_stop_area(element: ET.Element):
 
 def handle_stop_point(element: ET.Element):
     atco_code = element.findtext("AtcoCode")
+
+    if element.attrib.get("Status") != "active":
+        return
 
     modified_at = get_datetime(element.attrib.get("ModificationDateTime"))
     created_at = get_datetime(element.attrib.get("CreationDateTime"))
@@ -149,13 +149,10 @@ def handle_stop_point(element: ET.Element):
     setattr(stop, "revision_number", revision_number)
 
     for stop_area_ref in element.findall("StopAreas/StopAreaRef"):
-        if stop_area_ref.attrib.get("Modification") != "delete":
+        if stop_area_ref.attrib.get("Status") == "active":
             setattr(stop, "stop_area_id", stop_area_ref.text)
 
-    if (
-        atco_code in existing_stop_ids
-        and getattr(stop, "revision_number") > existing_stops[atco_code]
-    ):
+    if atco_code in existing_stop_ids:
         updated_stops.append(stop)
     else:
         new_stops.append(stop)
@@ -213,10 +210,7 @@ def import_naptan_data(file_path: str):
     global \
         new_stops, \
         updated_stops, \
-        existing_stops, \
         existing_stop_ids, \
-        stop_areas, \
-        existing_stop_areas, \
         stop_area_ids, \
         updated_stop_areas, \
         new_stop_areas
@@ -224,14 +218,10 @@ def import_naptan_data(file_path: str):
     iterator = ET.iterparse(file_path, events=("start", "end"))
     with SessionLocal() as db:
         try:
-            stops = db.query(Stop).all()
-            existing_stops = {stop[0]: stop[22] for stop in stops}
-            existing_stop_ids = {atco_code[0] for atco_code in existing_stops}
-            stop_areas = db.query(StopArea).all()
-            existing_stop_areas = {
-                stop_area[0]: stop_area[8] for stop_area in stop_areas
+            existing_stop_ids = {
+                atco_code[0] for atco_code in db.query(Stop.atco_code).all()
             }
-            stop_area_ids = {code[0] for code in stop_areas}
+            stop_area_ids = {code[0] for code in db.query(StopArea.id).all()}
             print("Loaded existing data")
             for event, element in iterator:
                 element.tag = element.tag.removeprefix("{http://www.naptan.org.uk/}")

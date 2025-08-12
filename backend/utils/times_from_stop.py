@@ -1,102 +1,100 @@
 from datetime import datetime, timedelta
-from collections import defaultdict
-
-import pandas as pd
 from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import and_
 
-from backend.core.db import SessionLocal
-from backend.models import Calendar, CalendarDate, Route, Service, StopTime, Trip
+from backend.db.db import SessionLocal
+from backend.models import (
+    Calendar,
+    CalendarException,
+    Line,
+    Service,
+    StopTime,
+    Journey,
+)
 
 
-def times_from_stop(stop_id: str, db: Session):
-    today = datetime.now()
-    weekday = today.date().strftime("%A").lower()
-    seconds_since_midnight = today.hour * 3600 + today.minute * 60 + today.second
+def times_from_stop(stop_id: str, db: Session, limit: int = 10):
+    # now = datetime.now() + timedelta(days=1, hours=10)
+    now = datetime(year=2025, month=8, day=11, hour=11, minute=1, second=0)
+    weekday_attr = now.strftime("%A").lower()
+    today_date = now.date()
+    seconds_since_midnight = now.hour * 3600 + now.minute * 60 + now.second
+    current_time = timedelta(seconds=seconds_since_midnight)
 
-    # 1️⃣ Get all service_ids for this stop with preloaded relationships
+    # 1️⃣ Get all StopTimes for this stop (with Journey+Calendar preloaded)
     stop_times = (
         db.query(StopTime)
         .filter(StopTime.stop_id == stop_id)
-        .join(Trip, StopTime.trip_id == Trip.id)
-        .join(Service, Trip.service_id == Service.id)
-        .options(joinedload(StopTime.trip).joinedload(Trip.service))
-        .limit(10)
-        .all()
-    )
-    service_ids = {st.trip.service_id for st in stop_times}
-
-    if not service_ids:
-        return []  # Early exit if no services are found
-
-    # 2️⃣ Find exceptions for today in a single query
-    exceptions = {
-        cd.service_id: cd.exception_type
-        for cd in db.query(CalendarDate)
-        .filter(CalendarDate.service_id.in_(service_ids), CalendarDate.date == today)
-        .all()
-    }
-
-    # 3️⃣ Find active services for today
-    active_service_ids = {
-        sid
-        for sid in service_ids
-        if exceptions.get(sid) == 1
-        or (
-            exceptions.get(sid) is None
-            and db.query(Calendar)
-            .filter(
-                Calendar.service_id == sid,
-                Calendar.start_date <= today.date(),
-                Calendar.end_date >= today.date(),
-                getattr(Calendar, weekday),
-            )
-            .first()
+        .join(Journey)
+        .join(Calendar)
+        .options(
+            joinedload(StopTime.journey).joinedload(Journey.calendar),
+            joinedload(StopTime.journey)
+            .joinedload(Journey.line)
+            .joinedload(Line.service),
         )
-    }
-
-    if not active_service_ids:
-        return []  # Early exit if no active services are found
-
-    # 4️⃣ Get today's stop_times for this stop and active services
-    stop_times = (
-        db.query(StopTime)
-        .distinct(StopTime.departure_time)
-        .filter(
-            StopTime.stop_id == stop_id,
-            StopTime.departure_time >= seconds_since_midnight,
-        )
-        .join(Trip, StopTime.trip_id == Trip.id)
-        .filter(Trip.service_id.in_(active_service_ids))
-        .join(Route, Trip.route_id == Route.id)
-        .options(joinedload(StopTime.trip).joinedload(Trip.route))
-        .order_by(StopTime.departure_time)
-        .limit(10)
         .all()
     )
 
-    stop_times_df = pd.DataFrame(
-        [
-            (
-                st.trip.route.short_name if hasattr(st.trip, "route") else None,
-                st.trip.headsign if hasattr(st, "trip") else None,
-                st.get_departure_time,
-            )
-            for st in stop_times
-        ],
-        columns=["route_num", "dest", "departure_time"],
-    )
-    stop_times_df.set_index("route_num", inplace=True)
-    stop_times_df.index.name = None  # Remove the index (route_num) title
+    # 2️⃣ Filter by active calendars
+    active_stop_times = []
+    for st in stop_times:
+        cal = st.journey.calendar
+        # Check calendar valid date range
+        if not (
+            cal.start_date <= today_date
+            and (cal.end_date is None or cal.end_date >= today_date)
+        ):
+            continue
 
-    longest_dest = stop_times_df["dest"].str.len().max()
+        # Check weekday flag
+        if not getattr(cal, weekday_attr):
+            continue
 
-    for departure in stop_times_df.itertuples():
-        print(
-            f"{departure.Index:<3} {departure.dest:<{longest_dest + 2}} {departure.departure_time}"
-        )
+        # Check exceptions
+        has_exception = False
+        for exc in cal.calendar_exceptions:
+            if exc.start_date <= today_date <= exc.end_date:
+                if not exc.operating:
+                    has_exception = True
+                else:
+                    has_exception = False
+                break
+
+        if has_exception:
+            continue
+
+        active_stop_times.append(st)
+
+    # 3️⃣ Keep only future departures
+    future_stop_times = [
+        st
+        for st in active_stop_times
+        if st.departure_time and st.departure_time >= current_time
+    ]
+
+    # 4️⃣ Sort by departure time
+    future_stop_times.sort(key=lambda st: st.departure_time)
+
+    # 5️⃣ Format results
+    results = []
+    for st in future_stop_times[:limit]:
+        line_name = st.journey.line.line_name if st.journey.line else None
+        dest = st.journey.service.destination
+        dep_str = st.departure_time_str
+        results.append((line_name, dest, dep_str))
+
+    # 6️⃣ Print nicely
+    if results:
+        longest_dest = max(len(dest or "") for _, dest, _ in results)
+        longest_line = max(len(line or "") for line, _, _ in results)
+        for line_name, dest, dep in results:
+            print(f"{line_name:<{longest_line + 1}}to {dest:<{longest_dest + 2}} {dep}")
+    else:
+        print("No departures found.")
 
 
 if __name__ == "__main__":
-    stop_id = "1980SN120841"
+    stop_id = "1900HA110364"
     with SessionLocal() as db:
         times_from_stop(stop_id, db)

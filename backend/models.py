@@ -222,6 +222,53 @@ class Operator(Base):
     search_vector = Column(TSVectorType("name", "noc"))
 
 
+class BankHoliday(Base):
+    __tablename__ = "bank_holiday"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String, nullable=False, unique=True)
+
+    dates = relationship(
+        "BankHolidayDate", back_populates="bank_holiday", cascade="all, delete-orphan"
+    )
+    calendars = relationship(
+        "Calendar", secondary="calendar_bank_holiday", back_populates="bank_holidays"
+    )
+
+
+class BankHolidayDate(Base):
+    __tablename__ = "bank_holiday_date"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    bank_holiday_id = Column(Integer, ForeignKey("bank_holiday.id"), nullable=False)
+    date = Column(Date, nullable=False)
+
+    bank_holiday = relationship("BankHoliday", back_populates="dates")
+
+    __table_args__ = (
+        UniqueConstraint(
+            "bank_holiday_id",
+            "date",
+            name="uq_bank_holiday_date_per_holiday",
+        ),
+    )
+
+
+class CalendarToBankHoliday(Base):
+    """
+    Many-to-many relationship between Calendar and BankHoliday
+    """
+
+    __tablename__ = "calendar_bank_holiday"
+    operating = Column(Boolean, nullable=False, default=True)
+    calendar_id = Column(
+        Integer, ForeignKey("calendar.id"), primary_key=True, nullable=False
+    )
+    bank_holiday_id = Column(
+        Integer, ForeignKey("bank_holiday.id"), primary_key=True, nullable=False
+    )
+
+
 class Calendar(Base):
     """
     days of operation of a journey
@@ -238,9 +285,45 @@ class Calendar(Base):
     saturday = Column(Boolean, nullable=False, default=False)
     sunday = Column(Boolean, nullable=False, default=False)
     start_date = Column(Date, nullable=False)
-    end_date = Column(Date, nullable=False)
+    end_date = Column(Date, nullable=True)  # no end date means it is valid indefinitely
+
+    bank_holidays = relationship(
+        "BankHoliday", secondary="calendar_bank_holiday", back_populates="calendars"
+    )
+    calendar_exceptions = relationship(
+        "CalendarException", back_populates="calendar", cascade="all, delete-orphan"
+    )
 
     journeys = relationship("Journey", back_populates="calendar")
+
+    @property
+    def days_of_week(self):
+        return {
+            "monday": self.monday,
+            "tuesday": self.tuesday,
+            "wednesday": self.wednesday,
+            "thursday": self.thursday,
+            "friday": self.friday,
+            "saturday": self.saturday,
+            "sunday": self.sunday,
+        }
+
+
+class CalendarException(Base):
+    """
+    exceptions to the calendar, e.g. public holidays, school days, etc.
+    """
+
+    __tablename__ = "calendar_exception"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    calendar_id = Column(Integer, ForeignKey("calendar.id"), nullable=False)
+    start_date = Column(Date, nullable=False)
+    end_date = Column(Date, nullable=False)
+    operating = Column(Boolean, nullable=False, default=True)
+    description = Column(String, nullable=True)
+
+    calendar = relationship("Calendar", back_populates="calendar_exceptions")
 
 
 class Service(Base):
@@ -261,7 +344,6 @@ class Service(Base):
     operator = relationship("Operator", back_populates="services")
     lines = relationship("Line", back_populates="service")
     journeys = relationship("Journey", back_populates="service")
-
     search_vector = Column(
         TSVectorType(
             "service_code", "description", "origin", "destination", "vias", "line_names"
@@ -351,7 +433,9 @@ class Journey(Base):
     __tablename__ = "journey"
     id = Column(String, primary_key=True)
     service_code = Column(String, ForeignKey("service.service_code"), nullable=False)
+    ticket_machine_code = Column(String, nullable=True)
     line_id = Column(String, ForeignKey("line.id"), nullable=True)
+    block_id = Column(String, nullable=True)
     direction = Column(Enum(DirectionType))
     start_time = Column(Interval, nullable=False)
     end_time = Column(Interval)
@@ -386,6 +470,28 @@ class StopTime(Base):
 
     journey = relationship("Journey", back_populates="stop_times")
     stop = relationship("Stop", back_populates="stop_times")
+
+    @property
+    def departure_time_str(self):
+        if self.departure_time is None:
+            return None
+        total_seconds = int(self.departure_time.total_seconds())
+        hours = total_seconds // 3600
+        if hours > 23:
+            hours = hours - 24
+        minutes = (total_seconds % 3600) // 60
+        return f"{hours:02d}:{minutes:02d}"
+
+    @property
+    def arrival_time_str(self):
+        if self.arrival_time is None:
+            return None
+        total_seconds = int(self.arrival_time.total_seconds())
+        hours = total_seconds // 3600
+        if hours > 23:
+            hours = hours - 24
+        minutes = (total_seconds % 3600) // 60
+        return f"{hours:02d}:{minutes:02d}"
 
     __table_args__ = (
         UniqueConstraint(

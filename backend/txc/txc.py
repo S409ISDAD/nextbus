@@ -48,7 +48,7 @@ class DateRange:
 
 class ServicedOrganisation:
     def __init__(self, element):
-        self.code = element.find("OrganisationCode").text
+        self.code = element.findtext("OrganisationCode")
         self.name = element.findtext("Name")
 
         working_days = element.findall("WorkingDays/DateRange")
@@ -298,14 +298,20 @@ class VehicleJourney:
         self.revision_number = element.get("RevisionNumber")
         self.private_code = element.findtext("PrivateCode")
         self.operator_ref = element.findtext("OperatorRef")
+        self.journey_code = element.findtext("VehicleJourneyCode")
 
-        journey_code = None
+        ticket_machine_code = None
+        block = None
         operational_elem = element.find("Operational")
         if operational_elem is not None:
+            block_elem = operational_elem.find("Block")
+            if block_elem is not None:
+                block = block_elem.findtext("BlockNumber")
             ticket_machine_elem = operational_elem.find("TicketMachine")
             if ticket_machine_elem is not None:
-                journey_code = ticket_machine_elem.findtext("JourneyCode")
-        self.journey_code = journey_code
+                ticket_machine_code = ticket_machine_elem.findtext("JourneyCode")
+        self.ticket_machine_code = ticket_machine_code
+        self.block = block
         operating_profile_elem = element.find("OperatingProfile")
         self.operating_profile = (
             OperatingProfile(operating_profile_elem)
@@ -347,6 +353,16 @@ class OperatingProfile:
             if bank_holiday_operation_elem is not None
             else None
         )
+        nonoperation_days = element.findall(
+            "SpecialDaysOperation/DaysOfNonOperation/DateRange"
+        )
+        self.non_operation_days = [DateRange(e) for e in nonoperation_days if len(e)]
+
+        operation_days = element.findall(
+            "SpecialDaysOperation/DaysOfOperation/DateRange"
+        )
+        self.operation_days = [DateRange(e) for e in operation_days if len(e)]
+        self.hash = ET.tostring(element)
 
 
 class RegularDayType:
@@ -355,7 +371,7 @@ class RegularDayType:
         days_of_week = []
         if days_of_week_elem is not None:
             for day_elem in days_of_week_elem:
-                days_of_week.append(day_elem.tag)
+                days_of_week.append(day_elem.tag.lower())
         self.days_of_week = days_of_week
 
 

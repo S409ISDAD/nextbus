@@ -44,16 +44,8 @@ def generate_timetable(line_id: str, db: Session):
                             stop_order[stop.common_name] = stop_time.stop_sequence
                         dep_time = stop_time.departure_time
                         if dep_time is not None:
-                            total_seconds = int(dep_time.total_seconds())
-                            hours = total_seconds // 3600
-                            minutes = (total_seconds % 3600) // 60
-                            formatted_time = f"{hours:02d}:{minutes:02d}"
-                            if stop.common_name == "Health Centre":
-                                print(
-                                    f"Stop: {stop.common_name}, Time: {stop.atco_code}"
-                                )
                             journey_stop_times[journey.id][stop.common_name] = (
-                                formatted_time
+                                stop_time.departure_time_str
                             )
                         else:
                             journey_stop_times[journey.id][stop.common_name] = "-"
