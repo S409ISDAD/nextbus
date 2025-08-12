@@ -170,6 +170,7 @@ class Stop(Base):
 
     stop_area = relationship("StopArea", back_populates="stops")
     stop_times = relationship("StopTime", back_populates="stop")
+    lines = relationship("Line", secondary="line_stop_usage", back_populates="stops")
 
     __table_args__ = (Index("ix_stop_point", "point", postgresql_using="gist"),)
 
@@ -361,10 +362,15 @@ class Line(Base):
     line_name = Column(String, nullable=False)
     inbound_description = Column(String)
     outbound_description = Column(String)
+    geometry = Column(
+        Geometry(geometry_type="MULTILINESTRING", srid=4326), nullable=True
+    )  # an overall geometry of the line, merged from all track sections
     service_code = Column(String, ForeignKey("service.service_code"), nullable=False)
 
     service = relationship("Service", back_populates="lines")
     journeys = relationship("Journey", back_populates="line")
+    routes = relationship("Route", back_populates="lines", secondary="line_to_route")
+    stops = relationship("Stop", secondary="line_stop_usage", back_populates="lines")
 
     __table_args__ = (
         UniqueConstraint("line_name", "service_code", name="uq_line_per_service"),
@@ -377,6 +383,34 @@ class Line(Base):
             "outbound_description",
         )
     )
+
+
+class LineStopUsage(Base):
+    """
+    A collection of all the stops that a line serves across all journeys
+    """
+
+    __tablename__ = "line_stop_usage"
+    line_id = Column(String, ForeignKey("line.id"), primary_key=True, nullable=False)
+    stop_id = Column(
+        String, ForeignKey("stop.atco_code"), primary_key=True, nullable=False
+    )
+
+    __table_args__ = (
+        UniqueConstraint("line_id", "stop_id", name="uq_line_stop_usage"),
+    )
+
+
+class LineToRoute(Base):
+    """
+    Many-to-many relationship between Line and Route
+    """
+
+    __tablename__ = "line_to_route"
+    line_id = Column(String, ForeignKey("line.id"), primary_key=True, nullable=False)
+    route_id = Column(String, ForeignKey("route.id"), primary_key=True, nullable=False)
+
+    __table_args__ = (UniqueConstraint("line_id", "route_id", name="uq_line_to_route"),)
 
 
 class TrackSection(Base):
@@ -422,6 +456,7 @@ class Route(Base):
     description = Column(String, nullable=True)
     route_section_id = Column(String, ForeignKey("route_section.id"), nullable=True)
 
+    lines = relationship("Line", back_populates="routes", secondary="line_to_route")
     route_section = relationship("RouteSection", back_populates="route")
 
 

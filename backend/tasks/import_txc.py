@@ -4,9 +4,10 @@ import zipfile
 from datetime import datetime, timedelta, timezone
 import isodate
 
-from geoalchemy2.shape import from_shape
-from shapely import Point
+from geoalchemy2.shape import from_shape, to_shape
+from shapely import MultiLineString, Point
 from shapely.geometry import LineString
+from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
 from backend.db.db import SessionLocal
@@ -17,14 +18,18 @@ from backend.models import (
     CalendarToBankHoliday,
     Journey,
     Line,
+    LineToRoute,
     Operator,
     Route,
     RouteSection,
     Service,
+    Stop,
     StopTime,
     TrackSection,
+    LineStopUsage,
 )
 from backend.txc import txc
+from backend.utils.bulk_upsert import bulk_upsert
 import concurrent.futures
 
 logger = logging.getLogger(__name__)
@@ -63,6 +68,10 @@ class TXCImporter:
         self.service_id = None
         self.calendar_cache = {}
         self.db = SessionLocal()
+        self.journeys_to_add = []
+        self.stop_times_to_add = []
+        self.line_to_routes = {}  # Maps line_id to a list of route IDs
+        self.line_to_stops = {}  # Maps line_id to a list of stop IDs
 
     def get_id(self, id: str) -> str:
         """Generate a unique ID for the object based on the service code, as e.g. RS3 is only unique within a service."""
@@ -236,6 +245,9 @@ class TXCImporter:
         cumulative_distance = 0.0
         cumulative_time = start_time
 
+        for stop_code in stops.keys():
+            self.line_to_stops.setdefault(line.id, set()).add(stop_code)
+
         sorted_stops = sorted(
             stops.items(), key=lambda item: stop_sequence.get(item[0], 0)
         )
@@ -246,53 +258,44 @@ class TXCImporter:
 
             cumulative_distance += stop_data["distance"] if stop_data else 0.0
 
-            stoptime = (
-                self.db.query(StopTime)
-                .filter_by(journey_id=journey_code, stop_sequence=seq)
-                .first()
-            )
-            if not stoptime:
-                activity = stop_data.get("activity") if stop_data else None
-                pick_up = "pickup" in activity.lower() if activity else False
-                drop_off = "setdown" in activity.lower() if activity else False
-                stoptime = StopTime(
-                    journey_id=journey_code,
-                    stop_id=stop_ref,
-                    pick_up=pick_up,
-                    drop_off=drop_off,
-                    departure_time=cumulative_time,
-                    arrival_time=cumulative_time,
-                    stop_sequence=seq,
-                    distance_traveled=cumulative_distance,
-                    timing_status=stop_data["timing_status"]
-                    if stop_data and "timing_status" in stop_data
-                    else None,
-                    wait_time=timedelta(0),
-                )
-                self.db.add(stoptime)
+            activity = stop_data.get("activity") if stop_data else None
+            pick_up = "pickup" in activity.lower() if activity else False
+            drop_off = "setdown" in activity.lower() if activity else False
+            stoptime = {
+                "journey_id": journey_code,
+                "stop_id": stop_ref,
+                "pick_up": pick_up,
+                "drop_off": drop_off,
+                "departure_time": cumulative_time,
+                "arrival_time": cumulative_time,
+                "stop_sequence": seq,
+                "distance_traveled": cumulative_distance,
+                "timing_status": stop_data["timing_status"]
+                if stop_data and "timing_status" in stop_data
+                else None,
+                "wait_time": timedelta(0),
+            }
+            self.stop_times_to_add.append(stoptime)
             cumulative_time += (
                 stop_data["runtime"]
                 if stop_data and "runtime" in stop_data
                 else timedelta(0)
             )
 
-        db_journey = self.db.query(Journey).filter_by(id=journey_code).first()
+        journey = {
+            "id": journey_code,
+            "service_code": service.service_code,
+            "ticket_machine_code": txc_journey.ticket_machine_code,
+            "line_id": line.id,
+            "block_id": txc_journey.block,
+            "direction": journey_pattern.direction if journey_pattern else None,
+            "start_time": start_time,
+            "end_time": cumulative_time,
+            "calendar_id": calendar.id,
+        }
+        self.journeys_to_add.append(journey)
 
-        journey = Journey(
-            id=journey_code,
-            service_code=service.service_code,
-            ticket_machine_code=txc_journey.ticket_machine_code,
-            line_id=line.id,
-            block_id=txc_journey.block,
-            direction=journey_pattern.direction if journey_pattern else None,
-            start_time=start_time,
-            end_time=cumulative_time,
-            calendar_id=calendar.id,
-        )
-        if not db_journey:
-            self.db.add(journey)
-        else:
-            self.db.merge(journey)
+        self.db.flush()
 
     def handle_service(self, txc_service: txc.Service):
         skip_journeys = False
@@ -343,6 +346,13 @@ class TXCImporter:
             self.db.merge(service)
         self.db.flush()
 
+        routes = set()
+
+        for jp in txc_service.journey_patterns.values():
+            route_ref = jp.route_ref
+            if route_ref:
+                routes.add(self.get_id(route_ref))
+
         for txc_line in txc_service.lines:
             db_line = self.db.query(Line).filter_by(id=txc_line.line_id).first()
             line = Line(
@@ -363,6 +373,7 @@ class TXCImporter:
                 print(f"Updating line {txc_line.line_id}")
                 self.db.merge(line)
             self.db.flush()
+            self.line_to_routes.setdefault(txc_line.line_id, []).extend(routes)
 
             if skip_journeys:
                 continue
@@ -413,52 +424,212 @@ class TXCImporter:
 
         self.db.bulk_save_objects(track_points_to_create)
 
-    def handle_txc_file(self):
-        for txc_operator in self.txc_data.operators:
-            db_operator = (
-                self.db.query(Operator)
-                .filter_by(noc=txc_operator.national_operator_code)
-                .first()
-            )
-            operator = Operator(
-                noc=txc_operator.national_operator_code,
-                ref=txc_operator.operator_id,
-                name=txc_operator.operator_name_on_licence or txc_operator.trading_name,
-            )
-            if not db_operator:
-                print(f"Adding operator {txc_operator.operator_name_on_licence}")
-                self.db.add(operator)
-            else:
-                print(f"Updating operator {txc_operator.operator_name_on_licence}")
-                self.db.merge(operator)
+    def update_geometry(self, line_id):
+        print(f"Updating route overview geometry for line {line_id}")
 
-        for txc_service in self.txc_data.services:
-            self.handle_service(txc_service)
+        # Query to get the ordered stops for the line
+        ordered_stops_query = (
+            select(Stop.point)
+            .join(LineStopUsage, LineStopUsage.stop_id == Stop.atco_code)
+            .where(LineStopUsage.line_id == line_id)
+            .order_by(LineStopUsage.stop_id)
+        ).subquery()
 
-        for txc_route in self.txc_data.routes:
-            route_id = self.get_id(txc_route.route_id)
-            db_route = self.db.query(Route).filter_by(id=route_id).first()
-            route_section_ref = txc_route.route_section_ref
+        # Create a LINESTRING from the ordered stops
+        geom_subquery = select(
+            func.ST_MakeLine(ordered_stops_query.c.point)
+        ).scalar_subquery()
 
-            if route_section_ref:
-                route_section = self.txc_data.route_sections.get(route_section_ref)
-                if route_section:
-                    self.handle_route_section(route_section)
+        # Convert geometry from EPSG:27700 to EPSG:4326 (WGS84)
+        geom_subquery = func.ST_Transform(geom_subquery, 4326)
 
-            route = Route(
-                id=route_id,
-                private_code=txc_route.private_code,
-                description=txc_route.description,
-                route_section_id=self.get_id(route_section_ref),
-            )
-            if not db_route:
-                print(f"Adding route {route_id}")
-                self.db.add(route)
-            else:
-                print(f"Updating route {route_id}")
-                self.db.merge(route)
+        # Build and execute the update statement
+        stmt = update(Line).where(Line.id == line_id).values(geometry=geom_subquery)
 
+        result = self.db.execute(stmt)
         self.db.commit()
+
+        if result.rowcount == 0:
+            print(f"No line with id {line_id} found or no geometry to update.")
+        else:
+            print(f"Geometry updated for line {line_id}")
+
+    def merge_line_routes(self, line_id: str, simplify_tolerance=0.0001):
+        """
+        Given a line_id, merge the geometries of all its related routes into one LineString overview.
+
+        Args:
+            db: SQLAlchemy Session
+            line_id: ID of the Line to fetch routes for
+            simplify_tolerance: tolerance for ST_Simplify (optional)
+
+        Returns:
+            Merged Shapely LineString of all route sections, or None if no geometry found.
+        """
+        # Subquery to get all route_section geometries for routes linked to this line
+        route_sections_subq = (
+            select(RouteSection.geometry)
+            .join(Route, Route.route_section_id == RouteSection.id)
+            .join(LineToRoute, LineToRoute.route_id == Route.id)
+            .where(LineToRoute.line_id == line_id)
+        ).subquery()
+
+        # Aggregate: ST_Union to merge, ST_LineMerge to merge connected lines, ST_Simplify to reduce vertices
+        merged_geom_sql = func.ST_LineMerge(
+            func.ST_Simplify(
+                func.ST_Union(route_sections_subq.c.geometry), simplify_tolerance
+            )
+        )
+
+        # Query to execute the aggregate function
+        merged_geom_wkb = self.db.execute(select(merged_geom_sql)).scalar()
+
+        if merged_geom_wkb is None:
+            return None
+
+        # Convert WKB to Shapely geometry and return
+        merged_geom = to_shape(merged_geom_wkb)
+        if isinstance(merged_geom, MultiLineString):
+            # If the merged geometry is a LineString, update the line's geometry
+            stmt = (
+                update(Line)
+                .where(Line.id == line_id)
+                .values(geometry=from_shape(merged_geom))
+            )
+            self.db.execute(stmt)
+            self.db.commit()
+            return merged_geom
+        else:
+            print(f"Merged geometry for line {line_id} is not a MultiLineString.")
+            return None
+
+    def handle_txc_file(self):
+        try:
+            for txc_operator in self.txc_data.operators:
+                db_operator = (
+                    self.db.query(Operator)
+                    .filter_by(noc=txc_operator.national_operator_code)
+                    .first()
+                )
+                operator = Operator(
+                    noc=txc_operator.national_operator_code,
+                    ref=txc_operator.operator_id,
+                    name=txc_operator.operator_name_on_licence
+                    or txc_operator.trading_name,
+                )
+                if not db_operator:
+                    print(f"Adding operator {txc_operator.operator_name_on_licence}")
+                    self.db.add(operator)
+                else:
+                    print(f"Updating operator {txc_operator.operator_name_on_licence}")
+                    self.db.merge(operator)
+
+            for txc_service in self.txc_data.services:
+                self.handle_service(txc_service)
+
+            bulk_upsert(
+                session=self.db,
+                model=Journey,
+                rows=self.journeys_to_add,
+                conflict_cols=["id"],
+                update_cols=[
+                    "service_code",
+                    "ticket_machine_code",
+                    "line_id",
+                    "block_id",
+                    "direction",
+                    "start_time",
+                    "end_time",
+                    "calendar_id",
+                ],
+            )
+            print(f"Added {len(self.journeys_to_add)} journeys")
+            self.journeys_to_add.clear()
+            self.db.flush()
+
+            bulk_upsert(
+                session=self.db,
+                model=StopTime,
+                rows=self.stop_times_to_add,
+                conflict_cols=["journey_id", "stop_sequence"],
+                update_cols=[
+                    "pick_up",
+                    "drop_off",
+                    "departure_time",
+                    "arrival_time",
+                    "stop_sequence",
+                    "distance_traveled",
+                    "timing_status",
+                    "wait_time",
+                ],
+            )
+            print(f"Added {len(self.stop_times_to_add)} stop times")
+            self.stop_times_to_add.clear()
+            self.db.flush()
+
+            for txc_route in self.txc_data.routes:
+                route_id = self.get_id(txc_route.route_id)
+                db_route = self.db.query(Route).filter_by(id=route_id).first()
+                route_section_ref = txc_route.route_section_ref
+
+                if route_section_ref:
+                    route_section = self.txc_data.route_sections.get(route_section_ref)
+                    if route_section:
+                        self.handle_route_section(route_section)
+
+                route = Route(
+                    id=route_id,
+                    private_code=txc_route.private_code,
+                    description=txc_route.description,
+                    route_section_id=self.get_id(route_section_ref),
+                )
+                if not db_route:
+                    print(f"Adding route {route_id}")
+                    self.db.add(route)
+                else:
+                    print(f"Updating route {route_id}")
+                    self.db.merge(route)
+            self.db.commit()
+
+            for line_id, stop_codes in self.line_to_stops.items():
+                for stop_code in stop_codes:
+                    db_stop = (
+                        self.db.query(LineStopUsage)
+                        .filter_by(line_id=line_id, stop_id=stop_code)
+                        .first()
+                    )
+                    if not db_stop:
+                        ltr = LineStopUsage(
+                            line_id=line_id,
+                            stop_id=stop_code,
+                        )
+                        self.db.add(ltr)
+                # self.update_geometry(line_id)
+                self.db.flush()
+
+            for line_id, route_ids in self.line_to_routes.items():
+                for route_id in route_ids:
+                    db_ltr = (
+                        self.db.query(LineToRoute)
+                        .filter_by(line_id=line_id, route_id=route_id)
+                        .first()
+                    )
+                    if not db_ltr:
+                        ltr = LineToRoute(
+                            line_id=line_id,
+                            route_id=route_id,
+                        )
+                        self.db.add(ltr)
+                self.merge_line_routes(line_id)
+                self.db.flush()
+
+            self.db.commit()
+        except Exception as e:
+            print("An error occurred during txc import:")
+            error_str = e.__str__()
+            print(error_str[:1000])
+            # print(error_str)
+            self.db.rollback()
 
 
 if __name__ == "__main__":
