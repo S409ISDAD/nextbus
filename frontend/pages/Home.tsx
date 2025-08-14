@@ -80,19 +80,22 @@ const Home: React.FC = () => {
                     </span> */}
                     {/* <DepartureBoard stop_id="" closest={true}></DepartureBoard> */}
 
-                    <div className="flex flex-row flex-wrap items-start justify-center w-full p-5 gap-y-3 gap-x-10">
-                        <div className="flex flex-col items-center justify-center gap-3 min-w-[350px] ">
-                            <span className="text-xl font-bold text-center">
-                                Find your train
+                    <div className="flex flex-row flex-wrap items-start justify-center w-full gap-10 p-5">
+                        <div className="flex flex-col items-center justify-center gap-3">
+                            <span className="hidden text-xl font-bold text-center md:block">
+                                See bus info
                             </span>
-                            <span className="text-xs text-center text-neutral-600">
-                                yes i know its a bus website but trains are cool
-                            </span>
-                            <TrainSearchCard></TrainSearchCard>
+                            <button
+                                className="w-full p-2 px-5 mt-2 font-semibold text-white transition-all bg-blue-500 cursor-pointer rounded-xl hover:bg-blue-600"
+                                onClick={() => {
+                                    window.location.href = `/buses`;
+                                }}>
+                                Bus Dashboard <FontAwesomeIcon icon={faBus} />
+                            </button>
                         </div>
                         <div className="flex flex-col items-center justify-center gap-3">
                             <span className="text-xl font-bold text-center">
-                                See nearby bus services
+                                Your nearby bus services
                             </span>
                             <Card className="max-w-[90vw] flex flex-col items-center gap-2">
                                 <span className="w-full text-center">
@@ -115,17 +118,14 @@ const Home: React.FC = () => {
                                 </div>
                             </Card>
                         </div>
-                        <div className="flex flex-col items-center justify-center gap-3">
+                        <div className="flex flex-col items-center justify-center gap-3 min-w-[350px] ">
                             <span className="text-xl font-bold text-center">
-                                Go to the bus dashboard
+                                Find your train
                             </span>
-                            <button
-                                className="w-full p-2 mt-2 font-semibold text-white transition-all bg-blue-500 cursor-pointer rounded-xl hover:bg-blue-600"
-                                onClick={() => {
-                                    window.location.href = `/buses`;
-                                }}>
-                                Bus Dashboard <FontAwesomeIcon icon={faBus} />
-                            </button>
+                            <span className="text-xs text-center text-neutral-600">
+                                yes i know its a bus website but trains are cool
+                            </span>
+                            <TrainSearchCard></TrainSearchCard>
                         </div>
                     </div>
 

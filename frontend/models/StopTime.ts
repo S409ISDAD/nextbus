@@ -7,4 +7,5 @@ export interface StopTime {
     coords: number[];
     track: number[][];
     set_down: boolean;
+    timing_status: "PTP" | "OTH";
 }

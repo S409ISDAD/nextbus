@@ -4,7 +4,7 @@ import { useNavigate, useParams } from "react-router";
 import { Skeleton } from "@radix-ui/themes";
 import { Card } from "../components/ui/Card";
 import type { ServiceLocation, TrainService } from "../models/Trains";
-import { generateTimeTo, lateness, toTime } from "../utils/timeUtils";
+import { generateTimeTo, toTime } from "../utils/timeUtils";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowLeft, faArrowRight } from "@fortawesome/free-solid-svg-icons";
 
@@ -120,16 +120,16 @@ function TrainCard({
 
                         {/* DELAY & BADGES */}
                         <div className="flex flex-wrap items-center gap-3">
-                            <span
+                            {/* <span
                                 className={`text-${
                                     (train.fromStop?.delay ?? 0) >= 60
                                         ? "red"
                                         : "green"
                                 }-400`}>
                                 {lateness(train.fromStop?.delay ?? 0)}
-                            </span>
+                            </span> */}
                             {train.duration && (
-                                <span className="font-semibold text-neutral-400">
+                                <span className="text-sm font-semibold md:text-base text-neutral-400">
                                     {`${Math.floor(
                                         train.duration / 3600
                                     )}h ${Math.floor(
@@ -152,10 +152,10 @@ function TrainCard({
                     </div>
 
                     {/* DESTINATION & OPERATOR */}
-                    <div className="flex flex-row items-center gap-3 text-sm">
+                    <div className="flex flex-row items-center gap-3 text-xs md:text-sm">
                         <div className="flex mb-1">
-                            <div className="flex items-center gap-1 px-3 py-1 font-semibold bg-neutral-800/50 rounded-l-2xl">
-                                <span>to</span>
+                            <div className="flex items-center gap-1 px-2 py-1 font-semibold md:px-2 bg-neutral-800/50 rounded-l-2xl">
+                                <span className="md:ml-1">to</span>
                                 {train.destination.map((d, i) => (
                                     <span key={d.description}>
                                         {d.description}
@@ -169,7 +169,7 @@ function TrainCard({
                                 ))}
                             </div>
                             <div
-                                className="px-3 py-1 font-semibold rounded-r-2xl"
+                                className="px-2 py-1 pl-1.5 font-semibold rounded-r-2xl"
                                 style={{ backgroundColor: train.atocColor }}>
                                 {train.atocCode}
                             </div>

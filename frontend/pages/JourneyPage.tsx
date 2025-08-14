@@ -499,7 +499,6 @@ const JourneyPage: React.FC = () => {
                                         </span>
                                     </div>
                                 </div>
-
                                 <div className="flex flex-col items-center gap-1">
                                     <span className="text-xs font-bold">
                                         {bus.livery
@@ -514,6 +513,7 @@ const JourneyPage: React.FC = () => {
                                                 "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 200' fill='none' xmlns:xlink='http://www.w3.org/1999/xlink'><rect width='300' height='200' fill='%23222222'/><text x='150' y='110' text-anchor='middle' fill='%23999999' font-size='80' font-family='sans-serif' dy='.35em'>?</text></svg>\")",
                                         }}></div>
                                 </div>
+
                                 <div className="flex justify-center px-2 py-1 rounded-lg bg-neutral-800/50">
                                     <span className="font-bold align-middle text">
                                         {lateness(bus ? bus.delay : 0)}
@@ -539,7 +539,10 @@ const JourneyPage: React.FC = () => {
                     ) : (
                         <></>
                     )}
-
+                    <div className="flex items-center justify-center gap-2 text-sm text-neutral-500">
+                        <div className="w-2 h-2 rounded-full bg-sky-500"></div>{" "}
+                        = timing point (bus waits here if early)
+                    </div>
                     <div className="flex justify-center gap-2">
                         <span className="text-xs text-neutral-400">
                             Updated {elapsed} ago
@@ -581,7 +584,9 @@ const JourneyPage: React.FC = () => {
                                                     ? "rounded-bl-full"
                                                     : ""
                                             }`}></div>
-
+                                        {/* {stop.timing_status === "PTP" && (
+                                            <div className="absolute z-10 w-3 h-3 translate-y-[-30%] rounded-full bg-neutral-700 flex items-center justify-center"></div>
+                                        )} */}
                                         {idx < journey.stops.length - 1 && (
                                             <div className="w-[4px] bg-neutral-700 flex-1 min-h-[68px]"></div>
                                         )}
@@ -593,7 +598,8 @@ const JourneyPage: React.FC = () => {
                                     <div
                                         key={stop.stop_id}
                                         className="flex flex-row items-center">
-                                        <div className="w-4 bg-neutral-700 rounded-r-full h-[4px]"></div>
+                                        <div
+                                            className={`w-4 bg-neutral-700 rounded-r-full h-[4px]`}></div>
                                         <div
                                             className="p-2 w-fit h-17"
                                             onClick={() =>
@@ -613,9 +619,13 @@ const JourneyPage: React.FC = () => {
                                                 {/* <span className="px-2 py-1 font-bold bg-indigo-800 rounded-t-2xl">
                                                     {stop.name}
                                                 </span> */}
-                                                <span className="font-bold">
+                                                <div className="flex flex-row items-center gap-2 font-bold">
+                                                    {stop.timing_status ===
+                                                        "PTP" && (
+                                                        <div className="w-2 h-2 rounded-full bg-sky-500"></div>
+                                                    )}{" "}
                                                     {stop.name}
-                                                </span>
+                                                </div>
                                                 {/* <div className="flex flex-row gap-6 px-2 py-1 font-bold bg-neutral-800/50 rounded-b-2xl">
                                                     <span>
                                                         {stop.aimed_time.toLocaleTimeString(
@@ -675,47 +685,52 @@ const JourneyPage: React.FC = () => {
                                                     ) : (
                                                         <div className="flex items-center gap-2">
                                                             {stop.expt_time &&
-                                                            stop.aimed_time ? (
-                                                                <div className="flex gap-3">
-                                                                    {new Date(
-                                                                        stop.expt_time
-                                                                    ).getTime() >
-                                                                        new Date(
-                                                                            stop.aimed_time
-                                                                        ).getTime() && (
-                                                                        <span className="line-through text-neutral-500">
-                                                                            {toTime(
-                                                                                stop.aimed_time
-                                                                            )}
-                                                                        </span>
-                                                                    )}
-                                                                    <span
-                                                                        className={
-                                                                            new Date(
-                                                                                stop.expt_time
-                                                                            ).getTime() >
-                                                                            new Date(
-                                                                                stop.aimed_time
-                                                                            ).getTime()
-                                                                                ? "text-red-400"
-                                                                                : "text-green-400"
-                                                                        }>
-                                                                        {new Date(
-                                                                            stop.expt_time
-                                                                        ).getTime() >
-                                                                        new Date(
-                                                                            stop.aimed_time
-                                                                        ).getTime()
-                                                                            ? "expt: "
-                                                                            : ""}
-                                                                        {toTime(
-                                                                            stop.expt_time
-                                                                        )}
-                                                                    </span>
-                                                                </div>
-                                                            ) : (
-                                                                "-"
-                                                            )}
+                                                            stop.aimed_time
+                                                                ? (() => {
+                                                                      const aimed =
+                                                                          new Date(
+                                                                              stop.aimed_time
+                                                                          ).getTime();
+                                                                      const expt =
+                                                                          new Date(
+                                                                              stop.expt_time
+                                                                          ).getTime();
+                                                                      const diff =
+                                                                          Math.abs(
+                                                                              expt -
+                                                                                  aimed
+                                                                          );
+                                                                      const isLate =
+                                                                          expt >
+                                                                              aimed &&
+                                                                          diff >
+                                                                              60000;
+                                                                      return (
+                                                                          <div className="flex gap-3">
+                                                                              {isLate && (
+                                                                                  <span className="line-through text-neutral-500">
+                                                                                      {toTime(
+                                                                                          stop.aimed_time
+                                                                                      )}
+                                                                                  </span>
+                                                                              )}
+                                                                              <span
+                                                                                  className={
+                                                                                      isLate
+                                                                                          ? "text-red-400"
+                                                                                          : "text-green-400"
+                                                                                  }>
+                                                                                  {isLate
+                                                                                      ? "expt: "
+                                                                                      : ""}
+                                                                                  {toTime(
+                                                                                      stop.expt_time
+                                                                                  )}
+                                                                              </span>
+                                                                          </div>
+                                                                      );
+                                                                  })()
+                                                                : "-"}
                                                         </div>
                                                     )}
                                                 </div>

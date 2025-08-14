@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import Literal, Optional
 from pydantic import BaseModel
 
 from backend.schemas.service import Service
@@ -25,3 +25,6 @@ class StopTime(BaseModel):
     coords: list[float]
     track: Optional[list[list[float]]]
     set_down: bool
+    timing_status: Literal["OTH", "PTP"] = (
+        "OTH"  # PTP: Principal Timing Point, OTH: Other
+    )

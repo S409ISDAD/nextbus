@@ -3,12 +3,12 @@
 set -e
 
 echo "pulling code from repo..."
-git pull origin main
+git pull
 
-echo "stopping containers..."
-docker compose stop || true
+echo "building..."
+docker compose -f docker-compose.prod.yml build
 
-echo "rebuilding and starting containers..."
-docker compose -f docker-compose.prod.yml up --build -d
+echo "starting..."
+docker compose -f docker-compose.prod.yml up -d
 
 echo "deployment complete."

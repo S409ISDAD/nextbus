@@ -111,6 +111,11 @@ async def get_vehicle_journey(journey_id, delay, r) -> Journey:
             if aimed < current_time:
                 started = True
 
+        reset_early = True if stop["timing_status"] == "PTP" else False
+
+        if delay < 0 and reset_early:
+            delay = 0
+
         if started:
             expt += timedelta(seconds=delay)
 
@@ -128,6 +133,7 @@ async def get_vehicle_journey(journey_id, delay, r) -> Journey:
                 track=track,
                 coords=coords,
                 set_down=stop.get("set_down"),
+                timing_status=stop.get("timing_status", "OTH"),
             )
         )
 
