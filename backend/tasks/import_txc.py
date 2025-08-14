@@ -454,18 +454,22 @@ class TXCImporter:
         else:
             print(f"Geometry updated for line {line_id}")
 
-    def merge_line_routes(self, line_id: str, simplify_tolerance=0.0001):
+    def merge_line_routes(
+        self, line_id: str, simplify_tolerance=0.0001, snap_tolerance=0.0001
+    ):
         """
-        Given a line_id, merge the geometries of all its related routes into one LineString overview.
+        Given a line_id, merge the geometries of all its related routes into one LineString overview,
+        snapping close points to reduce redundant vertices and create smoother merged lines.
 
         Args:
-            db: SQLAlchemy Session
             line_id: ID of the Line to fetch routes for
             simplify_tolerance: tolerance for ST_Simplify (optional)
+            snap_tolerance: tolerance distance for snapping points together (in degrees for SRID 4326)
 
         Returns:
-            Merged Shapely LineString of all route sections, or None if no geometry found.
+            Merged Shapely LineString or MultiLineString of all route sections, or None if no geometry found.
         """
+
         # Subquery to get all route_section geometries for routes linked to this line
         route_sections_subq = (
             select(RouteSection.geometry)
@@ -474,33 +478,42 @@ class TXCImporter:
             .where(LineToRoute.line_id == line_id)
         ).subquery()
 
-        # Aggregate: ST_Union to merge, ST_LineMerge to merge connected lines, ST_Simplify to reduce vertices
+        # 1. Aggregate with ST_Union to merge all geometries
+        # 2. Snap vertices to a grid to merge very close points
+        # 3. Simplify geometry to reduce vertex count further
+        # 4. Merge connected line segments into single lines
+
         merged_geom_sql = func.ST_LineMerge(
             func.ST_Simplify(
-                func.ST_Union(route_sections_subq.c.geometry), simplify_tolerance
+                func.ST_SnapToGrid(
+                    func.ST_Union(route_sections_subq.c.geometry), snap_tolerance
+                ),
+                simplify_tolerance,
             )
         )
 
-        # Query to execute the aggregate function
+        # Execute query and get merged geometry as WKB
         merged_geom_wkb = self.db.execute(select(merged_geom_sql)).scalar()
 
         if merged_geom_wkb is None:
             return None
 
-        # Convert WKB to Shapely geometry and return
         merged_geom = to_shape(merged_geom_wkb)
-        if isinstance(merged_geom, MultiLineString):
-            # If the merged geometry is a LineString, update the line's geometry
+
+        # Update the Line.geometry column in DB if we got a geometry
+        if isinstance(merged_geom, (MultiLineString, LineString)):
             stmt = (
                 update(Line)
                 .where(Line.id == line_id)
-                .values(geometry=from_shape(merged_geom))
+                .values(geometry=from_shape(merged_geom, srid=4326))
             )
             self.db.execute(stmt)
             self.db.commit()
             return merged_geom
         else:
-            print(f"Merged geometry for line {line_id} is not a MultiLineString.")
+            print(
+                f"Merged geometry for line {line_id} is not a LineString or MultiLineString."
+            )
             return None
 
     def handle_txc_file(self):

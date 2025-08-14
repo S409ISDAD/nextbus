@@ -201,7 +201,7 @@ async def build_bus(
 
     delay += 10  # account for stopping and various other things that increase delay
 
-    times, journey = await calculate_expected(
+    target_seq, times, journey = await calculate_expected(
         delay, progress.get("sequence", 0), stop_id, journey_id, r
     )
 
@@ -240,6 +240,7 @@ async def build_bus(
         scheduled=times.scheduled,
         started=times.started,
         finished=times.finished,
+        target_seq=target_seq,
         progress=progress,
         predictions=predictions,
         journey=journey,

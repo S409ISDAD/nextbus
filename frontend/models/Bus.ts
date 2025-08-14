@@ -31,6 +31,7 @@ export interface Bus {
     scheduled: string;
     started: boolean;
     finished: boolean;
+    target_seq?: number;
     progress?: ProgressInfo;
     coords?: number[];
     predictions: Prediction[];

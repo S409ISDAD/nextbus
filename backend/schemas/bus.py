@@ -36,6 +36,7 @@ class TrackedBus(BaseModel):
     scheduled: Optional[datetime]  # scheduled arrival time at stop (iso string)
     started: bool  # if the bus has started the route or is waiting at the first stop
     finished: bool  # if the bus has finished the route
+    target_seq: Optional[int]  # the sequence number of the stop requested
     speed: Optional[float]  # how fast the bus is going
     progress: Progress
     predictions: list[Prediction]

@@ -10,22 +10,88 @@ import timeTo, { lateness, toTime } from "../utils/timeUtils";
 import { getClosestStop } from "../utils/closestStop";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
+    faBus,
     faSatelliteDish,
     faSlash,
     faUpRightFromSquare,
 } from "@fortawesome/free-solid-svg-icons";
 import clsx from "clsx";
 import { WebSocketManager } from "../websockets/ws_manager";
+import getBus from "../utils/getBus";
+import type { Bus } from "../models/Bus";
+import { Pulse } from "../components/ui/Pulse";
 
+const getBusDetail = async (bus: Departure) => {
+    if (isTrackedBus(bus)) {
+        const bus_response = await getBus(String(bus.id));
+        return bus_response;
+    }
+};
 function BusCard({
     bus,
     onClick,
     gettingLiveData,
+    idx,
 }: {
     bus: Departure;
     onClick: () => void;
     gettingLiveData: boolean;
+    idx: number;
 }) {
+    const [busDetail, setBusDetail] = useState<Bus | null>(null);
+    const [sequence, setSequence] = useState<number | null>(null);
+
+    useEffect(() => {
+        let interval: NodeJS.Timeout | null = null;
+
+        const fetchDetail = () => {
+            if (idx === 0 && isTrackedBus(bus)) {
+                getBusDetail(bus).then((detail) => {
+                    if (detail) {
+                        setBusDetail(detail);
+                    }
+                });
+            }
+        };
+
+        fetchDetail();
+        if (idx === 0 && isTrackedBus(bus)) {
+            interval = setInterval(fetchDetail, 30000);
+        }
+
+        return () => {
+            if (interval) clearInterval(interval);
+        };
+    }, [idx === 0 && isTrackedBus(bus) ? bus.id : null]);
+
+    useEffect(() => {
+        // Only fetch if idx is 0, isTrackedBus, and bus.id has changed
+        if (idx === 0 && isTrackedBus(bus) && busDetail) {
+            const now = Date.now();
+            const progressIdx = busDetail.predictions.findIndex(
+                (p) => now < new Date(p.timestamp).getTime()
+            );
+            // If all timestamps are in the past, pick the last one
+            const seq =
+                progressIdx === -1
+                    ? busDetail.predictions[busDetail.predictions.length - 1]
+                          ?.sequence
+                    : busDetail.predictions[Math.max(0, progressIdx - 1)]
+                          ?.sequence;
+
+            let adjustedSeq = seq;
+            if (
+                bus.target_seq !== undefined &&
+                adjustedSeq !== undefined &&
+                adjustedSeq !== null &&
+                adjustedSeq > bus.target_seq
+            ) {
+                adjustedSeq = bus.target_seq;
+            }
+            setSequence(adjustedSeq ?? null);
+        }
+    }, [bus]);
+
     return (
         <div key={bus.trip} onClick={onClick} className="cursor-pointer">
             <div className="flex flex-row items-center justify-between">
@@ -142,6 +208,72 @@ function BusCard({
                     </div>
                 </div>
             </div>
+            {busDetail &&
+                idx === 0 &&
+                isTrackedBus(bus) &&
+                bus.target_seq !== undefined &&
+                sequence !== null &&
+                bus.target_seq - sequence < 5 && (
+                    <div className="flex flex-row items-center justify-center gap-1 p-3 pt-7 flex-nowrap overflow-clip lg:absolute lg:left-1/2 lg:-translate-x-1/2 lg:-translate-y-17">
+                        {busDetail?.journey.stops
+                            .slice(
+                                Math.max(0, bus.target_seq! - 5),
+                                bus.target_seq! + 2
+                            )
+                            .map((_, index) => {
+                                const actualIndex =
+                                    Math.max(0, bus.target_seq! - 5) + index;
+                                return (
+                                    <div
+                                        key={actualIndex}
+                                        className="flex items-center gap-1">
+                                        {actualIndex === sequence && (
+                                            <div className="absolute translate-x-[-31px] flex items-center justify-center">
+                                                <span className="absolute text-xs translate-y-[-23px] text-nowrap text-neutral-400">
+                                                    {bus.target_seq !==
+                                                        undefined &&
+                                                    sequence !== undefined
+                                                        ? (() => {
+                                                              const stopsAway =
+                                                                  bus.target_seq -
+                                                                  sequence;
+                                                              if (
+                                                                  stopsAway ===
+                                                                  1
+                                                              )
+                                                                  return "1 stop away";
+                                                              if (
+                                                                  stopsAway ===
+                                                                  0
+                                                              )
+                                                                  return "next stop";
+                                                              return `${stopsAway} stops away`;
+                                                          })()
+                                                        : "Stop info unavailable"}
+                                                </span>
+                                                <div className="z-10 flex items-center justify-center w-6 h-6 p-1 rounded-full bg-rose-500">
+                                                    <FontAwesomeIcon
+                                                        icon={faBus}
+                                                        className="text-[0.8rem]"
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
+                                        <div
+                                            className={clsx(
+                                                "w-2 h-2 rounded-full",
+                                                actualIndex === bus.target_seq
+                                                    ? "bg-sky-500"
+                                                    : "bg-neutral-600"
+                                            )}></div>
+                                        {index < 6 && (
+                                            <div className="min-w-[30px] bg-neutral-700 flex-1 h-[2px]"></div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                    </div>
+                )}
         </div>
     );
 }
@@ -414,6 +546,7 @@ const DeparturePage: React.FC = () => {
                                                   );
                                         }}
                                         gettingLiveData={gettingLiveData}
+                                        idx={idx}
                                     />
                                     {idx === buses.length - 1 && (
                                         <div className="flex items-center gap-2 mb-0.5">

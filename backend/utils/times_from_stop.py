@@ -112,6 +112,6 @@ def times_from_stop(stop_id: str, db: Session, limit: int = 10):
 
 
 if __name__ == "__main__":
-    stop_id = "1900HA110364"
+    stop_id = "1900HA020331"
     with SessionLocal() as db:
         times_from_stop(stop_id, db)

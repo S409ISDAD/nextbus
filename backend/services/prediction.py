@@ -152,6 +152,7 @@ async def calculate_expected(delay, sequence, stop_id, journey_id, r):
     scheduled_time = None
 
     stop_idx = 0
+    target_seq = None
 
     for stop_time in journey.stops:
         if stop_idx == 0:
@@ -162,6 +163,7 @@ async def calculate_expected(delay, sequence, stop_id, journey_id, r):
 
         if stop_time.stop_id == stop_id:
             aimed = stop_time.aimed_time
+            target_seq = stop_idx
             if not aimed:
                 include = False
                 break
@@ -183,13 +185,17 @@ async def calculate_expected(delay, sequence, stop_id, journey_id, r):
 
         stop_idx += 1
 
-    return Times(
-        expected=expected_time,
-        scheduled=scheduled_time,
-        started=not not_started,
-        finished=finished,
-        include=include,
-    ), journey
+    return (
+        target_seq,
+        Times(
+            expected=expected_time,
+            scheduled=scheduled_time,
+            started=not not_started,
+            finished=finished,
+            include=include,
+        ),
+        journey,
+    )
 
 
 async def get_started_finished(trip_id, r):
