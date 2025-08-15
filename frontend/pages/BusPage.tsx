@@ -9,7 +9,7 @@ const BusPage: React.FC = () => {
         document.title = "Bus Page";
     }, []);
 
-    const [favStops, _] = useLocalStorageState<
+    const [favStops, setFavStops] = useLocalStorageState<
         Record<string, [number, number]>
     >("favStops", {
         defaultValue: {},
@@ -33,7 +33,7 @@ const BusPage: React.FC = () => {
                 <span className="text-2xl font-bold">Closest Stop</span>
                 <DepartureBoard stop_id="" closest={true}></DepartureBoard>
             </div>
-            <div className="flex flex-col items-center justify-center gap-2 p-4 rounded-[40px] bg-neutral-900">
+            <div className="flex flex-col items-center justify-center gap-2 p-2 rounded-[32px] bg-neutral-900">
                 <span className="text-2xl font-bold">Favorite Stops</span>
                 <div className="flex flex-row flex-wrap items-center justify-center gap-3">
                     {Object.keys(favStops).length > 0 ? (
@@ -57,6 +57,11 @@ const BusPage: React.FC = () => {
                         </span>
                     )}
                 </div>
+                <button
+                    className="p-1.5 px-4 text-sm font-semibold text-white transition-all bg-blue-500 cursor-pointer rounded-xl hover:bg-blue-600"
+                    onClick={() => setFavStops({})}>
+                    Clear Favorites
+                </button>
             </div>
         </div>
     );

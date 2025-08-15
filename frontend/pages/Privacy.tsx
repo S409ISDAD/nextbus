@@ -1,6 +1,12 @@
 import React, { useEffect } from "react";
+import useLocalStorageState from "use-local-storage-state";
 
 const Privacy: React.FC = () => {
+    const [_, setFavStops] = useLocalStorageState<
+        Record<string, [number, number]>
+    >("favStops", {
+        defaultValue: {},
+    });
     useEffect(() => {
         document.title = "Privacy Policy";
     }, []);
@@ -57,7 +63,21 @@ const Privacy: React.FC = () => {
             </div>
             <div className="flex flex-col gap-2">
                 <span className="text-2xl font-bold">Cookies & Analytics</span>
-                <p>We do not use cookies or analytics services at this time.</p>
+                <span>
+                    We use cookies for the stop favoriting feature. The stop
+                    code and coordinates of the stop are stored in the browser's
+                    localStorage under{" "}
+                    <span className="p-1 rounded-lg bg-neutral-800">
+                        favStops
+                    </span>
+                    . You can delete this data at any time by pressing the
+                    'Clear Favorites' button in the Bus Page or here.
+                </span>
+                <button
+                    className="p-1.5 px-4 w-fit text-sm font-semibold text-white transition-all bg-blue-500 cursor-pointer rounded-xl hover:bg-blue-600"
+                    onClick={() => setFavStops({})}>
+                    Clear Favorites
+                </button>
             </div>
             <div className="flex flex-col gap-2">
                 <span className="text-2xl font-bold">Contact</span>
