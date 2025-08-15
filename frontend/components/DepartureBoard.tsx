@@ -275,7 +275,7 @@ function DepartureBoard({ stop_id, closest, filter }: Props) {
     }, [stop_id, closest]);
 
     return (
-        <div className="min-w-[350px] w-[100vw] sm:w-[25vw]">
+        <div className="min-w-[350px] w-full sm:w-[25vw]">
             <Card>
                 <div className="flex flex-col gap-2">
                     <div

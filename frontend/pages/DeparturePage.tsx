@@ -13,12 +13,15 @@ import {
     faBus,
     faSatelliteDish,
     faSlash,
+    faStar,
     faUpRightFromSquare,
 } from "@fortawesome/free-solid-svg-icons";
+import { faStar as faStarRegular } from "@fortawesome/free-regular-svg-icons";
 import clsx from "clsx";
 import { WebSocketManager } from "../websockets/ws_manager";
 import getBus from "../utils/getBus";
 import type { Bus } from "../models/Bus";
+import useLocalStorageState from "use-local-storage-state";
 
 const getBusDetail = async (bus: Departure) => {
     if (isTrackedBus(bus)) {
@@ -320,6 +323,13 @@ const DeparturePage: React.FC = () => {
     const [elapsed, setElapsed] = useState<string>("0s");
     const [msg, setMsg] = useState<string>("");
 
+    const [favStops, setFavStops] = useLocalStorageState<
+        Record<string, [number, number]>
+    >("favStops", {
+        defaultValue: {},
+    });
+    const isFav = !!favStops[stop_id || ""];
+
     useEffect(() => {
         const interval = setInterval(() => {
             const now = new Date();
@@ -475,6 +485,33 @@ const DeparturePage: React.FC = () => {
                             target="_blank">
                             View on bustimes.org
                         </a>
+
+                        <div
+                            className="flex items-center gap-2 p-2 cursor-pointer bg-neutral-800/50 w-fit rounded-2xl"
+                            onClick={() => {
+                                if (!stop_id || !stop?.coords) return;
+                                if (isFav) {
+                                    setFavStops((prev) => {
+                                        const updated = { ...prev };
+                                        delete updated[stop_id];
+                                        return updated;
+                                    });
+                                } else {
+                                    setFavStops((prev) => ({
+                                        ...prev,
+                                        [stop_id]: stop.coords as [
+                                            number,
+                                            number
+                                        ],
+                                    }));
+                                }
+                            }}>
+                            {isFav ? "Favourited" : "Favourite"}{" "}
+                            <FontAwesomeIcon
+                                icon={isFav ? faStar : faStarRegular}
+                            />
+                        </div>
+
                         {/* <a
                             className="px-2 py-1 text-neutral-400 border-1 rounded-xl border-neutral-800 bg-neutral-900"
                             href={`/departureboard/${stop?.stop_id}`}>
