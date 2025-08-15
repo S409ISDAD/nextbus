@@ -71,7 +71,16 @@ const Privacy: React.FC = () => {
                         favStops
                     </span>
                     . You can delete this data at any time by pressing the
-                    'Clear Favorites' button in the Bus Page or here.
+                    'Clear Favorites' button in the Bus Page or here. We also
+                    store a randomly generated client ID in your browser's
+                    localStorage under{" "}
+                    <span className="p-1 rounded-lg bg-neutral-800">
+                        ws-client-id
+                    </span>
+                    . This ID is used to identify your WebSocket connection and
+                    is not linked to any personal information. You can delete
+                    this data at any time by clearing your browser's
+                    localStorage.
                 </span>
                 <button
                     className="p-1.5 px-4 w-fit text-sm font-semibold text-white transition-all bg-blue-500 cursor-pointer rounded-xl hover:bg-blue-600"

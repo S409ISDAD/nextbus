@@ -53,9 +53,14 @@ const Home: React.FC = () => {
         <div>
             <div className="flex flex-col items-center justify-center gap-6">
                 <div className="flex flex-col items-center justify-center gap-5 pt-0 p-7">
-                    <span className="text-5xl font-black text-center pt-7">
-                        nextbus
-                    </span>
+                    <div className="flex flex-row items-center gap-1">
+                        <span className="text-5xl font-black text-center pt-7">
+                            nextbus
+                        </span>
+                        <span className="text-xl font-bold h-fit text-sky-500">
+                            beta
+                        </span>
+                    </div>
 
                     {/* <div className="flex items-center w-full py-2 rounded-full shadow-2xl border-1 border-neutral-800 bg-neutral-900">
                         <div className="ml-4 mr-2 text-gray-500">

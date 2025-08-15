@@ -10,6 +10,7 @@ import Layout from "../components/Layout";
 import StationPage from "../pages/StationPage";
 import TrainPage from "../pages/TrainPage";
 import NotFound from "../pages/NotFound";
+import StatsPage from "../pages/Stats";
 import TrainSearchPage from "../pages/TrainSearchPage";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router";
 import { Toaster } from "react-hot-toast";
@@ -126,6 +127,7 @@ function App() {
                         <Route path="/" element={<Home />} />
                         <Route path="/privacy" element={<PrivacyPolicy />} />
                         <Route path="/terms" element={<Terms />} />
+                        <Route path="/stats" element={<StatsPage />} />
                         <Route path="/buses" element={<BusPage />} />
                         <Route
                             path="departures/:stop_id"
@@ -157,24 +159,28 @@ function App() {
                         element={<DepartureScreen />}
                     />
                 </Routes>
-                <footer className="flex flex-row flex-wrap justify-center w-full gap-3 p-3 text-sm text-gray-200 border-t-2 max-h-fit border-neutral-800 grow">
-                    <span>© {currentYear} nextbus</span>
+                <footer className="flex flex-row flex-wrap justify-center w-full gap-2 p-3 text-sm text-gray-200 border-t-2 max-h-fit border-neutral-800 grow">
+                    <span>© {currentYear} nextbus</span>·
                     <a href="/privacy" className="underline text-sky-400 h-fit">
                         Privacy
                     </a>
-
+                    ·
                     <a href="/terms" className="underline text-sky-400 h-fit">
                         Terms
                     </a>
-
+                    ·
+                    <a href="/stats" className="underline text-sky-400 h-fit">
+                        Stats
+                    </a>
+                    ·
                     <a
                         href="https://discord.gg/dyEmZSkwge"
-                        className="underline text-sky-400"
+                        className="underline text-sky-400 h-fit"
                         target="_blank"
                         rel="noopener noreferrer">
                         Join the Discord!{" "}
                     </a>
-
+                    ·
                     <div className="flex gap-1 h-fit">
                         <span>Bus data:</span>
                         <a
@@ -185,7 +191,7 @@ function App() {
                             bustimes.org
                         </a>
                     </div>
-
+                    ·
                     <div className="flex gap-1 h-fit">
                         <span>Train data:</span>
                         <a

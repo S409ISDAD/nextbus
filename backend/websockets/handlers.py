@@ -43,7 +43,7 @@ async def stop_subscribe(stop_id: str, redis: redis.Redis):
                 try:
                     await ws.send_json(data_serializable)
                 except Exception:
-                    manager.disconnect("stop", stop_id, ws)
+                    await manager.disconnect("stop", stop_id, ws, redis)
     except asyncio.CancelledError:
         if pubsub:
             await pubsub.unsubscribe(f"stop:departures:{stop_id}")
@@ -70,6 +70,6 @@ async def handle_departures(channel: str, key: str, websocket: WebSocket, redis)
             await websocket.receive_text()
 
     except WebSocketDisconnect:
-        manager.disconnect(channel, key, websocket)
+        await manager.disconnect(channel, key, websocket, redis)
         if not manager.get_connections(channel, key):
             await stop_publishing(key)

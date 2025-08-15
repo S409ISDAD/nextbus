@@ -23,12 +23,20 @@ class MultiChannelManager:
     ):
         await websocket.accept()
         self.connections.setdefault(channel, {}).setdefault(key, []).append(websocket)
+        await redis.incr("total_ws_connections")
+        client_id = websocket.query_params.get("client_id")
+        if client_id:
+            await redis.sadd("clients", client_id)
 
         if key not in self.tasks:
             self.tasks[key] = asyncio.create_task(background_func(key, redis))
 
-    def disconnect(self, channel: str, key: str, websocket: WebSocket):
+    async def disconnect(self, channel: str, key: str, websocket: WebSocket, redis):
         self.connections[channel][key].remove(websocket)
+        await redis.decr("total_ws_connections")
+        client_id = websocket.query_params.get("client_id")
+        if client_id:
+            await redis.srem("clients", client_id)
         if not self.connections[channel][key]:
             del self.connections[channel][key]
             task = self.tasks.pop(key, None)

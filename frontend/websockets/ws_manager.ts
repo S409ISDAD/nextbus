@@ -1,3 +1,5 @@
+import { v4 as uuidv4 } from "uuid";
+
 export type WSMessage = {
     type: string;
     [key: string]: any;
@@ -12,6 +14,7 @@ export class WebSocketManager {
     private url: string;
     private autoReconnect: boolean = true;
     private reconnectDelay: number = 2000;
+    private clientId: string;
 
     private onMessageCallbacks: Callback[] = [];
     private onOpenCallbacks: (() => void)[] = [];
@@ -19,6 +22,14 @@ export class WebSocketManager {
 
     private constructor(url: string) {
         this.url = url;
+        let storedClientId = localStorage.getItem("ws-client-id");
+        if (!storedClientId) {
+            const newId = uuidv4();
+            localStorage.setItem("ws-client-id", newId);
+            this.clientId = newId;
+        } else {
+            this.clientId = storedClientId;
+        }
     }
 
     public static getInstance(url: string): WebSocketManager {
@@ -32,7 +43,10 @@ export class WebSocketManager {
 
     connect() {
         if (this.socket && this.socket.readyState < 2) return;
-        this.socket = new WebSocket(`${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}/ws/${this.url}`);
+        const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+        this.socket = new WebSocket(
+            `${protocol}://${window.location.host}/ws/${this.url}?client_id=${encodeURIComponent(this.clientId)}`
+        );
 
         this.socket.onopen = () => {
             this.onOpenCallbacks.forEach(cb => cb());

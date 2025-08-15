@@ -41,6 +41,9 @@ async def lifespan(app: FastAPI):
     else:
         log.warning("Redis did not respond.")
     await redis.close()
+    await redis.delete("clients")
+    redis.sadd("clients", *[])
+    await redis.set("total_ws_connections", "0")
     log.info("Setting up database...")
     Base.metadata.create_all(bind=engine)
     sync_search_vectors()
@@ -80,7 +83,7 @@ async def timing_middleware(request: Request, call_next):
     return response
 
 
-@app.get("/health")
+@app.get("/api/v1/health/")
 async def health_check(db: Session = Depends(get_db), redis=Depends(get_redis)):
     try:
         # Simple test query
@@ -89,6 +92,24 @@ async def health_check(db: Session = Depends(get_db), redis=Depends(get_redis)):
         db.execute(text("SELECT 1"))
         await redis.ping()
         return {"status": "healthy"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/v1/stats/")
+async def stats(redis=Depends(get_redis)):
+    try:
+        total_ws_connections = await redis.get("total_ws_connections")
+        if total_ws_connections is None:
+            total_ws_connections = 0
+        else:
+            total_ws_connections = int(total_ws_connections)
+
+        unique_ws_connections = await redis.scard("clients")
+        return {
+            "total_active": total_ws_connections,
+            "unique_active": unique_ws_connections,
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

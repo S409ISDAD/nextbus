@@ -29,7 +29,7 @@ const BusPage: React.FC = () => {
 
     return (
         <div className="flex flex-row flex-wrap items-center justify-center gap-3 p-4">
-            <div className="flex flex-col items-center justify-center gap-2 p-4 rounded-[40px] bg-neutral-900">
+            <div className="flex flex-col items-center justify-center gap-2 p-2 rounded-[32px] bg-neutral-900">
                 <span className="text-2xl font-bold">Closest Stop</span>
                 <DepartureBoard stop_id="" closest={true}></DepartureBoard>
             </div>

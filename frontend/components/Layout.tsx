@@ -8,8 +8,13 @@ export default function Layout() {
             <div className="top-0 flex justify-between p-[8px] z-[99999] border-b-1 border-neutral-800 rounded-b-[24px] fixed w-full bg-[#131313] shadow-2xl md:shadow-xl">
                 <div className="flex gap-2">
                     <Link to="/">
-                        <div className="flex items-center h-full mx-4">
-                            <span className="text-xl font-bold ">nextbus</span>
+                        <div className="flex flex-col items-center h-full mx-4">
+                            <span className="font-bold text-xl/6 ">
+                                nextbus
+                            </span>
+                            <span className="font-semibold text-sm/2 text-sky-500 ">
+                                beta
+                            </span>
                         </div>
                     </Link>
 
