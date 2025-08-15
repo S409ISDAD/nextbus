@@ -186,3 +186,5 @@ cython_debug/
 
 dump.sql
 *.xml
+*.key
+*.crt
