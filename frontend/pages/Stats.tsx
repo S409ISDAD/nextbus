@@ -1,12 +1,4 @@
 import React, { useEffect, useState } from "react";
-// import DepartureBoard from "../components/DepartureBoard";
-// import { faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
-// import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import StopMap from "../components/StopMap";
-import TrainSearchCard from "../components/TrainSearch";
-import { Card } from "../components/ui/Card";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBus } from "@fortawesome/free-solid-svg-icons";
 import getStats from "../utils/getStats";
 import type { Stats } from "../models/Stats";
 
