@@ -1,3 +1,6 @@
+import asyncio
+import datetime
+from datetime import timedelta, timezone
 import time
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -6,6 +9,7 @@ from backend.api.routes import (
     departures,
     lines,
     location,
+    stats,
     stops,
     services,
     buses,
@@ -13,8 +17,8 @@ from backend.api.routes import (
     trains,
 )
 from sqlalchemy.orm import Session
-from backend.db.db import sync_search_vectors, engine, get_db
-from backend.models import Base
+from backend.db.db import SessionLocal, sync_search_vectors, engine, get_db
+from backend.models import ActiveUsersSnapshot, Base
 from backend.websockets.routes import ws_router
 from backend.deps import get_redis_client, get_redis, limiter
 import logging
@@ -49,7 +53,45 @@ async def lifespan(app: FastAPI):
     sync_search_vectors()
     log.info("Database setup complete.")
 
+    stop_event = asyncio.Event()
+
+    async def record_loop():
+        try:
+            while not stop_event.is_set():
+                try:
+                    async with asyncio.timeout(5):
+                        with SessionLocal() as db:
+                            total = int(await redis.get("total_ws_connections") or 0)
+                            unique = int(await redis.scard("clients") or 0)
+                            db.add(
+                                ActiveUsersSnapshot(
+                                    total_connections=total, unique_connections=unique
+                                )
+                            )
+
+                            cutoff = datetime.datetime.now(tz=timezone.utc) - timedelta(
+                                days=7
+                            )
+                            db.query(ActiveUsersSnapshot).filter(
+                                ActiveUsersSnapshot.timestamp < cutoff
+                            ).delete()
+                            db.commit()
+                except Exception as e:
+                    print("Error recording active users:", e)
+
+                try:
+                    await asyncio.wait_for(stop_event.wait(), timeout=30)
+                except asyncio.TimeoutError:
+                    pass
+
+        except asyncio.CancelledError:
+            pass
+
+    task = asyncio.create_task(record_loop())
+
     yield
+    stop_event.set()
+    await task
 
 
 app = FastAPI(lifespan=lifespan, redirect_slashes=False)
@@ -96,24 +138,6 @@ async def health_check(db: Session = Depends(get_db), redis=Depends(get_redis)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/api/v1/stats/")
-async def stats(redis=Depends(get_redis)):
-    try:
-        total_ws_connections = await redis.get("total_ws_connections")
-        if total_ws_connections is None:
-            total_ws_connections = 0
-        else:
-            total_ws_connections = int(total_ws_connections)
-
-        unique_ws_connections = await redis.scard("clients")
-        return {
-            "total_active": total_ws_connections,
-            "unique_active": unique_ws_connections,
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
 app.include_router(ws_router)
 app.include_router(departures.router, prefix="/api/v1/departures")
 app.include_router(location.router, prefix="/api/v1/location")
@@ -123,3 +147,4 @@ app.include_router(buses.router, prefix="/api/v1/buses")
 app.include_router(livery.router, prefix="/api/v1/liveries")
 app.include_router(trains.router, prefix="/api/v1/trains")
 app.include_router(lines.router, prefix="/api/v1/lines")
+app.include_router(stats.router, prefix="/api/v1/stats")

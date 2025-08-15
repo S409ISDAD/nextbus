@@ -1,14 +1,11 @@
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import and_
 
 from backend.db.db import SessionLocal
 from backend.models import (
     Calendar,
-    CalendarException,
     DirectionType,
     Line,
-    Service,
     Stop,
     StopTime,
     Journey,

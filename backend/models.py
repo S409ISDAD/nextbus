@@ -14,15 +14,13 @@ from sqlalchemy import (
     Integer,
     Interval,
     String,
-    Text,
-    Time,
     UniqueConstraint,
+    func,
 )
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from sqlalchemy_searchable import make_searchable
 from sqlalchemy_utils.types import TSVectorType
-from sqlalchemy.dialects.postgresql import ARRAY, VARCHAR
 
 Base = declarative_base()
 make_searchable(Base.metadata)
@@ -134,6 +132,15 @@ class DirectionType(enum.Enum):
     inbound = "inbound"
     circular = "circular"
     unknown = "unknown"
+
+
+class ActiveUsersSnapshot(Base):
+    __tablename__ = "active_users_snapshot"
+
+    id = Column(Integer, primary_key=True)
+    timestamp = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+    total_connections = Column(Integer, nullable=False)
+    unique_connections = Column(Integer, nullable=False)
 
 
 class Stop(Base):
