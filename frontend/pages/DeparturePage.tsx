@@ -383,7 +383,7 @@ const DeparturePage: React.FC = () => {
                             stopData.coords,
                             stop_id
                         );
-                        setClosest(closestStop);
+                        setClosest(closestStop.stop_id);
                     }
                     const departures = await schedDeparturesPromise;
 

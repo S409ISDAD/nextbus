@@ -220,10 +220,11 @@ function DepartureBoard({ stop_id, closest, filter }: Props) {
                 let stop_id = id;
                 if (closest) {
                     const pos = await getCurrentPosition();
-                    stop_id = await getClosestStop([
+                    const closestStop = await getClosestStop([
                         pos.coords.latitude,
                         pos.coords.longitude,
                     ]);
+                    stop_id = closestStop.stop_id;
                     if (!stop_id) {
                         setMsg("No stop found nearby");
                         setLoading(false);

@@ -10,22 +10,43 @@ import type { ServiceInfo } from "../models/ServiceInfo";
 import getNearby from "../utils/getNearby";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBus } from "@fortawesome/free-solid-svg-icons";
-
+import { getClosestStop } from "../utils/closestStop";
 const Home: React.FC = () => {
     // const navigate = useNavigate();
 
     const [services, setServices] = React.useState<ServiceInfo[]>([]);
+    const [closestStop, setClosestStop] = React.useState<string | null>(null);
+    const [showStop, setShowStop] = React.useState(false);
 
     useEffect(() => {
         document.title = "nextbus";
     }, []);
 
     useEffect(() => {
-        let interval: any;
-
         const fetchServices = async () => {
             try {
                 const pos = await getCurrentPosition();
+                // const fakeCoords = [51.08087, -1.15937];
+
+                const closestStop = await getClosestStop([
+                    pos.coords.latitude,
+                    pos.coords.longitude,
+                ]);
+                // const closestStop = await getClosestStop(fakeCoords);
+                if (closestStop) {
+                    console.log(
+                        "closest stop",
+                        closestStop,
+                        "distance",
+                        closestStop.dist
+                    );
+                    if (closestStop.dist < 8 && closestStop.stop_id) {
+                        // 8 meters
+                        console.log("stop is close enough, showing popup");
+                        setClosestStop(closestStop.stop_id);
+                        setShowStop(true);
+                    }
+                }
 
                 const services = await getNearby([
                     pos.coords.latitude,
@@ -35,18 +56,12 @@ const Home: React.FC = () => {
                 if (services) {
                     setServices(services);
                 }
-            } catch {
-                console.log("uh oh");
-            } finally {
-                // setLoading(false);
+            } catch (error) {
+                console.log("uh oh", error);
             }
         };
 
         fetchServices();
-
-        return () => {
-            clearInterval(interval);
-        };
     }, []);
 
     return (
@@ -61,6 +76,32 @@ const Home: React.FC = () => {
                             beta
                         </span>
                     </div>
+
+                    {showStop && closestStop && (
+                        <div className="flex flex-col items-center gap-2 p-3 bg-neutral-800 rounded-[24px]">
+                            <span className="px-5 font-semibold text-center text-neutral-300 text">
+                                It looks like you're at a bus stop!
+                                <br /> Would you like to see the departures?
+                            </span>
+                            <div className="flex flex-row w-full gap-2">
+                                <button
+                                    className="w-full p-2 mt-2 font-semibold text-white transition-all cursor-pointer bg-neutral-600 rounded-xl hover:bg-neutral-700"
+                                    onClick={() => {
+                                        setShowStop(false);
+                                    }}>
+                                    No, thanks.
+                                </button>
+                                <button
+                                    className="w-full p-2 mt-2 font-semibold text-white transition-all bg-blue-500 cursor-pointer text-nowrap rounded-xl hover:bg-blue-600"
+                                    onClick={() => {
+                                        setShowStop(false);
+                                        window.location.href = `/departures/${closestStop}`;
+                                    }}>
+                                    Yes, show me!{" "}
+                                </button>
+                            </div>
+                        </div>
+                    )}
 
                     {/* <div className="flex items-center w-full py-2 rounded-full shadow-2xl border-1 border-neutral-800 bg-neutral-900">
                         <div className="ml-4 mr-2 text-gray-500">
@@ -87,9 +128,14 @@ const Home: React.FC = () => {
 
                     <div className="flex flex-row flex-wrap items-start justify-center w-full gap-10 p-5">
                         <div className="flex flex-col items-center justify-center gap-3">
-                            <span className="hidden text-xl font-bold text-center md:block">
-                                See bus info
-                            </span>
+                            <div className="flex flex-col items-center justify-center">
+                                <span className="text-xl font-bold text-center">
+                                    Your bus dashboard
+                                </span>
+                                <span className="text-sm font-semibold text-center text-neutral-500">
+                                    (favorite stops, etc.)
+                                </span>
+                            </div>
                             <button
                                 className="w-full p-2 px-5 mt-2 font-semibold text-white transition-all bg-blue-500 cursor-pointer rounded-xl hover:bg-blue-600"
                                 onClick={() => {
@@ -124,12 +170,15 @@ const Home: React.FC = () => {
                             </Card>
                         </div>
                         <div className="flex flex-col items-center justify-center gap-3 min-w-[350px] ">
-                            <span className="text-xl font-bold text-center">
-                                Find your train
-                            </span>
-                            <span className="text-xs text-center text-neutral-600">
-                                yes i know its a bus website but trains are cool
-                            </span>
+                            <div className="flex flex-col items-center justify-center">
+                                <span className="text-xl font-bold text-center">
+                                    Find your train
+                                </span>
+                                <span className="text-xs text-center text-neutral-600">
+                                    yes i know its a bus website but trains are
+                                    cool
+                                </span>
+                            </div>
                             <TrainSearchCard></TrainSearchCard>
                         </div>
                     </div>
