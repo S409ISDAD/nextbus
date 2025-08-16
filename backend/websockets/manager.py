@@ -27,6 +27,7 @@ class MultiChannelManager:
         client_id = websocket.query_params.get("client_id")
         if client_id:
             await redis.sadd("clients", client_id)
+            await redis.sadd("total_clients", client_id)
 
         if key not in self.tasks:
             self.tasks[key] = asyncio.create_task(background_func(key, redis))
@@ -37,8 +38,9 @@ class MultiChannelManager:
         client_id = websocket.query_params.get("client_id")
         if client_id:
             await redis.srem("clients", client_id)
-        if not self.connections[channel][key]:
-            del self.connections[channel][key]
+        if not self.connections[channel].get(key):
+            if key in self.connections[channel]:
+                del self.connections[channel][key]
             task = self.tasks.pop(key, None)
             if task:
                 task.cancel()

@@ -44,6 +44,8 @@ async def lifespan(app: FastAPI):
     else:
         log.warning("Redis did not respond.")
     await redis.close()
+    await redis.delete("total_clients")
+    redis.sadd("total_clients", *[])
     await redis.delete("clients")
     redis.sadd("clients", *[])
     await redis.set("total_ws_connections", "0")
@@ -61,14 +63,31 @@ async def lifespan(app: FastAPI):
                     async with asyncio.timeout(5):
                         with SessionLocal() as db:
                             total = int(await redis.get("total_ws_connections") or 0)
-                            unique = int(await redis.scard("clients") or 0)
-                            db.add(
-                                ActiveUsersSnapshot(
-                                    total_connections=total,
-                                    unique_connections=unique,
-                                    timestamp=floor_to_30s(datetime.now(timezone.utc)),
-                                )
+                            unique = int(await redis.scard("total_clients") or 0)
+
+                            await redis.delete("total_clients")
+                            clients = await redis.smembers("clients")
+                            if clients:
+                                await redis.sadd("total_clients", *clients)
+
+                            timestamp = floor_to_30s(datetime.now(timezone.utc))
+
+                            exists = (
+                                db.query(ActiveUsersSnapshot)
+                                .filter_by(timestamp=timestamp)
+                                .first()
                             )
+                            if not exists:
+                                print(
+                                    f"Logging {unique} active users at {timestamp.isoformat()}"
+                                )
+                                db.add(
+                                    ActiveUsersSnapshot(
+                                        total_connections=total,
+                                        unique_connections=unique,
+                                        timestamp=timestamp,
+                                    )
+                                )
 
                             cutoff = datetime.now(tz=timezone.utc) - timedelta(days=7)
                             db.query(ActiveUsersSnapshot).filter(
