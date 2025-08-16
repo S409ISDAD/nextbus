@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
 import redis.asyncio as redis
 import os
@@ -47,3 +47,8 @@ def datetime_decoder(obj):
     if "__datetime__" in obj:
         return datetime.fromisoformat(obj["iso"])
     return obj
+
+
+def floor_to_30s(ts: datetime) -> datetime:
+    ts = ts.replace(microsecond=0)
+    return ts - timedelta(seconds=ts.second % 30)

@@ -1,6 +1,5 @@
 import asyncio
-import datetime
-from datetime import timedelta, timezone
+from datetime import timedelta, timezone, datetime
 import time
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -20,7 +19,7 @@ from sqlalchemy.orm import Session
 from backend.db.db import SessionLocal, sync_search_vectors, engine, get_db
 from backend.models import ActiveUsersSnapshot, Base
 from backend.websockets.routes import ws_router
-from backend.deps import get_redis_client, get_redis, limiter
+from backend.deps import floor_to_30s, get_redis_client, get_redis, limiter
 import logging
 from prometheus_fastapi_instrumentator import Instrumentator
 from slowapi import _rate_limit_exceeded_handler
@@ -65,13 +64,13 @@ async def lifespan(app: FastAPI):
                             unique = int(await redis.scard("clients") or 0)
                             db.add(
                                 ActiveUsersSnapshot(
-                                    total_connections=total, unique_connections=unique
+                                    total_connections=total,
+                                    unique_connections=unique,
+                                    timestamp=floor_to_30s(datetime.now(timezone.utc)),
                                 )
                             )
 
-                            cutoff = datetime.datetime.now(tz=timezone.utc) - timedelta(
-                                days=7
-                            )
+                            cutoff = datetime.now(tz=timezone.utc) - timedelta(days=7)
                             db.query(ActiveUsersSnapshot).filter(
                                 ActiveUsersSnapshot.timestamp < cutoff
                             ).delete()

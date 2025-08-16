@@ -12,6 +12,15 @@ import {
     Legend,
     Title,
 } from "chart.js";
+import {
+    Listbox,
+    ListboxButton,
+    ListboxOption,
+    ListboxOptions,
+} from "@headlessui/react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faArrowDown, faCaretDown } from "@fortawesome/free-solid-svg-icons";
+import { timespans } from "../utils/getStats";
 
 ChartJS.register(
     LineElement,
@@ -31,6 +40,15 @@ const StatsPage: React.FC = () => {
     const [statsTimeseries, setStatsTimeseries] = useState<StatsTimeSeries[]>(
         []
     );
+    const [selectedTimespan, setSelectedTimespan] = useState<{
+        label: string;
+        value: string;
+        ms: number;
+    }>({
+        label: "Last hour",
+        value: "1h",
+        ms: 60 * 60 * 1000,
+    });
 
     useEffect(() => {
         const interval = setInterval(() => {
@@ -54,7 +72,7 @@ const StatsPage: React.FC = () => {
         const fetchStats = async () => {
             setLoading(true);
             try {
-                const stats = await getStats();
+                const stats = await getStats(selectedTimespan);
                 if (stats) {
                     setStats(stats.stats);
                     setStatsTimeseries(stats.timeseries);
@@ -71,13 +89,53 @@ const StatsPage: React.FC = () => {
         return () => {
             clearInterval(interval);
         };
-    }, []);
+    }, [selectedTimespan]);
 
-    const chartData = React.useMemo(
-        () => ({
-            labels: statsTimeseries.map((d) =>
-                new Date(d.timestamp).toLocaleTimeString()
-            ),
+    const chartData = React.useMemo(() => {
+        const isSameDay =
+            statsTimeseries.length > 0 &&
+            new Date(statsTimeseries[0].timestamp).toDateString() ===
+                new Date(
+                    statsTimeseries[statsTimeseries.length - 1].timestamp
+                ).toDateString();
+
+        const labels = statsTimeseries.map((d) => {
+            const date = new Date(d.timestamp);
+            if (isSameDay) {
+                // Show only time if all data is from the same day
+                return date.toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                });
+            } else if (
+                selectedTimespan.value === "7d" ||
+                selectedTimespan.ms >= 24 * 60 * 60 * 1000
+            ) {
+                // Show date (and maybe time) for longer ranges
+                return (
+                    date.toLocaleDateString(undefined, {
+                        month: "short",
+                        day: "numeric",
+                    }) +
+                    " " +
+                    date.toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                    })
+                );
+            } else {
+                // Fallback: show both date and time
+                return date.toLocaleString([], {
+                    month: "short",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                });
+            }
+        });
+
+        return {
+            labels,
             datasets: [
                 {
                     label: "Total Connections",
@@ -96,9 +154,8 @@ const StatsPage: React.FC = () => {
                     tension: 0.4,
                 },
             ],
-        }),
-        [statsTimeseries]
-    );
+        };
+    }, [statsTimeseries, selectedTimespan]);
 
     const chartOptions = {
         responsive: true,
@@ -143,6 +200,35 @@ const StatsPage: React.FC = () => {
                 </div>
                 <div className="text-lg font-semibold">
                     Active Users: {loading ? "-" : stats?.unique_active}
+                </div>
+                <div className="flex items-center gap-2 mb-4">
+                    <label htmlFor="timespan" className="text-sm font-medium">
+                        Show data for:
+                    </label>
+                    <Listbox
+                        value={selectedTimespan}
+                        onChange={setSelectedTimespan}>
+                        <div className="relative">
+                            <ListboxButton className="flex items-center w-full gap-1 p-2 text-sm font-semibold border border-neutral-700 rounded-xl bg-neutral-800/50">
+                                {selectedTimespan.label}
+                                <FontAwesomeIcon icon={faCaretDown} />
+                            </ListboxButton>
+                            <ListboxOptions className="absolute z-[9999999] w-full overflow-auto border shadow-lg max-h-60 rounded-xl border-neutral-700 bg-neutral-900">
+                                {timespans.map((span) => (
+                                    <ListboxOption
+                                        key={span.value}
+                                        value={span}
+                                        className={({ active }) =>
+                                            `px-2 py-1 text-sm cursor-pointer ${
+                                                active ? "bg-neutral-800" : ""
+                                            }`
+                                        }>
+                                        {span.label}
+                                    </ListboxOption>
+                                ))}
+                            </ListboxOptions>
+                        </div>
+                    </Listbox>
                 </div>
                 <div className="flex items-center w-full min-h-[300px]">
                     <Line data={chartData} options={chartOptions} />

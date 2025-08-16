@@ -137,8 +137,9 @@ class DirectionType(enum.Enum):
 class ActiveUsersSnapshot(Base):
     __tablename__ = "active_users_snapshot"
 
-    id = Column(Integer, primary_key=True)
-    timestamp = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+    timestamp = Column(
+        DateTime(timezone=True), server_default=func.now(), index=True, primary_key=True
+    )
     total_connections = Column(Integer, nullable=False)
     unique_connections = Column(Integer, nullable=False)
 

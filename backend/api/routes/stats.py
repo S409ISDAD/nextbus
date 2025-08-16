@@ -1,8 +1,9 @@
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
 import logging
+
 from backend.db.db import get_db
-from backend.deps import get_redis
+from backend.deps import floor_to_30s, get_redis
 from backend.models import ActiveUsersSnapshot
 from fastapi import Query
 from datetime import timedelta
@@ -34,17 +35,28 @@ def get_active_user_stats(
     rows = (
         db.query(ActiveUsersSnapshot)
         .filter(
-            ActiveUsersSnapshot.timestamp >= start, ActiveUsersSnapshot.timestamp <= end
+            ActiveUsersSnapshot.timestamp >= start,
+            ActiveUsersSnapshot.timestamp <= end,
         )
         .order_by(ActiveUsersSnapshot.timestamp)
         .all()
     )
 
-    return [
-        {
-            "timestamp": r.timestamp.isoformat(),
-            "total": r.total_connections,
-            "unique": r.unique_connections,
-        }
-        for r in rows
-    ]
+    data_by_ts = {r.timestamp: r for r in rows}
+
+    interval = timedelta(seconds=30)
+    current = floor_to_30s(start)
+    end = floor_to_30s(end)
+    result = []
+    while current <= end:
+        row = data_by_ts.get(current)
+        result.append(
+            {
+                "timestamp": current.isoformat(),
+                "total": row.total_connections if row else None,
+                "unique": row.unique_connections if row else None,
+            }
+        )
+        current += interval
+
+    return result
