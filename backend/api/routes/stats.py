@@ -17,10 +17,14 @@ log = logging.getLogger(__name__)
 async def stats(redis=Depends(get_redis)):
     try:
         total_ws_connections = int(await redis.get("total_ws_connections") or 0)
-        unique_ws_connections = await redis.scard("clients")
+        unique_ws_connections = await redis.scard("total_clients")
+        total_buses = await redis.scard("total_buses")
+        total_stops = await redis.scard("total_stops")
         return {
             "total_active": total_ws_connections,
             "unique_active": unique_ws_connections,
+            "total_buses": total_buses,
+            "total_stops": total_stops,
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -34,6 +38,9 @@ def get_active_user_stats(
 ):
     rows = (
         db.query(ActiveUsersSnapshot)
+        .with_entities(
+            ActiveUsersSnapshot.timestamp, ActiveUsersSnapshot.unique_connections
+        )
         .filter(
             ActiveUsersSnapshot.timestamp >= start,
             ActiveUsersSnapshot.timestamp <= end,
@@ -53,7 +60,6 @@ def get_active_user_stats(
         result.append(
             {
                 "timestamp": current.isoformat(),
-                "total": row.total_connections if row else None,
                 "unique": row.unique_connections if row else None,
             }
         )

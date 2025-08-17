@@ -92,7 +92,7 @@ const Home: React.FC = () => {
                                     No, thanks.
                                 </button>
                                 <button
-                                    className="w-full p-2 mt-2 font-semibold text-white transition-all bg-blue-500 cursor-pointer text-nowrap rounded-xl hover:bg-blue-600"
+                                    className="w-full p-2 mt-2 font-semibold text-white transition-all bg-blue-600 cursor-pointer text-nowrap rounded-xl hover:bg-blue-700"
                                     onClick={() => {
                                         setShowStop(false);
                                         window.location.href = `/departures/${closestStop}`;
@@ -137,7 +137,7 @@ const Home: React.FC = () => {
                                 </span>
                             </div>
                             <button
-                                className="w-full p-2 px-5 mt-2 font-semibold text-white transition-all bg-blue-500 cursor-pointer rounded-xl hover:bg-blue-600"
+                                className="w-full p-2 px-5 mt-2 font-semibold text-white transition-all bg-blue-600 cursor-pointer rounded-xl hover:bg-blue-700"
                                 onClick={() => {
                                     window.location.href = `/buses`;
                                 }}>

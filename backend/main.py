@@ -4,6 +4,8 @@ import time
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.cron import CronTrigger
 from backend.api.routes import (
     departures,
     lines,
@@ -36,6 +38,48 @@ log = logging.getLogger(__name__)
 # )
 
 
+def clear_redis_stats(redis):
+    print("Clearing Redis stats...")
+    redis.delete("total_buses")
+    redis.delete("total_stops")
+
+
+async def record_snapshot(redis):
+    try:
+        async with asyncio.timeout(5):
+            with SessionLocal() as db:
+                total = int(await redis.get("total_ws_connections") or 0)
+                unique = int(await redis.scard("total_clients") or 0)
+
+                await redis.delete("total_clients")
+                clients = await redis.smembers("clients")
+                if clients:
+                    await redis.sadd("total_clients", *clients)
+
+                timestamp = floor_to_30s(datetime.now(timezone.utc))
+
+                exists = (
+                    db.query(ActiveUsersSnapshot).filter_by(timestamp=timestamp).first()
+                )
+                if not exists:
+                    print(f"Logging {unique} active users at {timestamp.isoformat()}")
+                    db.add(
+                        ActiveUsersSnapshot(
+                            total_connections=total,
+                            unique_connections=unique,
+                            timestamp=timestamp,
+                        )
+                    )
+
+                cutoff = datetime.now(tz=timezone.utc) - timedelta(days=7)
+                db.query(ActiveUsersSnapshot).filter(
+                    ActiveUsersSnapshot.timestamp < cutoff
+                ).delete()
+                db.commit()
+    except Exception as e:
+        print("Error recording active users:", e)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     redis = get_redis_client()
@@ -54,62 +98,26 @@ async def lifespan(app: FastAPI):
     sync_search_vectors()
     log.info("Database setup complete.")
 
-    stop_event = asyncio.Event()
-
-    async def record_loop():
-        try:
-            while not stop_event.is_set():
-                try:
-                    async with asyncio.timeout(5):
-                        with SessionLocal() as db:
-                            total = int(await redis.get("total_ws_connections") or 0)
-                            unique = int(await redis.scard("total_clients") or 0)
-
-                            await redis.delete("total_clients")
-                            clients = await redis.smembers("clients")
-                            if clients:
-                                await redis.sadd("total_clients", *clients)
-
-                            timestamp = floor_to_30s(datetime.now(timezone.utc))
-
-                            exists = (
-                                db.query(ActiveUsersSnapshot)
-                                .filter_by(timestamp=timestamp)
-                                .first()
-                            )
-                            if not exists:
-                                print(
-                                    f"Logging {unique} active users at {timestamp.isoformat()}"
-                                )
-                                db.add(
-                                    ActiveUsersSnapshot(
-                                        total_connections=total,
-                                        unique_connections=unique,
-                                        timestamp=timestamp,
-                                    )
-                                )
-
-                            cutoff = datetime.now(tz=timezone.utc) - timedelta(days=7)
-                            db.query(ActiveUsersSnapshot).filter(
-                                ActiveUsersSnapshot.timestamp < cutoff
-                            ).delete()
-                            db.commit()
-                except Exception as e:
-                    print("Error recording active users:", e)
-
-                try:
-                    await asyncio.wait_for(stop_event.wait(), timeout=30)
-                except asyncio.TimeoutError:
-                    pass
-
-        except asyncio.CancelledError:
-            pass
-
-    task = asyncio.create_task(record_loop())
+    scheduler = AsyncIOScheduler()
+    scheduler.add_job(
+        record_snapshot,
+        CronTrigger(second="0,30"),  # run every 30 seconds
+        id="record_active_users",
+        replace_existing=True,
+        args=[redis],
+    )
+    scheduler.add_job(
+        clear_redis_stats,
+        CronTrigger(hour="0", minute="0", second="0"),  # run daily at midnight
+        id="clear_redis_stats",
+        replace_existing=True,
+        args=[redis],
+    )
+    scheduler.start()
 
     yield
-    stop_event.set()
-    await task
+
+    scheduler.shutdown(wait=False)
 
 
 app = FastAPI(lifespan=lifespan, redirect_slashes=False)
@@ -136,7 +144,11 @@ app.add_exception_handler(
 
 @app.middleware("http")
 async def timing_middleware(request: Request, call_next):
+    redis = await get_redis()
     start = time.time()
+    client_id = request.headers.get("X-Client-ID")
+    if client_id:
+        await redis.sadd("total_clients", client_id)
     response = await call_next(request)
     duration = time.time() - start
     print(f"{request.method} {request.url} completed in {duration:.3f}s")

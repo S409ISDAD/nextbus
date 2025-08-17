@@ -58,7 +58,7 @@ const BusPage: React.FC = () => {
                     )}
                 </div>
                 <button
-                    className="p-1.5 px-4 text-sm font-semibold text-white transition-all bg-blue-500 cursor-pointer rounded-xl hover:bg-blue-600"
+                    className="p-1.5 px-4 text-sm font-semibold text-white transition-all bg-blue-600 cursor-pointer rounded-xl hover:bg-blue-700"
                     onClick={() => setFavStops({})}>
                     Clear Favorites
                 </button>

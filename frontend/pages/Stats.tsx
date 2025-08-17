@@ -138,14 +138,6 @@ const StatsPage: React.FC = () => {
             labels,
             datasets: [
                 {
-                    label: "Total Connections",
-                    data: statsTimeseries.map((d) => d.total),
-                    borderColor: "#8884d8",
-                    backgroundColor: "rgba(136,132,216,0.1)",
-                    fill: false,
-                    tension: 0.4,
-                },
-                {
                     label: "Unique Users",
                     data: statsTimeseries.map((d) => d.unique),
                     borderColor: "#82ca9d",
@@ -176,8 +168,8 @@ const StatsPage: React.FC = () => {
 
     return (
         <div className="flex items-center justify-center w-full h-full">
-            <div className="flex flex-col items-center justify-center w-full md:w-[80vw] gap-2 pt-0 p-3 h-fit">
-                <div className="flex flex-row items-center gap-1 mb-10">
+            <div className="flex flex-col items-center justify-center w-full md:w-[80vw] gap-4 pt-0 p-3 h-fit">
+                <div className="flex flex-row items-center gap-1">
                     <span className="text-5xl font-black text-center pt-7">
                         nextbus
                     </span>
@@ -194,12 +186,31 @@ const StatsPage: React.FC = () => {
                         Updates every 10s
                     </span>
                 </div>
-                <div className="text-lg font-semibold">
-                    Total Active Connections:{" "}
-                    {loading ? "-" : stats?.total_active}
-                </div>
-                <div className="text-lg font-semibold">
-                    Active Users: {loading ? "-" : stats?.unique_active}
+                <div className="flex flex-wrap items-center justify-center w-full gap-4 mb-4">
+                    <div className="flex flex-col items-center p-4 shadow w-50 bg-neutral-800/50 rounded-xl">
+                        <span className="text-3xl font-bold text-sky-400">
+                            {stats?.unique_active ?? "--"}
+                        </span>
+                        <span className="mt-1 text-sm text-neutral-400">
+                            Active Users
+                        </span>
+                    </div>
+                    <div className="flex flex-col items-center p-4 shadow w-50 bg-neutral-800/50 rounded-xl">
+                        <span className="text-3xl font-bold text-emerald-400">
+                            {stats?.total_buses ?? "--"}
+                        </span>
+                        <span className="mt-1 text-sm text-neutral-400">
+                            Buses Tracked Today
+                        </span>
+                    </div>
+                    <div className="flex flex-col items-center p-4 shadow w-50 bg-neutral-800/50 rounded-xl">
+                        <span className="text-3xl font-bold text-amber-400">
+                            {stats?.total_stops ?? "--"}
+                        </span>
+                        <span className="mt-1 text-sm text-neutral-400">
+                            Stops Viewed Today
+                        </span>
+                    </div>
                 </div>
                 <div className="flex items-center gap-2 mb-4">
                     <label htmlFor="timespan" className="text-sm font-medium">

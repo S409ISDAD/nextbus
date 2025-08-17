@@ -139,12 +139,12 @@ function TrainCard({
                             )}
 
                             {idx === 0 && (
-                                <span className="px-2 py-1 text-xs font-bold text-blue-400 rounded-full bg-blue-500/20">
+                                <span className="px-2 py-1 text-xs font-bold text-blue-400 rounded-full bg-blue-600/20">
                                     arrives first
                                 </span>
                             )}
                             {train.fastest && (
-                                <span className="px-2 py-1 text-xs font-bold text-blue-400 rounded-full bg-blue-500/20">
+                                <span className="px-2 py-1 text-xs font-bold text-blue-400 rounded-full bg-blue-600/20">
                                     fastest
                                 </span>
                             )}
@@ -179,7 +179,7 @@ function TrainCard({
 
                 {/* RIGHT BLOCK */}
                 <div className="flex flex-wrap items-center justify-center gap-2 text-sm md:gap-4 sm:text-base">
-                    <div className="px-1.5 py-0.5 bg-blue-500 rounded-lg">
+                    <div className="px-1.5 py-0.5 bg-blue-600 rounded-lg">
                         <span className="text-xs font-bold text-neutral-950 whitespace-nowrap">
                             Platform {train.fromStop?.platform ?? "-"}
                         </span>
@@ -306,7 +306,7 @@ const TrainSearchPage: React.FC = () => {
     return (
         <div className="gap-3 p-5 md:mx-20">
             <div
-                className="flex items-center gap-2 p-1.5 px-2.5 my-2 text-sm font-semibold text-white transition-all cursor-pointer bg-neutral-800 w-fit rounded-xl hover:bg-blue-600"
+                className="flex items-center gap-2 p-1.5 px-2.5 my-2 text-sm font-semibold text-white transition-all cursor-pointer bg-neutral-800 w-fit rounded-xl hover:bg-blue-700"
                 onClick={() => {
                     navigate(-1);
                 }}>

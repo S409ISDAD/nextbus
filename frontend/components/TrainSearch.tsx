@@ -153,7 +153,7 @@ export default function TrainSearchCard() {
                 </div>
             </div>
             <button
-                className="w-full p-2 mt-2 font-semibold text-white transition-all bg-blue-500 cursor-pointer rounded-xl hover:bg-blue-600"
+                className="w-full p-2 mt-2 font-semibold text-white transition-all bg-blue-600 cursor-pointer rounded-xl hover:bg-blue-700"
                 onClick={() => {
                     if (!selectedFrom || !selectedTo) {
                         setMsg("Please select both stations.");

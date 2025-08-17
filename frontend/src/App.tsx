@@ -111,7 +111,7 @@ function App() {
                                 </p>
                                 <div className="mt-4">
                                     <div
-                                        className="inline-flex cursor-pointer items-center gap-2 rounded-md bg-blue-500 px-3 py-1.5 text-sm/6 font-semibold text-white  transition-all focus:not-data-focus:outline-none hover:bg-blue-600 data-focus:outline data-focus:outline-white data-hover:bg-gray-600 data-open:bg-gray-700"
+                                        className="inline-flex cursor-pointer items-center gap-2 rounded-md bg-blue-600 px-3 py-1.5 text-sm/6 font-semibold text-white  transition-all focus:not-data-focus:outline-none hover:bg-blue-700 data-focus:outline data-focus:outline-white data-hover:bg-gray-600 data-open:bg-gray-700"
                                         onClick={() => setIsOpen(false)}>
                                         Got it, thanks!
                                     </div>

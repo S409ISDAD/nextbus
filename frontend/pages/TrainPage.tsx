@@ -534,7 +534,7 @@ const TrainPage: React.FC = () => {
                                                             )}
                                                             {stop.serviceLocation ===
                                                                 "AT_PLAT" && (
-                                                                <span className="px-2 py-1 text-xs font-bold text-blue-400 rounded-full bg-blue-500/20">
+                                                                <span className="px-2 py-1 text-xs font-bold text-blue-400 rounded-full bg-blue-600/20">
                                                                     At platform
                                                                 </span>
                                                             )}

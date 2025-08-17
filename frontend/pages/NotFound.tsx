@@ -7,7 +7,7 @@ const NotFound: React.FC = () => (
         </h1>
         <p className="text-lg">Sorry, but this page will never depart.</p>
         <button
-            className="p-2 px-10 mt-2 font-semibold text-white transition-all bg-blue-500 cursor-pointer rounded-xl hover:bg-blue-600"
+            className="p-2 px-10 mt-2 font-semibold text-white transition-all bg-blue-600 cursor-pointer rounded-xl hover:bg-blue-700"
             onClick={() => {
                 window.location.href = `/`;
             }}>

@@ -168,6 +168,8 @@ async def build_bus(
     if not delay:
         return None
 
+    await r.sadd("total_buses", bus_id)
+
     timestamp = this_bus.get("datetime")
 
     coords = this_bus.get("coordinates", [0, 0])

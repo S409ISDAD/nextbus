@@ -14,12 +14,13 @@ const Privacy: React.FC = () => {
         <div className="flex flex-col max-w-3xl gap-5 p-6 mx-auto">
             <span className="text-4xl font-bold">Privacy Policy</span>
             <span>
-                <strong>Last updated:</strong> August 15, 2025
+                <strong>Last updated:</strong> August 17, 2025
             </span>
 
             <span>
                 This website "nextbus" cares about your privacy. We do not
-                collect or store any personal data on our servers.
+                collect or store any personal data (data linked to you or your
+                identity) on our servers.
             </span>
             <div className="flex flex-col gap-2">
                 <span className="text-2xl font-bold">Location Data</span>
@@ -77,13 +78,18 @@ const Privacy: React.FC = () => {
                     <span className="p-1 rounded-lg bg-neutral-800">
                         ws-client-id
                     </span>
-                    . This ID is used to identify your WebSocket connection and
-                    is not linked to any personal information. You can delete
-                    this data at any time by clearing your browser's
-                    localStorage.
+                    . This ID is used to identify your WebSocket connection or
+                    API request and is not linked to any personal information.
+                    This data is used to generate the statistics on the{" "}
+                    <a href="/stats" className="underline text-sky-500">
+                        Stats Page.
+                    </a>{" "}
+                    You can delete the ID at any time by clearing your browser's
+                    localStorage, however a new one will be generated when you
+                    next use the site.
                 </span>
                 <button
-                    className="p-1.5 px-4 w-fit text-sm font-semibold text-white transition-all bg-blue-500 cursor-pointer rounded-xl hover:bg-blue-600"
+                    className="p-1.5 px-4 w-fit text-sm font-semibold text-white transition-all bg-blue-600 cursor-pointer rounded-xl hover:bg-blue-700"
                     onClick={() => setFavStops({})}>
                     Clear Favorites
                 </button>

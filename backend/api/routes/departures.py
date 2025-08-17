@@ -21,6 +21,7 @@ async def departures_scheduled(
     request: Request, stop_id: str, redis=Depends(get_redis)
 ):
     try:
+        await redis.sadd("total_stops", stop_id)
         times = await stops.get_times(stop_id, redis)
 
         tasks = []
