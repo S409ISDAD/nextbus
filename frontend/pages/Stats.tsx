@@ -196,6 +196,14 @@ const StatsPage: React.FC = () => {
                         </span>
                     </div>
                     <div className="flex flex-col items-center p-4 shadow w-50 bg-neutral-800/50 rounded-xl">
+                        <span className="text-3xl font-bold text-purple-400">
+                            {stats?.total_users ?? "--"}
+                        </span>
+                        <span className="mt-1 text-sm text-neutral-400">
+                            Users Today
+                        </span>
+                    </div>
+                    <div className="flex flex-col items-center p-4 shadow w-50 bg-neutral-800/50 rounded-xl">
                         <span className="text-3xl font-bold text-emerald-400">
                             {stats?.total_buses ?? "--"}
                         </span>

@@ -28,6 +28,7 @@ class MultiChannelManager:
         if client_id:
             await redis.sadd("clients", client_id)
             await redis.sadd("total_clients", client_id)
+            await redis.sadd("total_users", client_id)
 
         if key not in self.tasks:
             self.tasks[key] = asyncio.create_task(background_func(key, redis))

@@ -38,10 +38,11 @@ log = logging.getLogger(__name__)
 # )
 
 
-def clear_redis_stats(redis):
+async def clear_redis_stats(redis):
     print("Clearing Redis stats...")
-    redis.delete("total_buses")
-    redis.delete("total_stops")
+    await redis.delete("total_buses")
+    await redis.delete("total_stops")
+    await redis.delete("total_users")
 
 
 async def record_snapshot(redis):
@@ -108,7 +109,7 @@ async def lifespan(app: FastAPI):
     )
     scheduler.add_job(
         clear_redis_stats,
-        CronTrigger(hour="0", minute="0", second="0"),  # run daily at midnight
+        CronTrigger(hour="0", minute="0", second="0"),
         id="clear_redis_stats",
         replace_existing=True,
         args=[redis],
@@ -149,6 +150,7 @@ async def timing_middleware(request: Request, call_next):
     client_id = request.headers.get("X-Client-ID")
     if client_id:
         await redis.sadd("total_clients", client_id)
+        await redis.sadd("total_users", client_id)
     response = await call_next(request)
     duration = time.time() - start
     print(f"{request.method} {request.url} completed in {duration:.3f}s")

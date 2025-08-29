@@ -20,11 +20,13 @@ async def stats(redis=Depends(get_redis)):
         unique_ws_connections = await redis.scard("total_clients")
         total_buses = await redis.scard("total_buses")
         total_stops = await redis.scard("total_stops")
+        total_users = await redis.scard("total_users")
         return {
             "total_active": total_ws_connections,
             "unique_active": unique_ws_connections,
             "total_buses": total_buses,
             "total_stops": total_stops,
+            "total_users": total_users,
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

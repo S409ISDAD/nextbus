@@ -430,7 +430,7 @@ class TrackSection(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     from_stop = Column(String, nullable=True)  # if null, it is the first
     to_stop = Column(String, nullable=True)  # if null, it is the last
-    distance = Column(Float, nullable=False)  # distance in meters
+    distance = Column(Float, nullable=True)  # distance in meters
     geometry = Column(Geometry(geometry_type="LINESTRING", srid=4326), nullable=False)
     route_link_ref = Column(String, nullable=True)  # Reference to the route link
     route_section_id = Column(String, ForeignKey("route_section.id"), nullable=False)
