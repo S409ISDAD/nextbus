@@ -277,7 +277,7 @@ const TrainPage: React.FC = () => {
     return (
         <div className="flex flex-col">
             <div
-                className="fixed flex flex-col w-full gap-2 p-3 pb-1 top-0 mt-13 grow bg-[#111111] z-15 rounded-b-2xl"
+                className="fixed flex flex-col w-full gap-2 p-3 pb-1 top-0 mt-14 grow bg-[#111111] z-15 rounded-b-2xl"
                 ref={trainInfoRef}>
                 {train ? (
                     <div className="flex flex-col items-center justify-center gap-2">
@@ -316,7 +316,7 @@ const TrainPage: React.FC = () => {
                                 {train.locations.length} stops
                             </span>
                         </div>
-                        <div className="flex items-center gap-3">
+                        <div className="flex flex-wrap items-center justify-center gap-3 gap-y-1">
                             <div className="flex flex-col items-center gap-1">
                                 <span className="font-bold align-middle">
                                     {train.trainIdentity}
@@ -325,7 +325,7 @@ const TrainPage: React.FC = () => {
 
                             <div className="flex flex-col items-center gap-1">
                                 <span
-                                    className="p-2 py-1 font-bold rounded-lg"
+                                    className="p-2 py-1 font-bold rounded-lg text-nowrap"
                                     style={{
                                         backgroundColor: train.atocColor,
                                     }}>
@@ -334,13 +334,13 @@ const TrainPage: React.FC = () => {
                             </div>
 
                             <div className="flex justify-center px-2 py-1 rounded-lg bg-neutral-800/50">
-                                <span className="font-bold align-middle text">
+                                <span className="font-bold align-middle text-nowrap">
                                     {lateness(train.delay ? train.delay : 0)}
                                 </span>
                             </div>
                             {showRoute && (
                                 <button
-                                    className="flex justify-center text-sm font-bold underline"
+                                    className="flex justify-center text-sm font-bold underline text-nowrap"
                                     onClick={() => {
                                         setShowRoute(false);
                                     }}

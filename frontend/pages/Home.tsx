@@ -8,14 +8,23 @@ import { Card } from "../components/ui/Card";
 import { getCurrentPosition } from "../utils/locations";
 import type { ServiceInfo } from "../models/ServiceInfo";
 import getNearby from "../utils/getNearby";
+import type { StationData } from "uk-railway-stations";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBus } from "@fortawesome/free-solid-svg-icons";
+import {
+    faBus,
+    faTrain,
+    faTrainSubway,
+} from "@fortawesome/free-solid-svg-icons";
 import { getClosestStop } from "../utils/closestStop";
+import { StationCombobox } from "../components/StationCombobox";
+
 const Home: React.FC = () => {
     // const navigate = useNavigate();
 
     const [services, setServices] = React.useState<ServiceInfo[]>([]);
     const [closestStop, setClosestStop] = React.useState<string | null>(null);
+    const [selectedStation, setSelectedStation] =
+        React.useState<StationData | null>(null);
     const [showStop, setShowStop] = React.useState(false);
 
     useEffect(() => {
@@ -126,8 +135,8 @@ const Home: React.FC = () => {
                     </span> */}
                     {/* <DepartureBoard stop_id="" closest={true}></DepartureBoard> */}
 
-                    <div className="flex flex-row flex-wrap items-start justify-center w-full gap-10 p-5">
-                        <div className="flex flex-col items-center justify-center gap-3">
+                    <div className="flex flex-row flex-wrap items-start justify-center w-full gap-5 p-5">
+                        <Card className="max-w-[90vw] flex flex-col items-center gap-2">
                             <div className="flex flex-col items-center justify-center">
                                 <span className="text-xl font-bold text-center">
                                     Your bus dashboard
@@ -143,44 +152,62 @@ const Home: React.FC = () => {
                                 }}>
                                 Bus Dashboard <FontAwesomeIcon icon={faBus} />
                             </button>
-                        </div>
-                        <div className="flex flex-col items-center justify-center gap-3">
+                        </Card>
+
+                        <Card className="max-w-[90vw] flex flex-col items-center gap-2">
                             <span className="text-xl font-bold text-center">
                                 Your nearby bus services
                             </span>
-                            <Card className="max-w-[90vw] flex flex-col items-center gap-2">
-                                <span className="w-full text-center">
-                                    Nearby Services
-                                </span>
-                                <div className="flex flex-row items-center justify-center gap-2 overflow-x-auto">
-                                    {services.length === 0 && (
-                                        <span className="text-sm text-neutral-400">
-                                            No nearby services found.
-                                        </span>
-                                    )}
-                                    {services.map((service) => (
-                                        <a
-                                            key={service.id}
-                                            className="flex items-center justify-center px-3 py-1 text-lg font-bold text-center cursor-pointer rounded-xl bg-neutral-800/50"
-                                            href={`/services/${service.id}`}>
-                                            {service.line_name}
-                                        </a>
-                                    ))}
-                                </div>
-                            </Card>
-                        </div>
-                        <div className="flex flex-col items-center justify-center gap-3 min-w-[350px] ">
+                            <div className="flex flex-row items-center justify-center gap-2 overflow-x-auto">
+                                {services.length === 0 && (
+                                    <span className="text-sm text-neutral-400">
+                                        No nearby services found.
+                                    </span>
+                                )}
+                                {services.map((service) => (
+                                    <a
+                                        key={service.id}
+                                        className="flex items-center justify-center px-3 py-1 text-lg font-bold text-center cursor-pointer rounded-xl bg-neutral-800/50"
+                                        href={`/services/${service.id}`}>
+                                        {service.line_name}
+                                    </a>
+                                ))}
+                            </div>
+                        </Card>
+
+                        <TrainSearchCard></TrainSearchCard>
+
+                        <Card className="flex flex-col items-center justify-center gap-3 p-[12px] min-w-[250px]">
                             <div className="flex flex-col items-center justify-center">
                                 <span className="text-xl font-bold text-center">
-                                    Find your train
+                                    Find a station
                                 </span>
                                 <span className="text-xs text-center text-neutral-600">
                                     yes i know its a bus website but trains are
                                     cool
                                 </span>
                             </div>
-                            <TrainSearchCard></TrainSearchCard>
-                        </div>
+                            <StationCombobox
+                                placeholder="to station..."
+                                value={selectedStation}
+                                onChange={setSelectedStation}
+                            />
+                            <button
+                                className={`w-full p-2 px-5 mt-2 font-semibold text-white bg-blue-600 transition-all rounded-xl ${
+                                    selectedStation
+                                        ? "cursor-pointer hover:bg-blue-700"
+                                        : "brightness-50 cursor-not-allowed"
+                                }`}
+                                disabled={!selectedStation}
+                                onClick={() => {
+                                    if (selectedStation) {
+                                        window.location.href = `/stations/${selectedStation.crsCode}`;
+                                    }
+                                }}>
+                                Go to Trains{" "}
+                                <FontAwesomeIcon icon={faTrainSubway} />
+                            </button>
+                        </Card>
                     </div>
 
                     <span className="text-xl font-bold text-center">
