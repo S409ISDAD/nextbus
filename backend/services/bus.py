@@ -5,6 +5,7 @@ from redis.asyncio import Redis
 from backend.config import VEHICLES_BASE
 from backend.schemas.livery import Livery
 from backend.schemas.bus import ScheduledBus, TrackedBus
+from backend.schemas.progress import Progress
 from backend.services.caching import BUS_CACHE, get_cached
 from backend.services.livery import get_livery
 from backend.services.prediction import (
@@ -236,7 +237,7 @@ async def build_bus(
         predictions = []
 
     return TrackedBus(
-        type="tracked" if tracking else "scheduled",
+        type="tracked",
         id=bus_id,
         service=service_info,
         trip=this_bus.get("trip_id", 0),
@@ -252,7 +253,9 @@ async def build_bus(
         started=times.started,
         finished=times.finished,
         target_seq=target_seq,
-        progress=progress,
+        progress=progress
+        if progress
+        else Progress(sequence=0, next_stop="", prev_stop="", progress=0),
         predictions=predictions,
         journey=journey,
         livery=livery,

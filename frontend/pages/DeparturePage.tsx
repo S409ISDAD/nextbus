@@ -177,55 +177,35 @@ function BusCard({
                                 Upcoming
                             </span>
                         )}
-                        {isTrackedBus(bus) ? (
+                        {bus.started && (
                             <div className="relative w-5 h-5">
                                 <FontAwesomeIcon
                                     icon={faSatelliteDish}
+                                    beatFade={gettingLiveData}
                                     className={clsx(
                                         "absolute top-0 left-0 w-5 h-5",
-                                        {
-                                            "text-sky-500":
-                                                bus.status === "tracking",
-                                            "text-emerald-500":
-                                                bus.status === "user_tracking",
-                                        }
+                                        gettingLiveData
+                                            ? "text-neutral-500"
+                                            : {
+                                                  "text-blue-400 opacity-40":
+                                                      bus.status ===
+                                                      "not_tracking",
+                                                  "text-sky-500":
+                                                      bus.status === "tracking",
+                                                  "text-emerald-500":
+                                                      bus.status ===
+                                                      "user_tracking",
+                                              }
                                     )}
                                 />
-                            </div>
-                        ) : (
-                            <>
-                                {bus.started && (
-                                    <div className="relative w-5 h-5">
+                                {!gettingLiveData &&
+                                    bus.status === "not_tracking" && (
                                         <FontAwesomeIcon
-                                            icon={faSatelliteDish}
-                                            beatFade={gettingLiveData}
-                                            className={clsx(
-                                                "absolute top-0 left-0 w-5 h-5",
-                                                gettingLiveData
-                                                    ? "text-neutral-500"
-                                                    : {
-                                                          "text-blue-400 opacity-40":
-                                                              bus.status ===
-                                                              "not_tracking",
-                                                          "text-sky-500":
-                                                              bus.status ===
-                                                              "tracking",
-                                                          "text-emerald-500":
-                                                              bus.status ===
-                                                              "user_tracking",
-                                                      }
-                                            )}
+                                            icon={faSlash}
+                                            className="absolute top-0 left-0 w-5 h-5 text-red-500"
                                         />
-                                        {!gettingLiveData &&
-                                            bus.status === "not_tracking" && (
-                                                <FontAwesomeIcon
-                                                    icon={faSlash}
-                                                    className="absolute top-0 left-0 w-5 h-5 text-red-500"
-                                                />
-                                            )}
-                                    </div>
-                                )}
-                            </>
+                                    )}
+                            </div>
                         )}
                     </div>
                 </div>
