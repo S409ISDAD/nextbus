@@ -10,11 +10,7 @@ import type { ServiceInfo } from "../models/ServiceInfo";
 import getNearby from "../utils/getNearby";
 import type { StationData } from "uk-railway-stations";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-    faBus,
-    faTrain,
-    faTrainSubway,
-} from "@fortawesome/free-solid-svg-icons";
+import { faBus, faTrainSubway } from "@fortawesome/free-solid-svg-icons";
 import { getClosestStop } from "../utils/closestStop";
 import { StationCombobox } from "../components/StationCombobox";
 
