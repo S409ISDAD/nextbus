@@ -165,8 +165,11 @@ async def build_bus(
 
     delay = this_bus.get("delay")
 
+    tracking = True
+
     if not delay:
-        return None
+        delay = 0
+        tracking = False
 
     # Ignore buses with a delay of over 2 hours, they are likely broken down or similar
     if delay > 2 * 60 * 60:
@@ -233,6 +236,7 @@ async def build_bus(
         predictions = []
 
     return TrackedBus(
+        type="tracked" if tracking else "scheduled",
         id=bus_id,
         service=service_info,
         trip=this_bus.get("trip_id", 0),
@@ -254,5 +258,5 @@ async def build_bus(
         livery=livery,
         speed=None,
         coords=coords,
-        status="tracking",
+        status="tracking" if tracking else "not_tracking",
     )
