@@ -5,7 +5,6 @@ import { useNavigate, useParams } from "react-router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { lateness, toTime } from "../utils/timeUtils";
 import generateWholeTrack from "../utils/locations";
-import clsx from "clsx";
 import {
     faBus,
     faCalendarCheck,
