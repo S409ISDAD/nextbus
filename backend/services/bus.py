@@ -168,6 +168,11 @@ async def build_bus(
     if not delay:
         return None
 
+    # Ignore buses with a delay of over 2 hours, they are likely broken down or similar
+    if delay > 2 * 60 * 60:
+        print(f"ignoring bus with delay of {round(delay / 60)} minutes")
+        return None
+
     await r.sadd("total_buses", bus_id)
 
     timestamp = this_bus.get("datetime")

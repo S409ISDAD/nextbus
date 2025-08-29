@@ -15,6 +15,7 @@ import {
     faSlash,
     faStar,
     faUpRightFromSquare,
+    faWarning,
 } from "@fortawesome/free-solid-svg-icons";
 import { faStar as faStarRegular } from "@fortawesome/free-regular-svg-icons";
 import clsx from "clsx";
@@ -95,7 +96,15 @@ function BusCard({
     }, [bus]);
 
     return (
-        <div key={bus.trip} onClick={onClick} className="cursor-pointer">
+        <div
+            key={bus.trip}
+            onClick={onClick}
+            className={clsx(
+                "cursor-pointer",
+                isTrackedBus(bus) &&
+                    bus.delay >= 2700 &&
+                    "opacity-75 pointer-events-none"
+            )}>
             <div className="flex flex-row items-center justify-between">
                 <div className="flex flex-col justify-around gap-1">
                     <div className="flex flex-row items-stretch mb-1">
@@ -117,6 +126,15 @@ function BusCard({
                             )}
                         </div>
                     </div>
+                    {isTrackedBus(bus) && bus.delay >= 2700 && (
+                        <div className="flex items-center gap-1 text-xs ">
+                            <FontAwesomeIcon
+                                icon={faWarning}
+                                className="text-red-400"
+                            />
+                            This bus is quite late, it may not arrive
+                        </div>
+                    )}
 
                     <div className="flex flex-row items-center pl-2 font-semibold text gap-x-3 text-nowrap">
                         <div className="flex items-center gap-2">

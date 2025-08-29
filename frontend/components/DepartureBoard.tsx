@@ -9,7 +9,11 @@ import { getCurrentPosition } from "../utils/locations";
 import getStopData from "../utils/getStopData";
 import type { Stop } from "../models/Stop";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSatelliteDish, faSlash } from "@fortawesome/free-solid-svg-icons";
+import {
+    faSatelliteDish,
+    faSlash,
+    faWarning,
+} from "@fortawesome/free-solid-svg-icons";
 import clsx from "clsx";
 import { WebSocketManager } from "../websockets/ws_manager";
 import React from "react";
@@ -30,7 +34,15 @@ function BusCard({
     gettingLiveData: boolean;
 }) {
     return (
-        <div className="cursor-pointer" key={bus.trip} onClick={onClick}>
+        <div
+            className={clsx(
+                "cursor-pointer",
+                isTrackedBus(bus) &&
+                    bus.delay >= 2700 &&
+                    "opacity-75 pointer-events-none"
+            )}
+            key={bus.trip}
+            onClick={onClick}>
             <div className="flex flex-row items-center justify-between gap-2">
                 <div className="flex flex-col justify-around">
                     <div className="flex flex-row items-stretch mb-1">
@@ -47,6 +59,15 @@ function BusCard({
                             </span>
                         </div>
                     </div>
+                    {isTrackedBus(bus) && bus.delay >= 2700 && (
+                        <div className="flex items-center gap-1 text-xs ">
+                            <FontAwesomeIcon
+                                icon={faWarning}
+                                className="text-red-400"
+                            />
+                            This bus is quite late, it may not arrive
+                        </div>
+                    )}
                     <div className="flex flex-row items-center gap-3 font-semibold text-nowrap">
                         <div className="flex gap-0.5 items-center text-sky-400">
                             <span className="text-xs">
