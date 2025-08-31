@@ -87,6 +87,7 @@ async def record_snapshot(redis):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    bot_task = None
     redis = get_redis_client()
     if await redis.ping():
         print("Redis Connected.")
@@ -106,10 +107,10 @@ async def lifespan(app: FastAPI):
     print("Starting discord bot...")
     dotenv.load_dotenv()
     token = os.getenv("BOT_TOKEN")
-    if not token:
-        print("No BOT_TOKEN found in environment, bot will not start.")
+    if token:
+        bot_task = asyncio.create_task(bot.start(token))
     else:
-        asyncio.create_task(bot.start(token))
+        print("No BOT_TOKEN found in environment, bot will not start.")
 
     scheduler = AsyncIOScheduler()
     scheduler.add_job(
@@ -131,10 +132,15 @@ async def lifespan(app: FastAPI):
     # print("Starting full import...")
     # asyncio.create_task(asyncio.to_thread(do_import))
     # print("Import started in background.")
+    try:
+        yield
+    finally:
+        scheduler.shutdown(wait=False)
 
-    yield
-
-    scheduler.shutdown(wait=False)
+        if bot_task:
+            print("Shutting down bot...")
+            await bot.close()
+            await bot_task
 
 
 app = FastAPI(lifespan=lifespan, redirect_slashes=False)
