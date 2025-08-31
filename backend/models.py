@@ -138,6 +138,13 @@ class DirectionType(enum.Enum):
     unknown = "unknown"
 
 
+class BotConfig(Base):
+    __tablename__ = "bot_dashboard"
+    id = Column(Integer, primary_key=True)
+    channel_id = Column(String, nullable=False)
+    message_id = Column(String, nullable=True)
+
+
 class ActiveUsersSnapshot(Base):
     __tablename__ = "active_users_snapshot"
 

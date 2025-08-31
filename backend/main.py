@@ -1,6 +1,8 @@
 import asyncio
 from datetime import timedelta, timezone, datetime
+import os
 import time
+import dotenv
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
@@ -27,6 +29,7 @@ from prometheus_fastapi_instrumentator import Instrumentator
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from backend.tasks.full_import import do_import
+from backend.bot.bot import bot
 
 
 log = logging.getLogger(__name__)
@@ -99,6 +102,14 @@ async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
     sync_search_vectors()
     print("Database setup complete.")
+
+    print("Starting discord bot...")
+    dotenv.load_dotenv()
+    token = os.getenv("BOT_TOKEN")
+    if not token:
+        print("No BOT_TOKEN found in environment, bot will not start.")
+    else:
+        asyncio.create_task(bot.start(token))
 
     scheduler = AsyncIOScheduler()
     scheduler.add_job(
