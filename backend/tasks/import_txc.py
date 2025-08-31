@@ -285,6 +285,7 @@ class TXCImporter:
         journey = {
             "id": journey_code,
             "service_code": service.service_code,
+            "vehicle_journey_code": txc_journey.journey_code,
             "ticket_machine_code": txc_journey.ticket_machine_code,
             "line_id": line.id,
             "block_id": txc_journey.block,

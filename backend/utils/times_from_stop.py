@@ -94,6 +94,10 @@ def times_from_stop(stop_id: str, db: Session, limit: int = 10):
 
     stop = db.query(Stop).filter(Stop.atco_code == stop_id).first()
 
+    if not stop:
+        print(f"Stop with ID {stop_id} not found.")
+        return
+
     print(
         f"Departures from {stop.common_name if stop else stop_id} ({stop.indicator}):"
     )

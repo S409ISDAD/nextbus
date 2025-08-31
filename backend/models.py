@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 import enum
 
 from geoalchemy2 import Geometry
@@ -18,7 +19,7 @@ from sqlalchemy import (
     func,
 )
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, Session, joinedload
 from sqlalchemy_searchable import make_searchable
 from sqlalchemy_utils.types import TSVectorType
 
@@ -194,6 +195,82 @@ class Stop(Base):
             "town",
         )
     )
+
+    def lines_served(self, db: Session) -> list["Line"]:
+        """
+        Returns a list of lines that serve this stop.
+        """
+        lines = (
+            db.query(Line)
+            .join(LineStopUsage, Line.id == LineStopUsage.line_id)
+            .filter(LineStopUsage.stop_id == self.atco_code)
+            .distinct()
+            .all()
+        )
+        return lines
+
+    def times_from_stop(
+        self, db: Session, date: datetime | None = None, limit: int = 10
+    ) -> list["StopTime"]:
+        """
+        Returns a list of upcoming StopTime objects for this stop, with joined journey, line, and service.
+        """
+
+        if date is None:
+            now = datetime.now()
+        else:
+            now = date
+
+        weekday_attr = now.strftime("%A").lower()
+        today_date = now.date()
+        seconds_since_midnight = now.hour * 3600 + now.minute * 60 + now.second
+        current_time = timedelta(seconds=seconds_since_midnight)
+
+        stop_times = (
+            db.query(StopTime)
+            .filter(StopTime.stop_id == self.atco_code)
+            .join(Journey)
+            .join(Calendar)
+            .options(
+                joinedload(StopTime.journey).joinedload(Journey.calendar),
+                joinedload(StopTime.journey)
+                .joinedload(Journey.line)
+                .joinedload(Line.service),
+            )
+            .all()
+        )
+
+        active_stop_times = []
+        for st in stop_times:
+            cal = st.journey.calendar
+            if not (
+                cal.start_date <= today_date
+                and (cal.end_date is None or cal.end_date >= today_date)
+            ):
+                continue
+            if not getattr(cal, weekday_attr):
+                continue
+            has_exception = False
+            for exc in cal.calendar_exceptions:
+                if exc.start_date <= today_date <= exc.end_date:
+                    if not exc.operating:
+                        has_exception = True
+                    else:
+                        has_exception = False
+                    break
+            if has_exception:
+                continue
+            active_stop_times.append(st)
+
+        future_stop_times = [
+            st
+            for st in active_stop_times
+            if st.departure_time and st.departure_time >= current_time
+        ]
+
+        future_stop_times.sort(key=lambda st: st.departure_time)
+
+        return future_stop_times[:limit]
 
 
 class StopArea(Base):
@@ -476,6 +553,7 @@ class Journey(Base):
     __tablename__ = "journey"
     id = Column(String, primary_key=True)
     service_code = Column(String, ForeignKey("service.service_code"), nullable=False)
+    vehicle_journey_code = Column(String, nullable=True)
     ticket_machine_code = Column(String, nullable=True)
     line_id = Column(String, ForeignKey("line.id"), nullable=True)
     block_id = Column(String, nullable=True)
@@ -491,6 +569,46 @@ class Journey(Base):
     stop_times = relationship(
         "StopTime", back_populates="journey", cascade="all, delete-orphan"
     )
+
+    def get_previous_journey(self, db: Session) -> "Journey | None":
+        """
+        Returns the previous journey in the same block and calendar, ordered by end_time.
+        """
+        if self.block_id is None or self.calendar_id is None:
+            return None
+        return (
+            db.query(Journey)
+            .filter(
+                Journey.block_id == self.block_id,
+                Journey.calendar_id == self.calendar_id,
+                Journey.end_time <= self.start_time,
+                Journey.id != self.id,
+            )
+            .order_by(Journey.end_time.desc())
+            .first()
+        )
+
+
+class JourneyTripMatch(Base):
+    """
+    cache of matched journey to bustimes trip_id
+    """
+
+    __tablename__ = "journey_trip_match"
+    journey_id = Column(
+        String, ForeignKey("journey.id"), primary_key=True, nullable=False
+    )
+    trip_id = Column(Integer, nullable=False)
+
+
+class LineServiceMatch(Base):
+    """
+    cache of matched line to bustimes service_id
+    """
+
+    __tablename__ = "line_service_match"
+    line_id = Column(String, ForeignKey("line.id"), primary_key=True, nullable=False)
+    service_id = Column(Integer, nullable=False)
 
 
 class StopTime(Base):

@@ -1,8 +1,19 @@
 import asyncio
+import json
 from dateutil import parser
 from redis.asyncio import Redis
 
 from backend.config import VEHICLES_BASE
+from backend.db.db import SessionLocal
+from backend.deps import DateTimeEncoder
+from backend.models import (
+    DirectionType,
+    Journey,
+    JourneyTripMatch,
+    Line,
+    Service,
+    StopTime,
+)
 from backend.schemas.livery import Livery
 from backend.schemas.bus import ScheduledBus, TrackedBus
 from backend.schemas.progress import Progress
@@ -13,8 +24,11 @@ from backend.services.prediction import (
     get_started_finished,
     predict_future,
 )
+from backend.utils.match_bt import match_line_service, match_journey_trip
 from backend.services.services import fetch_active_buses, get_service_info
 from backend.utils.fetch_json import fetch_json
+from sqlalchemy.orm import joinedload
+from datetime import datetime, timedelta
 
 
 async def fetch_bus(bus_id, r: Redis):
@@ -39,6 +53,38 @@ async def fetch_bus(bus_id, r: Redis):
         return None
 
 
+async def fetch_bus_trip(service_id, trip_id, r: Redis):
+    """Fetches specific bus by service and trip"""
+
+    async def fetch(service_id, trip_id):
+        data = await fetch_json(VEHICLES_BASE + f"?service={service_id}&trip={trip_id}")
+
+        exact_bus = [bus for bus in data if bus.get("trip_id") == trip_id]
+
+        return exact_bus[0] if exact_bus else None
+
+    this_bus = await get_cached(
+        f"bus:{service_id}:{trip_id}",
+        fetch,
+        (service_id, trip_id),
+        BUS_CACHE,
+        r,
+    )
+
+    # if this_bus:
+    #     await r.set(
+    #         f"bus:{this_bus.get('id')}",
+    #         value=json.dumps(
+    #             {"data": this_bus},
+    #             cls=DateTimeEncoder,
+    #             default=lambda o: o.__dict__ if hasattr(o, "__dict__") else str(o),
+    #         ),
+    #         ex=BUS_CACHE,
+    #     )
+
+    return this_bus
+
+
 def best_bus(buses: list[dict]) -> dict | None:
     valid = []
 
@@ -54,7 +100,9 @@ def best_bus(buses: list[dict]) -> dict | None:
     return max(valid, key=lambda b: b["progress"]["sequence"])
 
 
-async def fetch_buses(services, stop_id, times, r: Redis) -> list[TrackedBus]:
+async def fetch_buses(
+    services, stop_id, times, r: Redis, use_db=False
+) -> list[TrackedBus]:
     active = await fetch_active_buses(services, r)
 
     active_by_trip: dict[int, list[dict]] = {}
@@ -69,11 +117,13 @@ async def fetch_buses(services, stop_id, times, r: Redis) -> list[TrackedBus]:
     for time in times:
         trip_id = time.get("trip_id")
         matched_buses = active_by_trip.get(trip_id, [])
-
         if matched_buses:
             tasks.append(build_bus_candidates(matched_buses, r, stop_id))
         else:
-            tasks.append(build_scheduled(time, r))
+            if use_db:
+                tasks.append(build_scheduled_db(stop_id, trip_id, r))
+            else:
+                tasks.append(build_scheduled(time, r))
 
     buses = await asyncio.gather(*tasks)
     return [bus for bus in buses if bus is not None]
@@ -129,6 +179,93 @@ async def build_scheduled(time, r, include_started=True):
         trip=trip_id,
         status="not_tracking",
     )
+
+
+async def build_scheduled_db(stop_id, trip_id, r, include_started=True):
+    with SessionLocal() as db:
+        journey_row = (
+            db.query(JourneyTripMatch.journey_id)
+            .filter(JourneyTripMatch.trip_id == trip_id)
+            .first()
+        )
+        if not journey_row:
+            return None
+        journey_id = journey_row[0]
+
+        stop_time: StopTime = (
+            db.query(StopTime)
+            .filter(StopTime.journey_id == journey_id, StopTime.stop_id == stop_id)
+            .options(
+                joinedload(StopTime.journey)
+                .joinedload(Journey.line)
+                .joinedload(Line.service)
+            )
+            .first()
+        )
+
+        if not stop_time:
+            return None
+
+        if include_started:
+            started, finished = await get_started_finished(trip_id, r)
+        else:
+            started = False
+
+        today_midnight = datetime.combine(datetime.today(), datetime.min.time())
+        scheduled = today_midnight + stop_time.departure_time
+
+        dest = (
+            stop_time.journey.line.service.destination
+            if stop_time.journey.direction == DirectionType.outbound
+            else stop_time.journey.line.service.origin
+        )
+
+        prev_journey = stop_time.journey.get_previous_journey(db)
+
+        layover_time = (
+            stop_time.journey.start_time - prev_journey.end_time
+            if prev_journey
+            else timedelta(0)
+        )
+
+        prev_trip = (
+            await match_journey_trip(db, prev_journey.id, r) if prev_journey else None
+        )
+
+        service_id = await match_line_service(db, prev_journey.line.id)
+
+        potential_bus = (
+            await fetch_bus_trip(service_id, prev_trip, r) if service_id else None
+        )
+
+        if potential_bus:
+            bus = await build_bus(
+                potential_bus["id"], r, stop_id=stop_id, get_journey=False
+            )
+            if not bus:
+                return None
+            delay = max(
+                bus.delay - int(layover_time.total_seconds()), 0
+            )  # account for layover
+            bus.destination = dest
+            bus.scheduled = scheduled
+            bus.expected = scheduled + timedelta(seconds=delay)
+            bus.delay = delay
+            bus.trip = trip_id
+            bus.started = started
+
+            return bus
+
+        else:
+            return ScheduledBus(
+                destination=dest,
+                line=stop_time.journey.line.line_name,
+                scheduled=scheduled,
+                expected=scheduled,
+                started=started,
+                trip=trip_id,
+                status="not_tracking",
+            )
 
 
 async def build_bus_candidates(

@@ -16,7 +16,7 @@ if not RTT_USERNAME or not RTT_PASSWORD:
 auth = aiohttp.BasicAuth(RTT_USERNAME, RTT_PASSWORD)
 
 
-async def fetch_json(url):
+async def fetch_json(url) -> dict | None:
     async with aiohttp.ClientSession() as session:
         async with session.get(
             url, headers={"Accept": "application/json"}, ssl=ssl_context
@@ -26,7 +26,7 @@ async def fetch_json(url):
             return await response.json()
 
 
-async def fetch_rtt_json(url: str):
+async def fetch_rtt_json(url: str) -> dict | None:
     async with aiohttp.ClientSession(auth=auth) as session:
         async with session.get(
             url, headers={"Accept": "application/json"}, ssl=ssl_context

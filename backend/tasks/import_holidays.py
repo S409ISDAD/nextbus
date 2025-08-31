@@ -1,7 +1,6 @@
 from govuk_bank_holidays.bank_holidays import BankHolidays
 from sqlalchemy import and_
 from backend.db.db import SessionLocal
-from sqlalchemy.orm import Session
 from backend.models import BankHoliday, BankHolidayDate
 
 
@@ -38,7 +37,13 @@ def import_bank_holidays():
         for bank_holiday in england_and_wales:
             title = normalize_name(get_bank_holiday_name(bank_holiday))
 
-            bh = existing_bhs[title]
+            bh = existing_bhs.get(title)
+            if not bh:
+                bh = BankHoliday(name=title)
+                db.add(bh)
+                db.commit()
+                db.refresh(bh)
+                existing_bhs[title] = bh
 
             existing_date = (
                 db.query(BankHolidayDate)

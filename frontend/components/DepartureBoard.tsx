@@ -69,11 +69,32 @@ function BusCard({
                         </div>
                     )}
                     <div className="flex flex-row items-center gap-3 font-semibold text-nowrap">
-                        <div className="flex gap-0.5 items-center text-sky-400">
-                            <span className="text-xs">
-                                {isTrackedBus(bus) ? "Expt:" : "Schd:"}
-                            </span>
-                            <span>{toTime(bus.expected)}</span>
+                        <div className="flex items-center gap-2">
+                            {bus.expected && bus.scheduled
+                                ? (() => {
+                                      const aimed = new Date(
+                                          bus.scheduled
+                                      ).getTime();
+                                      const expt = new Date(
+                                          bus.expected
+                                      ).getTime();
+                                      const diff = Math.abs(expt - aimed);
+                                      const isLate =
+                                          expt > aimed && diff > 60000;
+                                      return (
+                                          <div className="flex gap-2">
+                                              {isLate && (
+                                                  <span className="line-through text-neutral-500">
+                                                      {toTime(bus.scheduled)}
+                                                  </span>
+                                              )}
+                                              <span className={"text-sky-400"}>
+                                                  {toTime(bus.expected)}
+                                              </span>
+                                          </div>
+                                      );
+                                  })()
+                                : "-"}
                         </div>
                         {isTrackedBus(bus) && (
                             <span
@@ -83,7 +104,7 @@ function BusCard({
                                 {lateness(bus ? bus.delay : 0)}
                             </span>
                         )}
-                        {!bus.started && !isTrackedBus(bus) && (
+                        {!bus.started && (
                             <span className="text-sm font-medium opacity-70">
                                 Upcoming
                             </span>

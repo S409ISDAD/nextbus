@@ -172,7 +172,7 @@ function BusCard({
                                 {lateness(bus ? bus.delay : 0)}
                             </span>
                         )}
-                        {!bus.started && !isTrackedBus(bus) && (
+                        {!bus.started && (
                             <span className="text-sm font-medium opacity-70">
                                 Upcoming
                             </span>

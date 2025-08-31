@@ -38,6 +38,6 @@ async def get_cached(key: str, func, args: tuple, exp: int, r: redis.Redis):
                 cls=DateTimeEncoder,
                 default=lambda o: o.__dict__ if hasattr(o, "__dict__") else str(o),
             ),
-            ex=exp,
+            ex=exp if exp > 0 else None,
         )
     return result
