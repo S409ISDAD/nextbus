@@ -1,3 +1,4 @@
+from pathlib import Path
 from geoalchemy2.shape import from_shape
 from shapely.geometry import Point
 from backend.db.db import SessionLocal
@@ -204,7 +205,7 @@ def create_or_update(db: Session):
         db.commit()
 
 
-def import_naptan_data(file_path: str):
+def import_naptan_data(file_path: Path):
     print("Importing NAPTAN data...")
 
     global \
@@ -245,6 +246,6 @@ if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Usage: <path_to_naptan_xml>")
         sys.exit(1)
-    naptan_path = sys.argv[1]
+    naptan_path = Path(sys.argv[1])
     import_naptan_data(naptan_path)
     print("done.")
