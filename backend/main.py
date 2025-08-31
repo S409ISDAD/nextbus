@@ -102,7 +102,7 @@ async def lifespan(app: FastAPI):
     print("Setting up database...")
     Base.metadata.create_all(bind=engine)
     print("Syncing search vectors...")
-    sync_search_vectors()
+    await asyncio.to_thread(sync_search_vectors)
     print("Database setup complete.")
 
     print("Starting discord bot...")
