@@ -58,6 +58,8 @@ async def fetch_bus_trip(service_id, trip_id, r: Redis):
 
     async def fetch(service_id, trip_id):
         data = await fetch_json(VEHICLES_BASE + f"?service={service_id}&trip={trip_id}")
+        if not data:
+            return None
 
         exact_bus = [bus for bus in data if bus.get("trip_id") == trip_id]
 
@@ -101,7 +103,7 @@ def best_bus(buses: list[dict]) -> dict | None:
 
 
 async def fetch_buses(
-    services, stop_id, times, r: Redis, use_db=False
+    services, stop_id, times, r: Redis, use_db=False, is_tomorrow=False
 ) -> list[TrackedBus]:
     active = await fetch_active_buses(services, r)
 
@@ -125,7 +127,9 @@ async def fetch_buses(
                 journey_id = journey.id if journey else None
             use_db = journey_id is not None
             if use_db:
-                tasks.append(build_scheduled_db(stop_id, trip_id, journey_id, r))
+                tasks.append(
+                    build_scheduled_db(stop_id, trip_id, journey_id, is_tomorrow, r)
+                )
             else:
                 tasks.append(build_scheduled(time, r))
 
@@ -185,7 +189,9 @@ async def build_scheduled(time, r, include_started=True):
     )
 
 
-async def build_scheduled_db(stop_id, trip_id, journey_id, r, include_started=True):
+async def build_scheduled_db(
+    stop_id, trip_id, journey_id, is_tomorrow, r, include_started=True
+):
     with SessionLocal() as db:
         stop_time: StopTime = (
             db.query(StopTime)
@@ -207,7 +213,12 @@ async def build_scheduled_db(stop_id, trip_id, journey_id, r, include_started=Tr
             started = False
 
         today_midnight = datetime.combine(datetime.today(), datetime.min.time())
+        if is_tomorrow:
+            today_midnight += timedelta(days=1)
         scheduled = today_midnight + stop_time.departure_time
+
+        if (scheduled - datetime.now()).total_seconds() > 11 * 3600:
+            return None
 
         dest = (
             stop_time.journey.line.service.destination
