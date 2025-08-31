@@ -4,6 +4,7 @@ import Home from "../pages/Home";
 import JourneyPage from "../pages/JourneyPage";
 import PrivacyPolicy from "../pages/Privacy";
 import Terms from "../pages/Terms";
+import Data from "../pages/Data";
 import BusPage from "../pages/BusPage";
 import ServicePage from "../pages/ServicePage";
 import Layout from "../components/Layout";
@@ -127,6 +128,7 @@ function App() {
                         <Route path="/" element={<Home />} />
                         <Route path="/privacy" element={<PrivacyPolicy />} />
                         <Route path="/terms" element={<Terms />} />
+                        <Route path="/data" element={<Data />} />
                         <Route path="/stats" element={<StatsPage />} />
                         <Route path="/buses" element={<BusPage />} />
                         <Route
@@ -160,7 +162,15 @@ function App() {
                     />
                 </Routes>
                 <footer className="flex flex-row flex-wrap justify-center w-full gap-2 p-3 text-sm text-gray-200 border-t-2 max-h-fit border-neutral-800 grow">
-                    <span>© {currentYear} nextbus</span>·
+                    <span>© {currentYear} nextbus</span> ·
+                    <div className="flex gap-1 h-fit">
+                        <a
+                            href="/data"
+                            className="underline text-sky-400 h-fit">
+                            Data Sources
+                        </a>
+                    </div>
+                    ·
                     <a href="/privacy" className="underline text-sky-400 h-fit">
                         Privacy
                     </a>
@@ -180,28 +190,6 @@ function App() {
                         rel="noopener noreferrer">
                         Join the Discord!{" "}
                     </a>
-                    ·
-                    <div className="flex gap-1 h-fit">
-                        <span>Bus data:</span>
-                        <a
-                            href="https://bustimes.org"
-                            className="underline text-sky-400"
-                            target="_blank"
-                            rel="noopener noreferrer">
-                            bustimes.org
-                        </a>
-                    </div>
-                    ·
-                    <div className="flex gap-1 h-fit">
-                        <span>Train data:</span>
-                        <a
-                            href="https://realtimetrains.co.uk"
-                            className="underline text-sky-400"
-                            target="_blank"
-                            rel="noopener noreferrer">
-                            realtimetrains.co.uk
-                        </a>
-                    </div>
                 </footer>
             </div>
         </BrowserRouter>
