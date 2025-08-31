@@ -85,19 +85,19 @@ async def record_snapshot(redis):
 async def lifespan(app: FastAPI):
     redis = get_redis_client()
     if await redis.ping():
-        log.info("Redis Connected.")
+        print("Redis Connected.")
     else:
-        log.warning("Redis did not respond.")
+        print("Redis did not respond.")
     await redis.close()
     await redis.delete("total_clients")
     redis.sadd("total_clients", *[])
     await redis.delete("clients")
     redis.sadd("clients", *[])
     await redis.set("total_ws_connections", "0")
-    log.info("Setting up database...")
+    print("Setting up database...")
     Base.metadata.create_all(bind=engine)
     sync_search_vectors()
-    log.info("Database setup complete.")
+    print("Database setup complete.")
 
     scheduler = AsyncIOScheduler()
     scheduler.add_job(
