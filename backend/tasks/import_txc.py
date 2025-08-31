@@ -120,7 +120,7 @@ class TXCImporter:
         service: Service,
         line: Line,
     ):
-        journey_code = self.get_id(txc_journey.journey_code)
+        journey_code = self.get_id(line.line_name + ":" + txc_journey.journey_code)
 
         operating_profile = txc_journey.operating_profile
         regular_days_of_week = (
