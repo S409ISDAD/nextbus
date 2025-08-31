@@ -120,5 +120,5 @@ async def update_dashboard():
             else:
                 db_entry.message_id = str(message.id)
             db.commit()
-
-        await message.edit(content=msg_content, suppress=True)
+        if message:
+            await message.edit(content=msg_content, suppress=True)

@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import sys
 import zipfile
@@ -10,6 +11,7 @@ from shapely.geometry import LineString
 from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
+from backend.bot.bot import update_dashboard
 from backend.db.db import SessionLocal
 from backend.models import (
     BankHoliday,
@@ -517,7 +519,7 @@ class TXCImporter:
             )
             return None
 
-    def handle_txc_file(self):
+    async def handle_txc_file(self):
         try:
             for txc_operator in self.txc_data.operators:
                 db_operator = (
@@ -638,6 +640,7 @@ class TXCImporter:
                 self.db.flush()
 
             self.db.commit()
+            await update_dashboard()
         except Exception as e:
             print("An error occurred during txc import:")
             error_str = e.__str__()
@@ -656,7 +659,7 @@ if __name__ == "__main__":
     elif input_path.lower().endswith(".xml"):
         with open(input_path, "rb") as xml_file:
             txc_importer = TXCImporter(xml_file)
-            txc_importer.handle_txc_file()
+            asyncio.run(txc_importer.handle_txc_file())
     else:
         print("Error: Input must be a .zip or .xml file")
         exit(1)
