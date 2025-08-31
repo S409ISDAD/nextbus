@@ -1,7 +1,6 @@
 from backend.services import bus, stops
 from backend.db.db import SessionLocal
 from backend.models import Line, Stop
-from backend.utils.match_bt import match_journey_trip
 
 
 async def get_departures(stop_id: str, redis):
@@ -27,7 +26,7 @@ async def get_departures(stop_id: str, redis):
             times = []
             for time in db_times:
                 journey = time.journey
-                trip_id = await match_journey_trip(db, journey.id, redis)
+                trip_id = await journey.get_bt_trip_id()
                 if trip_id:
                     times.append({"trip_id": int(trip_id)})
         else:

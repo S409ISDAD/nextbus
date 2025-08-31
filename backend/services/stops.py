@@ -51,11 +51,21 @@ async def get_services_from_stop(stop_id, r: Redis):
             if service_id in ids:
                 continue
             ids.add(service_id)
+            description_full = service.get("description", "")
+            if "via" in description_full:
+                desc, detail = description_full.split("via", 1)
+                description = desc.strip()
+                detail = detail.strip()
+            else:
+                description = description_full.strip()
+                detail = ""
+
             services.append(
                 {
                     "id": service_id,
                     "line_name": service.get("line_name"),
-                    "detail": service.get("description"),
+                    "description": description,
+                    "detail": detail,
                 }
             )
 

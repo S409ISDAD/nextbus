@@ -23,6 +23,9 @@ from sqlalchemy.orm import relationship, Session, joinedload
 from sqlalchemy_searchable import make_searchable
 from sqlalchemy_utils.types import TSVectorType
 
+from backend.config import API_BASE
+from backend.utils.fetch_json import fetch_json
+
 Base = declarative_base()
 make_searchable(Base.metadata)
 
@@ -444,6 +447,7 @@ class Line(Base):
 
     __tablename__ = "line"
     id = Column(String, primary_key=True)
+    bt_service_id = Column(Integer, nullable=True)
     line_name = Column(String, nullable=False)
     inbound_description = Column(String)
     outbound_description = Column(String)
@@ -468,6 +472,36 @@ class Line(Base):
             "outbound_description",
         )
     )
+
+    async def get_bt_service_id(self) -> int | None:
+        """
+        Returns the bustimes service ID if available, otherwise finds it.
+        """
+        bt_service_id = getattr(self, "bt_service_id", None)
+        if bt_service_id is not None:
+            return bt_service_id
+        else:
+            noc = self.service.operator_noc or ""
+            line_name = self.line_name
+            origin = self.service.origin
+            destination = self.service.destination
+
+            results = await fetch_json(
+                f"{API_BASE}/services/?operator={noc}&search={' '.join([str(line_name), str(origin), str(destination)])}"
+            )
+
+            if not results or "results" not in results:
+                return None
+
+            bt_service = results["results"]
+
+            if len(bt_service) != 1:
+                return None
+
+            service_id = bt_service[0]["id"]
+
+            self.bt_service_id = service_id
+            return service_id
 
 
 class LineStopUsage(Base):
@@ -552,6 +586,7 @@ class Journey(Base):
 
     __tablename__ = "journey"
     id = Column(String, primary_key=True)
+    bt_trip_id = Column(Integer, nullable=True)
     service_code = Column(String, ForeignKey("service.service_code"), nullable=False)
     vehicle_journey_code = Column(String, nullable=True)
     ticket_machine_code = Column(String, nullable=True)
@@ -584,31 +619,39 @@ class Journey(Base):
                 Journey.end_time <= self.start_time,
                 Journey.id != self.id,
             )
+            .options(joinedload(Journey.line).joinedload(Line.service))
             .order_by(Journey.end_time.desc())
             .first()
         )
 
+    async def get_bt_trip_id(self) -> int | None:
+        """
+        Returns the bustimes trip ID if available, otherwise finds it.
+        """
+        bt_trip_id = getattr(self, "bt_trip_id", None)
+        if bt_trip_id is not None:
+            return bt_trip_id
+        else:
+            vjc = self.vehicle_journey_code
+            tmc = self.ticket_machine_code
+            block = self.block_id
 
-class JourneyTripMatch(Base):
-    """
-    cache of matched journey to bustimes trip_id
-    """
+            results = await fetch_json(
+                f"{API_BASE}/trips/?vehicle_journey_code={vjc}&ticket_machine_code={tmc}&block={block or ''}"
+            )
 
-    __tablename__ = "journey_trip_match"
-    journey_id = Column(
-        String, ForeignKey("journey.id"), primary_key=True, nullable=False
-    )
-    trip_id = Column(Integer, nullable=False)
+            if not results or "results" not in results:
+                return None
 
+            bt_trip = results["results"]
 
-class LineServiceMatch(Base):
-    """
-    cache of matched line to bustimes service_id
-    """
+            if len(bt_trip) != 1:
+                return None
 
-    __tablename__ = "line_service_match"
-    line_id = Column(String, ForeignKey("line.id"), primary_key=True, nullable=False)
-    service_id = Column(Integer, nullable=False)
+            trip_id = bt_trip[0]["id"]
+
+            self.bt_trip_id = trip_id
+            return trip_id
 
 
 class StopTime(Base):

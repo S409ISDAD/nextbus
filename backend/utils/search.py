@@ -1,16 +1,39 @@
+import asyncio
 from datetime import datetime, timedelta
 from collections import defaultdict
 
-import pandas as pd
-from sqlalchemy import select
+from backend.deps import get_redis
+from sqlalchemy import select, func, or_
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy_searchable import search
 
 from backend.db.db import SessionLocal
 from backend.models import Line, Service, Stop, Operator
+from backend.utils.match_bt import match_service_line
 
 
-def search_db(query: str, db: Session, limit: int = 10):
+def fuzzy_search_service(query, db, limit=10, threshold=0.2):
+    # Fuzzy search on Service.description and Service.line_names
+    return (
+        db.query(Service)
+        .filter(
+            or_(
+                func.similarity(Service.description, query) > threshold,
+                func.similarity(Service.line_names, query) > threshold,
+            )
+        )
+        .order_by(
+            func.greatest(
+                func.similarity(Service.description, query),
+                func.similarity(Service.line_names, query),
+            ).desc()
+        )
+        .limit(limit)
+        .all()
+    )
+
+
+async def search_db(query: str, db: Session, limit: int = 10):
     results = defaultdict(list)
 
     operators_query = search(select(Operator), query).limit(limit)
@@ -19,6 +42,15 @@ def search_db(query: str, db: Session, limit: int = 10):
 
     service_query = search(select(Service), query).limit(limit)
     service = list(db.scalars(service_query).all())
+    # If not enough results, try fuzzy search
+    if len(service) < limit:
+        fuzzy_services = fuzzy_search_service(query, db, limit=limit)
+        # Avoid duplicates
+        service_ids = {s.service_code for s in service}
+        for s in fuzzy_services:
+            if s.service_code not in service_ids:
+                service.append(s)
+        service = service[:limit]
     results["service"] = service
 
     line_query = search(select(Line), query).limit(limit)
@@ -48,6 +80,6 @@ def search_db(query: str, db: Session, limit: int = 10):
 
 
 if __name__ == "__main__":
-    search_query = "alresford"
+    search_query = "64 Morn Hill, Alresford, Four Marks"
     with SessionLocal() as db:
-        search_db(search_query, db)
+        asyncio.run(search_db(search_query, db))

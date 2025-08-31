@@ -1,87 +1,85 @@
-from backend.models import Journey, JourneyTripMatch, Line, LineServiceMatch
+from sqlalchemy import func, or_
+from backend.models import Journey, Line, Service
 from sqlalchemy.orm import Session
-from backend.utils.fetch_json import fetch_json
-from backend.config import API_BASE
+from backend.services.journeys import get_trip
+from backend.services.services import get_service_info
 
 
-async def match_journey_trip(db: Session, journey_id: str, r) -> int | None:
-    """Match a db journey to a bustimes trip"""
-
-    trip_id = (
-        db.query(JourneyTripMatch.trip_id)
-        .filter(JourneyTripMatch.journey_id == journey_id)
-        .first()
-    )
-    if trip_id:
-        return trip_id[0]
-
-    db_journey: Journey = db.query(Journey).filter(Journey.id == journey_id).first()
-
-    if not db_journey:
-        return None
-
-    vjc = db_journey.vehicle_journey_code
-    tmc = db_journey.ticket_machine_code
-    block = db_journey.block_id
-
-    results = await fetch_json(
-        f"{API_BASE}/trips/?vehicle_journey_code={vjc}&ticket_machine_code={tmc}&block={block or ''}"
+def fuzzy_search_service(query, db, limit=10, threshold=0.2):
+    return (
+        db.query(Service)
+        .filter(
+            or_(
+                func.similarity(Service.description, query) > threshold,
+                func.similarity(Service.line_names, query) > threshold,
+            )
+        )
+        .order_by(
+            func.greatest(
+                func.similarity(Service.description, query),
+                func.similarity(Service.line_names, query),
+            ).desc()
+        )
+        .limit(limit)
+        .all()
     )
 
-    if not results or "results" not in results:
-        return None
 
-    bt_trip = results["results"]
+async def match_service_line(db: Session, service_id: int, r) -> Line | None:
+    # try to find a matching Line in our DB for this service_id
+    line = db.query(Line).filter(Line.bt_service_id == service_id).first()
+    if line:
+        return line
 
-    if len(bt_trip) != 1:
-        return None
+    # if no match by bt_service_id, try to match with other parameters
+    service = await get_service_info(service_id, r)
 
-    trip_id = bt_trip[0]["id"]
+    if service:
+        db_service = fuzzy_search_service(
+            f"{service.line_name} {service.description} {service.detail}", db, limit=10
+        )
 
-    match = JourneyTripMatch(journey_id=journey_id, trip_id=trip_id)
-    db.add(match)
-    db.commit()
+        if db_service:
+            db_service = db_service[0]
+            line_ids = db_service.line_names.split(", ")
+            print(db_service.service_code)
+            line = (
+                db.query(Line)
+                .filter(Line.service_code == db_service.service_code)
+                .filter(Line.line_name.in_(line_ids))
+                .first()
+            )
+        if line:
+            print(
+                f"Matched service {service_id} to line {line.line_name} via fuzzy search"
+            )
+            line.bt_service_id = service_id
+            db.commit()
+            return line
+    return None
 
-    return trip_id
 
+async def match_trip_journey(db: Session, trip_id: int, r) -> Journey | None:
+    # try to find a matching Line in our DB for this service_id
+    line = db.query(Journey).filter(Journey.bt_trip_id == trip_id).first()
+    if line:
+        return line
 
-async def match_line_service(db: Session, line_id: str) -> int | None:
-    """Match a db line to a bustimes service"""
+    # if no match by bt_service_id, try to match with other parameters
+    trip = await get_trip(trip_id, 0, r)
 
-    service_id = (
-        db.query(LineServiceMatch.service_id)
-        .filter(LineServiceMatch.line_id == line_id)
-        .first()
-    )
-    if service_id:
-        return service_id[0]
-
-    db_line: Line = db.query(Line).filter(Line.id == line_id).first()
-
-    if not db_line:
-        return None
-
-    noc = db_line.service.operator_noc or ""
-    line_name = db_line.line_name
-    origin = db_line.service.origin
-    destination = db_line.service.destination
-
-    results = await fetch_json(
-        f"{API_BASE}/services/?operator={noc}&search={' '.join([str(line_name), str(origin), str(destination)])}"
-    )
-
-    if not results or "results" not in results:
-        return None
-
-    bt_service = results["results"]
-
-    if len(bt_service) != 1:
-        return None
-
-    service_id = bt_service[0]["id"]
-
-    match = LineServiceMatch(line_id=line_id, service_id=service_id)
-    db.add(match)
-    db.commit()
-
-    return service_id
+    if trip:
+        query = (
+            db.query(Journey)
+            .filter(Journey.vehicle_journey_code == trip.vehicle_journey_code)
+            .filter(Journey.ticket_machine_code == str(trip.ticket_machine_code))
+        )
+        if trip.block is not None:
+            query = query.filter(Journey.block_id == trip.block)
+        journey = query.first()
+        if journey:
+            print(f"Matched trip {trip_id} to journey {journey.id}")
+            journey.bt_trip_id = trip_id
+            db.commit()
+            return journey
+    return None

@@ -9,7 +9,6 @@ from backend.deps import DateTimeEncoder
 from backend.models import (
     DirectionType,
     Journey,
-    JourneyTripMatch,
     Line,
     Service,
     StopTime,
@@ -24,11 +23,12 @@ from backend.services.prediction import (
     get_started_finished,
     predict_future,
 )
-from backend.utils.match_bt import match_line_service, match_journey_trip
 from backend.services.services import fetch_active_buses, get_service_info
 from backend.utils.fetch_json import fetch_json
 from sqlalchemy.orm import joinedload
 from datetime import datetime, timedelta
+
+from backend.utils.match_bt import match_trip_journey
 
 
 async def fetch_bus(bus_id, r: Redis):
@@ -120,8 +120,12 @@ async def fetch_buses(
         if matched_buses:
             tasks.append(build_bus_candidates(matched_buses, r, stop_id))
         else:
+            with SessionLocal() as db:
+                journey = await match_trip_journey(db, trip_id, r)
+                journey_id = journey.id if journey else None
+            use_db = journey_id is not None
             if use_db:
-                tasks.append(build_scheduled_db(stop_id, trip_id, r))
+                tasks.append(build_scheduled_db(stop_id, trip_id, journey_id, r))
             else:
                 tasks.append(build_scheduled(time, r))
 
@@ -181,17 +185,8 @@ async def build_scheduled(time, r, include_started=True):
     )
 
 
-async def build_scheduled_db(stop_id, trip_id, r, include_started=True):
+async def build_scheduled_db(stop_id, trip_id, journey_id, r, include_started=True):
     with SessionLocal() as db:
-        journey_row = (
-            db.query(JourneyTripMatch.journey_id)
-            .filter(JourneyTripMatch.trip_id == trip_id)
-            .first()
-        )
-        if not journey_row:
-            return None
-        journey_id = journey_row[0]
-
         stop_time: StopTime = (
             db.query(StopTime)
             .filter(StopTime.journey_id == journey_id, StopTime.stop_id == stop_id)
@@ -228,44 +223,44 @@ async def build_scheduled_db(stop_id, trip_id, r, include_started=True):
             else timedelta(0)
         )
 
-        prev_trip = (
-            await match_journey_trip(db, prev_journey.id, r) if prev_journey else None
-        )
+        prev_trip = await prev_journey.get_bt_trip_id() if prev_journey else None
 
-        service_id = await match_line_service(db, prev_journey.line.id)
+        service_id = (
+            await prev_journey.line.get_bt_service_id() if prev_journey else None
+        )
 
         potential_bus = (
             await fetch_bus_trip(service_id, prev_trip, r) if service_id else None
         )
 
         if potential_bus:
-            bus = await build_bus(
-                potential_bus["id"], r, stop_id=stop_id, get_journey=False
-            )
+            print("Found bus from previous trip")
+            bus = await build_bus(potential_bus["id"], r, get_journey=False)
             if not bus:
-                return None
-            delay = max(
-                bus.delay - int(layover_time.total_seconds()), 0
-            )  # account for layover
-            bus.destination = dest
-            bus.scheduled = scheduled
-            bus.expected = scheduled + timedelta(seconds=delay)
-            bus.delay = delay
-            bus.trip = trip_id
-            bus.started = started
+                print("Failed to build bus")
+            else:
+                delay = max(
+                    bus.delay - int(layover_time.total_seconds()), 0
+                )  # account for layover
+                bus.destination = dest
+                bus.scheduled = scheduled
+                bus.expected = scheduled + timedelta(seconds=delay)
+                bus.delay = delay
+                bus.trip = trip_id
+                bus.started = started
+                bus.status = "on_prev_trip"
 
-            return bus
+                return bus
 
-        else:
-            return ScheduledBus(
-                destination=dest,
-                line=stop_time.journey.line.line_name,
-                scheduled=scheduled,
-                expected=scheduled,
-                started=started,
-                trip=trip_id,
-                status="not_tracking",
-            )
+        return ScheduledBus(
+            destination=dest,
+            line=stop_time.journey.line.line_name,
+            scheduled=scheduled,
+            expected=scheduled,
+            started=started,
+            trip=trip_id,
+            status="not_tracking",
+        )
 
 
 async def build_bus_candidates(
@@ -373,6 +368,13 @@ async def build_bus(
     else:
         predictions = []
 
+    status = "tracking"
+
+    if not tracking:
+        status = "not_tracking"
+    if not times.started:
+        status = "waiting"
+
     return TrackedBus(
         type="tracked",
         id=bus_id,
@@ -398,5 +400,5 @@ async def build_bus(
         livery=livery,
         speed=None,
         coords=coords,
-        status="tracking" if tracking else "not_tracking",
+        status=status,
     )

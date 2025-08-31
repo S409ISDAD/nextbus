@@ -174,7 +174,11 @@ function BusCard({
                         )}
                         {!bus.started && (
                             <span className="text-sm font-medium opacity-70">
-                                Upcoming
+                                {bus.status === "not_tracking"
+                                    ? "Upcoming"
+                                    : bus.status === "waiting"
+                                    ? "Not Started"
+                                    : "On prev. trip"}
                             </span>
                         )}
                         {bus.started && (

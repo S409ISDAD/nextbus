@@ -26,6 +26,7 @@ import logging
 from prometheus_fastapi_instrumentator import Instrumentator
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from backend.tasks.full_import import do_import
 
 
 log = logging.getLogger(__name__)
@@ -115,6 +116,10 @@ async def lifespan(app: FastAPI):
         args=[redis],
     )
     scheduler.start()
+
+    # print("Starting full import...")
+    # asyncio.create_task(asyncio.to_thread(do_import))
+    # print("Import started in background.")
 
     yield
 

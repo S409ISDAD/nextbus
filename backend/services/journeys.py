@@ -262,5 +262,8 @@ async def get_trip(trip_id, delay, r) -> Trip:
 
     return Trip(
         service_id=journey.get("service").get("id"),
+        vehicle_journey_code=journey.get("vehicle_journey_code"),
+        ticket_machine_code=journey.get("ticket_machine_code"),
+        block=journey.get("block"),
         stops=stops,
     )
