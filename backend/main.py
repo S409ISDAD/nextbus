@@ -101,6 +101,7 @@ async def lifespan(app: FastAPI):
     await redis.set("total_ws_connections", "0")
     print("Setting up database...")
     Base.metadata.create_all(bind=engine)
+    print("Syncing search vectors...")
     sync_search_vectors()
     print("Database setup complete.")
 

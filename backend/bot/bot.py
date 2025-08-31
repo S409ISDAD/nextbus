@@ -1,6 +1,6 @@
 import asyncio
 import discord
-import dotenv
+from discord import app_commands
 from discord.ext import commands, tasks
 from backend.db.db import SessionLocal
 from backend.models import Line, BotConfig
@@ -26,11 +26,39 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 DASHBOARD_CHANNEL_ID = 1411756379542392953
 
 
+def is_admin():
+    def predicate(interaction: discord.Interaction) -> bool:
+        member = interaction.user
+        if hasattr(member, "roles"):
+            return any(role.name == "owner" for role in member.roles)
+        return False
+
+    return app_commands.check(predicate)
+
+
+@bot.tree.error
+async def on_app_command_error(interaction, error):
+    if isinstance(error, app_commands.errors.MissingRole):
+        await interaction.response.send_message(
+            "You do not have permission to run this.", ephemeral=True
+        )
+
+
 @bot.event
 async def on_ready():
     print(f"Bot logged in as {bot.user}")
     # Initial update
     await update_dashboard()
+
+
+@bot.tree.command(
+    name="update_dashboard", description="Manually update the dashboard message"
+)
+@is_admin()
+async def update_dashboard_command(interaction: discord.Interaction):
+    await interaction.response.defer(thinking=True)
+    await update_dashboard()
+    await interaction.followup.send("Dashboard updated.", ephemeral=True)
 
 
 async def get_dashboard_message() -> discord.Message | None:
