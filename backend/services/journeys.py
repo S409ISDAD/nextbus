@@ -36,11 +36,15 @@ async def get_vehicle_journey(journey_id, delay, r) -> Journey:
 
             aimed = stop.get(aimed_key)
             if aimed:
-                scheduled_time = dt.strptime(aimed, "%H:%M").replace(
-                    year=current_time.year,
-                    month=current_time.month,
-                    day=current_time.day,
-                    tzinfo=LONDON,
+                scheduled_time = (
+                    dt.strptime(aimed, "%H:%M")
+                    .replace(
+                        year=current_time.year,
+                        month=current_time.month,
+                        day=current_time.day,
+                        tzinfo=LONDON,
+                    )
+                    .astimezone(UTC)
                 )
 
                 scheduled_time = check_scheduled_time(scheduled_time, current_time)
@@ -164,11 +168,15 @@ async def get_trip(trip_id, delay, r) -> Trip:
 
             aimed = stop.get(aimed_key)
             if aimed:
-                scheduled_time = dt.strptime(aimed, "%H:%M").replace(
-                    year=current_time.year,
-                    month=current_time.month,
-                    day=current_time.day,
-                    tzinfo=LONDON,
+                scheduled_time = (
+                    dt.strptime(aimed, "%H:%M")
+                    .replace(
+                        year=current_time.year,
+                        month=current_time.month,
+                        day=current_time.day,
+                        tzinfo=LONDON,
+                    )
+                    .astimezone(UTC)
                 )
 
                 scheduled_time = check_scheduled_time(scheduled_time, current_time)
