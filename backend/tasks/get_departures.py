@@ -17,11 +17,11 @@ async def get_departures(stop_id: str, redis):
         use_db_method = False
         is_tomorrow = False
 
-        if stop:
-            db_lines = Stop.lines_served(stop, db)
-            db_line_names = [line.line_name for line in db_lines]
-            if set(line_names).issubset(set(db_line_names)):
-                use_db_method = True
+        # if stop:
+        #     db_lines = Stop.lines_served(stop, db)
+        #     db_line_names = [line.line_name for line in db_lines]
+        #     if set(line_names).issubset(set(db_line_names)):
+        #         use_db_method = True
 
         if use_db_method:
             print("Using DB method for departures")
