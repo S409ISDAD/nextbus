@@ -87,9 +87,9 @@ function BusCard({
                 bus.target_seq !== undefined &&
                 adjustedSeq !== undefined &&
                 adjustedSeq !== null &&
-                adjustedSeq > bus.target_seq
+                adjustedSeq >= bus.target_seq
             ) {
-                adjustedSeq = bus.target_seq;
+                adjustedSeq = bus.target_seq - 1;
             }
             setSequence(adjustedSeq ?? null);
         }
@@ -246,7 +246,7 @@ function BusCard({
                         endIdx
                     );
                     return (
-                        bus.target_seq - sequence < stopsSlice.length - 2 && (
+                        bus.target_seq - sequence < stopsSlice.length - 1 && (
                             <div className="flex flex-row items-center justify-center gap-1 p-3 pt-7 flex-nowrap overflow-clip lg:absolute lg:left-1/2 lg:-translate-x-1/2 lg:-translate-y-17">
                                 {stopsSlice.map((_, index) => {
                                     const actualIndex = startIdx + index;
