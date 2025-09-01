@@ -163,13 +163,9 @@ function App() {
                 </Routes>
                 <footer className="flex flex-row flex-wrap justify-center w-full gap-2 p-3 text-sm text-gray-200 border-t-2 max-h-fit border-neutral-800 grow">
                     <span>© {currentYear} nextbus</span> ·
-                    <div className="flex gap-1 h-fit">
-                        <a
-                            href="/data"
-                            className="underline text-sky-400 h-fit">
-                            Data Sources
-                        </a>
-                    </div>
+                    <a href="/data" className="underline text-sky-400 h-fit">
+                        Data Sources
+                    </a>
                     ·
                     <a href="/privacy" className="underline text-sky-400 h-fit">
                         Privacy

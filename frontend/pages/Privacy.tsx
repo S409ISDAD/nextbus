@@ -14,7 +14,7 @@ const Privacy: React.FC = () => {
         <div className="flex flex-col max-w-3xl gap-5 p-6 mx-auto">
             <span className="text-4xl font-bold">Privacy Policy</span>
             <span>
-                <strong>Last updated:</strong> August 17, 2025
+                <strong>Last updated:</strong> 17/08/2025
             </span>
 
             <span>
