@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import enum
 
 from geoalchemy2 import Geometry
@@ -228,7 +228,7 @@ class Stop(Base):
         """
 
         if date is None:
-            now = datetime.now(tz=LONDON)
+            now = datetime.now(tz=timezone.utc)
         else:
             now = date
 
