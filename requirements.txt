@@ -26,3 +26,4 @@ govuk-bank-holidays
 apscheduler
 ciso8601
 discord.py
+pytest-asyncio
