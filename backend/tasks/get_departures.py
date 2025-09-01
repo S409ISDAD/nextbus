@@ -2,6 +2,7 @@ from backend.services import bus, stops
 from backend.db.db import SessionLocal
 from backend.models import Line, Stop
 from datetime import datetime, timedelta
+from backend.deps import LONDON
 
 
 async def get_departures(stop_id: str, redis):
@@ -28,7 +29,7 @@ async def get_departures(stop_id: str, redis):
             if len(db_times) == 0:
                 print("trying tomorrow")
                 is_tomorrow = True
-                tomorrow = datetime.now() + timedelta(days=1)
+                tomorrow = datetime.now(tz=LONDON) + timedelta(days=1)
                 tomorrow = tomorrow.replace(hour=0, minute=0, second=0, microsecond=0)
                 db_times = stop.times_from_stop(db, date=tomorrow)
 

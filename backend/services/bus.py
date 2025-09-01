@@ -5,6 +5,7 @@ from redis.asyncio import Redis
 
 from backend.config import VEHICLES_BASE
 from backend.db.db import SessionLocal
+from backend.deps import LONDON
 from backend.deps import DateTimeEncoder
 from backend.models import (
     DirectionType,
@@ -212,12 +213,14 @@ async def build_scheduled_db(
         else:
             started = False
 
-        today_midnight = datetime.combine(datetime.today(), datetime.min.time())
+        today_midnight = datetime.combine(
+            datetime.today(), datetime.min.time()
+        ).astimezone(LONDON)
         if is_tomorrow:
             today_midnight += timedelta(days=1)
         scheduled = today_midnight + stop_time.departure_time
 
-        if (scheduled - datetime.now()).total_seconds() > 11 * 3600:
+        if (scheduled - datetime.now(tz=LONDON)).total_seconds() > 11 * 3600:
             return None
 
         dest = (
@@ -262,7 +265,7 @@ async def build_scheduled_db(
                 bus.status = "on_prev_trip"
 
                 # Don't show if expected is more than 2 hours away
-                if (bus.expected - datetime.now()).total_seconds() < 2 * 3600:
+                if (bus.expected - datetime.now(tz=LONDON)).total_seconds() < 2 * 3600:
                     return bus
                 print("Bus expected too far in future")
 

@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 from sqlalchemy.orm import Session, joinedload
 
 from backend.db.db import SessionLocal
+from backend.deps import LONDON
 from backend.models import (
     Calendar,
     DirectionType,
@@ -13,7 +14,7 @@ from backend.models import (
 
 
 def times_from_stop(stop_id: str, db: Session, limit: int = 10):
-    now = datetime.now()
+    now = datetime.now(tz=LONDON)
     # now = datetime(year=2025, month=8, day=10, hour=11, minute=1, second=0)
     weekday_attr = now.strftime("%A").lower()
     today_date = now.date()

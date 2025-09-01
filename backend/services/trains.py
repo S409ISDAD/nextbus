@@ -16,6 +16,7 @@ from backend.utils.trains import operator_map
 from datetime import datetime
 from datetime import timezone, timedelta
 import asyncio
+from backend.deps import LONDON
 
 
 async def parse_operator(atocName: str):
@@ -42,8 +43,7 @@ def parse_time(time_str: str):
     except ValueError:
         return None
 
-    uk_timezone = timezone(timedelta(hours=1))
-    now = datetime.now(timezone.utc).astimezone(uk_timezone)
+    now = datetime.now(tz=LONDON)
     date = now.replace(hour=hours, minute=minutes, second=seconds, microsecond=0)
 
     # If the time is more than 12 hours behind now, assume it's for the next day (overnight trains)
@@ -143,8 +143,7 @@ async def parse_train(train) -> TrainService | None:
         operator = await parse_operator(atoc_name)
 
         updated_stops: List[ServiceLocation] = []
-        uk_timezone = timezone(timedelta(hours=1))
-        now = datetime.now(timezone.utc).astimezone(uk_timezone)
+        now = datetime.now(tz=LONDON)
 
         for location in train.get("locations", []):
             expected_departure = parse_time(location.get("realtimeDeparture"))
@@ -369,7 +368,7 @@ async def get_service(
         if running_date:
             date_str = running_date.replace("-", "/")
         else:
-            today = datetime.now()
+            today = datetime.now(tz=LONDON)
             date_str = today.strftime("%Y/%m/%d")
         url = f"https://api.rtt.io/api/v1/json/service/{service_id}/{date_str}"
         train = await fetch_rtt_json(url)

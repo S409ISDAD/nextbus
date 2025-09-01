@@ -4,6 +4,9 @@ import redis.asyncio as redis
 import os
 from slowapi import Limiter
 from slowapi.util import get_remote_address
+from zoneinfo import ZoneInfo
+
+LONDON = ZoneInfo("Europe/London")
 
 
 def get_redis_url() -> str:

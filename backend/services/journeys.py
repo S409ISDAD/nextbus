@@ -5,6 +5,7 @@ from datetime import timedelta
 from geopy.distance import geodesic
 
 from backend.config import API_BASE
+from backend.deps import LONDON
 from backend.schemas.journey import Journey, Trip
 from backend.schemas.stop import StopTime
 from backend.services.caching import (
@@ -24,8 +25,7 @@ async def get_vehicle_journey(journey_id, delay, r) -> Journey:
         if not data:
             return
 
-        uk_timezone = datetime.timezone(datetime.timedelta(hours=1))
-        current_time = dt.now(datetime.timezone.utc).astimezone(uk_timezone)
+        current_time = dt.now(tz=LONDON)
         prev_time = 0
         total_delay = 0
         times = data["times"]
@@ -84,8 +84,7 @@ async def get_vehicle_journey(journey_id, delay, r) -> Journey:
     json_stops = journey.get("times")
     stops: list[StopTime] = []
 
-    uk_timezone = datetime.timezone(datetime.timedelta(hours=1))
-    current_time = dt.now(datetime.timezone.utc).astimezone(uk_timezone)
+    current_time = dt.now(tz=LONDON)
 
     started = False
 
@@ -154,8 +153,7 @@ async def get_trip(trip_id, delay, r) -> Trip:
         if not data:
             return
 
-        uk_timezone = datetime.timezone(datetime.timedelta(hours=1))
-        current_time = dt.now(datetime.timezone.utc).astimezone(uk_timezone)
+        current_time = dt.now(tz=LONDON)
         prev_time = 0
         total_delay = 0
         times = data["times"]
@@ -214,8 +212,7 @@ async def get_trip(trip_id, delay, r) -> Trip:
     json_stops = journey.get("times")
     stops: list[StopTime] = []
 
-    uk_timezone = datetime.timezone(datetime.timedelta(hours=1))
-    current_time = dt.now(datetime.timezone.utc).astimezone(uk_timezone)
+    current_time = dt.now(tz=LONDON)
     started = False
 
     for stop_idx, stop in enumerate(json_stops):
