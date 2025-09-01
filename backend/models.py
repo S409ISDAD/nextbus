@@ -22,7 +22,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, Session, joinedload
 from sqlalchemy_searchable import make_searchable
 from sqlalchemy_utils.types import TSVectorType
-from backend.deps import UTC
+from backend.deps import LONDON, UTC
 
 from backend.config import API_BASE
 from backend.utils.fetch_json import fetch_json
@@ -228,7 +228,7 @@ class Stop(Base):
         """
 
         if date is None:
-            now = datetime.now(tz=timezone.utc)
+            now = datetime.now(tz=LONDON)
         else:
             now = date
 
@@ -264,10 +264,10 @@ class Stop(Base):
             has_exception = False
             for exc in cal.calendar_exceptions:
                 if exc.start_date <= today_date <= exc.end_date:
-                    if not exc.operating:
-                        has_exception = True
-                    else:
+                    if exc.operating:
                         has_exception = False
+                    else:
+                        has_exception = True
                     break
             if has_exception:
                 continue

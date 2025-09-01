@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 
 from backend.bot.bot import update_dashboard
 from backend.db.db import SessionLocal
+from backend.deps import LONDON
 from backend.models import (
     BankHoliday,
     Calendar,
@@ -66,7 +67,7 @@ def import_txc_zip(zip_path):
 class TXCImporter:
     def __init__(self, xml_file):
         self.txc_data = txc.TransXChange(xml_file)
-        self.today = datetime.now(timezone.utc).astimezone(timezone.utc)
+        self.today = datetime.now(tz=LONDON)
         self.service_id = None
         self.calendar_cache = {}
         self.db = SessionLocal()
