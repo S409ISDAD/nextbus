@@ -254,27 +254,33 @@ function BusCard({
                                         <div
                                             key={actualIndex}
                                             className="flex items-center gap-1">
-                                            {actualIndex === sequence && (
+                                            {actualIndex === sequence + 1 && (
                                                 <div className="absolute translate-x-[-31px] flex items-center justify-center">
                                                     <span className="absolute text-xs translate-y-[-23px] text-nowrap text-neutral-400">
                                                         {bus.target_seq !==
                                                             undefined &&
-                                                        sequence !== undefined
+                                                        sequence !== null
                                                             ? (() => {
                                                                   const stopsAway =
                                                                       bus.target_seq -
-                                                                      sequence;
+                                                                      sequence -
+                                                                      1;
+                                                                  if (
+                                                                      stopsAway ===
+                                                                      0
+                                                                  )
+                                                                      return "next stop";
                                                                   if (
                                                                       stopsAway ===
                                                                       1
                                                                   )
                                                                       return "1 stop away";
                                                                   if (
-                                                                      stopsAway ===
-                                                                      0
+                                                                      stopsAway >
+                                                                      1
                                                                   )
-                                                                      return "next stop";
-                                                                  return `${stopsAway} stops away`;
+                                                                      return `${stopsAway} stops away`;
+                                                                  return "Stop info unavailable";
                                                               })()
                                                             : "Stop info unavailable"}
                                                     </span>
