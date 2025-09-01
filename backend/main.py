@@ -129,13 +129,8 @@ async def lifespan(app: FastAPI):
         replace_existing=True,
         args=[redis],
     )
-    scheduler.add_job(
-        update_dashboard,
-        CronTrigger(minute="0", second="0"),
-        id="update_bot",
-        replace_existing=True,
-    )
     scheduler.start()
+    print("App startup complete.")
 
     # print("Starting full import...")
     # asyncio.create_task(asyncio.to_thread(do_import))

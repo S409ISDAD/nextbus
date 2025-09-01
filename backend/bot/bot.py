@@ -2,6 +2,7 @@ import asyncio
 import discord
 from discord import app_commands
 from discord.ext import commands, tasks
+from discord.ext.commands.bot import Bot
 from backend.db.db import SessionLocal
 from backend.deps import UTC
 from backend.models import Line, BotConfig
@@ -11,12 +12,28 @@ from sqlalchemy import event
 import os
 
 
+update_queue = asyncio.Queue()
+
+
 @event.listens_for(Line, "after_insert")
 @event.listens_for(Line, "after_update")
 @event.listens_for(Line, "after_delete")
 def route_changed(mapper, connection, target):
     # update the message as a line has been added
-    asyncio.create_task(update_dashboard())
+    try:
+        loop = asyncio.get_event_loop()
+        print("queueing dashboard update due to route change...")
+        loop.create_task(update_queue.put(True))
+    except RuntimeError:
+        print("No running event loop; dashboard update not queued.")
+
+
+async def update_dashboard_worker():
+    await bot.wait_until_ready()
+    while True:
+        await update_queue.get()
+        await update_dashboard()
+        update_queue.task_done()
 
 
 intents = discord.Intents.default()
@@ -49,6 +66,9 @@ async def on_app_command_error(interaction, error):
 async def on_ready():
     print(f"Bot logged in as {bot.user}")
     # Initial update
+    if not getattr(bot, "_dashboard_worker_started", False):
+        bot.loop.create_task(update_dashboard_worker())
+        setattr(bot, "_dashboard_worker_started", True)
     await update_dashboard()
 
 
@@ -79,6 +99,7 @@ async def get_dashboard_message() -> discord.Message | None:
 
 
 async def update_dashboard():
+    await bot.wait_until_ready()
     print("Updating dashboard message...")
     with SessionLocal() as db:
         lines = db.query(Line).join(Line.service).all()
