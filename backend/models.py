@@ -22,7 +22,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, Session, joinedload
 from sqlalchemy_searchable import make_searchable
 from sqlalchemy_utils.types import TSVectorType
-from backend.deps import LONDON
+from backend.deps import UTC
 
 from backend.config import API_BASE
 from backend.utils.fetch_json import fetch_json

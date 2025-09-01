@@ -6,7 +6,7 @@ from datetime import timedelta
 import logging
 from fastapi import APIRouter, Depends, HTTPException, Request
 
-from backend.deps import LONDON, get_redis, limiter
+from backend.deps import UTC, get_redis, limiter
 from backend.services import bus, stops
 
 router = APIRouter()
@@ -31,7 +31,7 @@ async def departures_scheduled(
         buses = await asyncio.gather(*tasks)
         buses = [bus for bus in buses if bus is not None]
 
-        current_time = dt.now(tz=LONDON).isoformat()
+        current_time = dt.now(tz=UTC).isoformat()
         return {"buses": buses, "timestamp": current_time}
     except Exception as e:
         log.error(f"Unexpected error: {e}")
@@ -48,7 +48,7 @@ async def departures_live(request: Request, stop_id: str, redis=Depends(get_redi
 
         buses = await bus.fetch_buses_live(service_ids, stop_id, redis)
 
-        current_time = dt.now(tz=LONDON).isoformat()
+        current_time = dt.now(tz=UTC).isoformat()
         return {"buses": buses, "timestamp": current_time}
     except Exception as e:
         log.error(f"Unexpected error: {e}")
@@ -67,7 +67,7 @@ async def departures(request: Request, stop_id: str, redis=Depends(get_redis)):
 
         buses = await bus.fetch_buses(service_ids, stop_id, times, redis)
 
-        current_time = dt.now(tz=LONDON).isoformat()
+        current_time = dt.now(tz=UTC).isoformat()
 
         return {"buses": buses, "timestamp": current_time}
     except Exception as e:

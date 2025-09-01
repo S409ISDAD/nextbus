@@ -1,6 +1,6 @@
 from datetime import timedelta
 import datetime
-from backend.deps import LONDON
+from backend.deps import UTC
 from backend.schemas.prediction import Prediction
 from backend.schemas.trains import ServiceLocation, TrainService
 from datetime import datetime as dt
@@ -43,7 +43,7 @@ async def predict_future(
     ahead: int,
     r,
 ) -> list[Prediction]:
-    current_time = dt.now(tz=LONDON)
+    current_time = dt.now(tz=UTC)
 
     stops = service.locations
 
@@ -83,7 +83,7 @@ async def predict_future(
 
 
 async def get_started_finished(service: TrainService, r):
-    current_time = dt.now(tz=LONDON)
+    current_time = dt.now(tz=UTC)
 
     not_started = False
     finished = False

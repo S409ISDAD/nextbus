@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import json
 import redis.asyncio as redis
 import os
@@ -6,7 +6,7 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 from zoneinfo import ZoneInfo
 
-LONDON = ZoneInfo("Europe/London")
+UTC = timezone.utc
 
 
 def get_redis_url() -> str:

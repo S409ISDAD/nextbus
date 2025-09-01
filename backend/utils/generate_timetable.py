@@ -6,11 +6,11 @@ from sqlalchemy.orm import Session
 
 from backend.db.db import SessionLocal
 from backend.models import Calendar, Service, StopTime, Journey, DirectionType
-from backend.deps import LONDON
+from backend.deps import UTC
 
 
 def generate_timetable(line_id: str, db: Session):
-    today = datetime.now(tz=LONDON).date()
+    today = datetime.now(tz=UTC).date()
 
     # Fetch the services for the given route
     services = (

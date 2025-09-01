@@ -3,7 +3,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands, tasks
 from backend.db.db import SessionLocal
-from backend.deps import LONDON
+from backend.deps import UTC
 from backend.models import Line, BotConfig
 from backend.utils.fetch_json import fetch_json
 from datetime import datetime
@@ -98,7 +98,7 @@ async def update_dashboard():
             "# This channel is for requesting routes to be added to the system until I set up a full import.\n\nThese routes have advanced capabilities over other routes. e.g. predicting buses using blocks.\n## Routes in the system:\n"
             + lines_text
             + "\nPlease provide the name of the route and where it is located. (bustimes.org link is preferred)"
-            + f"\n\n-# updated <t:{int(datetime.now(tz=LONDON).timestamp())}:R>"
+            + f"\n\n-# updated <t:{int(datetime.now(tz=UTC).timestamp())}:R>"
         )
 
         # Fetch the dashboard message

@@ -1,7 +1,7 @@
 from datetime import timedelta
 import datetime
 from geopy.distance import geodesic
-from backend.deps import LONDON
+from backend.deps import UTC
 from backend.schemas.journey import Journey
 from backend.schemas.prediction import Prediction
 from backend.schemas.stop import StopTime
@@ -79,7 +79,7 @@ async def predict_future(
     ahead: int,
     r,
 ) -> list[Prediction]:
-    current_time = dt.now(tz=LONDON)
+    current_time = dt.now(tz=UTC)
 
     stops = journey.stops
 
@@ -141,7 +141,7 @@ async def predict_future(
 async def calculate_expected(delay, sequence, stop_id, journey_id, r):
     journey = await get_vehicle_journey(journey_id, delay, r)
 
-    current_time = dt.now(tz=LONDON)
+    current_time = dt.now(tz=UTC)
 
     not_started = False
     finished = False
@@ -200,7 +200,7 @@ async def calculate_expected(delay, sequence, stop_id, journey_id, r):
 async def get_started_finished(trip_id, r):
     trip = await get_trip(trip_id, 0, r)
 
-    current_time = dt.now(tz=LONDON)
+    current_time = dt.now(tz=UTC)
 
     not_started = False
     finished = False
