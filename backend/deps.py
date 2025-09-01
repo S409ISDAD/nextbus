@@ -7,6 +7,7 @@ from slowapi.util import get_remote_address
 from zoneinfo import ZoneInfo
 
 UTC = timezone.utc
+LONDON = ZoneInfo("Europe/London")
 
 
 def get_redis_url() -> str:

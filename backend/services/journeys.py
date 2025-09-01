@@ -5,7 +5,7 @@ from datetime import timedelta
 from geopy.distance import geodesic
 
 from backend.config import API_BASE
-from backend.deps import UTC
+from backend.deps import LONDON, UTC
 from backend.schemas.journey import Journey, Trip
 from backend.schemas.stop import StopTime
 from backend.services.caching import (
@@ -40,7 +40,7 @@ async def get_vehicle_journey(journey_id, delay, r) -> Journey:
                     year=current_time.year,
                     month=current_time.month,
                     day=current_time.day,
-                    tzinfo=current_time.tzinfo,
+                    tzinfo=LONDON,
                 )
 
                 scheduled_time = check_scheduled_time(scheduled_time, current_time)
@@ -168,7 +168,7 @@ async def get_trip(trip_id, delay, r) -> Trip:
                     year=current_time.year,
                     month=current_time.month,
                     day=current_time.day,
-                    tzinfo=current_time.tzinfo,
+                    tzinfo=LONDON,
                 )
 
                 scheduled_time = check_scheduled_time(scheduled_time, current_time)

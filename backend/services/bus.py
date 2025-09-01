@@ -161,10 +161,10 @@ async def fetch_buses_live(services, stop_id, r: Redis) -> list[TrackedBus]:
 
 
 async def build_scheduled(time, r, include_started=True):
-    scheduled = parser.isoparse(time.get("aimed_departure_time"))
+    scheduled = parser.isoparse(time.get("aimed_departure_time")).astimezone(UTC)
 
     if time.get("expected_departure_time"):
-        expected = parser.isoparse(time.get("expected_departure_time"))
+        expected = parser.isoparse(time.get("expected_departure_time")).astimezone(UTC)
 
     else:
         expected = scheduled
