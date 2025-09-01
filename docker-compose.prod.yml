@@ -4,7 +4,7 @@ services:
       context: .
       dockerfile: Dockerfile.prod
     ports:
-    - "80:80"
+      - "80:80"
     environment:
       REDIS_HOST: redis://redis:6379
       RTT_USERNAME: ${RTT_USERNAME}
@@ -27,6 +27,9 @@ services:
     image: redis:latest
     ports:
       - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
     networks:
       - web
 

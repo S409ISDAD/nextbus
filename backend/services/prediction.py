@@ -209,7 +209,7 @@ async def get_started_finished(trip_id, r):
 
     for stop_time in trip.stops:
         if stop_idx == 0:
-            scheduled_time_start = stop_time.aimed_time
+            scheduled_time_start = stop_time.aimed_time.astimezone(UTC)
 
             if scheduled_time_start > current_time:
                 not_started = True

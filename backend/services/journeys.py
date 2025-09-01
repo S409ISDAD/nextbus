@@ -36,18 +36,8 @@ async def get_vehicle_journey(journey_id, delay, r) -> Journey:
 
             aimed = stop.get(aimed_key)
             if aimed:
-                scheduled_time = (
-                    dt.strptime(aimed, "%H:%M")
-                    .replace(
-                        year=current_time.year,
-                        month=current_time.month,
-                        day=current_time.day,
-                        tzinfo=LONDON,
-                    )
-                    .astimezone(UTC)
-                )
-
-                scheduled_time = check_scheduled_time(scheduled_time, current_time)
+                aimed_dt = dt.strptime(aimed, "%H:%M")
+                scheduled_time = timedelta(hours=aimed_dt.hour, minutes=aimed_dt.minute)
 
                 expt_time = scheduled_time
                 old_expt = expt_time
@@ -67,8 +57,8 @@ async def get_vehicle_journey(journey_id, delay, r) -> Journey:
 
                 prev_time = old_expt
 
-                stop["aimed_time"] = scheduled_time
-                stop["expt_time"] = expt_time
+                stop["aimed_time"] = scheduled_time.total_seconds()
+                stop["expt_time"] = expt_time.total_seconds()
 
         # data["stops"] = await recalculate_timetable(data["stops"], journey_id, r)
 
@@ -103,12 +93,25 @@ async def get_vehicle_journey(journey_id, delay, r) -> Journey:
         coords = [coords[1], coords[0]]
 
         expt = stop.get("expt_time")
-        if type(expt) is str:
-            expt = dt.fromisoformat(expt)
+        expt = timedelta(seconds=expt)
+        expt = (dt.min + expt).replace(
+            tzinfo=UTC,
+            day=current_time.day,
+            month=current_time.month,
+            year=current_time.year,
+        )
+        expt = check_scheduled_time(expt, current_time)
 
         aimed = stop.get("aimed_time")
-        if type(aimed) is str:
-            aimed = dt.fromisoformat(aimed)
+        aimed = timedelta(seconds=aimed)
+        aimed = (dt.min + aimed).replace(
+            tzinfo=UTC,
+            day=current_time.day,
+            month=current_time.month,
+            year=current_time.year,
+        )
+
+        aimed = check_scheduled_time(aimed, current_time)
 
         if stop_idx == 0:
             if aimed < current_time:
@@ -130,7 +133,7 @@ async def get_vehicle_journey(journey_id, delay, r) -> Journey:
             StopTime(
                 stop_id=stop["stop"].get("atco_code"),
                 name=stop["stop"].get("name"),
-                aimed_time=stop.get("aimed_time"),
+                aimed_time=aimed,
                 expt_time=expt,
                 departed=departed,
                 track=track,
@@ -157,7 +160,6 @@ async def get_trip(trip_id, delay, r) -> Trip:
         if not data:
             return
 
-        current_time = dt.now(tz=UTC)
         prev_time = 0
         total_delay = 0
         times = data["times"]
@@ -168,18 +170,8 @@ async def get_trip(trip_id, delay, r) -> Trip:
 
             aimed = stop.get(aimed_key)
             if aimed:
-                scheduled_time = (
-                    dt.strptime(aimed, "%H:%M")
-                    .replace(
-                        year=current_time.year,
-                        month=current_time.month,
-                        day=current_time.day,
-                        tzinfo=LONDON,
-                    )
-                    .astimezone(UTC)
-                )
-
-                scheduled_time = check_scheduled_time(scheduled_time, current_time)
+                aimed_dt = dt.strptime(aimed, "%H:%M")
+                scheduled_time = timedelta(hours=aimed_dt.hour, minutes=aimed_dt.minute)
 
                 expt_time = scheduled_time
                 old_expt = expt_time
@@ -199,8 +191,8 @@ async def get_trip(trip_id, delay, r) -> Trip:
 
                 prev_time = old_expt
 
-                stop["aimed_time"] = scheduled_time
-                stop["expt_time"] = expt_time
+                stop["aimed_time"] = scheduled_time.total_seconds()
+                stop["expt_time"] = expt_time.total_seconds()
 
         # data["stops"] = await recalculate_timetable(data["stops"], journey_id, r)
 
@@ -209,7 +201,7 @@ async def get_trip(trip_id, delay, r) -> Trip:
 
         return data
 
-    journey = await get_cached(
+    trip = await get_cached(
         key=f"trips:{trip_id}",
         func=fetch,
         args=(trip_id,),
@@ -217,7 +209,7 @@ async def get_trip(trip_id, delay, r) -> Trip:
         r=r,
     )
 
-    json_stops = journey.get("times")
+    json_stops = trip.get("times")
     stops: list[StopTime] = []
 
     current_time = dt.now(tz=UTC)
@@ -234,12 +226,25 @@ async def get_trip(trip_id, delay, r) -> Trip:
         coords = [coords[1], coords[0]]
 
         expt = stop.get("expt_time")
-        if type(expt) is str:
-            expt = dt.fromisoformat(expt)
+        expt = timedelta(seconds=expt)
+        expt = (dt.min + expt).replace(
+            tzinfo=UTC,
+            day=current_time.day,
+            month=current_time.month,
+            year=current_time.year,
+        )
+        expt = check_scheduled_time(expt, current_time)
 
         aimed = stop.get("aimed_time")
-        if type(aimed) is str:
-            aimed = dt.fromisoformat(aimed)
+        aimed = timedelta(seconds=aimed)
+        aimed = (dt.min + aimed).replace(
+            tzinfo=UTC,
+            day=current_time.day,
+            month=current_time.month,
+            year=current_time.year,
+        )
+
+        aimed = check_scheduled_time(aimed, current_time)
 
         if stop_idx == 0:
             if aimed < current_time:
@@ -256,7 +261,7 @@ async def get_trip(trip_id, delay, r) -> Trip:
             StopTime(
                 stop_id=stop["stop"].get("atco_code"),
                 name=stop["stop"].get("name"),
-                aimed_time=stop.get("aimed_time"),
+                aimed_time=aimed,
                 expt_time=expt,
                 departed=departed,
                 track=track,
@@ -266,9 +271,9 @@ async def get_trip(trip_id, delay, r) -> Trip:
         )
 
     return Trip(
-        service_id=journey.get("service").get("id"),
-        vehicle_journey_code=journey.get("vehicle_journey_code"),
-        ticket_machine_code=journey.get("ticket_machine_code"),
-        block=journey.get("block"),
+        service_id=trip.get("service").get("id"),
+        vehicle_journey_code=trip.get("vehicle_journey_code"),
+        ticket_machine_code=trip.get("ticket_machine_code"),
+        block=trip.get("block"),
         stops=stops,
     )
