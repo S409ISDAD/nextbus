@@ -78,6 +78,7 @@ async def get_dashboard_message() -> discord.Message | None:
 
 
 async def update_dashboard():
+    print("Updating dashboard message...")
     with SessionLocal() as db:
         lines = db.query(Line).join(Line.service).all()
         lines_text = ""
@@ -93,9 +94,9 @@ async def update_dashboard():
                 bustimes_link = f"(https://bustimes.org/services/{slug})"
                 lines_text += f"[{line.line_name} | {line.service.origin} - {line.service.destination}]{bustimes_link}\n"
         msg_content = (
-            "# This channel is for requesting routes to be added to the system until I set up a full import.\n## Routes in the system:\n"
+            "# This channel is for requesting routes to be added to the system until I set up a full import.\n\nThese routes have advanced capabilities over other routes. e.g. predicting buses using blocks.\n## Routes in the system:\n"
             + lines_text
-            + "\nPlease say the name of the route and where it is located. (bustimes.org link would be super helpful)"
+            + "\nPlease provide the name of the route and where it is located. (bustimes.org link is preferred)"
             + f"\n\n-# updated <t:{int(datetime.now().timestamp())}:R>"
         )
 
@@ -122,3 +123,6 @@ async def update_dashboard():
             db.commit()
         if message:
             await message.edit(content=msg_content, suppress=True)
+            print("Dashboard message updated.")
+        else:
+            print("Could not find or create dashboard message.")

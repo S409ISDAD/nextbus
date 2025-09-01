@@ -29,7 +29,7 @@ from prometheus_fastapi_instrumentator import Instrumentator
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from backend.tasks.full_import import do_import
-from backend.bot.bot import bot
+from backend.bot.bot import bot, update_dashboard
 
 
 log = logging.getLogger(__name__)
@@ -101,8 +101,9 @@ async def lifespan(app: FastAPI):
     await redis.set("total_ws_connections", "0")
     print("Setting up database...")
     Base.metadata.create_all(bind=engine)
-    print("Syncing search vectors...")
-    asyncio.create_task(asyncio.to_thread(sync_search_vectors))
+    # we dont actually need to sync vectors every startup
+    # print("Syncing search vectors...")
+    # asyncio.create_task(asyncio.to_thread(sync_search_vectors))
     print("Database setup complete.")
 
     print("Starting discord bot...")
@@ -127,6 +128,12 @@ async def lifespan(app: FastAPI):
         id="clear_redis_stats",
         replace_existing=True,
         args=[redis],
+    )
+    scheduler.add_job(
+        update_dashboard,
+        CronTrigger(minute="0", second="0"),
+        id="update_bot",
+        replace_existing=True,
     )
     scheduler.start()
 

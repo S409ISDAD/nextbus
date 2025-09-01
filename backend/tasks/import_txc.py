@@ -640,7 +640,7 @@ class TXCImporter:
                 self.db.flush()
 
             self.db.commit()
-            await update_dashboard()
+            # await update_dashboard()
         except Exception as e:
             print("An error occurred during txc import:")
             error_str = e.__str__()

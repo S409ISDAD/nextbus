@@ -261,7 +261,10 @@ async def build_scheduled_db(
                 bus.started = started
                 bus.status = "on_prev_trip"
 
-                return bus
+                # Don't show if expected is more than 2 hours away
+                if (bus.expected - datetime.now()).total_seconds() < 2 * 3600:
+                    return bus
+                print("Bus expected too far in future")
 
         return ScheduledBus(
             destination=dest,

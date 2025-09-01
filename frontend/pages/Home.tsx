@@ -10,7 +10,11 @@ import type { ServiceInfo } from "../models/ServiceInfo";
 import getNearby from "../utils/getNearby";
 import type { StationData } from "uk-railway-stations";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBus, faTrainSubway } from "@fortawesome/free-solid-svg-icons";
+import {
+    faBus,
+    faTrainSubway,
+    faWarning,
+} from "@fortawesome/free-solid-svg-icons";
 import { getClosestStop } from "../utils/closestStop";
 import { StationCombobox } from "../components/StationCombobox";
 
@@ -73,13 +77,33 @@ const Home: React.FC = () => {
         <div>
             <div className="flex flex-col items-center justify-center gap-6">
                 <div className="flex flex-col items-center justify-center gap-5 pt-0 p-7">
-                    <div className="flex flex-row items-center gap-1">
-                        <span className="text-5xl font-black text-center pt-7">
-                            nextbus
-                        </span>
-                        <span className="text-xl font-bold h-fit text-sky-500">
-                            beta
-                        </span>
+                    <div className="flex flex-col items-center justify-center p-2">
+                        <div className="flex flex-row gap-1 p-2 px-4 rounded-2xl bg-amber-500">
+                            <span className="text-center text text-neutral-950">
+                                <FontAwesomeIcon
+                                    icon={faWarning}></FontAwesomeIcon>
+                                <strong>CAUTION!</strong> This is a work in
+                                progress. There may be some bugs and issues, and
+                                the information given is not guaranteed to be
+                                true.{" "}
+                                <a
+                                    href="https://discord.gg/dyEmZSkwge"
+                                    className="text-red-800 underline h-fit"
+                                    target="_blank"
+                                    rel="noopener noreferrer">
+                                    Join the Discord
+                                </a>{" "}
+                                if you would like to suggest or report anything.
+                            </span>
+                        </div>
+                        <div className="flex flex-row items-center gap-1">
+                            <span className="text-5xl font-black text-center pt-7">
+                                nextbus
+                            </span>
+                            <span className="text-xl font-bold h-fit text-sky-500">
+                                beta
+                            </span>
+                        </div>
                     </div>
 
                     {showStop && closestStop && (
@@ -170,6 +194,12 @@ const Home: React.FC = () => {
                                 ))}
                             </div>
                         </Card>
+                        <div className="flex flex-col items-center gap-2">
+                            <span className="text-xl font-bold text-center">
+                                Or find your stop on the map:
+                            </span>
+                            <StopMap />
+                        </div>
 
                         <TrainSearchCard></TrainSearchCard>
 
@@ -205,12 +235,6 @@ const Home: React.FC = () => {
                             </button>
                         </Card>
                     </div>
-
-                    <span className="text-xl font-bold text-center">
-                        Or find your stop on the map:
-                    </span>
-
-                    <StopMap />
                 </div>
                 {/* <div className="flex flex-row flex-wrap items-center justify-center gap-5 p-5 md:gap-15">
                     <span className="text-3xl font-bold text-center md:text-4xl md:w-80">
