@@ -95,7 +95,7 @@ async def get_vehicle_journey(journey_id, delay, r) -> Journey:
         expt = stop.get("expt_time")
         expt = timedelta(seconds=expt)
         expt = (dt.min + expt).replace(
-            tzinfo=UTC,
+            tzinfo=LONDON,
             day=current_time.day,
             month=current_time.month,
             year=current_time.year,
@@ -105,7 +105,7 @@ async def get_vehicle_journey(journey_id, delay, r) -> Journey:
         aimed = stop.get("aimed_time")
         aimed = timedelta(seconds=aimed)
         aimed = (dt.min + aimed).replace(
-            tzinfo=UTC,
+            tzinfo=LONDON,
             day=current_time.day,
             month=current_time.month,
             year=current_time.year,
@@ -228,7 +228,7 @@ async def get_trip(trip_id, delay, r) -> Trip:
         expt = stop.get("expt_time")
         expt = timedelta(seconds=expt)
         expt = (dt.min + expt).replace(
-            tzinfo=UTC,
+            tzinfo=LONDON,
             day=current_time.day,
             month=current_time.month,
             year=current_time.year,
@@ -238,7 +238,7 @@ async def get_trip(trip_id, delay, r) -> Trip:
         aimed = stop.get("aimed_time")
         aimed = timedelta(seconds=aimed)
         aimed = (dt.min + aimed).replace(
-            tzinfo=UTC,
+            tzinfo=LONDON,
             day=current_time.day,
             month=current_time.month,
             year=current_time.year,
