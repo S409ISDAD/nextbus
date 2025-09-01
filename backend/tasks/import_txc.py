@@ -38,20 +38,21 @@ import concurrent.futures
 logger = logging.getLogger(__name__)
 
 
-def import_txc_zip(zip_path):
+async def import_txc_zip(zip_path):
     with zipfile.ZipFile(zip_path, "r") as zf:
         xml_files = [
             filename for filename in zf.namelist() if filename.endswith(".xml")
         ]
 
-        def process_xml(filename):
-            with zf.open(filename) as xml_file:
-                print(f"Processing file: {filename}")
-                txc_importer = TXCImporter(xml_file)
-                txc_importer.handle_txc_file()
+        total = len(xml_files)
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers=6) as executor:
-            executor.map(process_xml, xml_files)
+        for filename in xml_files:
+            with zf.open(filename) as xml_file:
+                print(
+                    f"Processing file: {filename} ({xml_files.index(filename) + 1}/{total})"
+                )
+                txc_importer = TXCImporter(xml_file)
+                await txc_importer.handle_txc_file()
 
 
 # def import_txc_zip(zip_path):
@@ -656,7 +657,7 @@ if __name__ == "__main__":
         exit(1)
     input_path = sys.argv[1]
     if input_path.lower().endswith(".zip"):
-        import_txc_zip(input_path)
+        asyncio.run(import_txc_zip(input_path))
     elif input_path.lower().endswith(".xml"):
         with open(input_path, "rb") as xml_file:
             txc_importer = TXCImporter(xml_file)

@@ -22,6 +22,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, Session, joinedload
 from sqlalchemy_searchable import make_searchable
 from sqlalchemy_utils.types import TSVectorType
+from backend.db.db import SessionLocal
 from backend.deps import LONDON, UTC
 
 from backend.config import API_BASE
@@ -481,7 +482,7 @@ class Line(Base):
         )
     )
 
-    async def get_bt_service_id(self) -> int | None:
+    async def get_bt_service_id(self, db: Session) -> int | None:
         """
         Returns the bustimes service ID if available, otherwise finds it.
         """
@@ -507,6 +508,11 @@ class Line(Base):
                 return None
 
             service_id = bt_service[0]["id"]
+
+            obj = db.merge(self)
+            obj.bt_service_id = service_id
+            db.commit()
+            db.refresh(obj)
 
             self.bt_service_id = service_id
             return service_id
@@ -632,7 +638,7 @@ class Journey(Base):
             .first()
         )
 
-    async def get_bt_trip_id(self) -> int | None:
+    async def get_bt_trip_id(self, db: Session) -> int | None:
         """
         Returns the bustimes trip ID if available, otherwise finds it.
         """
@@ -657,6 +663,11 @@ class Journey(Base):
                 return None
 
             trip_id = bt_trip[0]["id"]
+
+            obj = db.merge(self)
+            obj.bt_trip_id = trip_id
+            db.commit()
+            db.refresh(obj)
 
             self.bt_trip_id = trip_id
             return trip_id

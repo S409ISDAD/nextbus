@@ -9,6 +9,7 @@ from backend.models import Line, BotConfig
 from backend.utils.fetch_json import fetch_json
 from datetime import datetime
 from sqlalchemy import event
+from sqlalchemy.orm import joinedload
 import os
 
 
@@ -19,11 +20,12 @@ update_queue = asyncio.Queue()
 @event.listens_for(Line, "after_update")
 @event.listens_for(Line, "after_delete")
 def route_changed(mapper, connection, target):
-    # update the message as a line has been added
     try:
         loop = asyncio.get_event_loop()
-        print("queueing dashboard update due to route change...")
-        loop.create_task(update_queue.put(True))
+        if loop.is_running():
+            loop.create_task(update_queue.put(True))
+        else:
+            print("No running event loop; dashboard update not queued.")
     except RuntimeError:
         print("No running event loop; dashboard update not queued.")
 
@@ -102,23 +104,30 @@ async def update_dashboard():
     await bot.wait_until_ready()
     print("Updating dashboard message...")
     with SessionLocal() as db:
-        lines = db.query(Line).join(Line.service).all()
+        lines = db.query(Line).options(joinedload(Line.service)).all()
         lines_text = ""
+        num = len(lines)
+        scso_total = 153
         for line in lines:
-            bustimes_id = await line.get_bt_service_id()
+            bustimes_id = await line.get_bt_service_id(db)
             bt_service = await fetch_json(
                 f"https://bustimes.org/api/services/{bustimes_id}"
             )
             if not bt_service:
-                lines_text += f"{line.line_name} | {line.service.origin} - {line.service.destination}\n"
+                lines_text += f"{line.line_name}  "
             else:
-                slug = bt_service.get("slug", "")
-                bustimes_link = f"(https://bustimes.org/services/{slug})"
-                lines_text += f"[{line.line_name} | {line.service.origin} - {line.service.destination}]{bustimes_link}\n"
+                if num < 20:
+                    slug = bt_service.get("slug", "")
+                    bustimes_link = f"(https://bustimes.org/services/{slug})"
+                    lines_text += f"[{line.line_name} | {line.service.origin} - {line.service.destination}]{bustimes_link}\n"
+                else:
+                    lines_text += f"{line.line_name}  "
+        percent = round((num / scso_total) * 100, 1) if scso_total else 0
         msg_content = (
             "# This channel is for requesting routes to be added to the system until I set up a full import.\n\nThese routes have advanced capabilities over other routes. e.g. predicting buses using blocks.\n## Routes in the system:\n"
+            + f"**{num} routes** ({percent}% of {scso_total} in Stagecoach South Dataset)\n\n"
             + lines_text
-            + "\nPlease provide the name of the route and where it is located. (bustimes.org link is preferred)"
+            + "\n\nPlease provide the name of the route and where it is located. (bustimes.org link is preferred)"
             + f"\n\n-# updated <t:{int(datetime.now(tz=UTC).timestamp())}:R>"
         )
 
