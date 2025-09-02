@@ -1,4 +1,3 @@
-import datetime
 import partridge as ptg
 import pandas as pd
 from geoalchemy2.shape import from_shape

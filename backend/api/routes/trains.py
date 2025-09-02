@@ -8,7 +8,6 @@ from backend.services.trains import (
     get_arrivals,
     get_detailed_route_trains,
     get_service,
-    get_route_trains,
 )
 from enum import Enum
 

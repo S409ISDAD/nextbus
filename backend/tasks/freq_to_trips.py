@@ -1,8 +1,6 @@
 from copy import copy
 import math
 
-from networkx.utils import pairwise
-import numpy as np
 import pandas as pd
 import partridge as ptg
 

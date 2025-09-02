@@ -1,17 +1,14 @@
 import asyncio
-import json
 from dateutil import parser
 from redis.asyncio import Redis
 
 from backend.config import VEHICLES_BASE
 from backend.db.db import SessionLocal
 from backend.deps import UTC
-from backend.deps import DateTimeEncoder
 from backend.models import (
     DirectionType,
     Journey,
     Line,
-    Service,
     StopTime,
 )
 from backend.schemas.livery import Livery

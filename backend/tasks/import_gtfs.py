@@ -1,4 +1,3 @@
-import datetime
 import partridge as ptg
 import pandas as pd
 from geoalchemy2.shape import from_shape
@@ -15,9 +14,7 @@ from backend.models import (
     Service,
     Shape,
     Trip,
-    Stop,
     StopTime,
-    LocationType,
     RouteType,
     ExceptionType,
     WheelchairAccessible,

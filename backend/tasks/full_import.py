@@ -1,8 +1,7 @@
 import asyncio
-import os
 import pathlib
 from backend.tasks.import_holidays import import_bank_holidays
-from backend.tasks.import_txc import import_txc_zip, TXCImporter
+from backend.tasks.import_txc import TXCImporter
 from backend.tasks.import_naptan import import_naptan_data
 
 

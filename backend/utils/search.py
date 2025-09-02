@@ -1,15 +1,12 @@
 import asyncio
-from datetime import datetime, timedelta
 from collections import defaultdict
 
-from backend.deps import get_redis
 from sqlalchemy import select, func, or_
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session
 from sqlalchemy_searchable import search
 
 from backend.db.db import SessionLocal
 from backend.models import Line, Service, Stop, Operator
-from backend.utils.match_bt import match_service_line
 
 
 def fuzzy_search_service(query, db, limit=10, threshold=0.2):

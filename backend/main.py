@@ -20,7 +20,7 @@ from backend.api.routes import (
     trains,
 )
 from sqlalchemy.orm import Session
-from backend.db.db import SessionLocal, sync_search_vectors, engine, get_db
+from backend.db.db import SessionLocal, engine, get_db
 from backend.models import ActiveUsersSnapshot, Base
 from backend.websockets.routes import ws_router
 from backend.deps import floor_to_30s, get_redis_client, get_redis, limiter
@@ -28,8 +28,7 @@ import logging
 from prometheus_fastapi_instrumentator import Instrumentator
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
-from backend.tasks.full_import import do_import
-from backend.bot.bot import bot, update_dashboard
+from backend.bot.bot import bot
 
 
 log = logging.getLogger(__name__)

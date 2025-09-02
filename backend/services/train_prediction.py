@@ -1,5 +1,4 @@
 from datetime import timedelta
-import datetime
 from backend.deps import UTC
 from backend.schemas.prediction import Prediction
 from backend.schemas.trains import ServiceLocation, TrainService

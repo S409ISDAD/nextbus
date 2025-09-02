@@ -1,16 +1,15 @@
 from datetime import datetime, timedelta
-from collections import defaultdict
 
 import pandas as pd
 from sqlalchemy.orm import Session
 
 from backend.db.db import SessionLocal
-from backend.models import Calendar, Service, StopTime, Journey, DirectionType
-from backend.deps import UTC
+from backend.models import Service, StopTime, Journey, DirectionType
+from backend.deps import LONDON
 
 
 def generate_timetable(line_id: str, db: Session):
-    today = datetime.now(tz=UTC).date()
+    today = datetime.now(tz=LONDON).date() + timedelta(days=1)
 
     # Fetch the services for the given route
     services = (
@@ -28,6 +27,8 @@ def generate_timetable(line_id: str, db: Session):
 
     for service in services:
         for journey in service.journeys:
+            if not journey.is_valid(today):
+                continue
             if journey.direction == DirectionType.outbound:
                 journey_ids.add(journey.id)
                 start_times[journey.id] = journey.start_time

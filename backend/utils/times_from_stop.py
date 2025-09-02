@@ -15,7 +15,7 @@ from backend.models import (
 
 def times_from_stop(stop_id: str, db: Session, limit: int = 10):
     now = datetime.now(tz=UTC)
-    # now = datetime(year=2025, month=8, day=10, hour=11, minute=1, second=0)
+    now = datetime(year=2025, month=9, day=3, hour=8, minute=1, second=0)
     weekday_attr = now.strftime("%A").lower()
     today_date = now.date()
     seconds_since_midnight = now.hour * 3600 + now.minute * 60 + now.second
@@ -39,29 +39,7 @@ def times_from_stop(stop_id: str, db: Session, limit: int = 10):
     # 2️⃣ Filter by active calendars
     active_stop_times = []
     for st in stop_times:
-        cal = st.journey.calendar
-        # Check calendar valid date range
-        if not (
-            cal.start_date <= today_date
-            and (cal.end_date is None or cal.end_date >= today_date)
-        ):
-            continue
-
-        # Check weekday flag
-        if not getattr(cal, weekday_attr):
-            continue
-
-        # Check exceptions
-        has_exception = False
-        for exc in cal.calendar_exceptions:
-            if exc.start_date <= today_date <= exc.end_date:
-                if not exc.operating:
-                    has_exception = True
-                else:
-                    has_exception = False
-                break
-
-        if has_exception:
+        if not st.journey.is_valid(today_date):
             continue
 
         active_stop_times.append(st)

@@ -1,10 +1,6 @@
 import calendar
-import datetime as dt
 from datetime import datetime, timezone, timedelta
-from functools import cache
-import logging
-from shapely import LineString, Point
-from isodate import parse_duration
+from shapely import Point
 import xml.etree.cElementTree as ET
 
 uk_timezone = timezone(timedelta(hours=1))

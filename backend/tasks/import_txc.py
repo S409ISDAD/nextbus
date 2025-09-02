@@ -2,16 +2,14 @@ import asyncio
 import logging
 import sys
 import zipfile
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 import isodate
 
 from geoalchemy2.shape import from_shape, to_shape
 from shapely import MultiLineString, Point
 from shapely.geometry import LineString
 from sqlalchemy import func, select, update
-from sqlalchemy.orm import Session
 
-from backend.bot.bot import update_dashboard
 from backend.db.db import SessionLocal
 from backend.deps import LONDON
 from backend.models import (
@@ -33,7 +31,6 @@ from backend.models import (
 )
 from backend.txc import txc
 from backend.utils.bulk_upsert import bulk_upsert
-import concurrent.futures
 
 logger = logging.getLogger(__name__)
 

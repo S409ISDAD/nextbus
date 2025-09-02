@@ -1,6 +1,6 @@
 from backend.services import bus, stops
 from backend.db.db import SessionLocal
-from backend.models import Line, Stop
+from backend.models import Stop
 from datetime import datetime, timedelta
 from backend.deps import UTC
 

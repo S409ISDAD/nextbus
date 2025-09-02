@@ -1,7 +1,5 @@
-import numpy
 from geopy.distance import geodesic
 
-from backend.services.caching import TIMETABLE_CACHE, get_cached
 
 
 async def calculate_distances(stops: list) -> list[float]:

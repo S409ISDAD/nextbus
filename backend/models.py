@@ -1,4 +1,4 @@
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timedelta
 import enum
 
 from geoalchemy2 import Geometry
@@ -17,14 +17,12 @@ from sqlalchemy import (
     String,
     UniqueConstraint,
     func,
-    or_,
 )
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, Session, joinedload
 from sqlalchemy_searchable import make_searchable
 from sqlalchemy_utils.types import TSVectorType
-from backend.db.db import SessionLocal
-from backend.deps import LONDON, UTC
+from backend.deps import LONDON
 
 from backend.config import API_BASE
 from backend.utils.fetch_json import fetch_json
@@ -638,18 +636,15 @@ class Journey(Base):
 
         weekday = date.strftime("%A").lower()
         if not getattr(self.calendar, weekday):
-            print("Not valid on this weekday, active days:", self.calendar.days_of_week)
+            # print("Not valid on this weekday, active days:", self.calendar.days_of_week)
             return False
 
         for exc in self.calendar.calendar_exceptions:
             if date < exc.start_date and exc.operating is True:
-                print("Date before exception start date, operating is True")
                 return False
             if exc.start_date <= date <= exc.end_date:
-                print("Date within exception range, operating is", exc.operating)
                 return exc.operating
             if date > exc.end_date and exc.operating is True:
-                print("Date after exception end date, operating is True")
                 return False
         print("No exceptions found, journey is valid")
         return True

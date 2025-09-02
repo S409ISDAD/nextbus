@@ -1,8 +1,7 @@
 import asyncio
 import discord
 from discord import app_commands
-from discord.ext import commands, tasks
-from discord.ext.commands.bot import Bot
+from discord.ext import commands
 from backend.db.db import SessionLocal
 from backend.deps import UTC
 from backend.models import Line, BotConfig
@@ -10,7 +9,6 @@ from backend.utils.fetch_json import fetch_json
 from datetime import datetime
 from sqlalchemy import event
 from sqlalchemy.orm import joinedload
-import os
 
 
 update_queue = asyncio.Queue()

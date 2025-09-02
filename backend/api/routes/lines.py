@@ -4,7 +4,6 @@ from backend.deps import get_redis, limiter
 
 # from backend.schemas.line import Line
 from backend.models import Line
-from backend.services import services
 from backend.db.db import get_db
 from geoalchemy2.shape import to_shape
 
