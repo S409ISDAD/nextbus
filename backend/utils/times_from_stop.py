@@ -21,42 +21,16 @@ def times_from_stop(stop_id: str, db: Session, limit: int = 10):
     seconds_since_midnight = now.hour * 3600 + now.minute * 60 + now.second
     current_time = timedelta(seconds=seconds_since_midnight)
 
-    # 1️⃣ Get all StopTimes for this stop (with Journey+Calendar preloaded)
-    stop_times = (
-        db.query(StopTime)
-        .filter(StopTime.stop_id == stop_id)
-        .join(Journey)
-        .join(Calendar)
-        .options(
-            joinedload(StopTime.journey).joinedload(Journey.calendar),
-            joinedload(StopTime.journey)
-            .joinedload(Journey.line)
-            .joinedload(Line.service),
-        )
-        .all()
-    )
+    stop = db.query(Stop).filter(Stop.atco_code == stop_id).first()
+    if not stop:
+        print(f"Stop with ID {stop_id} not found.")
+        return
 
-    # 2️⃣ Filter by active calendars
-    active_stop_times = []
-    for st in stop_times:
-        if not st.journey.is_valid(today_date):
-            continue
-
-        active_stop_times.append(st)
-
-    # 3️⃣ Keep only future departures
-    future_stop_times = [
-        st
-        for st in active_stop_times
-        if st.departure_time and st.departure_time >= current_time
-    ]
-
-    # 4️⃣ Sort by departure time
-    future_stop_times.sort(key=lambda st: st.departure_time)
+    stop_times = stop.times_from_stop(db, date=now)
 
     # 5️⃣ Format results
     results = []
-    for st in future_stop_times[:limit]:
+    for st in stop_times[:limit]:
         line_name = st.journey.line.line_name if st.journey.line else None
         outbound = st.journey.direction == DirectionType.outbound
         dest = st.journey.service.destination if outbound else st.journey.service.origin
@@ -92,6 +66,6 @@ def times_from_stop(stop_id: str, db: Session, limit: int = 10):
 
 
 if __name__ == "__main__":
-    stop_id = "1900HA020331"
+    stop_id = "1900HA110364"
     with SessionLocal() as db:
         times_from_stop(stop_id, db)

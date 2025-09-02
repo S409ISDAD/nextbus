@@ -232,7 +232,6 @@ class Stop(Base):
         else:
             now = date
 
-        weekday_attr = now.strftime("%A").lower()
         today_date = now.date()
         seconds_since_midnight = now.hour * 3600 + now.minute * 60 + now.second
         current_time = timedelta(seconds=seconds_since_midnight)
@@ -253,23 +252,7 @@ class Stop(Base):
 
         active_stop_times = []
         for st in stop_times:
-            cal = st.journey.calendar
-            if not (
-                cal.start_date <= today_date
-                and (cal.end_date is None or cal.end_date >= today_date)
-            ):
-                continue
-            if not getattr(cal, weekday_attr):
-                continue
-            has_exception = False
-            for exc in cal.calendar_exceptions:
-                if exc.start_date <= today_date <= exc.end_date:
-                    if exc.operating:
-                        has_exception = False
-                    else:
-                        has_exception = True
-                    break
-            if has_exception:
+            if not st.journey.is_valid(today_date):
                 continue
             active_stop_times.append(st)
 
@@ -672,18 +655,18 @@ class Journey(Base):
 
         candidate_journeys = (
             query.options(joinedload(Journey.line).joinedload(Line.service))
-            .order_by(Journey.end_time)
+            .order_by(Journey.end_time.desc())
             .all()
         )
 
         valid_candidates = [j for j in candidate_journeys if j.is_valid(date)]
-        print(
-            f"Candidate journeys for {self.ticket_machine_code} block {self.block_id} on {date}:"
-        )
-        for j in candidate_journeys:
-            print(
-                f"  tmc: {j.ticket_machine_code}, End Time: {j.end_time}, Valid: {j.is_valid(date)}"
-            )
+        # print(
+        #     f"Candidate journeys for {self.ticket_machine_code} block {self.block_id} on {date} starting {self.start_time}:"
+        # )
+        # for j in valid_candidates:
+        #     print(
+        #         f"  tmc: {j.ticket_machine_code}, End Time: {j.end_time}, Valid: {j.is_valid(date)}"
+        #     )
 
         prev_journey = valid_candidates[0] if valid_candidates else None
         return prev_journey

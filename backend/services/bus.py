@@ -210,11 +210,11 @@ async def build_scheduled_db(
         else:
             started = False
 
-        today_midnight = datetime.combine(
-            datetime.today(), datetime.min.time()
-        ).astimezone(UTC)
+        today = datetime.today().astimezone(UTC)
         if is_tomorrow:
-            today_midnight += timedelta(days=1)
+            today += timedelta(days=1)
+
+        today_midnight = datetime.combine(today, datetime.min.time()).astimezone(UTC)
         scheduled = today_midnight + stop_time.departure_time
 
         if (scheduled - datetime.now(tz=UTC)).total_seconds() > 11 * 3600:
@@ -226,7 +226,7 @@ async def build_scheduled_db(
             else stop_time.journey.line.service.origin
         )
 
-        prev_journey = stop_time.journey.get_previous_journey(db)
+        prev_journey = stop_time.journey.get_previous_journey(db, today.date())
 
         layover_time = (
             stop_time.journey.start_time - prev_journey.end_time
