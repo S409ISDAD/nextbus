@@ -42,7 +42,7 @@ async def get_departures(stop_id: str, redis):
                 times = []
                 for time in db_times:
                     journey = time.journey
-                    trip_id = await journey.get_bt_trip_id()
+                    trip_id = await journey.get_bt_trip_id(db)
                     if trip_id:
                         times.append({"trip_id": int(trip_id)})
         else:

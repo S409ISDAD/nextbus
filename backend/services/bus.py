@@ -237,10 +237,10 @@ async def build_scheduled_db(
             else timedelta(0)
         )
 
-        prev_trip = await prev_journey.get_bt_trip_id() if prev_journey else None
+        prev_trip = await prev_journey.get_bt_trip_id(db) if prev_journey else None
 
         service_id = (
-            await prev_journey.line.get_bt_service_id() if prev_journey else None
+            await prev_journey.line.get_bt_service_id(db) if prev_journey else None
         )
 
         potential_bus = (
