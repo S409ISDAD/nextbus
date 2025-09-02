@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 import enum
 
 from geoalchemy2 import Geometry
@@ -17,6 +17,7 @@ from sqlalchemy import (
     String,
     UniqueConstraint,
     func,
+    or_,
 )
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, Session, joinedload
@@ -619,24 +620,78 @@ class Journey(Base):
         "StopTime", back_populates="journey", cascade="all, delete-orphan"
     )
 
-    def get_previous_journey(self, db: Session) -> "Journey | None":
+    def is_valid(self, date: date | None = None) -> bool:
         """
-        Returns the previous journey in the same block and calendar, ordered by end_time.
+        Returns True if the journey is valid on the given date (or today if no date is given).
         """
-        if self.block_id is None or self.calendar_id is None:
+        if not self.calendar:
+            return False
+
+        if not date:
+            date = datetime.now(tz=LONDON).date()
+
+        if not (
+            self.calendar.start_date <= date
+            and (self.calendar.end_date is None or self.calendar.end_date >= date)
+        ):
+            return False
+
+        weekday = date.strftime("%A").lower()
+        if not getattr(self.calendar, weekday):
+            print("Not valid on this weekday, active days:", self.calendar.days_of_week)
+            return False
+
+        for exc in self.calendar.calendar_exceptions:
+            if date < exc.start_date and exc.operating is True:
+                print("Date before exception start date, operating is True")
+                return False
+            if exc.start_date <= date <= exc.end_date:
+                print("Date within exception range, operating is", exc.operating)
+                return exc.operating
+            if date > exc.end_date and exc.operating is True:
+                print("Date after exception end date, operating is True")
+                return False
+        print("No exceptions found, journey is valid")
+        return True
+
+    def get_previous_journey(
+        self, db: Session, date: date | None = None
+    ) -> "Journey | None":
+        """
+        Returns the previous journey in the same block, active on the same date, ordered by end_time.
+        Adds debug output to show all candidate journeys.
+        """
+
+        if self.block_id is None:
+            print(f"No block_id for journey {self.id}")
             return None
-        return (
-            db.query(Journey)
-            .filter(
-                Journey.block_id == self.block_id,
-                Journey.calendar_id == self.calendar_id,
-                Journey.end_time <= self.start_time,
-                Journey.id != self.id,
-            )
-            .options(joinedload(Journey.line).joinedload(Line.service))
-            .order_by(Journey.end_time.desc())
-            .first()
+
+        if not date:
+            date = datetime.now(tz=LONDON).date()
+
+        query = db.query(Journey).filter(
+            Journey.block_id == self.block_id,
+            Journey.id != self.id,
+            Journey.end_time < self.start_time,
         )
+
+        candidate_journeys = (
+            query.options(joinedload(Journey.line).joinedload(Line.service))
+            .order_by(Journey.end_time)
+            .all()
+        )
+
+        valid_candidates = [j for j in candidate_journeys if j.is_valid(date)]
+        print(
+            f"Candidate journeys for {self.ticket_machine_code} block {self.block_id} on {date}:"
+        )
+        for j in candidate_journeys:
+            print(
+                f"  tmc: {j.ticket_machine_code}, End Time: {j.end_time}, Valid: {j.is_valid(date)}"
+            )
+
+        prev_journey = valid_candidates[0] if valid_candidates else None
+        return prev_journey
 
     async def get_bt_trip_id(self, db: Session) -> int | None:
         """

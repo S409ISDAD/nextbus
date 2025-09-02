@@ -249,6 +249,7 @@ async def build_scheduled_db(
 
         if potential_bus:
             print("Found bus from previous trip")
+
             bus = await build_bus(potential_bus["id"], r, get_journey=False)
             if not bus:
                 print("Failed to build bus")
@@ -265,7 +266,7 @@ async def build_scheduled_db(
                 bus.status = "on_prev_trip"
 
                 # Don't show if expected is more than 2 hours away
-                if (bus.expected - datetime.now(tz=UTC)).total_seconds() < 2 * 3600:
+                if (bus.expected - datetime.now(tz=UTC)).total_seconds() < 4 * 3600:
                     return bus
                 print("Bus expected too far in future")
 
