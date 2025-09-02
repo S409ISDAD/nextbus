@@ -107,7 +107,7 @@ async def update_dashboard():
         lines = db.query(Line).options(joinedload(Line.service)).all()
         lines_text = ""
         num = len(lines)
-        scso_total = 153
+        scso_total = 189
         for line in lines:
             bustimes_id = await line.get_bt_service_id(db)
             bt_service = await fetch_json(
