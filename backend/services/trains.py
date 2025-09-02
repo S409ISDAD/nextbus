@@ -16,7 +16,7 @@ from backend.utils.trains import operator_map
 from datetime import datetime
 from datetime import timezone, timedelta
 import asyncio
-from backend.deps import UTC
+from backend.deps import LONDON, UTC
 
 
 async def parse_operator(atocName: str):
@@ -43,7 +43,7 @@ def parse_time(time_str: str):
     except ValueError:
         return None
 
-    now = datetime.now(tz=UTC)
+    now = datetime.now(tz=LONDON)
     date = now.replace(hour=hours, minute=minutes, second=seconds, microsecond=0)
 
     # If the time is more than 12 hours behind now, assume it's for the next day (overnight trains)
