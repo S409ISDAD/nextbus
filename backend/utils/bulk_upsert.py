@@ -22,10 +22,20 @@ def bulk_upsert(
     if not rows:
         return
 
-    stmt = insert(model).values(rows)
+    all_columns = [col.name for col in model.__table__.columns]
+    normalized_rows = [
+        {
+            col: row.get(col, None)
+            for col in all_columns
+            if not model.__table__.columns[col].computed
+        }
+        for row in rows
+    ]
+
+    stmt = insert(model).values(normalized_rows)
 
     # Build update mapping for on_conflict_do_update
-    update_dict = {col: stmt.excluded[col] for col in update_cols}
+    update_dict = {col: getattr(stmt.excluded, col) for col in update_cols}
 
     stmt = stmt.on_conflict_do_update(index_elements=conflict_cols, set_=update_dict)
 

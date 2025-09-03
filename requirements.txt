@@ -28,3 +28,4 @@ ciso8601
 discord.py
 pytest-asyncio
 sentry-sdk[fastapi]
+pydantic_settings

@@ -35,6 +35,8 @@ from backend.bot.bot import bot
 
 log = logging.getLogger(__name__)
 
+from backend.config import config
+
 
 # logging.basicConfig(
 #     level=logging.INFO,
@@ -155,6 +157,7 @@ sentry_sdk.init(
     integrations=[
         SqlalchemyIntegration(),
     ],
+    environment=config.env,
     send_default_pii=True,
     # Set traces_sample_rate to 1.0 to capture 100%
     # of transactions for tracing.
@@ -169,6 +172,7 @@ sentry_sdk.init(
 
 
 app = FastAPI(lifespan=lifespan, redirect_slashes=False)
+print(f"running in {config.env} mode")
 
 Instrumentator().instrument(app).expose(app)
 

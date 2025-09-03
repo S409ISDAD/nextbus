@@ -38,20 +38,37 @@ logger = logging.getLogger(__name__)
 
 
 async def import_txc_zip(zip_path):
-    with zipfile.ZipFile(zip_path, "r") as zf:
-        xml_files = [
-            filename for filename in zf.namelist() if filename.endswith(".xml")
-        ]
+    start = time.time()
+    try:
+        with zipfile.ZipFile(zip_path, "r") as zf:
+            xml_files = [
+                filename for filename in zf.namelist() if filename.endswith(".xml")
+            ]
 
-        total = len(xml_files)
+            total = len(xml_files)
 
-        for filename in xml_files:
-            with zf.open(filename) as xml_file:
-                print(
-                    f"Processing file: {filename} ({xml_files.index(filename) + 1}/{total})"
-                )
-                txc_importer = TXCImporter(xml_file)
-                await txc_importer.handle_txc_file()
+            for filename in xml_files:
+                with zf.open(filename) as xml_file:
+                    print(
+                        f"Processing file: {filename} ({xml_files.index(filename) + 1}/{total})"
+                    )
+                    txc_importer = TXCImporter(xml_file)
+                    await txc_importer.handle_txc_file()
+    finally:
+        end = time.time()
+        time_taken = end - start
+        duration = ""
+        if time_taken >= 3600:
+            hours = int(time_taken // 3600)
+            minutes = int((time_taken % 3600) // 60)
+            duration = f"{hours}h {minutes}m"
+        elif time_taken >= 60:
+            minutes = int(time_taken // 60)
+            seconds = int(time_taken % 60)
+            duration = f"{minutes}m {seconds}s"
+        else:
+            duration = f"{int(time_taken)}s"
+        print(f"Total TXC Import completed in {duration}")
 
 
 # def import_txc_zip(zip_path):
@@ -611,51 +628,56 @@ class TXCImporter:
                     self.db.flush()
 
                     for txc_route in self.txc_data.routes:
-                        with sentry_sdk.start_span(
-                            op="txc_route", name="Process Route"
-                        ):
-                            route_id = self.get_id(txc_route.route_id)
-                            db_route = (
-                                self.db.query(Route).filter_by(id=route_id).first()
-                            )
-                            route_section_ref = txc_route.route_section_ref
+                        route_id = self.get_id(txc_route.route_id)
+                        db_route = self.db.query(Route).filter_by(id=route_id).first()
+                        route_section_ref = txc_route.route_section_ref
 
-                            if route_section_ref:
-                                route_section = self.txc_data.route_sections.get(
-                                    route_section_ref
-                                )
-                                if route_section:
-                                    self.handle_route_section(route_section)
-
-                            route = Route(
-                                id=route_id,
-                                private_code=txc_route.private_code,
-                                description=txc_route.description,
-                                route_section_id=self.get_id(route_section_ref),
+                        if route_section_ref:
+                            route_section = self.txc_data.route_sections.get(
+                                route_section_ref
                             )
-                            if not db_route:
-                                print(f"Adding route {route_id}")
-                                self.db.add(route)
-                            else:
-                                print(f"Updating route {route_id}")
-                                self.db.merge(route)
+                            if route_section:
+                                self.handle_route_section(route_section)
+
+                        route = Route(
+                            id=route_id,
+                            private_code=txc_route.private_code,
+                            description=txc_route.description,
+                            route_section_id=self.get_id(route_section_ref),
+                        )
+                        if not db_route:
+                            print(f"Adding route {route_id}")
+                            self.db.add(route)
+                        else:
+                            print(f"Updating route {route_id}")
+                            self.db.merge(route)
                     self.db.commit()
 
+                    # Batch fetch all existing usages for relevant line_ids and stop_codes
+                    all_line_ids = list(self.line_to_stops.keys())
+                    all_stop_codes = set()
+                    for stop_codes in self.line_to_stops.values():
+                        all_stop_codes.update(stop_codes)
+                    existing_usages = set(
+                        (r.line_id, r.stop_id)
+                        for r in self.db.query(
+                            LineStopUsage.line_id, LineStopUsage.stop_id
+                        )
+                        .filter(LineStopUsage.line_id.in_(all_line_ids))
+                        .filter(LineStopUsage.stop_id.in_(all_stop_codes))
+                        .all()
+                    )
+                    to_insert = []
                     for line_id, stop_codes in self.line_to_stops.items():
                         for stop_code in stop_codes:
-                            db_stop = (
-                                self.db.query(LineStopUsage)
-                                .filter_by(line_id=line_id, stop_id=stop_code)
-                                .first()
-                            )
-                            if not db_stop:
-                                ltr = LineStopUsage(
-                                    line_id=line_id,
-                                    stop_id=stop_code,
+                            if (line_id, stop_code) not in existing_usages:
+                                to_insert.append(
+                                    {"line_id": line_id, "stop_id": stop_code}
                                 )
-                                self.db.add(ltr)
-                        # self.update_geometry(line_id)
-                        self.db.flush()
+                    if to_insert:
+                        objects = [LineStopUsage(**data) for data in to_insert]
+                        self.db.bulk_save_objects(objects)
+                    self.db.flush()
 
                     for line_id, route_ids in self.line_to_routes.items():
                         for route_id in route_ids:

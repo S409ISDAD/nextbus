@@ -11,14 +11,16 @@ from sqlalchemy.orm import Session
 import sys
 import xml.etree.ElementTree as ET
 from datetime import timedelta, timezone
+from sqlalchemy_searchable import sync_trigger
+from backend.db.db import engine
 
 
 from ciso8601 import parse_datetime
 
+from backend.utils.bulk_upsert import bulk_upsert
+
 new_stops = []
-updated_stops = []
 new_stop_areas = []
-updated_stop_areas = []
 
 
 def generate_point(lat, lon):
@@ -84,16 +86,21 @@ def get_stop(element, atco_code):
 
     naptan_code = element.findtext("NaptanCode")
 
-    stop = Stop(
-        atco_code=atco_code,
-        naptan_code=naptan_code,
-        point=point,
-    )
+    stop = {
+        "atco_code": atco_code,
+        "naptan_code": naptan_code,
+        "point": point,
+    }
 
     for xml_path, attr in stop_mapping:
         value = element.findtext(xml_path)
         if value:
-            setattr(stop, attr, value)
+            stop[attr] = value
+
+    stop["active"] = element.attrib.get("Status", "active") == "active"
+
+    if not stop["active"]:
+        return None
 
     return stop
 
@@ -112,14 +119,14 @@ def get_stop_area(element: ET.Element):
         except:
             return None
 
-        return StopArea(
-            id=code,
-            name=element.findtext("Name"),
-            point=point,
-            active=element.attrib.get("Status", "active") == "active",
-            type=type,
-            revision_number=element.attrib.get("RevisionNumber"),
-        )
+        return {
+            "id": code,
+            "name": element.findtext("Name"),
+            "point": point,
+            "active": element.attrib.get("Status", "active") == "active",
+            "type": type,
+            "revision_number": element.attrib.get("RevisionNumber"),
+        }
     return None
 
 
@@ -127,10 +134,7 @@ def handle_stop_area(element: ET.Element):
     stop_area = get_stop_area(element)
 
     if stop_area:
-        if getattr(stop_area, "id") in stop_area_ids:
-            updated_stop_areas.append(stop_area)
-        else:
-            new_stop_areas.append(stop_area)
+        new_stop_areas.append(stop_area)
 
 
 def handle_stop_point(element: ET.Element):
@@ -144,39 +148,38 @@ def handle_stop_point(element: ET.Element):
     revision_number = element.attrib.get("RevisionNumber")
 
     stop = get_stop(element, atco_code)
+    if not stop:
+        return
 
-    setattr(stop, "modified_at", modified_at)
-    setattr(stop, "created_at", created_at)
-    setattr(stop, "revision_number", revision_number)
+    stop["modified_at"] = modified_at
+    stop["created_at"] = created_at
+    stop["revision_number"] = revision_number
 
     for stop_area_ref in element.findall("StopAreas/StopAreaRef"):
         if stop_area_ref.attrib.get("Status") == "active":
-            setattr(stop, "stop_area_id", stop_area_ref.text)
+            stop["stop_area_id"] = stop_area_ref.text
 
-    if atco_code in existing_stop_ids:
-        updated_stops.append(stop)
-    else:
-        new_stops.append(stop)
+    new_stops.append(stop)
 
 
 def create_or_update(db: Session):
     if new_stop_areas:
         print(f"Importing {len(new_stop_areas)} Stop Areas.")
-        db.bulk_save_objects(new_stop_areas)
-        db.commit()
-
-    if updated_stop_areas:
-        print(f"Updating {len(updated_stop_areas)} Stop Areas.")
-        for stop_area in updated_stop_areas:
-            db.merge(stop_area)
-        db.commit()
+        bulk_upsert(
+            db,
+            StopArea,
+            new_stop_areas,
+            ["id"],
+            ["name", "point", "active", "type", "revision_number"],
+        )
 
     stop_areas = {code[0] for code in db.query(StopArea.id).all()}
 
     unknown_stop_areas = {
-        stop.stop_area_id
+        stop.get("stop_area_id")
         for stop in new_stops
-        if stop.stop_area_id not in stop_areas and stop.stop_area_id is not None
+        if stop.get("stop_area_id") not in stop_areas
+        and stop.get("stop_area_id") is not None
     }
 
     new_stop_areas_2 = []
@@ -195,26 +198,36 @@ def create_or_update(db: Session):
 
     if new_stops:
         print(f"Importing {len(new_stops)} Stops.")
-        db.bulk_save_objects(new_stops)
-        db.commit()
-
-    if updated_stops:
-        print(f"Updating {len(updated_stops)} Stops.")
-        for stop in updated_stops:
-            db.merge(stop)
-        db.commit()
+        bulk_upsert(
+            db,
+            Stop,
+            new_stops,
+            ["atco_code"],
+            [
+                "naptan_code",
+                "point",
+                "common_name",
+                "landmark",
+                "street",
+                "indicator",
+                "crossing",
+                "suburb",
+                "town",
+                "stop_type",
+                "bus_stop_type",
+                "timing_status",
+                "stop_area_id",
+                "modified_at",
+                "created_at",
+                "revision_number",
+            ],
+        )
 
 
 def import_naptan_data(file_path: Path):
     print("Importing NAPTAN data...")
 
-    global \
-        new_stops, \
-        updated_stops, \
-        existing_stop_ids, \
-        stop_area_ids, \
-        updated_stop_areas, \
-        new_stop_areas
+    global new_stops, existing_stop_ids, stop_area_ids, new_stop_areas
 
     iterator = ET.iterparse(file_path, events=("start", "end"))
     with SessionLocal() as db:
@@ -233,6 +246,23 @@ def import_naptan_data(file_path: Path):
                         handle_stop_area(element)
 
             create_or_update(db)
+            print("Updating search vectors...")
+            with engine.begin() as conn:
+                sync_trigger(
+                    conn,
+                    "stop",
+                    "search_vector",
+                    [
+                        "atco_code",
+                        "naptan_code",
+                        "common_name",
+                        "common_short_name",
+                        "landmark",
+                        "street",
+                        "suburb",
+                        "town",
+                    ],
+                )
             print("Import complete.")
         except Exception as e:
             print("An error occurred during NaPTAN import:")

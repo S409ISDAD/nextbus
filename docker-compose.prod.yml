@@ -16,6 +16,7 @@ services:
       BOT_TOKEN: ${BOT_TOKEN}
       PYTHONUNBUFFERED: 1
       TZ: Europe/London
+      ENV: production
     depends_on:
       - redis
       - db
