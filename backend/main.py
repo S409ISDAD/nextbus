@@ -90,18 +90,22 @@ async def record_snapshot(redis):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    bot_task = None
     redis = get_redis_client()
     if await redis.ping():
         print("Redis Connected.")
     else:
         print("Redis did not respond.")
     await redis.close()
-    await redis.delete("total_clients")
-    redis.sadd("total_clients", *[])
-    await redis.delete("clients")
-    redis.sadd("clients", *[])
-    await redis.set("total_ws_connections", "0")
+    is_leader = await redis.set("app:leader", "1", nx=True, ex=60)
+    if is_leader:
+        print("This instance is the leader.")
+        await redis.delete("total_clients")
+        redis.sadd("total_clients", *[])
+        await redis.delete("clients")
+        redis.sadd("clients", *[])
+        await redis.set("total_ws_connections", "0")
+    else:
+        print("This instance is not the leader.")
     print("Setting up database...")
     Base.metadata.create_all(bind=engine)
     # we dont actually need to sync vectors every startup
@@ -109,29 +113,22 @@ async def lifespan(app: FastAPI):
     # asyncio.create_task(asyncio.to_thread(sync_search_vectors))
     print("Database setup complete.")
 
-    print("Starting discord bot...")
-    dotenv.load_dotenv()
-    token = os.getenv("BOT_TOKEN")
-    if token:
-        bot_task = asyncio.create_task(bot.start(token))
-    else:
-        print("No BOT_TOKEN found in environment, bot will not start.")
-
     scheduler = AsyncIOScheduler()
-    scheduler.add_job(
-        record_snapshot,
-        CronTrigger(second="0,30"),  # run every 30 seconds
-        id="record_active_users",
-        replace_existing=True,
-        args=[redis],
-    )
-    scheduler.add_job(
-        clear_redis_stats,
-        CronTrigger(hour="0", minute="0", second="0"),
-        id="clear_redis_stats",
-        replace_existing=True,
-        args=[redis],
-    )
+    if is_leader:
+        scheduler.add_job(
+            record_snapshot,
+            CronTrigger(second="0,30"),  # run every 30 seconds
+            id="record_active_users",
+            replace_existing=True,
+            args=[redis],
+        )
+        scheduler.add_job(
+            clear_redis_stats,
+            CronTrigger(hour="0", minute="0", second="0"),
+            id="clear_redis_stats",
+            replace_existing=True,
+            args=[redis],
+        )
     scheduler.start()
     print("App startup complete.")
 
@@ -141,13 +138,9 @@ async def lifespan(app: FastAPI):
     try:
         yield
     finally:
+        if is_leader:
+            await redis.delete("app:leader")
         scheduler.shutdown(wait=False)
-
-        if bot_task:
-            print("Shutting down bot...")
-            await bot.close()
-            await bot_task
-            #
 
 
 sentry_sdk.init(
@@ -171,8 +164,8 @@ sentry_sdk.init(
 )
 
 
-app = FastAPI(lifespan=lifespan, redirect_slashes=False)
 print(f"running in {config.env} mode")
+app = FastAPI(lifespan=lifespan, redirect_slashes=False)
 
 Instrumentator().instrument(app).expose(app)
 
