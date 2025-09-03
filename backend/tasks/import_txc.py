@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import sys
+import time
 import zipfile
 from datetime import datetime, timedelta
 import isodate
@@ -9,6 +10,7 @@ from geoalchemy2.shape import from_shape, to_shape
 from shapely import MultiLineString, Point
 from shapely.geometry import LineString
 from sqlalchemy import func, select, update
+import sentry_sdk
 
 from backend.db.db import SessionLocal
 from backend.deps import LONDON
@@ -211,20 +213,26 @@ class TXCImporter:
 
         stops: dict[str, dict] = {}
 
+        route_link_refs = [
+            self.get_id(journey_pattern_section.timing_links[tl_ref].route_link_ref)
+            for tl_ref in journey_pattern_section.timing_links
+            if journey_pattern_section.timing_links[tl_ref].route_link_ref
+        ]
+        track_sections = (
+            self.db.query(TrackSection)
+            .filter(TrackSection.route_link_ref.in_(route_link_refs))
+            .all()
+        )
+        track_section_map = {str(ts.route_link_ref): ts for ts in track_sections}
+
         for timing_link in txc_journey.timing_links:
             journey_pattern_timing_link = journey_pattern_section.timing_links.get(
                 timing_link.journey_pattern_timing_link_ref
             )
             if not journey_pattern_timing_link:
                 continue
-            track_section = (
-                self.db.query(TrackSection)
-                .filter_by(
-                    route_link_ref=self.get_id(
-                        journey_pattern_timing_link.route_link_ref
-                    )
-                )
-                .first()
+            track_section = track_section_map.get(
+                self.get_id(journey_pattern_timing_link.route_link_ref)
             )
 
             from_stop = journey_pattern_timing_link.from_stop
@@ -387,7 +395,8 @@ class TXCImporter:
                         f"Skipping journey for service {txc_service.service_code} on line {txc_line.line_id} due to missing journey code"
                     )
                     continue
-                self.handle_journey(txc_journey, txc_service, service, line)
+                with sentry_sdk.start_span(op="txc_journey_add", name="Add Journey"):
+                    self.handle_journey(txc_journey, txc_service, service, line)
 
     def handle_route_section(self, txc_route_section: txc.RouteSection):
         track_points: list[Point] = []
@@ -519,133 +528,163 @@ class TXCImporter:
             return None
 
     async def handle_txc_file(self):
-        try:
-            for txc_operator in self.txc_data.operators:
-                db_operator = (
-                    self.db.query(Operator)
-                    .filter_by(noc=txc_operator.national_operator_code)
-                    .first()
-                )
-                operator = Operator(
-                    noc=txc_operator.national_operator_code,
-                    ref=txc_operator.operator_id,
-                    name=txc_operator.operator_name_on_licence
-                    or txc_operator.trading_name,
-                )
-                if not db_operator:
-                    print(f"Adding operator {txc_operator.operator_name_on_licence}")
-                    self.db.add(operator)
-                else:
-                    print(f"Updating operator {txc_operator.operator_name_on_licence}")
-                    self.db.merge(operator)
-
-            for txc_service in self.txc_data.services:
-                self.handle_service(txc_service)
-
-            bulk_upsert(
-                session=self.db,
-                model=Journey,
-                rows=self.journeys_to_add,
-                conflict_cols=["id"],
-                update_cols=[
-                    "service_code",
-                    "ticket_machine_code",
-                    "line_id",
-                    "block_id",
-                    "direction",
-                    "start_time",
-                    "end_time",
-                    "calendar_id",
-                ],
-            )
-            print(f"Added {len(self.journeys_to_add)} journeys")
-            self.journeys_to_add.clear()
-            self.db.flush()
-
-            bulk_upsert(
-                session=self.db,
-                model=StopTime,
-                rows=self.stop_times_to_add,
-                conflict_cols=["journey_id", "stop_sequence"],
-                update_cols=[
-                    "pick_up",
-                    "drop_off",
-                    "departure_time",
-                    "arrival_time",
-                    "stop_sequence",
-                    "distance_traveled",
-                    "timing_status",
-                    "wait_time",
-                ],
-            )
-            print(f"Added {len(self.stop_times_to_add)} stop times")
-            self.stop_times_to_add.clear()
-            self.db.flush()
-
-            for txc_route in self.txc_data.routes:
-                route_id = self.get_id(txc_route.route_id)
-                db_route = self.db.query(Route).filter_by(id=route_id).first()
-                route_section_ref = txc_route.route_section_ref
-
-                if route_section_ref:
-                    route_section = self.txc_data.route_sections.get(route_section_ref)
-                    if route_section:
-                        self.handle_route_section(route_section)
-
-                route = Route(
-                    id=route_id,
-                    private_code=txc_route.private_code,
-                    description=txc_route.description,
-                    route_section_id=self.get_id(route_section_ref),
-                )
-                if not db_route:
-                    print(f"Adding route {route_id}")
-                    self.db.add(route)
-                else:
-                    print(f"Updating route {route_id}")
-                    self.db.merge(route)
-            self.db.commit()
-
-            for line_id, stop_codes in self.line_to_stops.items():
-                for stop_code in stop_codes:
-                    db_stop = (
-                        self.db.query(LineStopUsage)
-                        .filter_by(line_id=line_id, stop_id=stop_code)
-                        .first()
-                    )
-                    if not db_stop:
-                        ltr = LineStopUsage(
-                            line_id=line_id,
-                            stop_id=stop_code,
+        sentry_sdk.init(
+            dsn="https://3da698c3793790b5233cb0a4a72d017f@o4509935722889216.ingest.de.sentry.io/4509935731277904",
+            traces_sample_rate=0.1,
+        )
+        start = time.time()
+        with sentry_sdk.start_transaction(op="task", name="TXC Import"):
+            with sentry_sdk.start_span(op="txc", name="Import TXC File"):
+                try:
+                    for txc_operator in self.txc_data.operators:
+                        db_operator = (
+                            self.db.query(Operator)
+                            .filter_by(noc=txc_operator.national_operator_code)
+                            .first()
                         )
-                        self.db.add(ltr)
-                # self.update_geometry(line_id)
-                self.db.flush()
-
-            for line_id, route_ids in self.line_to_routes.items():
-                for route_id in route_ids:
-                    db_ltr = (
-                        self.db.query(LineToRoute)
-                        .filter_by(line_id=line_id, route_id=route_id)
-                        .first()
-                    )
-                    if not db_ltr:
-                        ltr = LineToRoute(
-                            line_id=line_id,
-                            route_id=route_id,
+                        operator = Operator(
+                            noc=txc_operator.national_operator_code,
+                            ref=txc_operator.operator_id,
+                            name=txc_operator.operator_name_on_licence
+                            or txc_operator.trading_name,
                         )
-                        self.db.add(ltr)
-                self.merge_line_routes(line_id)
-                self.db.flush()
+                        if not db_operator:
+                            print(
+                                f"Adding operator {txc_operator.operator_name_on_licence}"
+                            )
+                            self.db.add(operator)
+                        else:
+                            print(
+                                f"Updating operator {txc_operator.operator_name_on_licence}"
+                            )
+                            self.db.merge(operator)
 
-            self.db.commit()
-            # await update_dashboard()
-        except Exception as e:
-            print("An error occurred during txc import:")
-            error_str = e.__str__()
-            print(error_str[:1000])
-            # print(error_str)
-            self.db.rollback()
+                    for txc_service in self.txc_data.services:
+                        with sentry_sdk.start_span(
+                            op="txc_service", name="Handle Service"
+                        ):
+                            self.handle_service(txc_service)
+                    with sentry_sdk.start_span(
+                        op="db_add_journeys", name="Add Journeys"
+                    ):
+                        bulk_upsert(
+                            session=self.db,
+                            model=Journey,
+                            rows=self.journeys_to_add,
+                            conflict_cols=["id"],
+                            update_cols=[
+                                "service_code",
+                                "ticket_machine_code",
+                                "line_id",
+                                "block_id",
+                                "direction",
+                                "start_time",
+                                "end_time",
+                                "calendar_id",
+                            ],
+                        )
+                    print(f"Added {len(self.journeys_to_add)} journeys")
+                    self.journeys_to_add.clear()
+                    self.db.flush()
+
+                    with sentry_sdk.start_span(
+                        op="db_add_stoptime", name="Add StopTimes"
+                    ):
+                        bulk_upsert(
+                            session=self.db,
+                            model=StopTime,
+                            rows=self.stop_times_to_add,
+                            conflict_cols=["journey_id", "stop_sequence"],
+                            update_cols=[
+                                "pick_up",
+                                "drop_off",
+                                "departure_time",
+                                "arrival_time",
+                                "stop_sequence",
+                                "distance_traveled",
+                                "timing_status",
+                                "wait_time",
+                            ],
+                        )
+                    print(f"Added {len(self.stop_times_to_add)} stop times")
+                    self.stop_times_to_add.clear()
+                    self.db.flush()
+
+                    for txc_route in self.txc_data.routes:
+                        with sentry_sdk.start_span(
+                            op="txc_route", name="Process Route"
+                        ):
+                            route_id = self.get_id(txc_route.route_id)
+                            db_route = (
+                                self.db.query(Route).filter_by(id=route_id).first()
+                            )
+                            route_section_ref = txc_route.route_section_ref
+
+                            if route_section_ref:
+                                route_section = self.txc_data.route_sections.get(
+                                    route_section_ref
+                                )
+                                if route_section:
+                                    self.handle_route_section(route_section)
+
+                            route = Route(
+                                id=route_id,
+                                private_code=txc_route.private_code,
+                                description=txc_route.description,
+                                route_section_id=self.get_id(route_section_ref),
+                            )
+                            if not db_route:
+                                print(f"Adding route {route_id}")
+                                self.db.add(route)
+                            else:
+                                print(f"Updating route {route_id}")
+                                self.db.merge(route)
+                    self.db.commit()
+
+                    for line_id, stop_codes in self.line_to_stops.items():
+                        for stop_code in stop_codes:
+                            db_stop = (
+                                self.db.query(LineStopUsage)
+                                .filter_by(line_id=line_id, stop_id=stop_code)
+                                .first()
+                            )
+                            if not db_stop:
+                                ltr = LineStopUsage(
+                                    line_id=line_id,
+                                    stop_id=stop_code,
+                                )
+                                self.db.add(ltr)
+                        # self.update_geometry(line_id)
+                        self.db.flush()
+
+                    for line_id, route_ids in self.line_to_routes.items():
+                        for route_id in route_ids:
+                            db_ltr = (
+                                self.db.query(LineToRoute)
+                                .filter_by(line_id=line_id, route_id=route_id)
+                                .first()
+                            )
+                            if not db_ltr:
+                                ltr = LineToRoute(
+                                    line_id=line_id,
+                                    route_id=route_id,
+                                )
+                                self.db.add(ltr)
+                        self.merge_line_routes(line_id)
+                        self.db.flush()
+
+                    self.db.commit()
+                    # await update_dashboard()
+                except Exception as e:
+                    print("An error occurred during txc import:")
+                    error_str = e.__str__()
+                    print(error_str[:1000])
+                    # print(error_str)
+                    self.db.rollback()
+                finally:
+                    self.db.close()
+                    end = time.time()
+                    print(f"TXC Import completed in {end - start:.2f} seconds")
 
 
 if __name__ == "__main__":
