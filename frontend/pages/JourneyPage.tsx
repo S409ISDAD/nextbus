@@ -334,8 +334,13 @@ const JourneyPage: React.FC = () => {
             const now = new Date();
 
             if (!predictions || predictions.length < 2) {
-                setSeq(bus?.progress ? bus.progress.sequence : 0);
-                setProg(bus?.progress ? bus.progress.progress : 0);
+                if (bus?.started) {
+                    setSeq(bus?.progress ? bus.progress.sequence : 0);
+                    setProg(bus?.progress ? bus.progress.progress : 0);
+                } else {
+                    setSeq(0);
+                    setProg(0);
+                }
                 const lat = bus?.coords?.[1] ?? 0;
                 const lng = bus?.coords?.[0] ?? 0;
                 setLoc([lat, lng]);
