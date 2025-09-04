@@ -106,10 +106,10 @@ async def get_dashboard_message() -> discord.Message | None:
 
 async def get_status():
     health = await fetch_json("https://nextbus.orbitix.dev/api/v1/health/")
-
+    status = "up"
     if not health:
-        return f"{status_ping_role} ❌ nextbus is down"
-    return f"{status_ping_role} ✅ nextbus is up"
+        status = "down"
+    return f"{status_ping_role}\n# nextbus is {status}\n-#<t:{int(datetime.now(tz=UTC).timestamp())}:F>"
 
 
 async def monitor_status(interval: int = 60):
