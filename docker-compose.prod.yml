@@ -51,6 +51,7 @@ services:
       replicas: 2   
       update_config:
         parallelism: 1 
+        failure_action: rollback
         delay: 5s
       restart_policy:
         condition: on-failure
