@@ -22,12 +22,18 @@ def bulk_upsert(
     if not rows:
         return
 
-    all_columns = [col.name for col in model.__table__.columns]
+    all_columns = [col.name for col in model.__table__.columns if not col.computed]
+    # exclude autoincrement
+    pk_autoinc_cols = [
+        col.name
+        for col in model.__table__.columns
+        if col.primary_key and col.autoincrement and col.name not in [*conflict_cols]
+    ]
     normalized_rows = [
         {
-            col: row.get(col, None)
+            col: row.get(col)
             for col in all_columns
-            if not model.__table__.columns[col].computed
+            if not (col in pk_autoinc_cols and col not in row)
         }
         for row in rows
     ]
