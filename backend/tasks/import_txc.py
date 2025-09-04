@@ -11,8 +11,9 @@ from shapely import MultiLineString, Point
 from shapely.geometry import LineString
 from sqlalchemy import func, select, update
 import sentry_sdk
+from sqlalchemy_searchable import sync_trigger
 
-from backend.db.db import SessionLocal
+from backend.db.db import SessionLocal, engine
 from backend.deps import LONDON
 from backend.models import (
     BankHoliday,
@@ -69,6 +70,37 @@ async def import_txc_zip(zip_path):
         else:
             duration = f"{int(time_taken)}s"
         print(f"Total TXC Import completed in {duration}")
+        print("Updating search vectors...")
+        with engine.begin() as conn:
+            sync_trigger(
+                conn,
+                "service",
+                "search_vector",
+                [
+                    "service_code",
+                    "description",
+                    "origin",
+                    "destination",
+                    "vias",
+                    "line_names",
+                ],
+            )
+            sync_trigger(
+                conn,
+                "operator",
+                "search_vector",
+                ["name", "noc"],
+            )
+            sync_trigger(
+                conn,
+                "line",
+                "search_vector",
+                [
+                    "line_name",
+                    "inbound_description",
+                    "outbound_description",
+                ],
+            )
 
 
 # def import_txc_zip(zip_path):
