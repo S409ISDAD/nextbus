@@ -137,7 +137,8 @@ async def monitor_status(interval: int = 60):
 
 
 async def send_status_message(status: str, downtime_duration: timedelta | None = None):
-    message = f"# nextbus is {status}"
+    emoji = "✅" if status == "up" else "⚠️" if status == "degraded" else "❌"
+    message = f"# {emoji} nextbus is {status}"
 
     if downtime_duration and status == "up":
         hours = downtime_duration.total_seconds() // 3600
