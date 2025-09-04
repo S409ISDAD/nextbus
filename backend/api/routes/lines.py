@@ -3,9 +3,11 @@ import logging
 from backend.deps import get_redis, limiter
 
 # from backend.schemas.line import Line
-from backend.models import Line
+from backend.models import Line, Service, Operator
 from backend.db.db import get_db
 from geoalchemy2.shape import to_shape
+from sqlalchemy.orm import joinedload, defer, Load
+from backend.utils.match_bt import match_service_line
 
 router = APIRouter()
 
@@ -18,25 +20,35 @@ async def line(
     request: Request, line_id: str, redis=Depends(get_redis), db=Depends(get_db)
 ):
     try:
-        line = db.query(Line).filter(Line.id == line_id).first()
+        if line_id.isdigit():
+            line = await match_service_line(db, int(line_id), redis)
+            if not line:
+                raise HTTPException(
+                    404, detail=f"Line not found with bt service id {line_id}"
+                )
+            line_id = str(line.id)
 
-        if line and line.geometry:
-            geom = to_shape(line.geometry)
-            from shapely.geometry import MultiLineString, LineString
+        line: Line = (
+            db.query(Line)
+            .options(
+                Load(Line).defer(Line.search_vector),
+                Load(Line).joinedload(Line.service).defer(Service.search_vector),
+                Load(Line)
+                .joinedload(Line.service)
+                .joinedload(Service.operator)
+                .defer(Operator.search_vector),
+            )
+            .filter(Line.id == line_id)
+            .first()
+        )
 
-            if isinstance(geom, LineString):
-                line.geometry = [[lat, lon] for lon, lat in geom.coords]
-            elif isinstance(geom, MultiLineString):
-                # For MultiLineString or similar
-                line.geometry = [
-                    [[lat, lon] for lon, lat in linestring.coords]
-                    for linestring in geom.geoms
-                    if hasattr(linestring, "coords")
-                ]
-            else:
-                line.geometry = []
+        if not line:
+            raise HTTPException(404, detail="Line not found")
 
-        return line
+        line_dict = line.__dict__.copy()
+        line_dict.pop("geometry", None)
+
+        return line_dict
     except Exception as e:
         log.error(f"Unexpected error: {e}")
         raise HTTPException(500, detail="An unexpected error occured")
