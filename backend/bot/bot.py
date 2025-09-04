@@ -109,7 +109,7 @@ async def get_status():
     status = "up"
     if not health:
         status = "down"
-    return f"{status_ping_role}\n# nextbus is {status}\n-#<t:{int(datetime.now(tz=UTC).timestamp())}:F>"
+    return f"{status_ping_role}\n# nextbus is {status}\n-# <t:{int(datetime.now(tz=UTC).timestamp())}:F>"
 
 
 async def monitor_status(interval: int = 60):
