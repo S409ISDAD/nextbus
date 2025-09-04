@@ -240,6 +240,8 @@ async def build_scheduled_db(
             await prev_journey.line.get_bt_service_id(db) if prev_journey else None
         )
 
+        service_info = await get_service_info(service_id, r) if service_id else None
+
         potential_bus = (
             await fetch_bus_trip(service_id, prev_trip, r) if service_id else None
         )
@@ -261,6 +263,7 @@ async def build_scheduled_db(
                 bus.trip = trip_id
                 bus.started = started
                 bus.status = "on_prev_trip"
+                bus.service = service_info if service_info else bus.service
 
                 # Don't show if expected is more than 2 hours away
                 if (bus.expected - datetime.now(tz=LONDON)).total_seconds() < 4 * 3600:
