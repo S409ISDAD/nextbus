@@ -18,8 +18,6 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 DASHBOARD_CHANNEL_ID = 1411756379542392953
 STATUS_CHANNEL_ID = 1404456642090897669
 
-status_ping_role = "<@&1404787103627219026>"
-
 last_status = None
 not_healthy_time = None
 
@@ -139,7 +137,7 @@ async def monitor_status(interval: int = 60):
 
 
 async def send_status_message(status: str, downtime_duration: timedelta | None = None):
-    message = f"{status_ping_role}\n# nextbus is {status}"
+    message = f"# nextbus is {status}"
 
     if downtime_duration and status == "up":
         hours = downtime_duration.total_seconds() // 3600
