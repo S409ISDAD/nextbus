@@ -14,6 +14,8 @@ log = logging.getLogger(__name__)
 @limiter.limit("45/minute")
 async def stop_details(request: Request, stop_id: str, redis=Depends(get_redis)):
     try:
+        if not stop_id:
+            raise HTTPException(400, detail="stop_id is required")
         services = await stops.get_services_from_stop(stop_id, redis)
 
         stop_details = await stops.get_stop_details(stop_id, redis)
