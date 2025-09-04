@@ -6,7 +6,7 @@ from backend.db.db import SessionLocal
 from backend.deps import LONDON, UTC
 from backend.models import Line, BotConfig
 from backend.utils.fetch_json import fetch_json
-from datetime import datetime
+from datetime import datetime, timedelta
 from sqlalchemy import event
 from sqlalchemy.orm import joinedload
 
@@ -21,6 +21,7 @@ STATUS_CHANNEL_ID = 1404456642090897669
 status_ping_role = "<@&1404787103627219026>"
 
 last_status = None
+not_healthy_time = None
 
 update_queue = asyncio.Queue()
 
@@ -116,17 +117,46 @@ async def get_status():
 
 async def monitor_status(interval: int = 60):
     global last_status
+    global not_healthy_time
     await bot.wait_until_ready()
     while True:
         status = await get_status()
         if status != last_status:
-            await send_status_message(status)
+            downtime_duration = None
+            if status != "up":
+                if not_healthy_time is None:
+                    not_healthy_time = datetime.now(tz=UTC)
+            else:
+                downtime_duration = (
+                    datetime.now(tz=UTC) - not_healthy_time
+                    if not_healthy_time
+                    else None
+                )
+                not_healthy_time = None
+            await send_status_message(status, downtime_duration)
             last_status = status
         await asyncio.sleep(interval)
 
 
-async def send_status_message(status: str):
-    message = f"{status_ping_role}\n# nextbus is {status}\n-# <t:{int(datetime.now(tz=LONDON).timestamp())}:F>"
+async def send_status_message(status: str, downtime_duration: timedelta | None = None):
+    message = f"{status_ping_role}\n# nextbus is {status}"
+
+    if downtime_duration and status == "up":
+        hours = downtime_duration.total_seconds() // 3600
+        minutes = (downtime_duration.total_seconds() % 3600) // 60
+        seconds = int(downtime_duration.total_seconds() % 60)
+        downtime_str = []
+        if hours > 0:
+            downtime_str.append(f"{int(hours)}h")
+        if minutes > 0:
+            downtime_str.append(f"{int(minutes)}m")
+        if seconds > 0 or not downtime_str:
+            downtime_str.append(f"{seconds}s")
+        duration = " ".join(downtime_str)
+        message += f"\n (down for {duration})"
+
+    message += f"\n-# <t:{int(datetime.now(tz=LONDON).timestamp())}:F>"
+
     channel = bot.get_channel(STATUS_CHANNEL_ID)
     if channel and isinstance(channel, discord.TextChannel):
         await channel.send(message)
