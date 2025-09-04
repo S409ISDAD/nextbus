@@ -226,7 +226,20 @@ async def build_scheduled_db(
             else stop_time.journey.line.service.origin
         )
 
+        scheduled_bus = ScheduledBus(
+            destination=dest,
+            line=stop_time.journey.line.line_name,
+            scheduled=scheduled,
+            expected=scheduled,
+            started=started,
+            trip=trip_id,
+            status="not_tracking",
+        )
+
         prev_journey = stop_time.journey.get_previous_journey(db, today.date())
+
+        if not prev_journey:
+            return scheduled_bus
 
         layover_time = (
             stop_time.journey.start_time - prev_journey.end_time
@@ -234,17 +247,16 @@ async def build_scheduled_db(
             else timedelta(0)
         )
 
-        prev_trip = await prev_journey.get_bt_trip_id(db) if prev_journey else None
+        prev_trip = await prev_journey.get_bt_trip_id(db)
 
-        service_id = (
-            await prev_journey.line.get_bt_service_id(db) if prev_journey else None
-        )
+        service_id = await prev_journey.line.get_bt_service_id(db)
 
-        service_info = await get_service_info(service_id, r) if service_id else None
+        if not prev_trip or not service_id:
+            return scheduled_bus
 
-        potential_bus = (
-            await fetch_bus_trip(service_id, prev_trip, r) if service_id else None
-        )
+        service_info = await get_service_info(service_id, r)
+
+        potential_bus = await fetch_bus_trip(service_id, prev_trip, r)
 
         if potential_bus:
             print("Found bus from previous trip")
