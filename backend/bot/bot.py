@@ -3,7 +3,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 from backend.db.db import SessionLocal
-from backend.deps import UTC
+from backend.deps import LONDON, UTC
 from backend.models import Line, BotConfig
 from backend.utils.fetch_json import fetch_json
 from datetime import datetime
@@ -108,8 +108,10 @@ async def get_status():
     health = await fetch_json("https://nextbus.orbitix.dev/api/v1/health/")
     status = "up"
     if not health:
-        status = "down"
-    return f"{status_ping_role}\n# nextbus is {status}\n-# <t:{int(datetime.now(tz=UTC).timestamp())}:F>"
+        return "down"
+    if health.get("status") != "healthy":
+        return "degraded"
+    return status
 
 
 async def monitor_status(interval: int = 60):
@@ -118,12 +120,16 @@ async def monitor_status(interval: int = 60):
     while True:
         status = await get_status()
         if status != last_status:
-            channel = bot.get_channel(STATUS_CHANNEL_ID)
-            if channel and isinstance(channel, discord.TextChannel):
-                await channel.send(status)
-                print(f"Status changed: {status}")
+            await send_status_message(status)
             last_status = status
         await asyncio.sleep(interval)
+
+
+async def send_status_message(status: str):
+    message = f"{status_ping_role}\n# nextbus is {status}\n-# <t:{int(datetime.now(tz=LONDON).timestamp())}:F>"
+    channel = bot.get_channel(STATUS_CHANNEL_ID)
+    if channel and isinstance(channel, discord.TextChannel):
+        await channel.send(message)
 
 
 async def update_dashboard():
