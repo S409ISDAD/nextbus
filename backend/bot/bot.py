@@ -153,7 +153,7 @@ async def send_status_message(status: str, downtime_duration: timedelta | None =
         if seconds > 0 or not downtime_str:
             downtime_str.append(f"{seconds}s")
         duration = " ".join(downtime_str)
-        message += f"\n (down for {duration})"
+        message += f"\n(down for {duration})"
 
     message += f"\n-# <t:{int(datetime.now(tz=LONDON).timestamp())}:F>"
 
