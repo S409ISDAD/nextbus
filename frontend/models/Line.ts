@@ -1,4 +1,4 @@
-import { Service } from "./ServiceInfo";
+import type { Service } from "./ServiceInfo";
 
 export interface Line {
     id: string;

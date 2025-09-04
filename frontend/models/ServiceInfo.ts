@@ -1,4 +1,4 @@
-import { Operator } from "./Operator";
+import type { Operator } from "./Operator";
 
 export interface ServiceInfo {
     id: number;
