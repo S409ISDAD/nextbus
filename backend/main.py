@@ -143,25 +143,26 @@ async def lifespan(app: FastAPI):
         scheduler.shutdown(wait=False)
 
 
-sentry_sdk.init(
-    dsn="https://3da698c3793790b5233cb0a4a72d017f@o4509935722889216.ingest.de.sentry.io/4509935731277904",
-    # Add data like request headers and IP for users,
-    # see https://docs.sentry.io/platforms/python/data-management/data-collected/ for more info
-    integrations=[
-        SqlalchemyIntegration(),
-    ],
-    environment=config.env,
-    send_default_pii=True,
-    # Set traces_sample_rate to 1.0 to capture 100%
-    # of transactions for tracing.
-    traces_sample_rate=0.2,
-    # Set profile_session_sample_rate to 1.0 to profile 100%
-    # of profile sessions.
-    profile_session_sample_rate=0.1,
-    # Set profile_lifecycle to "trace" to automatically
-    # run the profiler on when there is an active transaction
-    profile_lifecycle="trace",
-)
+if config.env != "development":
+    sentry_sdk.init(
+        dsn="https://3da698c3793790b5233cb0a4a72d017f@o4509935722889216.ingest.de.sentry.io/4509935731277904",
+        # Add data like request headers and IP for users,
+        # see https://docs.sentry.io/platforms/python/data-management/data-collected/ for more info
+        integrations=[
+            SqlalchemyIntegration(),
+        ],
+        environment=config.env,
+        send_default_pii=True,
+        # Set traces_sample_rate to 1.0 to capture 100%
+        # of transactions for tracing.
+        traces_sample_rate=0.2,
+        # Set profile_session_sample_rate to 1.0 to profile 100%
+        # of profile sessions.
+        profile_session_sample_rate=0.1,
+        # Set profile_lifecycle to "trace" to automatically
+        # run the profiler on when there is an active transaction
+        profile_lifecycle="trace",
+    )
 
 
 print(f"running in {config.env} mode")
