@@ -30,14 +30,7 @@ async def line(
 
         line: Line = (
             db.query(Line)
-            .options(
-                Load(Line).defer(Line.search_vector),
-                Load(Line).joinedload(Line.service).defer(Service.search_vector),
-                Load(Line)
-                .joinedload(Line.service)
-                .joinedload(Service.operator)
-                .defer(Operator.search_vector),
-            )
+            .options(joinedload(Line.service).joinedload(Service.operator))
             .filter(Line.id == line_id)
             .first()
         )

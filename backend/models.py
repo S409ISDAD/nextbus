@@ -19,8 +19,9 @@ from sqlalchemy import (
     func,
 )
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship, Session, joinedload
+from sqlalchemy.orm import relationship, Session, joinedload, deferred
 from sqlalchemy_searchable import make_searchable
+from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy_utils.types import TSVectorType
 from backend.deps import LONDON
 
@@ -194,16 +195,18 @@ class Stop(Base):
 
     __table_args__ = (Index("ix_stop_point", "point", postgresql_using="gist"),)
 
-    search_vector = Column(
-        TSVectorType(
-            "atco_code",
-            "naptan_code",
-            "common_name",
-            "common_short_name",
-            "landmark",
-            "street",
-            "suburb",
-            "town",
+    search_vector = deferred(
+        Column(
+            TSVectorType(
+                "atco_code",
+                "naptan_code",
+                "common_name",
+                "common_short_name",
+                "landmark",
+                "street",
+                "suburb",
+                "town",
+            ),
         )
     )
 
@@ -299,21 +302,24 @@ class Operator(Base):
 
     services = relationship("Service", back_populates="operator")
 
-    search_vector = Column(TSVectorType("name", "noc"))
+    search_vector = deferred(Column(TSVectorType("name", "noc")))
 
 
 class BankHoliday(Base):
     __tablename__ = "bank_holiday"
-
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String, nullable=False, unique=True)
 
     dates = relationship(
         "BankHolidayDate", back_populates="bank_holiday", cascade="all, delete-orphan"
     )
-    calendars = relationship(
-        "Calendar", secondary="calendar_bank_holiday", back_populates="bank_holidays"
+    calendar_links = relationship(
+        "CalendarToBankHoliday",
+        back_populates="bank_holiday",
+        cascade="all, delete-orphan",
     )
+
+    calendars = association_proxy("calendar_links", "calendar")
 
 
 class BankHolidayDate(Base):
@@ -348,6 +354,13 @@ class CalendarToBankHoliday(Base):
         Integer, ForeignKey("bank_holiday.id"), primary_key=True, nullable=False
     )
 
+    bank_holiday = relationship(
+        "BankHoliday", back_populates="calendar_links", overlaps="calendars"
+    )
+    calendar = relationship(
+        "Calendar", back_populates="calendar_bank_holiday", overlaps="calendars"
+    )
+
 
 class Calendar(Base):
     """
@@ -367,9 +380,11 @@ class Calendar(Base):
     start_date = Column(Date, nullable=False)
     end_date = Column(Date, nullable=True)  # no end date means it is valid indefinitely
 
-    bank_holidays = relationship(
-        "BankHoliday", secondary="calendar_bank_holiday", back_populates="calendars"
+    calendar_bank_holiday = relationship(
+        "CalendarToBankHoliday", back_populates="calendar", cascade="all, delete-orphan"
     )
+
+    bank_holidays = association_proxy("calendar_bank_holiday", "bank_holiday")
     calendar_exceptions = relationship(
         "CalendarException", back_populates="calendar", cascade="all, delete-orphan"
     )
@@ -387,6 +402,43 @@ class Calendar(Base):
             "saturday": self.saturday,
             "sunday": self.sunday,
         }
+
+    def is_valid(self, date: date | None = None) -> bool:
+        """
+        Returns True if the calendar is valid on the given date (or today if no date is given).
+        """
+
+        if not date:
+            date = datetime.now(tz=LONDON).date()
+
+        if not (
+            self.start_date <= date and (self.end_date is None or self.end_date >= date)
+        ):
+            return False
+
+        # check day
+        weekday = date.strftime("%A").lower()
+        if not getattr(self, weekday):
+            # print("Not valid on this weekday, active days:", self.calendar.days_of_week)
+            return False
+
+        # check exceptions
+        for exc in self.calendar_exceptions:
+            if date < exc.start_date and exc.operating is True:
+                return False
+            if exc.start_date <= date <= exc.end_date:
+                return exc.operating
+            if date > exc.end_date and exc.operating is True:
+                return False
+
+        # check bank holidays
+        for link in self.calendar_bank_holiday:
+            bh = link.bank_holiday
+            for bh_date in bh.dates:
+                if bh_date.date == date:
+                    return link.operating
+
+        return True
 
 
 class CalendarException(Base):
@@ -424,9 +476,16 @@ class Service(Base):
     operator = relationship("Operator", back_populates="services")
     lines = relationship("Line", back_populates="service")
     journeys = relationship("Journey", back_populates="service")
-    search_vector = Column(
-        TSVectorType(
-            "service_code", "description", "origin", "destination", "vias", "line_names"
+    search_vector = deferred(
+        Column(
+            TSVectorType(
+                "service_code",
+                "description",
+                "origin",
+                "destination",
+                "vias",
+                "line_names",
+            ),
         )
     )
 
@@ -456,11 +515,13 @@ class Line(Base):
         UniqueConstraint("line_name", "service_code", name="uq_line_per_service"),
     )
 
-    search_vector = Column(
-        TSVectorType(
-            "line_name",
-            "inbound_description",
-            "outbound_description",
+    search_vector = deferred(
+        Column(
+            TSVectorType(
+                "line_name",
+                "inbound_description",
+                "outbound_description",
+            ),
         )
     )
 
@@ -611,26 +672,7 @@ class Journey(Base):
         if not date:
             date = datetime.now(tz=LONDON).date()
 
-        if not (
-            self.calendar.start_date <= date
-            and (self.calendar.end_date is None or self.calendar.end_date >= date)
-        ):
-            return False
-
-        weekday = date.strftime("%A").lower()
-        if not getattr(self.calendar, weekday):
-            # print("Not valid on this weekday, active days:", self.calendar.days_of_week)
-            return False
-
-        for exc in self.calendar.calendar_exceptions:
-            if date < exc.start_date and exc.operating is True:
-                return False
-            if exc.start_date <= date <= exc.end_date:
-                return exc.operating
-            if date > exc.end_date and exc.operating is True:
-                return False
-        print("No exceptions found, journey is valid")
-        return True
+        return self.calendar.is_valid(date)
 
     def get_previous_journey(
         self, db: Session, date: date | None = None

@@ -10,6 +10,17 @@ from datetime import datetime
 from sqlalchemy import event
 from sqlalchemy.orm import joinedload
 
+intents = discord.Intents.default()
+intents.messages = True
+
+bot = commands.Bot(command_prefix="!", intents=intents)
+
+DASHBOARD_CHANNEL_ID = 1411756379542392953
+STATUS_CHANNEL_ID = 1404456642090897669
+
+status_ping_role = "<@&1404787103627219026>"
+
+last_status = None
 
 update_queue = asyncio.Queue()
 
@@ -34,14 +45,6 @@ async def update_dashboard_worker():
         await update_queue.get()
         await update_dashboard()
         update_queue.task_done()
-
-
-intents = discord.Intents.default()
-intents.messages = True
-
-bot = commands.Bot(command_prefix="!", intents=intents)
-
-DASHBOARD_CHANNEL_ID = 1411756379542392953
 
 
 def is_admin():
@@ -69,6 +72,9 @@ async def on_ready():
     if not getattr(bot, "_dashboard_worker_started", False):
         bot.loop.create_task(update_dashboard_worker())
         setattr(bot, "_dashboard_worker_started", True)
+    if not getattr(bot, "_status_monitor_started", False):
+        bot.loop.create_task(monitor_status())
+        setattr(bot, "_status_monitor_started", True)
     await update_dashboard()
 
 
@@ -96,6 +102,28 @@ async def get_dashboard_message() -> discord.Message | None:
                 except discord.NotFound:
                     return None
     return None
+
+
+async def get_status():
+    health = await fetch_json("https://nextbus.orbitix.dev/api/v1/health/")
+
+    if not health:
+        return f"{status_ping_role} ❌ nextbus is down"
+    return f"{status_ping_role} ✅ nextbus is up"
+
+
+async def monitor_status(interval: int = 60):
+    global last_status
+    await bot.wait_until_ready()
+    while True:
+        status = await get_status()
+        if status != last_status:
+            channel = bot.get_channel(STATUS_CHANNEL_ID)
+            if channel and isinstance(channel, discord.TextChannel):
+                await channel.send(status)
+                print(f"Status changed: {status}")
+            last_status = status
+        await asyncio.sleep(interval)
 
 
 async def update_dashboard():
