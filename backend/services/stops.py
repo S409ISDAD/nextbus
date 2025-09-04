@@ -199,6 +199,7 @@ async def get_nearby_services(lat, lng, r, dist=0.005):
             nearby_service = Service(
                 id=service_id,
                 line_name=service.get("line_name"),
+                description=service.get("description"),
                 detail=service.get("detail"),
             )
             nearby_services.append(nearby_service)
