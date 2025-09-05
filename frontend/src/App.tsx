@@ -18,6 +18,7 @@ import { BrowserRouter, Routes, Route, useLocation } from "react-router";
 import { Toaster } from "react-hot-toast";
 import { faXmark } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import useReloadPrompt from "../components/ReloadPrompt";
 
 import { useState, useEffect } from "react";
 import {
@@ -70,6 +71,8 @@ function App() {
             window.history.replaceState({}, document.title, url.toString());
         }
     }, []);
+
+    useReloadPrompt();
 
     return (
         <BrowserRouter>

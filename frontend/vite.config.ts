@@ -13,6 +13,9 @@ export default defineConfig({
       clientsClaim: true,
       skipWaiting: true,
     },
+    devOptions: {
+      enabled: true,
+    },
   })],
   server: {
     allowedHosts: ['pi5.tailefc815.ts.net'],
