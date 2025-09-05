@@ -249,14 +249,15 @@ async def build_scheduled_db(
 
         prev_trip = await prev_journey.get_bt_trip_id(db)
 
-        service_id = await prev_journey.line.get_bt_service_id(db)
+        prev_service_id = await prev_journey.line.get_bt_service_id(db)
+        this_service_id = await stop_time.journey.line.get_bt_service_id(db)
 
-        if not prev_trip or not service_id:
+        if not prev_trip or not prev_service_id or not this_service_id:
             return scheduled_bus
 
-        service_info = await get_service_info(service_id, r)
+        service_info = await get_service_info(this_service_id, r)
 
-        potential_bus = await fetch_bus_trip(service_id, prev_trip, r)
+        potential_bus = await fetch_bus_trip(prev_service_id, prev_trip, r)
 
         if potential_bus:
             print("Found bus from previous trip")
@@ -275,7 +276,8 @@ async def build_scheduled_db(
                 bus.trip = trip_id
                 bus.started = started
                 bus.status = "on_prev_trip"
-                bus.service = service_info if service_info else bus.service
+                service = service_info if service_info else bus.service
+                bus.service = service
 
                 # Don't show if expected is more than 2 hours away
                 if (bus.expected - datetime.now(tz=LONDON)).total_seconds() < 4 * 3600:
