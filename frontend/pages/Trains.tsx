@@ -2,30 +2,17 @@ import React, { useEffect } from "react";
 // import DepartureBoard from "../components/DepartureBoard";
 // import { faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
 // import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import StopMap from "../components/StopMap";
 import TrainSearchCard from "../components/TrainSearch";
 import { Card } from "../components/ui/Card";
-import { getCurrentPosition } from "../utils/locations";
-import type { ServiceInfo } from "../models/ServiceInfo";
-import getNearby from "../utils/getNearby";
 import type { StationData } from "uk-railway-stations";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-    faBus,
-    faTrainSubway,
-    faWarning,
-} from "@fortawesome/free-solid-svg-icons";
-import { getClosestStop } from "../utils/closestStop";
+import { faTrainSubway } from "@fortawesome/free-solid-svg-icons";
 import { StationCombobox } from "../components/StationCombobox";
 
 const TrainsDashboard: React.FC = () => {
     // const navigate = useNavigate();
-
-    const [services, setServices] = React.useState<ServiceInfo[]>([]);
-    const [closestStop, setClosestStop] = React.useState<string | null>(null);
     const [selectedStation, setSelectedStation] =
         React.useState<StationData | null>(null);
-    const [showStop, setShowStop] = React.useState(false);
 
     useEffect(() => {
         document.title = "trains | nextbus";

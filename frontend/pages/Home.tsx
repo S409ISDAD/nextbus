@@ -3,28 +3,19 @@ import React, { useEffect } from "react";
 // import { faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
 // import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import StopMap from "../components/StopMap";
-import TrainSearchCard from "../components/TrainSearch";
 import { Card } from "../components/ui/Card";
 import { getCurrentPosition } from "../utils/locations";
 import type { ServiceInfo } from "../models/ServiceInfo";
 import getNearby from "../utils/getNearby";
-import type { StationData } from "uk-railway-stations";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-    faBus,
-    faTrainSubway,
-    faWarning,
-} from "@fortawesome/free-solid-svg-icons";
+import { faBus, faWarning } from "@fortawesome/free-solid-svg-icons";
 import { getClosestStop } from "../utils/closestStop";
-import { StationCombobox } from "../components/StationCombobox";
 
 const Home: React.FC = () => {
     // const navigate = useNavigate();
 
     const [services, setServices] = React.useState<ServiceInfo[]>([]);
     const [closestStop, setClosestStop] = React.useState<string | null>(null);
-    const [selectedStation, setSelectedStation] =
-        React.useState<StationData | null>(null);
     const [showStop, setShowStop] = React.useState(false);
 
     useEffect(() => {
