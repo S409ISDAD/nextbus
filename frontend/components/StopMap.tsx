@@ -1,26 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import L from "leaflet";
 import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
 import { LocateControl } from "leaflet.locatecontrol";
 import "leaflet.locatecontrol/dist/L.Control.Locate.min.css";
-
-const LocateControlComponent: React.FC<{}> = () => {
-    const map = useMap();
-
-    useEffect(() => {
-        // @ts-ignore
-        const locateControl = new LocateControl({
-            position: "topright",
-            showPopup: false,
-            strings: {
-                title: "Show me where I am",
-            },
-        });
-        locateControl.addTo(map);
-    }, [map]);
-
-    return null;
-};
 
 type Stop = {
     stop_id: string;
@@ -35,6 +17,7 @@ type MapViewProps = {
     lng: number;
     stops: Stop[];
     loading?: boolean;
+    onBoundsChange: (bounds: L.LatLngBounds, zoom: number) => void;
 };
 
 const getPinIcon = (bearing: number) =>
@@ -57,8 +40,22 @@ const getStopIcon = () =>
         popupAnchor: [-6, -6],
     });
 
-import { useCallback } from "react";
+// Leaflet locate control
+const LocateControlComponent: React.FC = () => {
+    const map = useMap();
+    useEffect(() => {
+        // @ts-ignore
+        const locateControl = new LocateControl({
+            position: "topright",
+            showPopup: false,
+            strings: { title: "Show me where I am" },
+        });
+        locateControl.addTo(map);
+    }, [map]);
+    return null;
+};
 
+// Zoom prompt overlay
 const ZoomPrompt: React.FC<{ zoom: number }> = ({ zoom }) => {
     if (zoom < 13) {
         return (
@@ -82,6 +79,7 @@ const ZoomPrompt: React.FC<{ zoom: number }> = ({ zoom }) => {
     return null;
 };
 
+// Loading overlay
 const LoadingMsg: React.FC<{ loading: boolean }> = ({ loading }) => {
     if (loading) {
         return (
@@ -89,7 +87,8 @@ const LoadingMsg: React.FC<{ loading: boolean }> = ({ loading }) => {
                 style={{
                     position: "absolute",
                     top: 10,
-                    left: 50,
+                    left: "50%",
+                    transform: "translateX(-50%)",
                     background: "rgba(255,255,255,0.95)",
                     padding: "8px 16px",
                     borderRadius: "8px",
@@ -104,37 +103,48 @@ const LoadingMsg: React.FC<{ loading: boolean }> = ({ loading }) => {
     return null;
 };
 
-const MapView: React.FC<
-    MapViewProps & { onBoundsChange: (bounds: any, zoom: number) => void }
-> = ({ lat, lng, stops, loading, onBoundsChange }) => {
+const MapView: React.FC<MapViewProps> = ({
+    lat,
+    lng,
+    stops,
+    loading,
+    onBoundsChange,
+}) => {
     const [zoom, setZoom] = useState(10);
 
     const handleMove = useCallback(
         (map: L.Map) => {
             const bounds = map.getBounds();
             const z = map.getZoom();
-            setZoom(z);
+
+            setZoom((prevZoom) => (prevZoom !== z ? z : prevZoom)); // only update zoom if changed
             onBoundsChange(bounds, z);
         },
         [onBoundsChange]
     );
 
-    function MapEvents() {
+    const MapEvents: React.FC = () => {
         const map = useMap();
+
         useEffect(() => {
+            const onMoveEnd = () => handleMove(map);
+            map.on("moveend", onMoveEnd);
+            map.on("zoomend", onMoveEnd);
+
+            // call once on mount
             handleMove(map);
-            map.on("moveend", () => handleMove(map));
-            map.on("zoomend", () => handleMove(map));
+
             return () => {
-                map.off("moveend", () => handleMove(map));
-                map.off("zoomend", () => handleMove(map));
+                map.off("moveend", onMoveEnd);
+                map.off("zoomend", onMoveEnd);
             };
-        }, [map]);
+        }, [map, handleMove]);
+
         return null;
-    }
+    };
 
     return (
-        <div className="" style={{ position: "relative", zIndex: 0 }}>
+        <div style={{ position: "relative", zIndex: 0 }}>
             <MapContainer
                 center={[lat, lng]}
                 zoom={zoom}
@@ -150,7 +160,6 @@ const MapView: React.FC<
                     attribution='&copy; <a href="https://osm.org/copyright">OpenStreetMap</a>'
                     url="https://tile-{s}.openstreetmap.fr/hot/{z}/{x}/{y}.png"
                 />
-
                 {stops.map((stop) => (
                     <Marker
                         key={stop.stop_id}
@@ -189,32 +198,27 @@ const StopMap: React.FC = () => {
     const [stops, setStops] = useState<Stop[]>([]);
     const [loading, setLoading] = useState(false);
     const [center, setCenter] = useState<[number, number]>([51, -1]);
-    // const fetchedBoundsRef = useRef<any>(null);
+    const lastBoundsRef = useRef<L.LatLngBounds | null>(null);
     const stopsTimeout = useRef<number | null>(null);
-
-    // Store last bounds to avoid unnecessary fetches
-    const lastBoundsRef = useRef<any>(null);
 
     useEffect(() => {
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
-                (pos) => {
-                    setCenter([pos.coords.latitude, pos.coords.longitude]);
-                },
+                (pos) => setCenter([pos.coords.latitude, pos.coords.longitude]),
                 () => {},
                 { enableHighAccuracy: true, timeout: 10000 }
             );
         }
     }, []);
 
-    const fetchStops = useCallback(async (bounds: any) => {
+    const fetchStops = useCallback(async (bounds: L.LatLngBounds) => {
         setLoading(true);
         try {
-            // bounds: { _northEast: {lat, lng}, _southWest: {lat, lng} }
-            const ymax = bounds._northEast.lat;
-            const ymin = bounds._southWest.lat;
-            const xmax = bounds._northEast.lng;
-            const xmin = bounds._southWest.lng;
+            const ymax = bounds.getNorth();
+            const ymin = bounds.getSouth();
+            const xmax = bounds.getEast();
+            const xmin = bounds.getWest();
+
             const url = `https://bustimes.org/stops.json?ymax=${ymax}&xmax=${xmax}&ymin=${ymin}&xmin=${xmin}`;
             const res = await fetch(url);
             const geojson = await res.json();
@@ -237,117 +241,38 @@ const StopMap: React.FC = () => {
         }
     }, []);
 
-    // function containsBounds(outer: any, inner: any) {
-    //     if (!outer) return false;
-
-    //     const BUFFER = 0.0005; // about ~50m buffer
-
-    //     return (
-    //         outer._southWest.lat - BUFFER <= inner._southWest.lat &&
-    //         outer._southWest.lng - BUFFER <= inner._southWest.lng &&
-    //         outer._northEast.lat + BUFFER >= inner._northEast.lat &&
-    //         outer._northEast.lng + BUFFER >= inner._northEast.lng
-    //     );
-    // }
-
-    // function mergeBounds(a: any, b: any) {
-    //     return L.latLngBounds([
-    //         [
-    //             Math.min(a._southWest.lat, b._southWest.lat),
-    //             Math.min(a._southWest.lng, b._southWest.lng),
-    //         ],
-    //         [
-    //             Math.max(a._northEast.lat, b._northEast.lat),
-    //             Math.max(a._northEast.lng, b._northEast.lng),
-    //         ],
-    //     ]);
-    // }
-
-    // const handleBoundsChange = useCallback(
-    //     (bounds: any, zoom: number) => {
-    //         const prev = lastBoundsRef.current;
-
-    //         if (!prev) {
-    //             lastBoundsRef.current = { bounds, zoom };
-    //             fetchedBoundsRef.current = bounds;
-    //             fetchStops(bounds, zoom);
-    //             return;
-    //         }
-
-    //         const prevZoom = prev.zoom;
-
-    //         const zoomOut = zoom < prevZoom;
-    //         const zoomIn = zoom > prevZoom;
-
-    //         const needsMore = !containsBounds(fetchedBoundsRef.current, bounds);
-
-    //         console.log(
-    //             "ZoomOut:",
-    //             zoomOut,
-    //             "ZoomIn:",
-    //             zoomIn,
-    //             "NeedsMore:",
-    //             needsMore
-    //         );
-
-    //         const shouldFetch = zoomOut || (needsMore && !zoomIn);
-
-    //         if (shouldFetch) {
-    //             lastBoundsRef.current = { bounds, zoom };
-
-    //             // grow the fetched bounds
-    //             fetchedBoundsRef.current = mergeBounds(
-    //                 fetchedBoundsRef.current,
-    //                 bounds
-    //             );
-
-    //             if (stopsTimeout.current) clearTimeout(stopsTimeout.current);
-    //             stopsTimeout.current = window.setTimeout(() => {
-    //                 fetchStops(bounds, zoom);
-    //             }, 200);
-    //         }
-    //     },
-    //     [fetchStops]
-    // );
-
     const handleBoundsChange = useCallback(
-        (bounds: any, zoom: number) => {
+        (bounds: L.LatLngBounds, zoom: number) => {
             if (zoom < 13) {
-                setStops([]);
+                if (stops.length > 0) setStops([]);
                 return;
             }
-            const hasBoundsChanged =
-                !lastBoundsRef.current ||
-                lastBoundsRef.current._northEast.lat !==
-                    bounds._northEast.lat ||
-                lastBoundsRef.current._northEast.lng !==
-                    bounds._northEast.lng ||
-                lastBoundsRef.current._southWest.lat !==
-                    bounds._southWest.lat ||
-                lastBoundsRef.current._southWest.lng !== bounds._southWest.lng;
 
-            if (hasBoundsChanged) {
+            // Only fetch if bounds changed
+            if (
+                !lastBoundsRef.current ||
+                !lastBoundsRef.current.equals(bounds)
+            ) {
                 lastBoundsRef.current = bounds;
 
                 if (stopsTimeout.current) clearTimeout(stopsTimeout.current);
-                stopsTimeout.current = window.setTimeout(() => {
-                    fetchStops(bounds);
-                }, 400);
+                stopsTimeout.current = window.setTimeout(
+                    () => fetchStops(bounds),
+                    400
+                );
             }
         },
-        [fetchStops]
+        [fetchStops, stops.length]
     );
 
     return (
-        <>
-            <MapView
-                lat={center[0]}
-                lng={center[1]}
-                stops={stops}
-                loading={loading}
-                onBoundsChange={handleBoundsChange}
-            />
-        </>
+        <MapView
+            lat={center[0]}
+            lng={center[1]}
+            stops={stops}
+            loading={loading}
+            onBoundsChange={handleBoundsChange}
+        />
     );
 };
 

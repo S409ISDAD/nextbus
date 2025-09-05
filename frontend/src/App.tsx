@@ -60,13 +60,15 @@ function UsefulBanner() {
 function App() {
     const currentYear = new Date().getFullYear();
     const [isOpen, setIsOpen] = useState(false);
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("from") === "fly") {
-        setIsOpen(true);
-        const url = new URL(window.location.href);
-        url.searchParams.delete("from");
-        window.history.replaceState({}, document.title, url.toString());
-    }
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get("from") === "fly") {
+            setIsOpen(true);
+            const url = new URL(window.location.href);
+            url.searchParams.delete("from");
+            window.history.replaceState({}, document.title, url.toString());
+        }
+    }, []);
 
     return (
         <BrowserRouter>
