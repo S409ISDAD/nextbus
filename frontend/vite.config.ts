@@ -9,7 +9,10 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   plugins: [react(), tailwindcss(), VitePWA({
-    registerType: 'autoUpdate', injectRegister: 'auto', manifest: false
+    registerType: 'autoUpdate', injectRegister: 'auto', manifest: false, workbox: {
+      clientsClaim: true,
+      skipWaiting: true,
+    },
   })],
   server: {
     allowedHosts: ['pi5.tailefc815.ts.net'],
