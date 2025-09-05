@@ -33,6 +33,15 @@ api.interceptors.response.use(
                 }
             );
             return Promise.reject(error);
+        } else if (error.response && error.response.status >= 500) {
+            toast.error(
+                "A server error occurred. Please try again later.",
+                {
+                    id: 'server-error-toast',
+                    duration: 3000,
+                }
+            );
+            return Promise.reject(error);
         }
     }
 );
