@@ -6,7 +6,7 @@ import { getCurrentPosition } from "../utils/locations";
 
 const BusPage: React.FC = () => {
     useEffect(() => {
-        document.title = "Bus Page";
+        document.title = "bus dashboard | nextbus";
     }, []);
 
     const [favStops, setFavStops] = useLocalStorageState<

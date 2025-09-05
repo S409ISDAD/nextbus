@@ -13,6 +13,7 @@ import TrainPage from "../pages/TrainPage";
 import NotFound from "../pages/NotFound";
 import StatsPage from "../pages/Stats";
 import TrainSearchPage from "../pages/TrainSearchPage";
+import TrainsDashboard from "../pages/Trains";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router";
 import { Toaster } from "react-hot-toast";
 import { faXmark } from "@fortawesome/free-solid-svg-icons";
@@ -133,6 +134,7 @@ function App() {
                         <Route path="/data" element={<Data />} />
                         <Route path="/stats" element={<StatsPage />} />
                         <Route path="/buses" element={<BusPage />} />
+                        <Route path="/trains" element={<TrainsDashboard />} />
                         <Route
                             path="departures/:stop_id"
                             element={<DeparturePage />}
@@ -163,27 +165,35 @@ function App() {
                         element={<DepartureScreen />}
                     />
                 </Routes>
-                <footer className="flex flex-row flex-wrap justify-center w-full gap-2 p-3 text-sm text-gray-200 border-t-2 max-h-fit border-neutral-800 grow">
+                <footer className="flex flex-row flex-wrap items-start justify-center w-full gap-2 p-3 text-sm text-gray-200 border-t-2 max-h-fit border-neutral-800">
                     <span>© {currentYear} nextbus</span> ·
-                    <a href="/data" className="underline text-sky-400 h-fit">
+                    <a
+                        href="/data"
+                        className="underline text-sky-400 max-h-fit">
                         Data Sources
                     </a>
                     ·
-                    <a href="/privacy" className="underline text-sky-400 h-fit">
+                    <a
+                        href="/privacy"
+                        className="underline text-sky-400 max-h-fit">
                         Privacy
                     </a>
                     ·
-                    <a href="/terms" className="underline text-sky-400 h-fit">
+                    <a
+                        href="/terms"
+                        className="underline text-sky-400 max-h-fit">
                         Terms
                     </a>
                     ·
-                    <a href="/stats" className="underline text-sky-400 h-fit">
+                    <a
+                        href="/stats"
+                        className="underline text-sky-400 max-h-fit">
                         Stats
                     </a>
                     ·
                     <a
                         href="https://discord.gg/dyEmZSkwge"
-                        className="underline text-sky-400 h-fit"
+                        className="underline text-sky-400 max-h-fit"
                         target="_blank"
                         rel="noopener noreferrer">
                         Join the Discord!{" "}

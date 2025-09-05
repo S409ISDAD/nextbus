@@ -200,40 +200,6 @@ const Home: React.FC = () => {
                             </span>
                             <StopMap />
                         </div>
-
-                        <TrainSearchCard></TrainSearchCard>
-
-                        <Card className="flex flex-col items-center justify-center gap-3 p-[12px] min-w-[250px]">
-                            <div className="flex flex-col items-center justify-center">
-                                <span className="text-xl font-bold text-center">
-                                    Find a station
-                                </span>
-                                <span className="text-xs text-center text-neutral-600">
-                                    yes i know its a bus website but trains are
-                                    cool
-                                </span>
-                            </div>
-                            <StationCombobox
-                                placeholder="to station..."
-                                value={selectedStation}
-                                onChange={setSelectedStation}
-                            />
-                            <button
-                                className={`w-full p-2 px-5 mt-2 font-semibold text-white bg-blue-600 transition-all rounded-xl ${
-                                    selectedStation
-                                        ? "cursor-pointer hover:bg-blue-700"
-                                        : "brightness-50 cursor-not-allowed"
-                                }`}
-                                disabled={!selectedStation}
-                                onClick={() => {
-                                    if (selectedStation) {
-                                        window.location.href = `/stations/${selectedStation.crsCode}`;
-                                    }
-                                }}>
-                                Go to Trains{" "}
-                                <FontAwesomeIcon icon={faTrainSubway} />
-                            </button>
-                        </Card>
                     </div>
                 </div>
                 {/* <div className="flex flex-row flex-wrap items-center justify-center gap-5 p-5 md:gap-15">
