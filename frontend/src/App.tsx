@@ -21,6 +21,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import useReloadPrompt from "../components/ReloadPrompt";
 import InstallToast from "../components/InstallPrompt";
 import useLocalStorageState from "use-local-storage-state";
+import version from "../utils/version";
 
 import { useState, useEffect } from "react";
 import {
@@ -229,7 +230,7 @@ function App() {
                         rel="noopener noreferrer">
                         Join the Discord!{" "}
                     </a>
-                    ·<span>V0.10.0</span>
+                    ·<span>v{version}</span>
                 </footer>
             </div>
         </BrowserRouter>
