@@ -1,20 +1,39 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react-swc'
 import tailwindcss from '@tailwindcss/vite';
-import { resolve, dirname } from 'path';
-import { fileURLToPath } from 'url';
 import { VitePWA } from 'vite-plugin-pwa'
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   plugins: [react(), tailwindcss(), VitePWA({
-    registerType: 'autoUpdate', injectRegister: 'auto', manifest: false, workbox: {
+    registerType: 'autoUpdate',
+    injectRegister: 'auto',
+    manifest: {
+  "name": "nextbus",
+  "short_name": "nextbus",
+  "description": "Super easy bus and train tracking for the UK.",
+  "id": "/",
+  "start_url": "/",
+  "icons": [
+    {
+      "src": "/favicon/web-app-manifest-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/favicon/web-app-manifest-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "theme_color": "#00A0EB",
+  "background_color": "#131313",
+  "display": "standalone"
+},
+    workbox: {
       clientsClaim: true,
       skipWaiting: true,
-    },
-    devOptions: {
-      enabled: true,
     },
   })],
   server: {
@@ -38,11 +57,5 @@ export default defineConfig({
   build: {
     manifest: true,
     outDir: "dist",
-    rollupOptions: {
-      input: {
-        main: resolve(__dirname, 'index.html'),
-        offline: resolve(__dirname, 'offline.html')
-      }
-    }
   }
 })
