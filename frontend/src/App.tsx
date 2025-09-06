@@ -229,6 +229,7 @@ function App() {
                         rel="noopener noreferrer">
                         Join the Discord!{" "}
                     </a>
+                    ·<span>V0.10.0</span>
                 </footer>
             </div>
         </BrowserRouter>
