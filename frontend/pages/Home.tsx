@@ -67,7 +67,7 @@ const Home: React.FC = () => {
     return (
         <div>
             <div className="flex flex-col items-center justify-center gap-6">
-                <div className="flex flex-col items-center justify-center gap-5 pt-0 p-7">
+                <div className="flex flex-col items-center justify-center gap-5 pt-0 py-7">
                     <div className="flex flex-col items-center justify-center p-2">
                         <div className="flex flex-row gap-1 p-2 px-4 rounded-2xl bg-amber-500">
                             <span className="text-center text text-neutral-950">
@@ -185,12 +185,12 @@ const Home: React.FC = () => {
                                 ))}
                             </div>
                         </Card>
-                        <div className="flex flex-col items-center gap-2">
-                            <span className="text-xl font-bold text-center">
-                                Or find your stop on the map:
-                            </span>
-                            <StopMap />
-                        </div>
+                    </div>
+                    <div className="flex flex-col items-center w-full gap-2 px-5">
+                        <span className="text-xl font-bold text-center">
+                            Or find your stop on the map:
+                        </span>
+                        <StopMap />
                     </div>
                 </div>
                 {/* <div className="flex flex-row flex-wrap items-center justify-center gap-5 p-5 md:gap-15">

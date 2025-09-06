@@ -144,12 +144,11 @@ const MapView: React.FC<MapViewProps> = ({
     };
 
     return (
-        <div style={{ position: "relative", zIndex: 0 }}>
+        <div style={{ position: "relative", zIndex: 0, width: "100%" }}>
             <MapContainer
                 center={[lat, lng]}
                 zoom={zoom}
                 style={{
-                    width: "90vw",
                     aspectRatio:
                         typeof window !== "undefined" && window.innerWidth < 640
                             ? 1 / 1.3
@@ -201,15 +200,15 @@ const StopMap: React.FC = () => {
     const lastBoundsRef = useRef<L.LatLngBounds | null>(null);
     const stopsTimeout = useRef<number | null>(null);
 
-    useEffect(() => {
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                (pos) => setCenter([pos.coords.latitude, pos.coords.longitude]),
-                () => {},
-                { enableHighAccuracy: true, timeout: 10000 }
-            );
-        }
-    }, []);
+    // useEffect(() => {
+    //     if (navigator.geolocation) {
+    //         navigator.geolocation.getCurrentPosition(
+    //             (pos) => setCenter([pos.coords.latitude, pos.coords.longitude]),
+    //             () => {},
+    //             { enableHighAccuracy: true, timeout: 10000 }
+    //         );
+    //     }
+    // }, []);
 
     const fetchStops = useCallback(async (bounds: L.LatLngBounds) => {
         setLoading(true);
