@@ -110,7 +110,7 @@ const MapView: React.FC<MapViewProps> = ({
     loading,
     onBoundsChange,
 }) => {
-    const [zoom, setZoom] = useState(10);
+    const [zoom, setZoom] = useState(9);
 
     const handleMove = useCallback(
         (map: L.Map) => {
@@ -196,7 +196,7 @@ const MapView: React.FC<MapViewProps> = ({
 const StopMap: React.FC = () => {
     const [stops, setStops] = useState<Stop[]>([]);
     const [loading, setLoading] = useState(false);
-    const [center, setCenter] = useState<[number, number]>([51, -1]);
+    const [center] = useState<[number, number]>([51, -1]);
     const lastBoundsRef = useRef<L.LatLngBounds | null>(null);
     const stopsTimeout = useRef<number | null>(null);
 
