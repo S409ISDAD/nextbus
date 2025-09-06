@@ -70,6 +70,15 @@ function App() {
             url.searchParams.delete("from");
             window.history.replaceState({}, document.title, url.toString());
         }
+        caches.keys().then((keys) => {
+            keys.forEach((key) => {
+                if (key.startsWith("pwa-cache-v1")) {
+                    caches
+                        .delete(key)
+                        .then(() => console.log("Deleted old cache:", key));
+                }
+            });
+        });
     }, []);
 
     useReloadPrompt();
