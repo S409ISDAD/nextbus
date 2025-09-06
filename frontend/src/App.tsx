@@ -19,6 +19,7 @@ import { Toaster } from "react-hot-toast";
 import { faXmark } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import useReloadPrompt from "../components/ReloadPrompt";
+import InstallToast from "../components/InstallPrompt";
 
 import { useState, useEffect } from "react";
 import {
@@ -70,15 +71,6 @@ function App() {
             url.searchParams.delete("from");
             window.history.replaceState({}, document.title, url.toString());
         }
-        caches.keys().then((keys) => {
-            keys.forEach((key) => {
-                if (key.startsWith("pwa-cache-v1")) {
-                    caches
-                        .delete(key)
-                        .then(() => console.log("Deleted old cache:", key));
-                }
-            });
-        });
     }, []);
 
     useReloadPrompt();
@@ -93,12 +85,14 @@ function App() {
                         style: {
                             borderRadius: "20px",
                             background: "#222",
+                            marginRight: "-8px",
                             color: "#fff",
                             border: "1px solid #363636",
-                            marginTop: "60px",
+                            zIndex: "99",
                         },
                     }}
                 />
+                <InstallToast />
                 <Dialog
                     open={isOpen}
                     as="div"

@@ -1,6 +1,9 @@
 {
   "name": "nextbus",
   "short_name": "nextbus",
+  "description": "Super easy bus and train tracking for the UK.",
+  "id": "/",
+  "start_url": "/",
   "icons": [
     {
       "src": "/favicon/web-app-manifest-192x192.png",

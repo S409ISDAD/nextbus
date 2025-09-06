@@ -4,7 +4,7 @@ import Clock from "../components/Clock";
 export default function Layout() {
     return (
         <div className="h-full">
-            <div className="top-0 flex justify-between p-[8px] z-[99999] border-b-1 border-neutral-800 rounded-b-[24px] fixed w-full bg-[#131313] shadow-2xl md:shadow-xl">
+            <div className="top-0 flex justify-between p-[8px] z-[99] border-b-1 border-neutral-800 rounded-b-[24px] fixed w-full bg-[#131313] shadow-2xl md:shadow-xl">
                 <div className="flex gap-2">
                     <Link to="/">
                         <div className="flex flex-col items-center h-full mx-4">
