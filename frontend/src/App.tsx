@@ -20,6 +20,7 @@ import { faXmark } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import useReloadPrompt from "../components/ReloadPrompt";
 import InstallToast from "../components/InstallPrompt";
+import useLocalStorageState from "use-local-storage-state";
 
 import { useState, useEffect } from "react";
 import {
@@ -63,6 +64,29 @@ function UsefulBanner() {
 function App() {
     const currentYear = new Date().getFullYear();
     const [isOpen, setIsOpen] = useState(false);
+    const [haveReset, setHaveReset] = useLocalStorageState<boolean>(
+        "haveResetSW",
+        {
+            defaultValue: false,
+        }
+    );
+    const reset = async () => {
+        if (!haveReset) {
+            const registrations =
+                await navigator.serviceWorker.getRegistrations();
+            for (const reg of registrations) {
+                console.log("Unregistering service worker:", reg);
+                await reg.unregister();
+            }
+
+            const cacheNames = await caches.keys();
+            for (const name of cacheNames) {
+                console.log("Deleting cache:", name);
+                await caches.delete(name);
+            }
+            setHaveReset(true);
+        }
+    };
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
         if (params.get("from") === "fly") {
@@ -71,6 +95,7 @@ function App() {
             url.searchParams.delete("from");
             window.history.replaceState({}, document.title, url.toString());
         }
+        reset();
     }, []);
 
     useReloadPrompt();

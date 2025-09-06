@@ -7,6 +7,9 @@ export default defineConfig({
   plugins: [react(), tailwindcss(), VitePWA({
     registerType: 'autoUpdate',
     injectRegister: 'auto',
+    devOptions: {
+      enabled: true,
+    },
     manifest: {
   "name": "nextbus",
   "short_name": "nextbus",
