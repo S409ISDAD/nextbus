@@ -11,7 +11,7 @@ export default function useReloadPrompt() {
 
     useEffect(() => {
         if (offlineReady) {
-            toast.success("App ready to work offline", {
+            toast.success("App updated sucessfully!", {
                 duration: 4000,
             });
         }

@@ -1,15 +1,20 @@
 import { useLocation } from "react-router";
+import { useEffect, useState } from "react";
 
-export const showAppNav = () => {
-    // decide wether to show an app-like bottom nav or a normal website nav, based on screen size, and weather it is a pwa.
-    if (window.matchMedia("(display-mode: standalone)").matches) {
-        return true;
-    }
-    if (window.matchMedia("(max-width: 640px)").matches) {
-        return true;
-    }
-    return false;
-}
+export const useShowAppNav = (): boolean => {
+    const [show, setShow] = useState<boolean>(false);
+
+    useEffect(() => {
+        const mediaQuery = window.matchMedia("(max-width: 640px)");
+        setShow(mediaQuery.matches);
+        const handler = (e: MediaQueryListEvent) => setShow(e.matches);
+
+        mediaQuery.addEventListener("change", handler);
+        return () => mediaQuery.removeEventListener("change", handler);
+    }, []);
+
+    return show;
+};
 
 export const whereAmI = () => {
     // use location to get the current path, and from there determine what section of the app we are in.

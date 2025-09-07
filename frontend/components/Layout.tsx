@@ -1,6 +1,6 @@
 import { Link, Outlet } from "react-router";
 import Clock from "../components/Clock";
-import { showAppNav, whereAmI } from "../utils/AppNav";
+import { useShowAppNav, whereAmI } from "../utils/AppNav";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
     faBus,
@@ -11,7 +11,8 @@ import version from "../utils/version";
 
 export default function Layout() {
     const currentYear = new Date().getFullYear();
-    if (!showAppNav()) {
+    const showAppNav = useShowAppNav();
+    if (!showAppNav) {
         return (
             <div className="h-full">
                 <div className="top-0 flex justify-between p-[8px] z-[99] border-b-1 border-neutral-800 rounded-b-[24px] fixed w-full bg-[#131313] shadow-2xl md:shadow-xl">

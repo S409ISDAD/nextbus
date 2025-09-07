@@ -22,7 +22,7 @@ import useReloadPrompt from "../components/ReloadPrompt";
 import InstallToast from "../components/InstallPrompt";
 import useLocalStorageState from "use-local-storage-state";
 import version from "../utils/version";
-import { showAppNav } from "../utils/AppNav";
+import { useShowAppNav } from "../utils/AppNav";
 
 import { useState, useEffect } from "react";
 import {
@@ -35,6 +35,7 @@ import {
 function UsefulBanner() {
     const location = useLocation();
     const [visible, setVisible] = useState(true);
+    const showAppNav = useShowAppNav();
 
     useEffect(() => {
         setVisible(true);
@@ -44,7 +45,7 @@ function UsefulBanner() {
     return (
         <div
             className={`fixed flex gap-2 items-center justify-center p-3 transform -translate-x-1/2 bg-neutral-800 shadow-lg z-[99999] ${
-                showAppNav() ? "bottom-18" : "bottom-4"
+                showAppNav ? "bottom-19" : "bottom-4"
             } left-1/2 rounded-2xl`}>
             <span className="text-center text-gray-200 text-nowrap">
                 Finding this useful?{" "}
@@ -74,6 +75,7 @@ function App() {
             defaultValue: false,
         }
     );
+    const showAppNav = useShowAppNav();
     const reset = async () => {
         if (!haveReset) {
             const registrations =
@@ -94,7 +96,7 @@ function App() {
     useEffect(() => {
         console.log("App mounted");
         console.log("Current version:", version);
-        console.log("showAppNav:", showAppNav());
+        console.log("showAppNav:", showAppNav);
 
         const params = new URLSearchParams(window.location.search);
         if (params.get("from") === "fly") {

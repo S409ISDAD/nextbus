@@ -15,7 +15,7 @@ import {
 import type { Prediction } from "../models/Bus";
 import type { TrainService } from "../models/Trains";
 import React from "react";
-import { showAppNav } from "../utils/AppNav";
+import { useShowAppNav } from "../utils/AppNav";
 
 export const TrainProgress: React.FC<{
     sequence: number;
@@ -100,6 +100,7 @@ const TrainPage: React.FC = () => {
     const [msg, setMsg] = useState<string>("");
     const [trainInfoHeight, setTrainInfoHeight] = useState(0);
     const trainInfoRef = useRef<HTMLDivElement>(null);
+    const showAppNav = useShowAppNav();
 
     useEffect(() => {
         if (trainInfoRef.current) {
@@ -279,7 +280,7 @@ const TrainPage: React.FC = () => {
         <div className="flex flex-col">
             <div
                 className={`fixed flex flex-col w-full gap-2 p-3 pb-1 top-0 ${
-                    !showAppNav() ? "mt-14" : ""
+                    !showAppNav ? "mt-14" : ""
                 } grow bg-[#111111] z-15 rounded-b-2xl`}
                 ref={trainInfoRef}>
                 {train ? (

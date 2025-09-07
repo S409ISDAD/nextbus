@@ -22,7 +22,7 @@ import {
 } from "react-leaflet";
 import { LocateControl } from "leaflet.locatecontrol";
 import "leaflet.locatecontrol/dist/L.Control.Locate.min.css";
-import { showAppNav } from "../utils/AppNav";
+import { useShowAppNav } from "../utils/AppNav";
 
 const LocateControlComponent: React.FC<{ busLatLng: LatLngExpression }> = ({
     busLatLng,
@@ -292,6 +292,7 @@ const JourneyPage: React.FC = () => {
     const [msg, setMsg] = useState<string>("");
     const [busInfoHeight, setBusInfoHeight] = useState(0);
     const busInfoRef = useRef<HTMLDivElement>(null);
+    const showAppNav = useShowAppNav();
 
     useEffect(() => {
         if (busInfoRef.current) {
@@ -473,14 +474,14 @@ const JourneyPage: React.FC = () => {
         <div className="flex flex-col">
             <div
                 className={`flex flex-col gap-2 top-0 grow px-5 pb-1 z-12 bg-[#111111] rounded-b-2xl fixed w-full ${
-                    !showAppNav() ? "pt-15" : ""
+                    !showAppNav ? "pt-15" : ""
                 }`}
                 ref={busInfoRef}>
                 {bus ? (
                     <div className="flex flex-col items-center justify-center gap-2">
                         <div
                             className={`fixed flex flex-row items-stretch p-2 px-3 my-1 mb-1 z-10000000 ${
-                                !showAppNav() ? "top-15" : "top-0"
+                                !showAppNav ? "top-15" : "top-0"
                             }`}>
                             <div className="flex items-center px-3 py-1 bg-blue-700 rounded-l-2xl">
                                 <span className="flex items-center justify-center text-xl font-bold text-center">
@@ -581,7 +582,10 @@ const JourneyPage: React.FC = () => {
                     </span>
                 </div>
             </div>
-            <div style={{ marginTop: busInfoHeight - (showAppNav() ? 0 : 50) }}>
+            <div
+                style={{
+                    marginTop: busInfoHeight - (showAppNav ? 0 : 50),
+                }}>
                 {bus?.finished || !bus ? (
                     <div className="flex flex-col gap-3 mt-4 grow h-[60vh] md:max-h-[80vh] items-center justify-center">
                         <FontAwesomeIcon
