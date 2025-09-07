@@ -11,7 +11,7 @@ FROM python:3.13
 
 # Install dependencies
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends nginx bash gdal-bin && \
+    apt-get install -y --no-install-recommends bash gdal-bin && \
     rm -rf /var/lib/apt/lists/* /var/lib/apt /var/lib/dpkg/info/*
 WORKDIR /app
 
@@ -21,16 +21,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY backend ./backend
 COPY static_data ./static_data
 
-# Copy built frontend and nginx config
-RUN rm -f /etc/nginx/sites-enabled/default \
-    && rm -f /etc/nginx/conf.d/* \
-    && rm -f /etc/nginx/sites-available/default
-COPY --from=frontend-builder /app/frontend/dist /usr/share/nginx/html
-COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=frontend-builder /app/frontend/dist ./frontend_dist
 
-# Add start script
-COPY start.sh /start.sh
-RUN chmod +x /start.sh
-
-EXPOSE 80
-CMD ["/start.sh"]
+EXPOSE 8000
+CMD ["fastapi", "run", "backend/main.py", "--proxy-headers", "--port", "8000", "--host", "0.0.0.0"]

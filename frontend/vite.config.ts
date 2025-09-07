@@ -11,30 +11,33 @@ export default defineConfig({
       enabled: true,
     },
     manifest: {
-  "name": "nextbus",
-  "short_name": "nextbus",
-  "description": "Super easy bus and train tracking for the UK.",
-  "id": "/",
-  "start_url": "/",
-  "icons": [
-    {
-      "src": "/favicon/web-app-manifest-192x192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "maskable"
+      "name": "nextbus",
+      "short_name": "nextbus",
+      "description": "Super easy bus and train tracking for the UK.",
+      "id": "/",
+      "start_url": "/",
+      "icons": [
+        {
+          "src": "/favicon/web-app-manifest-192x192.png",
+          "sizes": "192x192",
+          "type": "image/png",
+          "purpose": "maskable"
+        },
+        {
+          "src": "/favicon/web-app-manifest-512x512.png",
+          "sizes": "512x512",
+          "type": "image/png",
+          "purpose": "maskable"
+        }
+      ],
+      "theme_color": "#00A0EB",
+      "background_color": "#131313",
+      "display": "standalone"
     },
-    {
-      "src": "/favicon/web-app-manifest-512x512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
-    }
-  ],
-  "theme_color": "#00A0EB",
-  "background_color": "#131313",
-  "display": "standalone"
-},
+    scope: '/',
     workbox: {
+      navigateFallbackDenylist: [/^\/api(\/.*)?$/, /^\/ws(\/.*)?$/],
+      navigateFallbackAllowlist: undefined,
       clientsClaim: true,
       skipWaiting: true,
     },

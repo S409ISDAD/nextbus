@@ -7,6 +7,7 @@ from backend.bot.bot import bot, send_status_message
 print("Starting discord bot...")
 dotenv.load_dotenv()
 token = os.getenv("BOT_TOKEN")
+env = os.getenv("ENV", "development")
 
 
 async def run_bot(token):
@@ -31,7 +32,10 @@ async def run_bot(token):
         await bot.close()
 
 
-if token:
-    asyncio.run(run_bot(token))
+if env == "development":
+    print("Running in development mode, bot will not start.")
 else:
-    print("No BOT_TOKEN found in environment, bot will not start.")
+    if token:
+        asyncio.run(run_bot(token))
+    else:
+        print("No BOT_TOKEN found in environment, bot will not start.")

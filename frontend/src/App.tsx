@@ -89,6 +89,7 @@ function App() {
         }
     };
     useEffect(() => {
+        console.log("App mounted");
         const params = new URLSearchParams(window.location.search);
         if (params.get("from") === "fly") {
             setIsOpen(true);

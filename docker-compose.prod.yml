@@ -5,6 +5,7 @@ services:
       - "--providers.docker=true"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
+      - "--api.insecure=true"
     ports:
       - "80:80"
       - "443:443"
@@ -16,12 +17,29 @@ services:
       - web
     restart: unless-stopped
 
+  nginx:
+    build:
+      context: .
+      dockerfile: Dockerfile.nginx
+    expose:
+      - "8081"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.nginx.rule=(Host(`localhost`) || Host(`nextbus.orbitix.dev`) || Host(`192.168.4.211`))"
+      - "traefik.http.routers.nginx.entrypoints=web"
+      - "traefik.http.services.nginx.loadbalancer.server.port=8081"
+      - "traefik.http.routers.nginx.priority=1"
+    depends_on:
+      - app
+    networks:
+      - web
+    restart: unless-stopped
   app:
     build:
       context: .
-      dockerfile: Dockerfile.prod
+      dockerfile: Dockerfile.app
     expose:
-      - "80"
+      - "8000"
     environment:
       REDIS_HOST: redis://redis:6379
       RTT_USERNAME: ${RTT_USERNAME}
@@ -36,12 +54,11 @@ services:
       ENV: production
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.app.rule=Host(`localhost`) || Host(`nextbus.orbitix.dev`) || Host(`192.168.4.211`)"
+      - "traefik.http.routers.app.rule=(Host(`localhost`) || Host(`nextbus.orbitix.dev`) || Host(`192.168.4.211`)) && PathRegexp(`^/api(/.*)?$|^/ws(/.*)?$`)"
       - "traefik.http.routers.app.entrypoints=web"
-      - "traefik.http.routers.app.tls=false"
-      - "traefik.http.services.app.loadbalancer.server.port=80"
+      - "traefik.http.services.app.loadbalancer.server.port=8000"
       - "traefik.http.services.app.loadbalancer.sticky.cookie=true"
-      - "traefik.http.routers.app.priority=2"
+      - "traefik.http.routers.app.priority=100"
     depends_on:
       - redis
       - db
@@ -86,8 +103,7 @@ services:
       - web
 
   db:
-    image: imresamu/postgis
-    container_name: nextbus_db
+    image: imresamu/postgis:latest
     restart: unless-stopped
     ports:
       - "5432:5432"
@@ -109,3 +125,4 @@ networks:
 volumes:
   postgres_data:
   redis_data:
+  frontend_dist:
