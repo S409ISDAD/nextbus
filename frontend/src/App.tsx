@@ -22,6 +22,7 @@ import useReloadPrompt from "../components/ReloadPrompt";
 import InstallToast from "../components/InstallPrompt";
 import useLocalStorageState from "use-local-storage-state";
 import version from "../utils/version";
+import { showAppNav } from "../utils/AppNav";
 
 import { useState, useEffect } from "react";
 import {
@@ -41,7 +42,10 @@ function UsefulBanner() {
 
     if (location.pathname === "/" || !visible) return null;
     return (
-        <div className="fixed flex gap-2 items-center justify-center p-3 transform -translate-x-1/2 bg-neutral-800 shadow-lg z-[99999] bottom-4 left-1/2 rounded-2xl">
+        <div
+            className={`fixed flex gap-2 items-center justify-center p-3 transform -translate-x-1/2 bg-neutral-800 shadow-lg z-[99999] ${
+                showAppNav() ? "bottom-18" : "bottom-4"
+            } left-1/2 rounded-2xl`}>
             <span className="text-center text-gray-200 text-nowrap">
                 Finding this useful?{" "}
                 <a
@@ -63,7 +67,6 @@ function UsefulBanner() {
 }
 
 function App() {
-    const currentYear = new Date().getFullYear();
     const [isOpen, setIsOpen] = useState(false);
     const [haveReset, setHaveReset] = useLocalStorageState<boolean>(
         "haveResetSW",
@@ -90,6 +93,9 @@ function App() {
     };
     useEffect(() => {
         console.log("App mounted");
+        console.log("Current version:", version);
+        console.log("showAppNav:", showAppNav());
+
         const params = new URLSearchParams(window.location.search);
         if (params.get("from") === "fly") {
             setIsOpen(true);
@@ -167,9 +173,8 @@ function App() {
                         <Route path="/data" element={<Data />} />
                         <Route path="/stats" element={<StatsPage />} />
                         <Route path="/buses" element={<BusPage />} />
-                        <Route path="/trains" element={<TrainsDashboard />} />
                         <Route
-                            path="departures/:stop_id"
+                            path="/buses/stops/:stop_id"
                             element={<DeparturePage />}
                         />
                         <Route
@@ -177,19 +182,20 @@ function App() {
                             element={<JourneyPage />}
                         />
                         <Route
-                            path="/services/:service_id"
+                            path="buses/services/:service_id"
                             element={<ServicePage />}
                         />
+                        <Route path="/trains" element={<TrainsDashboard />} />
                         <Route
-                            path="/stations/:station_id"
+                            path="/trains/stations/:station_id"
                             element={<StationPage />}
                         />
                         <Route
-                            path="/search/trains/:fromStationCode/to/:toStationCode"
+                            path="trains/search/:fromStationCode/to/:toStationCode"
                             element={<TrainSearchPage />}
                         />
                         <Route
-                            path="/trains/:service_id"
+                            path="trains/:service_id"
                             element={<TrainPage />}
                         />
                     </Route>
@@ -198,41 +204,6 @@ function App() {
                         element={<DepartureScreen />}
                     />
                 </Routes>
-                <footer className="flex flex-row flex-wrap items-start justify-center w-full gap-2 p-3 text-sm text-gray-200 border-t-2 max-h-fit border-neutral-800">
-                    <span>© {currentYear} nextbus</span> ·
-                    <a
-                        href="/data"
-                        className="underline text-sky-400 max-h-fit">
-                        Data Sources
-                    </a>
-                    ·
-                    <a
-                        href="/privacy"
-                        className="underline text-sky-400 max-h-fit">
-                        Privacy
-                    </a>
-                    ·
-                    <a
-                        href="/terms"
-                        className="underline text-sky-400 max-h-fit">
-                        Terms
-                    </a>
-                    ·
-                    <a
-                        href="/stats"
-                        className="underline text-sky-400 max-h-fit">
-                        Stats
-                    </a>
-                    ·
-                    <a
-                        href="https://discord.gg/dyEmZSkwge"
-                        className="underline text-sky-400 max-h-fit"
-                        target="_blank"
-                        rel="noopener noreferrer">
-                        Join the Discord!{" "}
-                    </a>
-                    ·<span>v{version}</span>
-                </footer>
             </div>
         </BrowserRouter>
     );

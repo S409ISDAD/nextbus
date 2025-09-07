@@ -175,7 +175,7 @@ const MapView: React.FC<MapViewProps> = ({
                                     {stop.services.join(", ")}
                                 </span>
                                 <a
-                                    href={`/departures/${stop.stop_id}`}
+                                    href={`/buses/stops/${stop.stop_id}`}
                                     className="text-sky-500 hover:underline">
                                     View Stop
                                 </a>

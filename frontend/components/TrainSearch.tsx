@@ -63,7 +63,7 @@ export default function TrainSearchCard() {
                         setMsg("Please select both stations.");
                         return;
                     }
-                    window.location.href = `/search/trains/${selectedFrom.crsCode}/to/${selectedTo.crsCode}`;
+                    window.location.href = `/trains/search/${selectedFrom.crsCode}/to/${selectedTo.crsCode}`;
                 }}>
                 Search
             </button>

@@ -307,7 +307,7 @@ function DepartureBoard({ stop_id, closest, filter }: Props) {
                 <div className="flex flex-col gap-2">
                     <div
                         className="flex flex-col justify-center gap-1 cursor-pointer"
-                        onClick={() => navigate(`/departures/${stopID}`)}>
+                        onClick={() => navigate(`/buses/stops/${stopID}`)}>
                         {closest && (
                             <div className="flex items-center justify-center gap-1 p-1 bg-indigo-800 rounded-lg w-fit h-fit">
                                 <span className="text-xs font-bold ">

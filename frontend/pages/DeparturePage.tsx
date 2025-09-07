@@ -488,7 +488,7 @@ const DeparturePage: React.FC = () => {
                                     setBuses([]);
                                     setLoading(true);
                                     firstFetch.current = true;
-                                    navigate(`/departures/${closestStop}`);
+                                    navigate(`/buses/stops/${closestStop}`);
                                 }}>
                                 Nearest Stop{" "}
                                 <FontAwesomeIcon

@@ -10,6 +10,7 @@ import getNearby from "../utils/getNearby";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBus, faWarning } from "@fortawesome/free-solid-svg-icons";
 import { getClosestStop } from "../utils/closestStop";
+import { useNavigate } from "react-router";
 
 const Home: React.FC = () => {
     // const navigate = useNavigate();
@@ -17,6 +18,8 @@ const Home: React.FC = () => {
     const [services, setServices] = React.useState<ServiceInfo[]>([]);
     const [closestStop, setClosestStop] = React.useState<string | null>(null);
     const [showStop, setShowStop] = React.useState(false);
+
+    const navigate = useNavigate();
 
     useEffect(() => {
         document.title = "nextbus";
@@ -115,7 +118,7 @@ const Home: React.FC = () => {
                                     className="w-full p-2 mt-2 font-semibold text-white transition-all bg-blue-600 cursor-pointer text-nowrap rounded-xl hover:bg-blue-700"
                                     onClick={() => {
                                         setShowStop(false);
-                                        window.location.href = `/departures/${closestStop}`;
+                                        navigate("/buses/stops/${closestStop}");
                                     }}>
                                     Yes, show me!{" "}
                                 </button>
@@ -159,7 +162,7 @@ const Home: React.FC = () => {
                             <button
                                 className="w-full p-2 px-5 mt-2 font-semibold text-white transition-all bg-blue-600 cursor-pointer rounded-xl hover:bg-blue-700"
                                 onClick={() => {
-                                    window.location.href = `/buses`;
+                                    navigate("/buses");
                                 }}>
                                 Bus Dashboard <FontAwesomeIcon icon={faBus} />
                             </button>
@@ -179,7 +182,7 @@ const Home: React.FC = () => {
                                     <a
                                         key={service.id}
                                         className="flex items-center justify-center px-3 py-1 text-lg font-bold text-center cursor-pointer rounded-xl bg-neutral-800/50"
-                                        href={`/services/${service.id}`}>
+                                        href={`/buses/buses/services/${service.id}`}>
                                         {service.line_name}
                                     </a>
                                 ))}
