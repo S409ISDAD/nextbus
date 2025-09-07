@@ -23,6 +23,7 @@ import InstallToast from "../components/InstallPrompt";
 import useLocalStorageState from "use-local-storage-state";
 import version from "../utils/version";
 import { useShowAppNav } from "../utils/AppNav";
+import toast from "react-hot-toast";
 
 import { useState, useEffect } from "react";
 import {
@@ -106,6 +107,12 @@ function App() {
             window.history.replaceState({}, document.title, url.toString());
         }
         reset();
+        const prevVersion = localStorage.getItem("appVersion");
+        const currentVersion = version;
+        if (prevVersion && prevVersion !== currentVersion) {
+            toast.success("App updated to latest version");
+        }
+        localStorage.setItem("appVersion", currentVersion);
     }, []);
 
     useReloadPrompt();
