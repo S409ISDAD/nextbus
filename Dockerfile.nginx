@@ -3,6 +3,10 @@ WORKDIR /app
 COPY frontend/package*.json ./frontend/
 RUN cd frontend && npm install
 COPY frontend ./frontend
+
+ARG COMMIT=dev
+ENV VITE_VERSION=$COMMIT
+
 RUN cd frontend && npm run build
 
 FROM nginx:alpine

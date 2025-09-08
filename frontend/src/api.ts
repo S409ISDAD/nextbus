@@ -21,7 +21,17 @@ api.interceptors.request.use((config) => {
 });
 
 api.interceptors.response.use(
-    (response) => response,
+    (response) => {
+        const version = response.headers['x-version'];
+        if (version) {
+            const prevVersion = localStorage.getItem("appVersion");
+            const currentVersion = version;
+            if (prevVersion && prevVersion !== currentVersion) {
+                toast("New version available! Refresh to install.", { id: 'version-update-toast', duration: 3000, icon: 'ℹ️' });
+            }
+        }
+        return response;
+    },
     (error) => {
         // Check if response exists
         if (error.response) {

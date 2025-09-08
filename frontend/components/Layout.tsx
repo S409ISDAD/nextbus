@@ -86,7 +86,7 @@ export default function Layout() {
                                 rel="noopener noreferrer">
                                 Join the Discord!{" "}
                             </a>
-                            ·<span>v{version}</span>
+                            ·<span>{version}</span>
                         </footer>
                     )}
                 </main>
@@ -157,7 +157,7 @@ export default function Layout() {
                                 rel="noopener noreferrer">
                                 Join the Discord!{" "}
                             </a>
-                            ·<span>v{version}</span>
+                            ·<span>{version}</span>
                         </footer>
                     )}
                     <div className="h-18"></div>

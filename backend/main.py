@@ -25,7 +25,7 @@ from sqlalchemy.orm import Session
 from backend.db.db import SessionLocal, engine, get_db
 from backend.models import ActiveUsersSnapshot, Base
 from backend.websockets.routes import ws_router
-from backend.deps import floor_to_30s, get_redis_client, get_redis, limiter
+from backend.deps import floor_to_30s, get_redis_client, get_redis, limiter, VERSION
 import logging
 from prometheus_fastapi_instrumentator import Instrumentator
 from slowapi import _rate_limit_exceeded_handler
@@ -199,6 +199,7 @@ async def timing_middleware(request: Request, call_next):
     response = await call_next(request)
     duration = time.time() - start
     print(f"{request.method} {request.url} completed in {duration:.3f}s")
+    response.headers["X-Version"] = VERSION
     return response
 
 

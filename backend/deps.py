@@ -5,9 +5,20 @@ import os
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from zoneinfo import ZoneInfo
+from pathlib import Path
 
 UTC = timezone.utc
 LONDON = ZoneInfo("Europe/London")
+
+
+def get_version() -> str:
+    try:
+        return Path("/app/version.txt").read_text().strip()
+    except FileNotFoundError:
+        return "dev"
+
+
+VERSION = get_version()
 
 
 def get_redis_url() -> str:
