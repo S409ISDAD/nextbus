@@ -159,10 +159,8 @@ async def calculate_expected(delay, sequence, stop_id, journey_id, r):
 
             time_till_start = (scheduled_time_start - current_time).total_seconds()
 
-            if (
-                scheduled_time_start > current_time
-                and (time_till_start > 300)
-                or (sequence < 4)
+            if scheduled_time_start > current_time and (
+                time_till_start > 300 or sequence < 4
             ):
                 not_started = True
 
