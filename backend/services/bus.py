@@ -274,7 +274,7 @@ async def build_scheduled_db(
                 bus.expected = scheduled + timedelta(seconds=delay)
                 bus.delay = delay
                 bus.trip = trip_id
-                bus.started = started
+                bus.started = False
                 bus.status = "on_prev_trip"
                 service = service_info if service_info else bus.service
                 bus.service = service

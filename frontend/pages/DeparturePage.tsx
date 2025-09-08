@@ -472,7 +472,7 @@ const DeparturePage: React.FC = () => {
         <div className="p-5 md:mx-20">
             <div className="flex flex-col gap-4">
                 <div className="flex flex-col items-center justify-center gap-3">
-                    <span className="text-3xl font-bold md:text-4xl text-start">
+                    <span className="text-3xl font-bold text-center md:text-4xl">
                         {stop?.name}{" "}
                         {stop?.indicator
                             ? `(${stop.indicator})`
