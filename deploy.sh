@@ -5,8 +5,10 @@ set -e
 echo "pulling code from repo..."
 git pull
 
-echo "building..."
-COMMIT=$(git rev-parse --short HEAD) docker compose -f docker-compose.prod.yml build
+export COMMIT=$(git rev-parse --short HEAD)
+
+echo "building version $COMMIT..."
+docker compose -f docker-compose.prod.yml build
 
 echo "starting..."
 docker compose -f docker-compose.prod.yml up -d
