@@ -45,9 +45,6 @@ export default function Layout() {
                             </button>
                         </Link>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <Clock></Clock>
-                    </div>
                 </div>
                 <main>
                     <div className="h-15"></div>

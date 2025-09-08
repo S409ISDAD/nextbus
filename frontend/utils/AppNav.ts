@@ -5,12 +5,17 @@ export const useShowAppNav = (): boolean => {
     const [show, setShow] = useState<boolean>(false);
 
     useEffect(() => {
-        const mediaQuery = window.matchMedia("(max-width: 640px)");
-        setShow(mediaQuery.matches);
-        const handler = (e: MediaQueryListEvent) => setShow(e.matches);
+        const isPWA = window.matchMedia("(display-mode: standalone)");
+        if (isPWA.matches) {
+            setShow(true);
+            return;
+        }
+        // const isMobileView = window.matchMedia("(max-width: 640px)");
+        // setShow(isMobileView.matches);
+        // const handler = (e: MediaQueryListEvent) => setShow(e.matches);
 
-        mediaQuery.addEventListener("change", handler);
-        return () => mediaQuery.removeEventListener("change", handler);
+        // isMobileView.addEventListener("change", handler);
+        // return () => isMobileView.removeEventListener("change", handler);
     }, []);
 
     return show;

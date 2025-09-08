@@ -9,6 +9,7 @@ import { Card } from "../components/ui/Card";
 import timeTo, { lateness, toTime } from "../utils/timeUtils";
 import { getClosestStop } from "../utils/closestStop";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { motion, AnimatePresence } from "framer-motion";
 import {
     faBus,
     faSatelliteDish,
@@ -102,9 +103,7 @@ function BusCard({
             onClick={onClick}
             className={clsx(
                 "cursor-pointer",
-                isTrackedBus(bus) &&
-                    bus.delay >= 2700 &&
-                    "opacity-75 pointer-events-none"
+                isTrackedBus(bus) && bus.delay >= 2700 && "opacity-75"
             )}>
             <div className="flex flex-row items-center justify-between">
                 <div className="flex flex-col justify-around gap-1">
@@ -242,83 +241,118 @@ function BusCard({
                     </div>
                 </div>
             </div>
-            {busDetail &&
-                idx === 0 &&
-                isTrackedBus(bus) &&
-                bus.target_seq !== undefined &&
-                sequence !== null &&
-                (() => {
-                    const startIdx = Math.max(0, bus.target_seq! - 5);
-                    const endIdx = bus.target_seq! + 2;
-                    const stopsSlice = busDetail.journey.stops.slice(
-                        startIdx,
-                        endIdx
-                    );
-                    return (
-                        bus.target_seq - sequence < stopsSlice.length - 1 && (
-                            <div className="flex flex-row items-center justify-center gap-1 p-3 pt-7 flex-nowrap overflow-clip lg:absolute lg:left-1/2 lg:-translate-x-1/2 lg:-translate-y-17">
-                                {stopsSlice.map((_, index) => {
-                                    const actualIndex = startIdx + index;
-                                    return (
-                                        <div
-                                            key={actualIndex}
-                                            className="flex items-center gap-1">
-                                            {actualIndex === sequence + 1 && (
-                                                <div className="absolute translate-x-[-31px] flex items-center justify-center">
-                                                    <span className="absolute text-xs translate-y-[-23px] text-nowrap text-neutral-400">
-                                                        {bus.target_seq !==
-                                                            undefined &&
-                                                        sequence !== null
-                                                            ? (() => {
-                                                                  const stopsAway =
-                                                                      bus.target_seq -
-                                                                      sequence -
-                                                                      1;
-                                                                  if (
-                                                                      stopsAway ===
-                                                                      0
-                                                                  )
-                                                                      return "next stop";
-                                                                  if (
-                                                                      stopsAway ===
-                                                                      1
-                                                                  )
-                                                                      return "1 stop away";
-                                                                  if (
-                                                                      stopsAway >
-                                                                      1
-                                                                  )
-                                                                      return `${stopsAway} stops away`;
-                                                                  return "Stop info unavailable";
-                                                              })()
-                                                            : "Stop info unavailable"}
-                                                    </span>
-                                                    <div className="z-10 flex items-center justify-center w-6 h-6 p-1 rounded-full bg-rose-500">
-                                                        <FontAwesomeIcon
-                                                            icon={faBus}
-                                                            className="text-[0.8rem]"
-                                                        />
-                                                    </div>
-                                                </div>
-                                            )}
+            <AnimatePresence>
+                {busDetail &&
+                    idx === 0 &&
+                    isTrackedBus(bus) &&
+                    bus.target_seq !== undefined &&
+                    sequence !== null &&
+                    (() => {
+                        const startIdx = Math.max(0, bus.target_seq! - 5);
+                        const endIdx = bus.target_seq! + 2;
+                        const stopsSlice = busDetail.journey.stops.slice(
+                            startIdx,
+                            endIdx
+                        );
+                        return (
+                            bus.target_seq - sequence <
+                                stopsSlice.length - 1 && (
+                                <motion.div
+                                    key={`stop-sequence-${bus.id}`}
+                                    className="flex flex-row items-center justify-center gap-1 p-3 pt-7 flex-nowrap overflow-clip lg:absolute lg:left-1/2 lg:-translate-x-1/2 lg:-translate-y-17"
+                                    initial={{ opacity: 0, y: -10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -10 }}
+                                    transition={{
+                                        type: "spring",
+                                        stiffness: 400,
+                                        damping: 40,
+                                    }}>
+                                    {stopsSlice.map((_, index) => {
+                                        const actualIndex = startIdx + index;
+                                        return (
                                             <div
-                                                className={clsx(
-                                                    "w-2 h-2 rounded-full",
-                                                    actualIndex ===
-                                                        bus.target_seq
-                                                        ? "bg-sky-500"
-                                                        : "bg-neutral-600"
-                                                )}></div>
-                                            {index < stopsSlice.length - 1 && (
-                                                <div className="min-w-[30px] bg-neutral-700 flex-1 h-[2px]"></div>
-                                            )}
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        )
-                    );
-                })()}
+                                                key={actualIndex}
+                                                className="flex items-center gap-1">
+                                                {actualIndex ===
+                                                    sequence + 1 && (
+                                                    <motion.div
+                                                        layout
+                                                        key={`bus-${bus.id}-${sequence}`} // unique for position changes
+                                                        className="absolute translate-x-[-31px] flex items-center justify-center"
+                                                        initial={{
+                                                            x: -30,
+                                                            opacity: 0,
+                                                        }}
+                                                        animate={{
+                                                            x: 0,
+                                                            opacity: 1,
+                                                        }}
+                                                        exit={{
+                                                            x: 30,
+                                                            opacity: 0,
+                                                        }}
+                                                        transition={{
+                                                            type: "tween",
+                                                            stiffness: 500,
+                                                            damping: 40,
+                                                        }}>
+                                                        <span className="absolute text-xs translate-y-[-23px] text-nowrap text-neutral-400">
+                                                            {bus.target_seq !==
+                                                                undefined &&
+                                                            sequence !== null
+                                                                ? (() => {
+                                                                      const stopsAway =
+                                                                          bus.target_seq -
+                                                                          sequence -
+                                                                          1;
+                                                                      if (
+                                                                          stopsAway ===
+                                                                          0
+                                                                      )
+                                                                          return "next stop";
+                                                                      if (
+                                                                          stopsAway ===
+                                                                          1
+                                                                      )
+                                                                          return "1 stop away";
+                                                                      if (
+                                                                          stopsAway >
+                                                                          1
+                                                                      )
+                                                                          return `${stopsAway} stops away`;
+                                                                      return "Stop info unavailable";
+                                                                  })()
+                                                                : "Stop info unavailable"}
+                                                        </span>
+                                                        <div className="z-10 flex items-center justify-center w-6 h-6 p-1 rounded-full bg-rose-500">
+                                                            <FontAwesomeIcon
+                                                                icon={faBus}
+                                                                className="text-[0.8rem]"
+                                                            />
+                                                        </div>
+                                                    </motion.div>
+                                                )}
+                                                <div
+                                                    className={clsx(
+                                                        "w-2 h-2 rounded-full",
+                                                        actualIndex ===
+                                                            bus.target_seq
+                                                            ? "bg-sky-500"
+                                                            : "bg-neutral-600"
+                                                    )}></div>
+                                                {index <
+                                                    stopsSlice.length - 1 && (
+                                                    <div className="min-w-[30px] bg-neutral-700 flex-1 h-[2px]"></div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </motion.div>
+                            )
+                        );
+                    })()}
+            </AnimatePresence>
         </div>
     );
 }
@@ -603,9 +637,19 @@ const DeparturePage: React.FC = () => {
                             ))}
                         </>
                     ) : (
-                        <>
+                        <AnimatePresence>
                             {buses.map((bus, idx) => (
-                                <>
+                                <motion.div
+                                    key={bus.trip}
+                                    layout // enables smooth reordering animations
+                                    initial={{ opacity: 0, y: 20 }} // entry animation
+                                    animate={{ opacity: 1, y: 0 }} // while present
+                                    exit={{ opacity: 0, y: -20 }} // exit animation
+                                    transition={{
+                                        type: "spring",
+                                        stiffness: 500,
+                                        damping: 40,
+                                    }}>
                                     <div className="flex items-center gap-2 mb-0.5">
                                         <div className="flex-grow border-t border-dashed border-neutral-600"></div>
                                         <span className="text-[10px] text-neutral-600">
@@ -637,7 +681,7 @@ const DeparturePage: React.FC = () => {
                                             <div className="flex-grow border-t border-dashed border-neutral-600"></div>
                                         </div>
                                     )}
-                                </>
+                                </motion.div>
                             ))}
                             {buses.length === 0 && (
                                 <div className="flex justify-center">
@@ -646,7 +690,7 @@ const DeparturePage: React.FC = () => {
                                     </span>
                                 </div>
                             )}
-                        </>
+                        </AnimatePresence>
                     )}
                 </div>
             </div>

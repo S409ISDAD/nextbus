@@ -58,12 +58,13 @@ const LocateControlComponent: React.FC = () => {
 
 // Zoom prompt overlay
 const ZoomPrompt: React.FC<{ zoom: number }> = ({ zoom }) => {
+    const showAppNav = useShowAppNav();
     if (zoom < 13) {
         return (
             <div
                 style={{
                     position: "absolute",
-                    top: 10,
+                    top: showAppNav ? 10 : 70,
                     left: "50%",
                     transform: "translateX(-50%)",
                     background: "rgba(255,255,255,0.95)",
@@ -148,7 +149,7 @@ const MapView: React.FC<MapViewProps> = ({
 
     return (
         <div
-            className="relative w-full"
+            className="w-full"
             style={{
                 height: showAppNav
                     ? "calc(100vh - 74px)"

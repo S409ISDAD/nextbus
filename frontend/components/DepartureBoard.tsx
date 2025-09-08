@@ -9,6 +9,7 @@ import { getCurrentPosition } from "../utils/locations";
 import getStopData from "../utils/getStopData";
 import type { Stop } from "../models/Stop";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { motion, AnimatePresence } from "framer-motion";
 import {
     faSatelliteDish,
     faSlash,
@@ -341,9 +342,28 @@ function DepartureBoard({ stop_id, closest, filter }: Props) {
                                             </span>
                                         </div>
                                     ) : (
-                                        <>
+                                        <AnimatePresence>
                                             {buses.map((bus, idx) => (
-                                                <React.Fragment key={bus.trip}>
+                                                <motion.div
+                                                    key={bus.trip}
+                                                    layout
+                                                    initial={{
+                                                        opacity: 0,
+                                                        y: 20,
+                                                    }}
+                                                    animate={{
+                                                        opacity: 1,
+                                                        y: 0,
+                                                    }}
+                                                    exit={{
+                                                        opacity: 0,
+                                                        y: -20,
+                                                    }}
+                                                    transition={{
+                                                        type: "spring",
+                                                        stiffness: 500,
+                                                        damping: 40,
+                                                    }}>
                                                     <BusCard
                                                         bus={bus}
                                                         onClick={() => {
@@ -370,7 +390,7 @@ function DepartureBoard({ stop_id, closest, filter }: Props) {
                                                             <div className="flex-grow border-t border-dashed border-neutral-600"></div>
                                                         </div>
                                                     )}
-                                                </React.Fragment>
+                                                </motion.div>
                                             ))}
                                             {buses.length === 0 ? (
                                                 <div className="flex justify-center">
@@ -379,7 +399,7 @@ function DepartureBoard({ stop_id, closest, filter }: Props) {
                                                     </span>
                                                 </div>
                                             ) : null}
-                                        </>
+                                        </AnimatePresence>
                                     )}
                                 </div>
                             </div>
