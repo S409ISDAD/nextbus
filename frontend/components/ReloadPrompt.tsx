@@ -10,7 +10,7 @@ export default function useReloadPrompt() {
 
     useEffect(() => {
         if (offlineReady) {
-            toast.success("App can now be used offline", {
+            toast.success("App initialised sucessfully", {
                 duration: 4000,
             });
         }
