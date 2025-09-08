@@ -17,7 +17,6 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import clsx from "clsx";
 import { WebSocketManager } from "../websockets/ws_manager";
-import React from "react";
 
 interface Props {
     stop_id: string;

@@ -7,15 +7,13 @@ export const useShowAppNav = (): boolean => {
     useEffect(() => {
         const isPWA = window.matchMedia("(display-mode: standalone)");
         if (isPWA.matches) {
-            setShow(true);
-            return;
-        }
-        // const isMobileView = window.matchMedia("(max-width: 640px)");
-        // setShow(isMobileView.matches);
-        // const handler = (e: MediaQueryListEvent) => setShow(e.matches);
+            const isMobileView = window.matchMedia("(max-width: 640px)");
+            setShow(isMobileView.matches);
+            const handler = (e: MediaQueryListEvent) => setShow(e.matches);
 
-        // isMobileView.addEventListener("change", handler);
-        // return () => isMobileView.removeEventListener("change", handler);
+            isMobileView.addEventListener("change", handler);
+            return () => isMobileView.removeEventListener("change", handler);
+        }
     }, []);
 
     return show;

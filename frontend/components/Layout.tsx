@@ -1,5 +1,4 @@
 import { Link, Outlet } from "react-router";
-import Clock from "../components/Clock";
 import { useShowAppNav, whereAmI } from "../utils/AppNav";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
