@@ -40,7 +40,7 @@ export const parseDepartures = async (departures: Departures, filter?: string) =
                 (bus) => new Date(bus.expected).getTime() - now.getTime() < 43200000
             )
             .filter(
-                (bus) => new Date(new Date(bus.expected).getTime() + 60 * 1000) > now
+                (bus) => new Date(new Date(bus.expected).getTime() + 90 * 1000) > now
             )
             .sort(
                 (a, b) => new Date(a.expected).getTime() - new Date(b.expected).getTime()
