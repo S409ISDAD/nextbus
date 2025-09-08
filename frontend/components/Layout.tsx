@@ -160,7 +160,7 @@ export default function Layout() {
                             ·<span>v{version}</span>
                         </footer>
                     )}
-                    <div className="h-16"></div>
+                    <div className="h-18"></div>
                 </main>
             </div>
         );

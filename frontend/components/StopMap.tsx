@@ -3,6 +3,7 @@ import L from "leaflet";
 import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
 import { LocateControl } from "leaflet.locatecontrol";
 import "leaflet.locatecontrol/dist/L.Control.Locate.min.css";
+import { useShowAppNav } from "../utils/AppNav";
 
 type Stop = {
     stop_id: string;
@@ -112,6 +113,8 @@ const MapView: React.FC<MapViewProps> = ({
 }) => {
     const [zoom, setZoom] = useState(9);
 
+    const showAppNav = useShowAppNav();
+
     const handleMove = useCallback(
         (map: L.Map) => {
             const bounds = map.getBounds();
@@ -146,7 +149,11 @@ const MapView: React.FC<MapViewProps> = ({
     return (
         <div
             className="relative w-full"
-            style={{ height: "calc(100vh - 64px)" }}>
+            style={{
+                height: showAppNav
+                    ? "calc(100vh - 74px)"
+                    : "calc(100vh - 60px)",
+            }}>
             <MapContainer
                 center={[lat, lng]}
                 zoom={zoom}
