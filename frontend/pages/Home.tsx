@@ -2,7 +2,6 @@ import React, { useEffect } from "react";
 // import DepartureBoard from "../components/DepartureBoard";
 // import { faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
 // import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import StopMap from "../components/StopMap";
 import { Card } from "../components/ui/Card";
 import { getCurrentPosition } from "../utils/locations";
 import type { ServiceInfo } from "../models/ServiceInfo";
