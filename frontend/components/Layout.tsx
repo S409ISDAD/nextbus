@@ -92,7 +92,7 @@ export default function Layout() {
         ];
         return (
             <div className="h-full">
-                <nav className="bottom-0 left-0 right-0 flex justify-around items-center p-3 z-[99] border-t border-neutral-800 rounded-t-2xl fixed w-full shadow-2xl md:shadow-xl backdrop-blur-lg backdrop-brightness-20">
+                <nav className="bottom-0 left-0 right-0 flex justify-around items-center p-3 z-[99] border-t border-neutral-800 rounded-t-2xl fixed w-full shadow-2xl md:shadow-xl bg-[#131313]">
                     {items.map((item) => (
                         <Link
                             to={item.href}
