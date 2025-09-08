@@ -144,15 +144,15 @@ const MapView: React.FC<MapViewProps> = ({
     };
 
     return (
-        <div style={{ position: "relative", zIndex: 0, width: "100%" }}>
+        <div
+            className="relative w-full"
+            style={{ height: "calc(100vh - 64px)" }}>
             <MapContainer
                 center={[lat, lng]}
                 zoom={zoom}
                 style={{
-                    aspectRatio:
-                        typeof window !== "undefined" && window.innerWidth < 640
-                            ? 1 / 1.3
-                            : 2 / 1,
+                    height: "100%",
+                    width: "100%",
                     borderRadius: "8px",
                 }}>
                 <TileLayer

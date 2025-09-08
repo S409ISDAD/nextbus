@@ -5,6 +5,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
     faBus,
     faHome,
+    faMap,
     faTrainSubway,
 } from "@fortawesome/free-solid-svg-icons";
 import version from "../utils/version";
@@ -28,6 +29,11 @@ export default function Layout() {
                             </div>
                         </Link>
 
+                        <Link to="/map">
+                            <button className="p-2 px-3 transition-all cursor-pointer border-neutral-800 h-max rounded-2xl border-1 hover:border-blue-700 ">
+                                map
+                            </button>
+                        </Link>
                         <Link to="/buses">
                             <button className="p-2 px-3 transition-all cursor-pointer border-neutral-800 h-max rounded-2xl border-1 hover:border-blue-700 ">
                                 buses
@@ -46,47 +52,50 @@ export default function Layout() {
                 <main>
                     <div className="h-15"></div>
                     <Outlet />
-                    <footer className="flex flex-row flex-wrap items-start justify-center w-full gap-2 p-3 text-sm text-gray-200 border-t-2 max-h-fit border-neutral-800">
-                        <span>© {currentYear} nextbus</span> ·
-                        <a
-                            href="/data"
-                            className="underline text-sky-400 max-h-fit">
-                            Data Sources
-                        </a>
-                        ·
-                        <a
-                            href="/privacy"
-                            className="underline text-sky-400 max-h-fit">
-                            Privacy
-                        </a>
-                        ·
-                        <a
-                            href="/terms"
-                            className="underline text-sky-400 max-h-fit">
-                            Terms
-                        </a>
-                        ·
-                        <a
-                            href="/stats"
-                            className="underline text-sky-400 max-h-fit">
-                            Stats
-                        </a>
-                        ·
-                        <a
-                            href="https://discord.gg/dyEmZSkwge"
-                            className="underline text-sky-400 max-h-fit"
-                            target="_blank"
-                            rel="noopener noreferrer">
-                            Join the Discord!{" "}
-                        </a>
-                        ·<span>v{version}</span>
-                    </footer>
+                    {whereAmI() !== "map" && (
+                        <footer className="flex flex-row flex-wrap items-start justify-center w-full gap-2 p-3 text-sm text-gray-200 border-t-2 max-h-fit border-neutral-800">
+                            <span>© {currentYear} nextbus</span> ·
+                            <a
+                                href="/data"
+                                className="underline text-sky-400 max-h-fit">
+                                Data Sources
+                            </a>
+                            ·
+                            <a
+                                href="/privacy"
+                                className="underline text-sky-400 max-h-fit">
+                                Privacy
+                            </a>
+                            ·
+                            <a
+                                href="/terms"
+                                className="underline text-sky-400 max-h-fit">
+                                Terms
+                            </a>
+                            ·
+                            <a
+                                href="/stats"
+                                className="underline text-sky-400 max-h-fit">
+                                Stats
+                            </a>
+                            ·
+                            <a
+                                href="https://discord.gg/dyEmZSkwge"
+                                className="underline text-sky-400 max-h-fit"
+                                target="_blank"
+                                rel="noopener noreferrer">
+                                Join the Discord!{" "}
+                            </a>
+                            ·<span>v{version}</span>
+                        </footer>
+                    )}
                 </main>
             </div>
         );
     } else {
         const items = [
             { name: "home", href: "/", icon: faHome },
+            { name: "map", href: "/map", icon: faMap },
             { name: "buses", href: "/buses", icon: faBus },
             { name: "trains", href: "/trains", icon: faTrainSubway },
         ];
@@ -114,41 +123,43 @@ export default function Layout() {
                 </nav>
                 <main>
                     <Outlet />
-                    <footer className="flex flex-row flex-wrap items-start justify-center w-full gap-2 p-3 text-sm text-gray-200 border-t-2 max-h-fit border-neutral-800">
-                        <span>© {currentYear} nextbus</span> ·
-                        <a
-                            href="/data"
-                            className="underline text-sky-400 max-h-fit">
-                            Data Sources
-                        </a>
-                        ·
-                        <a
-                            href="/privacy"
-                            className="underline text-sky-400 max-h-fit">
-                            Privacy
-                        </a>
-                        ·
-                        <a
-                            href="/terms"
-                            className="underline text-sky-400 max-h-fit">
-                            Terms
-                        </a>
-                        ·
-                        <a
-                            href="/stats"
-                            className="underline text-sky-400 max-h-fit">
-                            Stats
-                        </a>
-                        ·
-                        <a
-                            href="https://discord.gg/dyEmZSkwge"
-                            className="underline text-sky-400 max-h-fit"
-                            target="_blank"
-                            rel="noopener noreferrer">
-                            Join the Discord!{" "}
-                        </a>
-                        ·<span>v{version}</span>
-                    </footer>
+                    {whereAmI() !== "map" && (
+                        <footer className="flex flex-row flex-wrap items-start justify-center w-full gap-2 p-3 text-sm text-gray-200 border-t-2 max-h-fit border-neutral-800">
+                            <span>© {currentYear} nextbus</span> ·
+                            <a
+                                href="/data"
+                                className="underline text-sky-400 max-h-fit">
+                                Data Sources
+                            </a>
+                            ·
+                            <a
+                                href="/privacy"
+                                className="underline text-sky-400 max-h-fit">
+                                Privacy
+                            </a>
+                            ·
+                            <a
+                                href="/terms"
+                                className="underline text-sky-400 max-h-fit">
+                                Terms
+                            </a>
+                            ·
+                            <a
+                                href="/stats"
+                                className="underline text-sky-400 max-h-fit">
+                                Stats
+                            </a>
+                            ·
+                            <a
+                                href="https://discord.gg/dyEmZSkwge"
+                                className="underline text-sky-400 max-h-fit"
+                                target="_blank"
+                                rel="noopener noreferrer">
+                                Join the Discord!{" "}
+                            </a>
+                            ·<span>v{version}</span>
+                        </footer>
+                    )}
                     <div className="h-16"></div>
                 </main>
             </div>

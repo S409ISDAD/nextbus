@@ -28,6 +28,9 @@ export const whereAmI = () => {
     if (location.pathname === "/account") {
         return "account";
     }
+    if (location.pathname.startsWith("/map")) {
+        return "map";
+    }
     if (location.pathname === "/") {
         return "home";
     }
