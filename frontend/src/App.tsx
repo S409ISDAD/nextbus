@@ -113,6 +113,7 @@ function App() {
         const currentVersion = version;
         if (prevVersion && prevVersion !== currentVersion) {
             toast.success("App updated to latest version");
+            localStorage.setItem("shownUpdatePopup", "false");
         }
         localStorage.setItem("appVersion", currentVersion);
     }, []);

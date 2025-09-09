@@ -26,8 +26,9 @@ api.interceptors.response.use(
         if (version) {
             const prevVersion = localStorage.getItem("appVersion");
             const currentVersion = version;
-            if (prevVersion && prevVersion !== currentVersion) {
+            if (prevVersion && prevVersion !== currentVersion && localStorage.getItem("shownUpdatePopup") !== 'true') {
                 toast(`Version ${currentVersion} available! Refresh to update`, { id: 'version-update-toast', duration: 3000, icon: 'ℹ️' });
+                localStorage.setItem("shownUpdatePopup", "true");
             }
         }
         return response;
