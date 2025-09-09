@@ -13,168 +13,44 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import type { Bus, Prediction } from "../models/Bus";
 import {
-    MapContainer,
+    Map as MapGL,
     Marker,
-    Polyline,
     Popup,
-    TileLayer,
-    useMap,
-} from "react-leaflet";
-import { LocateControl } from "leaflet.locatecontrol";
-import "leaflet.locatecontrol/dist/L.Control.Locate.min.css";
+    NavigationControl,
+    Source,
+    Layer,
+    type MapRef,
+} from "react-map-gl/maplibre";
+import "maplibre-gl/dist/maplibre-gl.css";
 import { useShowAppNav } from "../utils/AppNav";
 
-const LocateControlComponent: React.FC<{ busLatLng: LatLngExpression }> = ({
-    busLatLng,
-}) => {
-    const map = useMap();
-
-    useEffect(() => {
-        const locateControl = new LocateControl({
-            position: "topright",
-            showPopup: false,
-            strings: {
-                title: "Show me where I am",
-            },
-            setView: false, // Don't auto-center
-        });
-        locateControl.addTo(map);
-
-        const onLocationFound = (e: any) => {
-            const userLatLng = e.latlng;
-            const bounds = L.latLngBounds([userLatLng, busLatLng]);
-            map.fitBounds(bounds, { padding: [50, 50] });
-        };
-
-        map.on("locationfound", onLocationFound);
-
-        return () => {
-            locateControl.remove();
-            map.off("locationfound", onLocationFound);
-        };
-    }, [map, busLatLng]);
-
-    return null;
-};
-
-const ResetZoomControl: React.FC = () => {
-    const map = useMap();
-
-    useEffect(() => {
-        const control = L.Control.extend({
-            options: { position: "topright" },
-            onAdd: function () {
-                const container = L.DomUtil.create("div", "leaflet-bar");
-
-                const link = L.DomUtil.create("a", "", container);
-                link.innerHTML = "<i class='fa-solid fa-magnifying-glass'></i>";
-                link.href = "#";
-                link.title = "Reset Zoom";
-
-                L.DomEvent.on(link, "click", L.DomEvent.stopPropagation)
-                    .on(link, "click", L.DomEvent.preventDefault)
-                    .on(link, "click", () => {
-                        map.setZoom(15);
-                    });
-
-                return container;
-            },
-        });
-
-        const instance = new control();
-        instance.addTo(map);
-
-        return () => {
-            instance.remove();
-        };
-    }, [map]);
-
-    return null;
-};
+type LatLng = [number, number];
 
 type MapInfoProps = {
     text: string;
-    style?: React.CSSProperties;
+    color?: string;
 };
 
-const MapInfo: React.FC<MapInfoProps> = ({ text, style }) => {
-    const map = useMap();
-
-    useEffect(() => {
-        const infoControl = new L.Control({ position: "bottomright" });
-
-        infoControl.onAdd = () => {
-            const container = L.DomUtil.create("div", "leaflet-bar");
-
-            const link = L.DomUtil.create("a", "", container);
-            link.innerHTML = text;
-            link.style.width = "100%";
-            link.style.padding = "0 5px 0 5px";
-            link.style.color = style?.color || "black";
-            return container;
-        };
-
-        infoControl.addTo(map);
-
-        return () => {
-            infoControl.remove();
-        };
-    }, [map, text, style]);
-
-    return null;
+const MapInfo: React.FC<MapInfoProps> = ({ text, color = "black" }) => {
+    return (
+        <div
+            className="absolute px-2 py-1 text-sm rounded-md shadow bottom-2 left-2 bg-neutral-900"
+            style={{ color }}>
+            {text}
+        </div>
+    );
 };
 
 type MapViewProps = {
     lat: number;
     lng: number;
     bus: Bus;
-    accuracy: string;
-    track: LatLngExpression[];
+    accuracy: "high" | "med" | "low";
+    track: LatLng[];
 };
-
-const MapCenterUpdater: React.FC<{ lat: number; lng: number }> = ({
-    lat,
-    lng,
-}) => {
-    const map = useMap();
-
-    useEffect(() => {
-        map.setView([lat, lng]);
-    }, [lat, lng, map]);
-
-    return null;
-};
-
-import L, { type LatLngExpression } from "leaflet";
 import React from "react";
 import { Pulse } from "../components/ui/Pulse";
-// import { Pulse } from "../components/ui/Pulse";
-
-const busIcon = L.divIcon({
-    html: `<div style="
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: #ff2056;
-    border-radius: 9999px;
-    width: 24px;
-    height: 24px;
-  ">
-    <i class="fas fa-bus" style="color: white; font-size: 12px;"></i>
-  </div>`,
-    className: "",
-    iconSize: [24, 24],
-    iconAnchor: [12, 12],
-    popupAnchor: [0, -12],
-});
-
-const pinIcon = L.divIcon({
-    html: `<i class="fas fa-circle"></i>`,
-    className: "text-blue-500",
-    iconSize: [12, 12],
-    iconAnchor: [12, 12],
-    popupAnchor: [-6, -6],
-});
+import { map } from "leaflet";
 
 const MapView: React.FC<MapViewProps> = ({
     lat,
@@ -183,58 +59,147 @@ const MapView: React.FC<MapViewProps> = ({
     accuracy,
     track = [],
 }) => {
+    const [popup, setPopup] = React.useState<{
+        coords: LatLng;
+        content: React.ReactNode;
+    } | null>(null);
+
+    const mapRef = React.useRef<MapRef | null>(null);
+
+    React.useEffect(() => {
+        if (mapRef.current) {
+            mapRef.current.flyTo({
+                center: [lng, lat],
+                zoom:
+                    mapRef.current.getZoom() < 9 ? 9 : mapRef.current.getZoom(),
+                duration: 500,
+                essential: true,
+            });
+        }
+    }, [lat, lng]);
+
+    const accuracyColor =
+        accuracy === "high"
+            ? "limegreen"
+            : accuracy === "med"
+            ? "darkorange"
+            : "red";
     return (
-        <div className="">
-            <MapContainer
-                center={[lat, lng]}
-                zoom={15}
-                style={{ height: "200px", width: "100vw" }}>
-                <TileLayer
-                    attribution='&copy; <a href="https://osm.org/copyright">OpenStreetMap</a>'
-                    url="https://tile-{s}.openstreetmap.fr/hot/{z}/{x}/{y}.png"
-                />
-                <Marker
-                    position={[lat, lng]}
-                    icon={busIcon}
-                    zIndexOffset={1000}>
-                    <Popup>Bus is here</Popup>
+        <div className="relative w-[100vw] h-[200px]">
+            <MapGL
+                ref={mapRef}
+                initialViewState={{
+                    longitude: lng,
+                    latitude: lat,
+                    zoom: 12,
+                }}
+                mapStyle="https://tiles.stadiamaps.com/styles/alidade_smooth_dark.json"
+                // mapStyle={{
+                //     version: 8,
+                //     sources: {
+                //         osm: {
+                //             type: "raster",
+                //             tiles: [
+                //                 "https://tile-a.openstreetmap.fr/hot/{z}/{x}/{y}.png",
+                //                 "https://tile-b.openstreetmap.fr/hot/{z}/{x}/{y}.png",
+                //                 "https://tile-c.openstreetmap.fr/hot/{z}/{x}/{y}.png",
+                //             ],
+                //             tileSize: 256,
+                //             attribution:
+                //                 '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                //         },
+                //     },
+                //     layers: [
+                //         {
+                //             id: "osm",
+                //             type: "raster",
+                //             source: "osm",
+                //             minzoom: 0,
+                //             maxzoom: 19,
+                //         },
+                //     ],
+                // }}
+                style={{ width: "100%", height: "100%" }}>
+                <NavigationControl position="top-right" />
+
+                <Marker longitude={lng} latitude={lat} anchor="center">
+                    <div className="flex items-center justify-center w-6 h-6 rounded-full shadow-lg bg-rose-600">
+                        <i className="text-xs text-white fas fa-bus" />
+                    </div>
                 </Marker>
                 {bus.journey.stops.map((stop) => (
                     <Marker
                         key={stop.stop_id}
-                        position={[stop.coords[0], stop.coords[1]]}
-                        icon={pinIcon}>
-                        <Popup>
-                            <div className="flex flex-col">
-                                <span>{stop.name}</span>
-                                Expt: {toTime(stop.expt_time)}
-                            </div>
-                        </Popup>
+                        longitude={stop.coords[1]}
+                        latitude={stop.coords[0]}
+                        anchor="center"
+                        onClick={(e) => {
+                            e.originalEvent.stopPropagation();
+                            setPopup({
+                                coords: [stop.coords[1], stop.coords[0]],
+                                content: (
+                                    <div className="flex flex-col text-white bg-[#222]">
+                                        <a
+                                            className="font-semibold"
+                                            href={`/buses/stops/${stop.stop_id}`}>
+                                            {stop.name}
+                                        </a>
+                                        <span className="text-xs opacity-80">
+                                            Expt:{" "}
+                                            {new Date(
+                                                stop.expt_time
+                                            ).toLocaleTimeString([], {
+                                                hour: "2-digit",
+                                                minute: "2-digit",
+                                            })}
+                                        </span>
+                                    </div>
+                                ),
+                            });
+                        }}>
+                        <div className="text-blue-500">
+                            <i className="fas fa-circle text-[12px]" />
+                        </div>
                     </Marker>
                 ))}
-                <Polyline
-                    positions={track}
-                    pathOptions={{
-                        color: "black",
-                        weight: 4,
-                        opacity: 0.7,
-                    }}
-                />
-                <MapCenterUpdater lat={lat} lng={lng}></MapCenterUpdater>
-                <MapInfo
-                    text={`Accuracy: ${accuracy}`}
-                    style={{
-                        color:
-                            accuracy === "high"
-                                ? "green"
-                                : accuracy === "med"
-                                ? "darkorange"
-                                : "red",
-                    }}
-                />
-                <LocateControlComponent busLatLng={[lat, lng]} />
-                <ResetZoomControl />
-            </MapContainer>
+
+                {track.length > 0 && (
+                    <Source
+                        id="track"
+                        type="geojson"
+                        data={{
+                            type: "Feature",
+                            geometry: {
+                                type: "LineString",
+                                coordinates: track.map((p) => [p[1], p[0]]),
+                            },
+                            properties: {},
+                        }}>
+                        <Layer
+                            id="track-line"
+                            type="line"
+                            paint={{
+                                "line-color": "white",
+                                "line-width": 4,
+                                "line-opacity": 0.7,
+                            }}
+                        />
+                    </Source>
+                )}
+
+                {popup && (
+                    <Popup
+                        longitude={popup.coords[0]}
+                        latitude={popup.coords[1]}
+                        closeOnClick={true}
+                        anchor="top"
+                        onClose={() => setPopup(null)}>
+                        {popup.content}
+                    </Popup>
+                )}
+            </MapGL>
+
+            <MapInfo text={`Accuracy: ${accuracy}`} color={accuracyColor} />
         </div>
     );
 };

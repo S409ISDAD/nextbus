@@ -1,8 +1,13 @@
-import { useEffect, useRef, useState, useCallback } from "react";
-import L from "leaflet";
-import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
-import { LocateControl } from "leaflet.locatecontrol";
-import "leaflet.locatecontrol/dist/L.Control.Locate.min.css";
+import { useRef, useState, useCallback, type JSX } from "react";
+import {
+    Map as MapGL,
+    Marker,
+    Popup,
+    NavigationControl,
+    GeolocateControl,
+    type MapRef,
+} from "react-map-gl/maplibre";
+import "maplibre-gl/dist/maplibre-gl.css";
 import { useShowAppNav } from "../utils/AppNav";
 import type { MapBus } from "../models/Bus";
 import getLivery from "../utils/getLivery";
@@ -17,119 +22,15 @@ type Stop = {
 };
 
 type MapViewProps = {
-    lat: number;
-    lng: number;
+    mapRef: React.Ref<MapRef>;
     stops: Stop[];
     buses: MapBus[];
     loading?: boolean;
     onBoundsChange: (bounds: L.LatLngBounds, zoom: number) => void;
 };
 
-const getPinIcon = (bearing: number) =>
-    L.divIcon({
-        html: `<i class="fas fa-location-dot fa-xl" style="transform: rotate(${
-            bearing + 180
-        }deg);"></i>`,
-        className: "text-blue-500 opacity-80",
-        iconSize: [24, 24],
-        iconAnchor: [12, 12],
-        popupAnchor: [-6, -6],
-    });
-
-const getStopIcon = () =>
-    L.divIcon({
-        html: `<i class="fas fa-circle-dot"></i>`,
-        className: "text-blue-500 opacity-80",
-        iconSize: [24, 24],
-        iconAnchor: [12, 12],
-        popupAnchor: [-6, -6],
-    });
-
-const getBusIcon = (bus: MapBus) =>
-    L.divIcon({
-        html: `<div class="z-100 w-[24px] h-[16px] flex items-center justify-center" style="transform: rotate(${
-            bus.heading - 90
-        }deg); background: ${
-            bus?.livery?.left_css
-                ? bus.livery.left_css
-                : "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 200' fill='none'><rect width='300' height='200' fill='%23222222'/><text x='150' y='110' text-anchor='middle' fill='%23999999' font-size='80' font-family='sans-serif' dy='.35em'>?</text></svg>\")"
-        };"><span class="font-bold text-black">${
-            bus.service.line_name
-        }</span></div>`,
-        className: "opacity-100",
-        iconSize: [24, 16],
-        iconAnchor: [12, 8],
-        popupAnchor: [0, -8],
-    });
-
-// Leaflet locate control
-const LocateControlComponent: React.FC = () => {
-    const map = useMap();
-    useEffect(() => {
-        // @ts-ignore
-        const locateControl = new LocateControl({
-            position: "topright",
-            showPopup: false,
-            strings: { title: "Show me where I am" },
-        });
-        locateControl.addTo(map);
-    }, [map]);
-    return null;
-};
-
-// Zoom prompt overlay
-const ZoomPrompt: React.FC<{ zoom: number }> = ({ zoom }) => {
-    const showAppNav = useShowAppNav();
-    if (zoom < 13) {
-        return (
-            <div
-                style={{
-                    position: "absolute",
-                    top: showAppNav ? 10 : 70,
-                    left: "50%",
-                    transform: "translateX(-50%)",
-                    background: "rgba(255,255,255,0.95)",
-                    padding: "8px 16px",
-                    borderRadius: "8px",
-                    boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-                    zIndex: 1000,
-                }}
-                className="text-sm font-semibold text-gray-600">
-                Zoom in to see bus stops
-            </div>
-        );
-    }
-    return null;
-};
-
-// Loading overlay
-const LoadingMsg: React.FC<{ loading: boolean }> = ({ loading }) => {
-    const showAppNav = useShowAppNav();
-    if (loading) {
-        return (
-            <div
-                style={{
-                    position: "absolute",
-                    top: showAppNav ? 10 : 70,
-                    left: "50%",
-                    transform: "translateX(-50%)",
-                    background: "rgba(255,255,255,0.95)",
-                    padding: "8px 16px",
-                    borderRadius: "8px",
-                    boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-                    zIndex: 1000,
-                }}
-                className="text-sm font-semibold text-gray-500">
-                Loading...
-            </div>
-        );
-    }
-    return null;
-};
-
 const MapView: React.FC<MapViewProps> = ({
-    lat,
-    lng,
+    mapRef,
     stops,
     buses,
     loading,
@@ -139,109 +40,191 @@ const MapView: React.FC<MapViewProps> = ({
 
     const showAppNav = useShowAppNav();
 
-    const handleMove = useCallback(
-        (map: L.Map) => {
-            const bounds = map.getBounds();
-            const z = map.getZoom();
+    const [popup, setPopup] = useState<{
+        lngLat: [number, number];
+        content: JSX.Element;
+    } | null>(null);
 
-            setZoom((prevZoom) => (prevZoom !== z ? z : prevZoom)); // only update zoom if changed
-            onBoundsChange(bounds, z);
+    const handleMove = useCallback(
+        (e: any) => {
+            const { viewState } = e;
+            setZoom(viewState.zoom);
+
+            const bounds = e.target.getBounds();
+            onBoundsChange(bounds, viewState.zoom);
         },
         [onBoundsChange]
     );
 
-    const MapEvents: React.FC = () => {
-        const map = useMap();
-
-        useEffect(() => {
-            const onMoveEnd = () => handleMove(map);
-            map.on("moveend", onMoveEnd);
-            map.on("zoomend", onMoveEnd);
-
-            // call once on mount
-            handleMove(map);
-
-            return () => {
-                map.off("moveend", onMoveEnd);
-                map.off("zoomend", onMoveEnd);
-            };
-        }, [map, handleMove]);
-
-        return null;
-    };
-
     return (
         <div
-            className="w-full"
             style={{
                 height: showAppNav
                     ? "calc(100vh - 74px)"
                     : "calc(100vh - 60px)",
+                width: "100%",
             }}>
-            <MapContainer
-                center={[lat, lng]}
-                zoom={zoom}
+            <MapGL
+                ref={mapRef}
+                initialViewState={{
+                    latitude: 51,
+                    longitude: -1,
+                    zoom: 9,
+                }}
                 style={{
                     height: "100%",
                     width: "100%",
                     borderRadius: "8px",
-                }}>
-                <TileLayer
-                    attribution='&copy; <a href="https://osm.org/copyright">OpenStreetMap</a>'
-                    url="https://tile-{s}.openstreetmap.fr/hot/{z}/{x}/{y}.png"
-                />
+                }}
+                touchPitch={false}
+                pitchWithRotate={false}
+                dragRotate={false}
+                maxPitch={0}
+                maxZoom={18}
+                minZoom={4}
+                mapStyle="https://tiles.stadiamaps.com/styles/alidade_smooth_dark.json"
+                // mapStyle={{
+                //     version: 8,
+                //     sources: {
+                //         osm: {
+                //             type: "raster",
+                //             tiles: [
+                //                 "https://tile-a.openstreetmap.fr/hot/{z}/{x}/{y}.png",
+                //                 "https://tile-b.openstreetmap.fr/hot/{z}/{x}/{y}.png",
+                //                 "https://tile-c.openstreetmap.fr/hot/{z}/{x}/{y}.png",
+                //             ],
+                //             tileSize: 256,
+                //             attribution:
+                //                 '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                //         },
+                //     },
+                //     layers: [
+                //         {
+                //             id: "osm",
+                //             type: "raster",
+                //             source: "osm",
+                //             minzoom: 0,
+                //             maxzoom: 19,
+                //         },
+                //     ],
+                // }}
+                onMoveEnd={handleMove}>
+                <NavigationControl position="top-right" />
 
+                <GeolocateControl
+                    position="top-right"
+                    trackUserLocation={true}
+                    showAccuracyCircle={true}
+                />
                 {stops.map((stop) => (
                     <Marker
                         key={stop.stop_id}
-                        position={[stop.coords[0], stop.coords[1]]}
-                        icon={
-                            stop.bearing != null
-                                ? getPinIcon(stop.bearing)
-                                : getStopIcon()
-                        }>
-                        <Popup>
-                            <div className="flex flex-col">
-                                <span>{stop.name}</span>
-                                <span className="text-sm text-gray-500">
-                                    {stop.services.join(", ")}
-                                </span>
-                                <a
-                                    href={`/buses/stops/${stop.stop_id}`}
-                                    className="text-sky-500 hover:underline">
-                                    View Stop
-                                </a>
-                            </div>
-                        </Popup>
+                        longitude={stop.coords[1]}
+                        latitude={stop.coords[0]}
+                        onClick={(e) => {
+                            e.originalEvent.stopPropagation();
+                            setPopup({
+                                lngLat: [stop.coords[1], stop.coords[0]],
+                                content: (
+                                    <div className="flex flex-col text-white bg-[#222]">
+                                        <span className="font-semibold text-white">
+                                            {stop.name}
+                                        </span>
+                                        <span className="text-xs text-gray-300">
+                                            {stop.services.join(", ")}
+                                        </span>
+                                        <a
+                                            href={`/buses/stops/${stop.stop_id}`}
+                                            className="text-xs text-sky-400 hover:underline">
+                                            View Stop
+                                        </a>
+                                    </div>
+                                ),
+                            });
+                        }}>
+                        <i
+                            className={`text-blue-500 fas ${
+                                stop.bearing
+                                    ? "fa-location-dot scale-130"
+                                    : "fa-circle-dot"
+                            } opacity-80`}
+                            style={{
+                                transform: `rotate(${
+                                    (stop.bearing ?? 0) - 180
+                                }deg)`,
+                            }}
+                        />
                     </Marker>
                 ))}
 
                 {buses.map((bus) => (
                     <Marker
                         key={bus.trip_id}
-                        position={[bus.coords[0], bus.coords[1]]}
-                        icon={getBusIcon(bus)}>
-                        <Popup>
-                            <div className="flex flex-col">
-                                <span>
-                                    {bus.service.line_name} to {bus.destination}
-                                </span>
-                                <span className="text-sm text-gray-500">
-                                    {bus.vehicle.features}
-                                </span>
-                                <span className="text-sm text-gray-500">
-                                    {bus.vehicle.name}
-                                </span>
-                            </div>
-                        </Popup>
+                        longitude={bus.coords[1]}
+                        latitude={bus.coords[0]}
+                        anchor="center"
+                        onClick={() =>
+                            setPopup({
+                                lngLat: [bus.coords[1], bus.coords[0]],
+                                content: (
+                                    <div className="flex flex-col">
+                                        <span>
+                                            {bus.service.line_name} to{" "}
+                                            {bus.destination}
+                                        </span>
+                                        <span className="text-sm text-gray-500">
+                                            {bus.vehicle.features}
+                                        </span>
+                                        <span className="text-sm text-gray-500">
+                                            {bus.vehicle.name}
+                                        </span>
+                                    </div>
+                                ),
+                            })
+                        }>
+                        <div
+                            style={{
+                                width: 24,
+                                height: 16,
+                                background: bus?.livery?.left_css ?? "#222",
+                                transform: `rotate(${bus.heading - 90}deg)`,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                            }}>
+                            <span className="text-xs font-bold text-black">
+                                {bus.service.line_name}
+                            </span>
+                        </div>
                     </Marker>
                 ))}
 
-                <LocateControlComponent />
-                <MapEvents />
-            </MapContainer>
-            <ZoomPrompt zoom={zoom} />
-            <LoadingMsg loading={!!loading} />
+                {popup && (
+                    <Popup
+                        longitude={popup.lngLat[0]}
+                        latitude={popup.lngLat[1]}
+                        closeOnClick={true}
+                        anchor="bottom"
+                        maxWidth="250px"
+                        onClose={() => setPopup(null)}>
+                        {popup.content}
+                    </Popup>
+                )}
+            </MapGL>
+            {zoom < 13 && (
+                <div
+                    className="absolute px-4 py-2 text-sm font-semibold text-gray-600 transform -translate-x-1/2 bg-white rounded shadow left-1/2"
+                    style={{ top: showAppNav ? 10 : 70 }}>
+                    Zoom in to see bus stops
+                </div>
+            )}
+            {loading && (
+                <div
+                    className="absolute px-4 py-2 text-sm font-semibold text-gray-500 transform -translate-x-1/2 bg-white rounded shadow left-1/2"
+                    style={{ top: showAppNav ? 10 : 70 }}>
+                    Loading...
+                </div>
+            )}
         </div>
     );
 };
@@ -251,9 +234,9 @@ const Map: React.FC = () => {
     const [buses, setBuses] = useState<MapBus[]>([]);
     const [loading, setLoading] = useState(false);
     const [center] = useState<[number, number]>([51, -1]);
-    const lastBoundsRef = useRef<L.LatLngBounds | null>(null);
     const stopsTimeout = useRef<number | null>(null);
     const busesTimeout = useRef<number | null>(null);
+    const mapRef = useRef<MapRef>(null);
 
     // useEffect(() => {
     //     if (navigator.geolocation) {
@@ -265,13 +248,15 @@ const Map: React.FC = () => {
     //     }
     // }, []);
 
-    const fetchStops = useCallback(async (bounds: L.LatLngBounds) => {
+    const fetchStops = useCallback(async (bounds: maplibregl.LngLatBounds) => {
         setLoading(true);
         try {
-            const ymax = bounds.getNorth();
-            const ymin = bounds.getSouth();
-            const xmax = bounds.getEast();
-            const xmin = bounds.getWest();
+            const sw = bounds.getSouthWest();
+            const ne = bounds.getNorthEast();
+            const xmin = sw.lng,
+                ymin = sw.lat;
+            const xmax = ne.lng,
+                ymax = ne.lat;
 
             const url = `https://bustimes.org/stops.json?ymax=${ymax}&xmax=${xmax}&ymin=${ymin}&xmin=${xmin}`;
             const res = await fetch(url);
@@ -295,13 +280,15 @@ const Map: React.FC = () => {
         }
     }, []);
 
-    const fetchBuses = useCallback(async (bounds: L.LatLngBounds) => {
+    const fetchBuses = useCallback(async (bounds: maplibregl.LngLatBounds) => {
         setLoading(true);
         try {
-            const ymax = bounds.getNorth();
-            const ymin = bounds.getSouth();
-            const xmax = bounds.getEast();
-            const xmin = bounds.getWest();
+            const sw = bounds.getSouthWest();
+            const ne = bounds.getNorthEast();
+            const xmin = sw.lng,
+                ymin = sw.lat;
+            const xmax = ne.lng,
+                ymax = ne.lat;
 
             const url = `https://bustimes.org/vehicles.json?ymax=${ymax}&xmax=${xmax}&ymin=${ymin}&xmin=${xmin}`;
             const res = await fetch(url);
@@ -329,43 +316,33 @@ const Map: React.FC = () => {
         }
     }, []);
 
-    const handleBoundsChange = useCallback(
-        (bounds: L.LatLngBounds, zoom: number) => {
-            if (zoom < 13) {
-                if (stops.length > 0) setStops([]);
-                return;
-            }
+    const handleBoundsChange = useCallback(() => {
+        const map = mapRef.current?.getMap();
+        if (!map) return;
 
-            // Only fetch if bounds changed
-            if (
-                !lastBoundsRef.current ||
-                !lastBoundsRef.current.equals(bounds)
-            ) {
-                lastBoundsRef.current = bounds;
+        const bounds = map.getBounds();
+        const zoom = map.getZoom();
 
-                if (stopsTimeout.current) clearTimeout(stopsTimeout.current);
-                stopsTimeout.current = window.setTimeout(
-                    () => fetchStops(bounds),
-                    400
-                );
+        if (zoom < 13) {
+            if (stops.length > 0) setStops([]);
+            return;
+        }
 
-                if (SHOW_BUSES) {
-                    if (busesTimeout.current)
-                        clearTimeout(busesTimeout.current);
-                    busesTimeout.current = window.setTimeout(
-                        () => fetchBuses(bounds),
-                        1000
-                    );
-                }
-            }
-        },
-        [fetchStops, stops.length]
-    );
+        if (stopsTimeout.current) clearTimeout(stopsTimeout.current);
+        stopsTimeout.current = window.setTimeout(() => fetchStops(bounds), 400);
+
+        if (SHOW_BUSES) {
+            if (busesTimeout.current) clearTimeout(busesTimeout.current);
+            busesTimeout.current = window.setTimeout(
+                () => fetchBuses(bounds),
+                1000
+            );
+        }
+    }, [fetchStops, fetchBuses, stops.length]);
 
     return (
         <MapView
-            lat={center[0]}
-            lng={center[1]}
+            mapRef={mapRef}
             stops={stops}
             buses={buses}
             loading={loading}
