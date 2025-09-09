@@ -7,7 +7,7 @@ import {
     faMap,
     faTrainSubway,
 } from "@fortawesome/free-solid-svg-icons";
-import { faDiscord, faGit, faGithub } from "@fortawesome/free-brands-svg-icons";
+import { faDiscord, faGithub } from "@fortawesome/free-brands-svg-icons";
 import version from "../utils/version";
 
 const footer = (currentYear: number) => (
