@@ -8,6 +8,7 @@ from backend.schemas.stop import StopTime
 from backend.schemas.times import Times
 from backend.services.journeys import get_trip, get_vehicle_journey
 from datetime import datetime as dt
+from backend.deps import LONDON
 
 
 async def calculate_sequence(stops: list[StopTime], future_time: dt, extra: int) -> int:
@@ -100,8 +101,8 @@ async def predict_future(
         if timestamp:
             age = int(
                 (
-                    datetime.datetime.fromtimestamp(future_time, uk_timezone)
-                    - datetime.datetime.fromtimestamp(timestamp, uk_timezone)
+                    datetime.datetime.fromtimestamp(future_time, LONDON)
+                    - datetime.datetime.fromtimestamp(timestamp, LONDON)
                 ).total_seconds()
             )
             raw_offset = int((ideal_age - age) * sensitivity)

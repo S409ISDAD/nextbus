@@ -10,7 +10,6 @@ async def get_departures(stop_id: str, redis):
 
     service_ids = [service.get("id") for service in services]
 
-    line_names = [service.get("line_name") for service in services]
     times = []
 
     use_db_method = False

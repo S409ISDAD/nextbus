@@ -24,7 +24,6 @@ async def get_vehicle_journey(journey_id, delay, r) -> Journey:
         if not data:
             return
 
-        current_time = dt.now(tz=UTC)
         prev_time = 0
         total_delay = 0
         times = data["times"]

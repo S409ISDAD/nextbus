@@ -1,9 +1,7 @@
 import asyncio
 from datetime import timedelta, timezone, datetime
-import os
 import time
-import dotenv
-from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -30,12 +28,10 @@ import logging
 from prometheus_fastapi_instrumentator import Instrumentator
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
-from backend.bot.bot import bot
+from backend.config import config
 
 
 log = logging.getLogger(__name__)
-
-from backend.config import config
 
 
 # logging.basicConfig(

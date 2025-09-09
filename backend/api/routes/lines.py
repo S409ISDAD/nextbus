@@ -3,10 +3,9 @@ import logging
 from backend.deps import get_redis, limiter
 
 # from backend.schemas.line import Line
-from backend.models import Line, Service, Operator
+from backend.models import Line, Service
 from backend.db.db import get_db
-from geoalchemy2.shape import to_shape
-from sqlalchemy.orm import joinedload, defer, Load
+from sqlalchemy.orm import joinedload
 from backend.utils.match_bt import match_service_line
 
 router = APIRouter()

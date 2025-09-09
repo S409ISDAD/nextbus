@@ -16,10 +16,8 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# add your model's MetaData object here
-# for 'autogenerate' support
-from backend.models import *
-from backend.models import Base
+from backend.models import *  # noqa: E402, F403
+from backend.models import Base  # noqa: E402
 
 # target_metadata = mymodel.Base.metadata
 target_metadata = Base.metadata

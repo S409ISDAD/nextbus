@@ -1,23 +1,17 @@
 from datetime import datetime, timedelta
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session
 
 from backend.db.db import SessionLocal
 from backend.deps import UTC
 from backend.models import (
-    Calendar,
     DirectionType,
-    Line,
     Stop,
-    StopTime,
-    Journey,
 )
 
 
 def times_from_stop(stop_id: str, db: Session, limit: int = 10):
     now = datetime.now(tz=UTC)
     now = datetime(year=2025, month=9, day=3, hour=8, minute=1, second=0)
-    weekday_attr = now.strftime("%A").lower()
-    today_date = now.date()
     seconds_since_midnight = now.hour * 3600 + now.minute * 60 + now.second
     current_time = timedelta(seconds=seconds_since_midnight)
 

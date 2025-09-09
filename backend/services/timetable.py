@@ -1,7 +1,6 @@
 from geopy.distance import geodesic
 
 
-
 async def calculate_distances(stops: list) -> list[float]:
     distances = []
 

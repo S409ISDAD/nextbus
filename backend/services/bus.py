@@ -4,7 +4,7 @@ from redis.asyncio import Redis
 
 from backend.config import VEHICLES_BASE
 from backend.db.db import SessionLocal
-from backend.deps import LONDON, UTC
+from backend.deps import LONDON
 from backend.models import (
     DirectionType,
     Journey,
