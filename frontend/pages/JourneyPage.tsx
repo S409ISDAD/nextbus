@@ -538,7 +538,7 @@ const JourneyPage: React.FC = () => {
                                     className="rounded shadow-2xl w-15 aspect-3/2"
                                     style={{
                                         background:
-                                            bus?.livery?.css ||
+                                            bus?.livery?.right_css ||
                                             "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 200' fill='none' xmlns:xlink='http://www.w3.org/1999/xlink'><rect width='300' height='200' fill='%23222222'/><text x='150' y='110' text-anchor='middle' fill='%23999999' font-size='80' font-family='sans-serif' dy='.35em'>?</text></svg>\")",
                                     }}></div>
                             </div>

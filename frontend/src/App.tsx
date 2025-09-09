@@ -33,7 +33,7 @@ import {
     DialogPanel,
     DialogTitle,
 } from "@headlessui/react";
-import StopMap from "../components/StopMap";
+import Map from "../components/Map";
 
 function UsefulBanner() {
     const location = useLocation();
@@ -188,7 +188,7 @@ function App() {
                             <Route path="/terms" element={<Terms />} />
                             <Route path="/data" element={<Data />} />
                             <Route path="/stats" element={<StatsPage />} />
-                            <Route path="/map" element={<StopMap />} />
+                            <Route path="/map" element={<Map />} />
                             <Route path="/buses" element={<BusPage />} />
                             <Route
                                 path="/buses/stops/:stop_id"

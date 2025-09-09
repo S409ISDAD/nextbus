@@ -1,4 +1,5 @@
 export interface Livery {
     name: string
-    css: string
+    left_css: string
+    right_css: string
 }

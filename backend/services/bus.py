@@ -373,7 +373,7 @@ async def build_bus(
     else:
         css = vehicle.get("css")
         if css:
-            livery = Livery(name="Livery:", css=css)
+            livery = Livery(name="Livery:", right_css=css, left_css=css)
         else:
             livery = None
 
