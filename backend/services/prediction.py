@@ -164,7 +164,7 @@ async def calculate_expected(delay, sequence, stop_id, journey_id, r):
             ):
                 not_started = True
 
-        if stop_time.stop_id == stop_id:
+        if stop_time.stop_id == stop_id and not sequence > stop_idx:
             aimed = stop_time.aimed_time
             target_seq = stop_idx
             if not aimed:

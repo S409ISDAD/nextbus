@@ -126,13 +126,16 @@ async def fetch_buses(
             use_db = journey_id is not None
             if use_db:
                 tasks.append(
-                    build_scheduled_db(stop_id, trip_id, journey_id, is_tomorrow, r)
+                    build_scheduled_db(
+                        time, stop_id, trip_id, journey_id, is_tomorrow, r
+                    )
                 )
             else:
                 tasks.append(build_scheduled(time, r))
 
     buses = await asyncio.gather(*tasks)
-    return [bus for bus in buses if bus is not None]
+    final_buses = [bus for bus in buses if bus is not None]
+    return final_buses
 
 
 async def fetch_buses_live(services, stop_id, r: Redis) -> list[TrackedBus]:
@@ -188,7 +191,7 @@ async def build_scheduled(time, r, include_started=True):
 
 
 async def build_scheduled_db(
-    stop_id, trip_id, journey_id, is_tomorrow, r, include_started=True
+    time, stop_id, trip_id, journey_id, is_tomorrow, r, include_started=True
 ):
     with SessionLocal() as db:
         stop_time: StopTime = (
@@ -203,7 +206,8 @@ async def build_scheduled_db(
         )
 
         if not stop_time:
-            return None
+            print("No stop time found")
+            return await build_scheduled(time, r, include_started)
 
         if include_started:
             started, finished = await get_started_finished(trip_id, r)
@@ -218,6 +222,7 @@ async def build_scheduled_db(
         scheduled = today_midnight + stop_time.departure_time
 
         if (scheduled - datetime.now(tz=LONDON)).total_seconds() > 11 * 3600:
+            print("Scheduled too far in future")
             return None
 
         dest = (
