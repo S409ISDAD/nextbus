@@ -7,7 +7,44 @@ import {
     faMap,
     faTrainSubway,
 } from "@fortawesome/free-solid-svg-icons";
+import { faDiscord, faGit, faGithub } from "@fortawesome/free-brands-svg-icons";
 import version from "../utils/version";
+
+const footer = (currentYear: number) => (
+    <footer className="flex flex-row flex-wrap items-start justify-center w-full gap-2 p-3 text-sm text-gray-200 border-t-2 max-h-fit border-neutral-800">
+        <span>© {currentYear} nextbus</span> ·
+        <a href="/data" className="underline text-sky-400 max-h-fit">
+            Data Sources
+        </a>
+        ·
+        <a href="/privacy" className="underline text-sky-400 max-h-fit">
+            Privacy
+        </a>
+        ·
+        <a href="/terms" className="underline text-sky-400 max-h-fit">
+            Terms
+        </a>
+        ·
+        <a href="/stats" className="underline text-sky-400 max-h-fit">
+            Stats
+        </a>
+        ·
+        <a
+            href="https://discord.gg/dyEmZSkwge"
+            target="_blank"
+            rel="noopener noreferrer">
+            <FontAwesomeIcon icon={faDiscord} />
+        </a>{" "}
+        ·
+        <a
+            href="https://github.com/Orbitix/nextbus"
+            target="_blank"
+            rel="noopener noreferrer">
+            <FontAwesomeIcon icon={faGithub} />
+        </a>
+        ·<span>{version}</span>
+    </footer>
+);
 
 export default function Layout() {
     const currentYear = new Date().getFullYear();
@@ -48,43 +85,7 @@ export default function Layout() {
                 <main>
                     <div className="h-15"></div>
                     <Outlet />
-                    {whereAmI() !== "map" && (
-                        <footer className="flex flex-row flex-wrap items-start justify-center w-full gap-2 p-3 text-sm text-gray-200 border-t-2 max-h-fit border-neutral-800">
-                            <span>© {currentYear} nextbus</span> ·
-                            <a
-                                href="/data"
-                                className="underline text-sky-400 max-h-fit">
-                                Data Sources
-                            </a>
-                            ·
-                            <a
-                                href="/privacy"
-                                className="underline text-sky-400 max-h-fit">
-                                Privacy
-                            </a>
-                            ·
-                            <a
-                                href="/terms"
-                                className="underline text-sky-400 max-h-fit">
-                                Terms
-                            </a>
-                            ·
-                            <a
-                                href="/stats"
-                                className="underline text-sky-400 max-h-fit">
-                                Stats
-                            </a>
-                            ·
-                            <a
-                                href="https://discord.gg/dyEmZSkwge"
-                                className="underline text-sky-400 max-h-fit"
-                                target="_blank"
-                                rel="noopener noreferrer">
-                                Join the Discord!{" "}
-                            </a>
-                            ·<span>{version}</span>
-                        </footer>
-                    )}
+                    {whereAmI() !== "map" && footer(currentYear)}
                 </main>
             </div>
         );
@@ -119,43 +120,7 @@ export default function Layout() {
                 </nav>
                 <main>
                     <Outlet />
-                    {whereAmI() !== "map" && (
-                        <footer className="flex flex-row flex-wrap items-start justify-center w-full gap-2 p-3 text-sm text-gray-200 border-t-2 max-h-fit border-neutral-800">
-                            <span>© {currentYear} nextbus</span> ·
-                            <a
-                                href="/data"
-                                className="underline text-sky-400 max-h-fit">
-                                Data Sources
-                            </a>
-                            ·
-                            <a
-                                href="/privacy"
-                                className="underline text-sky-400 max-h-fit">
-                                Privacy
-                            </a>
-                            ·
-                            <a
-                                href="/terms"
-                                className="underline text-sky-400 max-h-fit">
-                                Terms
-                            </a>
-                            ·
-                            <a
-                                href="/stats"
-                                className="underline text-sky-400 max-h-fit">
-                                Stats
-                            </a>
-                            ·
-                            <a
-                                href="https://discord.gg/dyEmZSkwge"
-                                className="underline text-sky-400 max-h-fit"
-                                target="_blank"
-                                rel="noopener noreferrer">
-                                Join the Discord!{" "}
-                            </a>
-                            ·<span>{version}</span>
-                        </footer>
-                    )}
+                    {whereAmI() !== "map" && footer(currentYear)}
                     <div className="h-18"></div>
                 </main>
             </div>
