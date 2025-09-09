@@ -4,7 +4,7 @@ import getBus from "../utils/getBus";
 import { useNavigate, useParams } from "react-router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { lateness, toTime } from "../utils/timeUtils";
-import generateWholeTrack from "../utils/locations";
+import { generateWholeTrack, type LatLng } from "../utils/locations";
 import {
     faBus,
     faCalendarCheck,
@@ -23,8 +23,6 @@ import {
 } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useShowAppNav } from "../utils/AppNav";
-
-type LatLng = [number, number];
 
 type MapInfoProps = {
     text: string;
@@ -45,12 +43,11 @@ type MapViewProps = {
     lat: number;
     lng: number;
     bus: Bus;
-    accuracy: "high" | "med" | "low";
+    accuracy: "high" | "med" | "low" | "unknown";
     track: LatLng[];
 };
 import React from "react";
 import { Pulse } from "../components/ui/Pulse";
-import { map } from "leaflet";
 
 const MapView: React.FC<MapViewProps> = ({
     lat,
@@ -146,12 +143,14 @@ const MapView: React.FC<MapViewProps> = ({
                                         </a>
                                         <span className="text-xs opacity-80">
                                             Expt:{" "}
-                                            {new Date(
-                                                stop.expt_time
-                                            ).toLocaleTimeString([], {
-                                                hour: "2-digit",
-                                                minute: "2-digit",
-                                            })}
+                                            {stop.expt_time
+                                                ? new Date(
+                                                      stop.expt_time
+                                                  ).toLocaleTimeString([], {
+                                                      hour: "2-digit",
+                                                      minute: "2-digit",
+                                                  })
+                                                : "-"}
                                         </span>
                                     </div>
                                 ),
@@ -248,7 +247,9 @@ const JourneyPage: React.FC = () => {
     const [sequence, setSeq] = useState<number>(0);
     const [progress, setProg] = useState<number>(0);
     const [location, setLoc] = useState<number[]>([0, 0]);
-    const [accuracy, setAccuracy] = useState<string>("unknown");
+    const [accuracy, setAccuracy] = useState<
+        "high" | "med" | "low" | "unknown"
+    >("unknown");
     const [journey, setJourney] = useState<Journey>();
     const [loading, setLoading] = useState(true);
     const [fetching, setFetching] = useState(false);
@@ -280,7 +281,7 @@ const JourneyPage: React.FC = () => {
                 const age = Math.floor(
                     (now.getTime() - new Date(bus?.timestamp).getTime()) / 1000
                 );
-                let accuracy = "unknown";
+                let accuracy: "high" | "med" | "low" | "unknown" = "unknown";
 
                 if (age <= 45) {
                     accuracy = "high";

@@ -233,7 +233,6 @@ const Map: React.FC = () => {
     const [stops, setStops] = useState<Stop[]>([]);
     const [buses, setBuses] = useState<MapBus[]>([]);
     const [loading, setLoading] = useState(false);
-    const [center] = useState<[number, number]>([51, -1]);
     const stopsTimeout = useRef<number | null>(null);
     const busesTimeout = useRef<number | null>(null);
     const mapRef = useRef<MapRef>(null);
