@@ -570,7 +570,7 @@ const DeparturePage: React.FC = () => {
                         </a> */}
                     </div>
                 </div>
-                <div className="flex flex-row justify-start gap-1 overflow-x-auto">
+                <div className="flex flex-row justify-center gap-1 overflow-x-auto">
                     {stop?.services
                         .sort((a, b) =>
                             new Intl.Collator(undefined, {
