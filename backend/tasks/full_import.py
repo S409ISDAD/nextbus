@@ -13,9 +13,8 @@ async def do_import():
     static_data_dir = script_dir / "../../static_data"
     static_data_dir = static_data_dir.resolve()  # normalize path
 
-    # Example imports
-    import_naptan_data(static_data_dir / "NaPTAN.xml")
-    print("✔ NAPTAN data imported successfully")
+    # import_naptan_data(static_data_dir / "NaPTAN.xml")
+    # print("✔ NAPTAN data imported successfully")
 
     scso_url = "https://opendata.stagecoachbus.com/stagecoach-scso-route-schedule-data-transxchange_2_4.zip"
 

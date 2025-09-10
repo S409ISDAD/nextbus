@@ -27,4 +27,6 @@ def download_if_modified(datasource: DataSource, file: Path):
             db.add(datasource)
             db.commit()
 
-    return file
+        return file
+
+    return None

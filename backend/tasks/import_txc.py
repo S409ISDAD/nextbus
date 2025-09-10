@@ -49,14 +49,15 @@ async def import_datasource(id, folder: Path):
             print(f"No DataSource with id {id} found.")
             return
 
-        download_if_modified(datasource, folder / f"data_source_{id}.zip")
+        path = download_if_modified(datasource, folder / f"txc_source_{id}.zip")
 
-        print(f"Importing data from {folder / f'data_source_{id}.zip'}")
+        if path:
+            print(f"Importing data from {path}")
 
-        await import_txc_zip(folder / f"data_source_{id}.zip")
+            await import_txc_zip(folder / f"data_source_{id}.zip", datasource.id)
 
 
-async def import_txc_zip(zip_path):
+async def import_txc_zip(zip_path, ds_id=None):
     start = time.time()
     try:
         with zipfile.ZipFile(zip_path, "r") as zf:
@@ -71,7 +72,7 @@ async def import_txc_zip(zip_path):
                     print(
                         f"Processing file: {filename} ({xml_files.index(filename) + 1}/{total})"
                     )
-                    txc_importer = TXCImporter(xml_file)
+                    txc_importer = TXCImporter(xml_file, ds_id=ds_id)
                     await txc_importer.handle_txc_file()
     finally:
         end = time.time()
@@ -137,7 +138,7 @@ async def import_txc_zip(zip_path):
 
 
 class TXCImporter:
-    def __init__(self, xml_file):
+    def __init__(self, xml_file, ds_id=None):
         self.txc_data = txc.TransXChange(xml_file)
         self.today = datetime.now(tz=LONDON)
         self.service_id = None
@@ -147,6 +148,7 @@ class TXCImporter:
         self.stop_times_to_add = []
         self.line_to_routes = {}  # Maps line_id to a list of route IDs
         self.line_to_stops = {}  # Maps line_id to a list of stop IDs
+        self.ds_id = ds_id
 
     def get_id(self, id: str) -> str:
         """Generate a unique ID for the object based on the service code, as e.g. RS3 is only unique within a service."""
@@ -428,6 +430,7 @@ class TXCImporter:
             origin=txc_service.origin,
             destination=txc_service.destination,
             vias=txc_service.vias,
+            data_source_id=self.ds_id,
             line_names=", ".join(
                 line.line_name for line in txc_service.lines if line.line_name
             ),
@@ -616,6 +619,7 @@ class TXCImporter:
         sentry_sdk.init(
             dsn="https://3da698c3793790b5233cb0a4a72d017f@o4509935722889216.ingest.de.sentry.io/4509935731277904",
             traces_sample_rate=0.1,
+            environment="development",
         )
         start = time.time()
         with sentry_sdk.start_transaction(op="task", name="TXC Import"):
@@ -638,11 +642,6 @@ class TXCImporter:
                                 f"Adding operator {txc_operator.operator_name_on_licence}"
                             )
                             self.db.add(operator)
-                        else:
-                            print(
-                                f"Updating operator {txc_operator.operator_name_on_licence}"
-                            )
-                            self.db.merge(operator)
 
                     for txc_service in self.txc_data.services:
                         with sentry_sdk.start_span(

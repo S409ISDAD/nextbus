@@ -18,6 +18,7 @@ from backend.db.db import engine
 from ciso8601 import parse_datetime
 
 from backend.utils.bulk_upsert import bulk_upsert
+from backend.utils.download_to_static import download_to_static
 
 new_stops = []
 new_stop_areas = []
@@ -273,9 +274,24 @@ def import_naptan_data(file_path: Path):
 
 
 if __name__ == "__main__":
+    from_internet = False
     if len(sys.argv) < 2:
-        print("Usage: <path_to_naptan_xml>")
-        sys.exit(1)
-    naptan_path = Path(sys.argv[1])
-    import_naptan_data(naptan_path)
-    print("done.")
+        from_internet = True
+        url = "https://beta-naptan.dft.gov.uk/Download/National/xml"
+
+        print(f"Downloading NAPTAN data from {url}...")
+        naptan_path = download_to_static(url, "NaPTAN.xml")
+        if not naptan_path:
+            print("Failed to download NAPTAN data.")
+            sys.exit(1)
+    else:
+        naptan_path = Path(sys.argv[1])
+
+    try:
+        import_naptan_data(naptan_path)
+    except KeyboardInterrupt:
+        print("Stopped by user.")
+    finally:
+        if from_internet:
+            naptan_path.unlink()
+        print("done.")
