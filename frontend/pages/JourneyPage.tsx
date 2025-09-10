@@ -48,6 +48,7 @@ type MapViewProps = {
 };
 import React from "react";
 import { Pulse } from "../components/ui/Pulse";
+import { map } from "leaflet";
 
 const MapView: React.FC<MapViewProps> = ({
     lat,
@@ -64,13 +65,19 @@ const MapView: React.FC<MapViewProps> = ({
     const mapRef = React.useRef<MapRef | null>(null);
 
     React.useEffect(() => {
-        if (mapRef.current) {
+        if (
+            mapRef.current &&
+            lat !== 0 &&
+            lng !== 0 &&
+            !mapRef.current.isMoving() &&
+            !mapRef.current.isZooming()
+        ) {
             mapRef.current.flyTo({
                 center: [lng, lat],
                 zoom:
                     mapRef.current.getZoom() < 9 ? 9 : mapRef.current.getZoom(),
                 duration: 500,
-                essential: true,
+                essential: false,
             });
         }
     }, [lat, lng]);
@@ -88,7 +95,7 @@ const MapView: React.FC<MapViewProps> = ({
                 initialViewState={{
                     longitude: lng,
                     latitude: lat,
-                    zoom: 12,
+                    zoom: 14,
                 }}
                 attributionControl={false}
                 mapStyle="https://tiles.stadiamaps.com/styles/alidade_smooth_dark.json"
