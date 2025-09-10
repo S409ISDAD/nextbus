@@ -45,6 +45,7 @@ async def import_datasource(id, folder: Path):
     logs: dict[datetime, str] = {}
     with SessionLocal() as db:
         datasource = db.query(DataSource).filter(DataSource.id == id).first()
+        name = datasource.name if datasource else "Unknown"
 
         if not datasource:
             print(f"No DataSource with id {id} found.")
@@ -52,7 +53,7 @@ async def import_datasource(id, folder: Path):
             return
 
         logs[datetime.now(tz=LONDON)] = (
-            f"Trying to import data source {datasource.name} from {datasource.url}"
+            f"Trying to import data source {name} from {datasource.url}"
         )
 
         path = download_if_modified(datasource, folder / f"txc_source_{id}.zip")
@@ -63,16 +64,12 @@ async def import_datasource(id, folder: Path):
 
             await import_txc_zip(folder / f"txc_source_{id}.zip", id)
 
-            logs[datetime.now(tz=LONDON)] = (
-                f"Import completed for data source {datasource.name}"
-            )
-            print(f"Import completed for data source {datasource.name}")
+            logs[datetime.now(tz=LONDON)] = f"Import completed for data source {name}"
+            print(f"Import completed for data source {name}")
 
         else:
-            logs[datetime.now(tz=LONDON)] = (
-                f"No updates for data source {datasource.name}"
-            )
-            print(f"No updates for data source {datasource.name}")
+            logs[datetime.now(tz=LONDON)] = f"No updates for data source {name}"
+            print(f"No updates for data source {name}")
 
     log_dir = folder / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)

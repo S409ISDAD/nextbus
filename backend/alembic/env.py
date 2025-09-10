@@ -16,7 +16,6 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-from backend.models import *  # noqa: E402, F403
 from backend.models import Base  # noqa: E402
 
 # target_metadata = mymodel.Base.metadata
@@ -28,11 +27,11 @@ target_metadata = Base.metadata
 # ... etc.
 
 
-def include_object(object, name, type_, reflected, compare_to):
-    # Exclude the spatial_ref_sys table from migrations
-    if name == "spatial_ref_sys":
-        return False
-    return True
+def include_name(name, type_, parent_names):
+    if type_ == "schema":
+        return name == target_metadata.schema
+    else:
+        return True
 
 
 def run_migrations_offline() -> None:
@@ -93,10 +92,13 @@ def run_migrations_online() -> None:
         context.configure(
             connection=connection,
             target_metadata=target_metadata,
-            include_object=include_object,
+            version_table_schema=target_metadata.schema,
+            include_schemas=True,
+            include_name=include_name,
         )
 
         with context.begin_transaction():
+            context.execute("SET search_path TO public")
             context.run_migrations()
 
 

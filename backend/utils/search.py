@@ -48,30 +48,21 @@ async def search_db(query: str, db: Session, limit: int = 10):
             if s.service_code not in service_ids:
                 service.append(s)
         service = service[:limit]
-    results["service"] = service
+    results["services"] = service
 
     line_query = search(select(Line), query).limit(limit)
     line = list(db.scalars(line_query).all())
-    results["line"] = line
+    for l in line:
+        if hasattr(l, "geometry"):
+            l.geometry = None
+    results["lines"] = line
 
     stops_query = search(select(Stop), query).limit(limit)
     stops = list(db.scalars(stops_query).all())
+    for s in stops:
+        if hasattr(s, "point"):
+            s.point = None
     results["stops"] = stops
-
-    print(f"Search results for query '{query}':")
-    for category, items in results.items():
-        print(f"\n{category.capitalize()}:")
-        for item in items:
-            if isinstance(item, Operator):
-                print(f"- {item.name} (NOC: {item.noc})")
-            elif isinstance(item, Service):
-                print(
-                    f"- {item.description} | {item.line_names} (ID: {item.service_code})"
-                )
-            elif isinstance(item, Line):
-                print(f"- {item.line_name} | {item.outbound_description}")
-            elif isinstance(item, Stop):
-                print(f"- {item.common_name} (ID: {item.atco_code})")
 
     return results
 
@@ -79,4 +70,18 @@ async def search_db(query: str, db: Session, limit: int = 10):
 if __name__ == "__main__":
     search_query = "64 Morn Hill, Alresford, Four Marks"
     with SessionLocal() as db:
-        asyncio.run(search_db(search_query, db))
+        results = asyncio.run(search_db(search_query, db))
+        print(f"Search results for query '{search_query}':")
+        for category, items in results.items():
+            print(f"\n{category.capitalize()}:")
+            for item in items:
+                if isinstance(item, Operator):
+                    print(f"- {item.name} (NOC: {item.noc})")
+                elif isinstance(item, Service):
+                    print(
+                        f"- {item.description} | {item.line_names} (ID: {item.service_code})"
+                    )
+                elif isinstance(item, Line):
+                    print(f"- {item.line_name} | {item.outbound_description}")
+                elif isinstance(item, Stop):
+                    print(f"- {item.common_name} (ID: {item.atco_code})")
