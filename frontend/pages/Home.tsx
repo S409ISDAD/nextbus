@@ -182,7 +182,7 @@ const Home: React.FC = () => {
                                         <a
                                             key={service.id}
                                             className="flex items-center justify-center px-3 py-1 text-lg font-bold text-center cursor-pointer rounded-xl bg-neutral-800/50"
-                                            href={`/buses/buses/services/${service.id}`}>
+                                            href={`/buses/services/${service.id}`}>
                                             {service.line_name}
                                         </a>
                                     ))}
