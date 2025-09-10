@@ -15,6 +15,7 @@ import {
 import type { Prediction } from "../models/Bus";
 import type { TrainService } from "../models/Trains";
 import React from "react";
+import { useShowAppNav } from "../utils/AppNav";
 
 export const TrainProgress: React.FC<{
     sequence: number;
@@ -48,6 +49,32 @@ export const TrainProgress: React.FC<{
     );
 });
 
+const BoardAlightLabel: React.FC<{
+    idx: number;
+    startIdx: number;
+    endIdx: number;
+}> = ({ idx, startIdx, endIdx }) => {
+    if (idx === startIdx) {
+        return (
+            <div className="text-sm font-semibold text-neutral-400 text-nowrap md:hidden">
+                <span className="z-10 flex items-center justify-center">
+                    board at
+                </span>
+            </div>
+        );
+    }
+    if (idx === endIdx) {
+        return (
+            <div className="text-sm font-semibold text-neutral-400 text-nowrap md:hidden">
+                <span className="z-10 flex items-center justify-center">
+                    alight at
+                </span>
+            </div>
+        );
+    }
+    return null;
+};
+
 const TrainPage: React.FC = () => {
     const { service_id } = useParams();
 
@@ -71,6 +98,15 @@ const TrainPage: React.FC = () => {
     const [lastRefreshed, setRefreshed] = useState(new Date());
     const [elapsed, setElapsed] = useState<string>("0s");
     const [msg, setMsg] = useState<string>("");
+    const [trainInfoHeight, setTrainInfoHeight] = useState(0);
+    const trainInfoRef = useRef<HTMLDivElement>(null);
+    const showAppNav = useShowAppNav();
+
+    useEffect(() => {
+        if (trainInfoRef.current) {
+            setTrainInfoHeight(trainInfoRef.current.clientHeight);
+        }
+    }, [trainInfoRef, loading, showRoute]);
 
     useEffect(() => {
         const interval = setInterval(() => {
@@ -241,132 +277,132 @@ const TrainPage: React.FC = () => {
     }
 
     return (
-        <div className="">
-            <div className="flex flex-col">
-                <div className="fixed flex flex-col w-full gap-2 p-3 pb-1 top-0 mt-13 grow bg-[#111111] z-15 rounded-b-2xl">
-                    {train ? (
-                        <div className="flex flex-col items-center justify-center gap-2">
-                            <div className="flex flex-wrap items-center justify-center w-full gap-2 text-2xl font-bold">
-                                {train.origin.map((o, i) => (
-                                    <span key={o.description}>
-                                        {o.description}
-                                        {i < train.origin.length - 2
-                                            ? ", "
-                                            : ""}
-                                        {i === train.origin.length - 2
-                                            ? " and "
-                                            : ""}
-                                    </span>
-                                ))}
-                                <span>to</span>
-                                {train.destination.map((d, i) => (
-                                    <span key={d.description}>
-                                        {d.description}
-                                        {i < train.destination.length - 2
-                                            ? ", "
-                                            : ""}
-                                        {i === train.destination.length - 2
-                                            ? " and "
-                                            : ""}
-                                    </span>
-                                ))}
-                            </div>
-                            <div className="flex gap-3">
-                                <a
-                                    className="underline text-sky-500"
-                                    href={`https://www.realtimetrains.co.uk/service/gb-nr:${train.serviceUid}/${train.runDate}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer">
-                                    View on realtimetrains
-                                </a>
-                                <span className="text-center">
-                                    {train.locations.length} stops
+        <div className="flex flex-col">
+            <div
+                className={`fixed flex flex-col w-full gap-2 p-3 pb-1 top-0 ${
+                    !showAppNav ? "mt-14" : ""
+                } grow bg-[#111111] z-15 rounded-b-2xl`}
+                ref={trainInfoRef}>
+                {train ? (
+                    <div className="flex flex-col items-center justify-center gap-2">
+                        <div className="flex flex-wrap items-center justify-center w-full gap-2 text-2xl font-bold">
+                            {train.origin.map((o, i) => (
+                                <span key={o.description}>
+                                    {o.description}
+                                    {i < train.origin.length - 2 ? ", " : ""}
+                                    {i === train.origin.length - 2
+                                        ? " and "
+                                        : ""}
+                                </span>
+                            ))}
+                            <span>to</span>
+                            {train.destination.map((d, i) => (
+                                <span key={d.description}>
+                                    {d.description}
+                                    {i < train.destination.length - 2
+                                        ? ", "
+                                        : ""}
+                                    {i === train.destination.length - 2
+                                        ? " and "
+                                        : ""}
+                                </span>
+                            ))}
+                        </div>
+                        <div className="flex gap-3">
+                            <a
+                                className="underline text-sky-500"
+                                href={`https://www.realtimetrains.co.uk/service/gb-nr:${train.serviceUid}/${train.runDate}`}
+                                target="_blank"
+                                rel="noopener noreferrer">
+                                View on realtimetrains
+                            </a>
+                            <span className="text-center">
+                                {train.locations.length} stops
+                            </span>
+                        </div>
+                        <div className="flex flex-wrap items-center justify-center gap-3 gap-y-1">
+                            <div className="flex flex-col items-center gap-1">
+                                <span className="font-bold align-middle">
+                                    {train.trainIdentity}
                                 </span>
                             </div>
-                            <div className="flex items-center gap-3">
-                                <div className="flex flex-col items-center gap-1">
-                                    <span className="font-bold align-middle">
-                                        {train.trainIdentity}
-                                    </span>
-                                </div>
 
-                                <div className="flex flex-col items-center gap-1">
-                                    <span
-                                        className="p-2 py-1 font-bold rounded-lg"
-                                        style={{
-                                            backgroundColor: train.atocColor,
-                                        }}>
-                                        {train.atocName}
-                                    </span>
-                                </div>
-
-                                <div className="flex justify-center px-2 py-1 rounded-lg bg-neutral-800/50">
-                                    <span className="font-bold align-middle text">
-                                        {lateness(
-                                            train.delay ? train.delay : 0
-                                        )}
-                                    </span>
-                                </div>
-                                {showRoute && (
-                                    <button
-                                        className="flex justify-center text-sm font-bold underline"
-                                        onClick={() => {
-                                            setShowRoute(false);
-                                        }}
-                                        type="button">
-                                        View full route
-                                    </button>
-                                )}
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="flex flex-row items-center justify-center h-30">
-                            <div className="flex flex-row gap-3 p-3 border-2 border-red-400 bg-red-950 rounded-2xl">
-                                <FontAwesomeIcon
-                                    icon={faWarning}
-                                    size="2x"
-                                    className="text-neutral-300"></FontAwesomeIcon>
-                                <span className="text-2xl font-black text-neutral-300 wrap-normal">
-                                    Train not active.
+                            <div className="flex flex-col items-center gap-1">
+                                <span
+                                    className="p-2 py-1 font-bold rounded-lg text-nowrap"
+                                    style={{
+                                        backgroundColor: train.atocColor,
+                                    }}>
+                                    {train.atocName}
                                 </span>
                             </div>
-                        </div>
-                    )}
-                    {msg ? (
-                        <span className="text-center text-red-400">{msg}</span>
-                    ) : (
-                        <></>
-                    )}
-                    <div className="flex flex-row items-center justify-center gap-2 text-sm font-semibold text-neutral-300/75">
-                        <span>
-                            <FontAwesomeIcon
-                                icon={faRightToBracket}
-                                className="text-cyan-400"
-                            />{" "}
-                            = Arrival
-                        </span>
-                        <span>
-                            <FontAwesomeIcon
-                                icon={faRightFromBracket}
-                                className="text-purple-500"
-                            />{" "}
-                            = Departure
-                        </span>
-                    </div>
 
-                    <div className="flex justify-center gap-2">
-                        <span className="text-xs text-neutral-400">
-                            Updated {elapsed} ago
-                        </span>
-                        <span className="text-xs text-neutral-400">·</span>
-                        <span className="text-xs text-neutral-400">
-                            Updates every 30s
-                        </span>
+                            <div className="flex justify-center px-2 py-1 rounded-lg bg-neutral-800/50">
+                                <span className="font-bold align-middle text-nowrap">
+                                    {lateness(train.delay ? train.delay : 0)}
+                                </span>
+                            </div>
+                            {showRoute && (
+                                <button
+                                    className="flex justify-center text-sm font-bold underline text-nowrap"
+                                    onClick={() => {
+                                        setShowRoute(false);
+                                    }}
+                                    type="button">
+                                    View full route
+                                </button>
+                            )}
+                        </div>
                     </div>
+                ) : (
+                    <div className="flex flex-row items-center justify-center h-30">
+                        <div className="flex flex-row gap-3 p-3 border-2 border-red-400 bg-red-950 rounded-2xl">
+                            <FontAwesomeIcon
+                                icon={faWarning}
+                                size="2x"
+                                className="text-neutral-300"></FontAwesomeIcon>
+                            <span className="text-2xl font-black text-neutral-300 wrap-normal">
+                                Train not active.
+                            </span>
+                        </div>
+                    </div>
+                )}
+                {msg ? (
+                    <span className="text-center text-red-400">{msg}</span>
+                ) : (
+                    <></>
+                )}
+                <div className="flex flex-row items-center justify-center gap-2 text-sm font-semibold text-neutral-300/75">
+                    <span>
+                        <FontAwesomeIcon
+                            icon={faRightToBracket}
+                            className="text-cyan-400"
+                        />{" "}
+                        = Arrival
+                    </span>
+                    <span>
+                        <FontAwesomeIcon
+                            icon={faRightFromBracket}
+                            className="text-purple-500"
+                        />{" "}
+                        = Departure
+                    </span>
                 </div>
+
+                <div className="flex justify-center gap-2">
+                    <span className="text-xs text-neutral-400">
+                        Updated {elapsed} ago
+                    </span>
+                    <span className="text-xs text-neutral-400">·</span>
+                    <span className="text-xs text-neutral-400">
+                        Updates every 30s
+                    </span>
+                </div>
+            </div>
+            <div style={{ marginTop: trainInfoHeight }}>
                 {train && (
                     <div className="flex flex-row gap-2 px-3 md:px-0">
-                        <div className="relative flex mx-5 mt-50 md:mx-40">
+                        <div className="relative flex mx-5 md:mx-40">
                             <div className="relative flex flex-col items-center py-8">
                                 <TrainProgress
                                     sequence={sequence}
@@ -451,7 +487,7 @@ const TrainPage: React.FC = () => {
                                             className="p-2 w-fit h-17"
                                             onClick={() =>
                                                 navigate(
-                                                    `/stations/${stop.crs}`
+                                                    `/trains/stations/${stop.crs}`
                                                 )
                                             }
                                             style={{
@@ -467,7 +503,19 @@ const TrainPage: React.FC = () => {
                                                         : ""
                                                 }`}>
                                                 <div className="flex flex-wrap items-center min-w-full gap-2 gap-y-0">
-                                                    <span className="font-bold text-nowrap">
+                                                    {showRoute &&
+                                                        (idx == startIdx ||
+                                                            idx == endIdx) && (
+                                                            <BoardAlightLabel
+                                                                idx={idx}
+                                                                startIdx={
+                                                                    startIdx
+                                                                }
+                                                                endIdx={endIdx}
+                                                            />
+                                                        )}
+
+                                                    <span className="block overflow-hidden font-bold truncate text-nowrap max-w-55 md:max-w-full">
                                                         {stop.description}
                                                     </span>
                                                     <span className="font-bold text-neutral-400 min-h-fit">
@@ -496,7 +544,7 @@ const TrainPage: React.FC = () => {
                                                             )}
                                                             {stop.serviceLocation ===
                                                                 "AT_PLAT" && (
-                                                                <span className="px-2 py-1 text-xs font-bold text-blue-400 rounded-full bg-blue-500/20">
+                                                                <span className="px-2 py-1 text-xs font-bold text-blue-400 rounded-full bg-blue-600/20">
                                                                     At platform
                                                                 </span>
                                                             )}
@@ -516,29 +564,6 @@ const TrainPage: React.FC = () => {
                                                             )}
                                                         </>
                                                     )}
-
-                                                    {idx == startIdx &&
-                                                        showRoute && (
-                                                            <>
-                                                                <span className="font-bold text-neutral-400 min-h-fit lg:hidden">
-                                                                    ·
-                                                                </span>
-                                                                <span className="z-10 flex items-center justify-center text-sm font-semibold text-green-400 text-nowrap md:hidden">
-                                                                    board here
-                                                                </span>
-                                                            </>
-                                                        )}
-                                                    {idx == endIdx &&
-                                                        showRoute && (
-                                                            <>
-                                                                <span className="font-bold text-neutral-400 min-h-fit lg:hidden">
-                                                                    ·
-                                                                </span>
-                                                                <span className="z-10 flex items-center justify-center text-sm font-semibold text-green-400 text-nowrap md:hidden">
-                                                                    alight here
-                                                                </span>
-                                                            </>
-                                                        )}
                                                 </div>
 
                                                 {stop.displayAs ===

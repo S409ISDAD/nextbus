@@ -8,7 +8,7 @@ const Terms: React.FC = () => {
         <div className="flex flex-col max-w-3xl gap-5 p-6 mx-auto">
             <span className="text-4xl font-bold">Terms of Service</span>
             <span>
-                <strong>Last updated:</strong> July 15, 2025
+                <strong>Last updated:</strong> 01/09/2025
             </span>
 
             <span>By using nextbus, you agree to these terms:</span>
@@ -19,17 +19,15 @@ const Terms: React.FC = () => {
                 <span>
                     NextBus is provided “as is.” We do our best to provide
                     accurate information, but we do not guarantee that bus
-                    times, stops, or other data are always correct. Bus
-                    information and timetables are sourced from{" "}
+                    times, stops, or other data are always correct. Visit the{" "}
                     <strong>
                         <a
-                            href="https://bustimes.org"
-                            className="text-teal-500 underline"
-                            target="_blank"
-                            rel="noopener noreferrer">
-                            bustimes.org
+                            href="/data"
+                            className="underline text-sky-400 h-fit">
+                            Data Sources
                         </a>
-                    </strong>
+                    </strong>{" "}
+                    page for more details on where our data comes from.
                 </span>
             </div>
             <div className="flex flex-col gap-2">
@@ -47,7 +45,7 @@ const Terms: React.FC = () => {
                     <strong>
                         <a
                             href="https://forms.gle/SxrFyLQ1HedQcLLC7"
-                            className="text-teal-500 underline"
+                            className="underline text-sky-500"
                             target="_blank"
                             rel="noopener noreferrer">
                             Google Form

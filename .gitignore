@@ -180,3 +180,11 @@ cython_debug/
 .cursorignore
 .cursorindexingignore
 .DS_Store
+
+*.zip
+*.csv
+
+dump.sql
+*.xml
+*.key
+*.crt

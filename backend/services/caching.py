@@ -11,7 +11,8 @@ DAY = HOUR * 24
 SERVICES_CACHE = DAY
 TRIPS_CACHE = 60
 BUS_CACHE = 18
-JOURNEY_CACHE = DAY
+# JOURNEY_CACHE = DAY
+JOURNEY_CACHE = 1
 SERVICE_CACHE = DAY
 STOPS_CACHE = DAY
 TIMETABLE_CACHE = 3600
@@ -38,6 +39,6 @@ async def get_cached(key: str, func, args: tuple, exp: int, r: redis.Redis):
                 cls=DateTimeEncoder,
                 default=lambda o: o.__dict__ if hasattr(o, "__dict__") else str(o),
             ),
-            ex=exp,
+            ex=exp if exp > 0 else None,
         )
     return result

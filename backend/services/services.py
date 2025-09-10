@@ -1,5 +1,5 @@
 from backend.config import API_BASE, VEHICLES_BASE
-from backend.models.service import Service
+from backend.schemas.service import Service
 from backend.services.caching import SERVICE_CACHE, TRIPS_CACHE, get_cached
 from backend.utils.fetch_json import fetch_json
 from redis.asyncio import Redis
@@ -12,12 +12,20 @@ async def get_service_info(service, r: Redis):
         if not data:
             return None
 
+        description_full = data.get("description", "")
+        if "via" in description_full:
+            desc, detail = description_full.split("via", 1)
+            description = desc.strip()
+            detail = detail.strip()
+        else:
+            description = description_full.strip()
+            detail = ""
+
         return {
             "id": service,
             "line_name": data.get("line_name"),
-            "detail": data.get("description").split("via")[1].lstrip()
-            if "via" in data.get("description")
-            else "",
+            "description": description,
+            "detail": detail,
         }
 
     service_info = await get_cached(
@@ -31,6 +39,7 @@ async def get_service_info(service, r: Redis):
     return Service(
         id=service_info.get("id"),
         line_name=service_info.get("line_name"),
+        description=service_info.get("description"),
         detail=service_info.get("detail"),
     )
 

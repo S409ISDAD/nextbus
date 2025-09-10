@@ -1,6 +1,12 @@
 import React, { useEffect } from "react";
+import useLocalStorageState from "use-local-storage-state";
 
 const Privacy: React.FC = () => {
+    const [_, setFavStops] = useLocalStorageState<
+        Record<string, [number, number]>
+    >("favStops", {
+        defaultValue: {},
+    });
     useEffect(() => {
         document.title = "Privacy Policy";
     }, []);
@@ -8,12 +14,13 @@ const Privacy: React.FC = () => {
         <div className="flex flex-col max-w-3xl gap-5 p-6 mx-auto">
             <span className="text-4xl font-bold">Privacy Policy</span>
             <span>
-                <strong>Last updated:</strong> July 15, 2025
+                <strong>Last updated:</strong> 17/08/2025
             </span>
 
             <span>
                 This website "nextbus" cares about your privacy. We do not
-                collect or store any personal data on our servers.
+                collect or store any personal data (data linked to you or your
+                identity) on our servers.
             </span>
             <div className="flex flex-col gap-2">
                 <span className="text-2xl font-bold">Location Data</span>
@@ -25,7 +32,7 @@ const Privacy: React.FC = () => {
                     <strong>
                         <a
                             href="https://bustimes.org/privacy"
-                            className="text-teal-500 underline"
+                            className="underline text-sky-500"
                             target="_blank"
                             rel="noopener noreferrer">
                             bustimes.org
@@ -36,7 +43,7 @@ const Privacy: React.FC = () => {
                     <strong>
                         <a
                             href="https://bustimes.org/privacy"
-                            className="text-teal-500 underline"
+                            className="underline text-sky-500"
                             target="_blank"
                             rel="noopener noreferrer">
                             bustimes.org
@@ -57,19 +64,47 @@ const Privacy: React.FC = () => {
             </div>
             <div className="flex flex-col gap-2">
                 <span className="text-2xl font-bold">Cookies & Analytics</span>
-                <p>We do not use cookies or analytics services at this time.</p>
+                <span>
+                    We use cookies for the stop favoriting feature. The stop
+                    code and coordinates of the stop are stored in the browser's
+                    localStorage under{" "}
+                    <span className="p-1 rounded-lg bg-neutral-800">
+                        favStops
+                    </span>
+                    . You can delete this data at any time by pressing the
+                    'Clear Favorites' button in the Bus Page or here. We also
+                    store a randomly generated client ID in your browser's
+                    localStorage under{" "}
+                    <span className="p-1 rounded-lg bg-neutral-800">
+                        ws-client-id
+                    </span>
+                    . This ID is used to identify your WebSocket connection or
+                    API request and is not linked to any personal information.
+                    This data is used to generate the statistics on the{" "}
+                    <a href="/stats" className="underline text-sky-500">
+                        Stats Page.
+                    </a>{" "}
+                    You can delete the ID at any time by clearing your browser's
+                    localStorage, however a new one will be generated when you
+                    next use the site.
+                </span>
+                <button
+                    className="p-1.5 px-4 w-fit text-sm font-semibold text-white transition-all bg-blue-600 cursor-pointer rounded-xl hover:bg-blue-700"
+                    onClick={() => setFavStops({})}>
+                    Clear Favorites
+                </button>
             </div>
-            {/* <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2">
                 <span className="text-2xl font-bold">Contact</span>
                 <p>
                     If you have any questions, please contact:{" "}
                     <a
-                        href="mailto:you@example.com"
-                        className="text-teal-500 underline">
-                        you@example.com
+                        href="mailto:contact@orbitix.dev"
+                        className="underline text-sky-500">
+                        contact@orbitix.dev
                     </a>
                 </p>
-            </div> */}
+            </div>
         </div>
     );
 };

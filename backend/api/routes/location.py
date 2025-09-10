@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 import logging
 from backend.deps import get_redis, limiter
-from backend.models.service import Service
+from backend.schemas.service import Service
 from backend.services import stops
 import traceback
 
@@ -11,7 +11,7 @@ log = logging.getLogger(__name__)
 
 
 @router.get("/closest")
-@limiter.limit("5/minute")
+@limiter.limit("30/minute")
 async def closest_stops(
     request: Request,
     lat: float,
@@ -36,7 +36,7 @@ async def closest_stops(
 
 
 @router.get("/closestforservice")
-@limiter.limit("5/minute")
+@limiter.limit("15/minute")
 async def closest_stop_for_service(
     request: Request,
     lat: float,
@@ -65,7 +65,7 @@ async def closest_stop_for_service(
 
 
 @router.get("/nearby", response_model=list[Service] | None)
-@limiter.limit("5/minute")
+@limiter.limit("20/minute")
 async def nearby_services(
     request: Request,
     lat: float,

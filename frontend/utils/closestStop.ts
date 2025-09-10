@@ -16,9 +16,7 @@ export const getClosestStop = async (position: number[], ignore?: string) => {
 
     const response = await api.get<closestStop>(`/location/closest?lat=${lat}&lng=${lng}&dist=0.01&ignore=${ignore}`)
 
-    const stop_id = response.data.stop_id
-
-    return stop_id
+    return response.data
 
 }
 

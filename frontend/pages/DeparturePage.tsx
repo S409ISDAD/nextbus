@@ -9,18 +9,103 @@ import { Card } from "../components/ui/Card";
 import timeTo, { lateness, toTime } from "../utils/timeUtils";
 import { getClosestStop } from "../utils/closestStop";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { motion, AnimatePresence } from "framer-motion";
 import {
+    faBus,
     faSatelliteDish,
     faSlash,
+    faStar,
     faUpRightFromSquare,
+    faWarning,
 } from "@fortawesome/free-solid-svg-icons";
+import { faStar as faStarRegular } from "@fortawesome/free-regular-svg-icons";
 import clsx from "clsx";
 import { WebSocketManager } from "../websockets/ws_manager";
+import getBus from "../utils/getBus";
+import type { Bus } from "../models/Bus";
+import useLocalStorageState from "use-local-storage-state";
 
-function BusCard({ bus, onClick }: { bus: Departure; onClick: () => void }) {
+const getBusDetail = async (bus: Departure) => {
+    if (isTrackedBus(bus)) {
+        const bus_response = await getBus(String(bus.id));
+        return bus_response;
+    }
+};
+function BusCard({
+    bus,
+    onClick,
+    gettingLiveData,
+    idx,
+}: {
+    bus: Departure;
+    onClick: () => void;
+    gettingLiveData: boolean;
+    idx: number;
+}) {
+    const [busDetail, setBusDetail] = useState<Bus | null>(null);
+    const [sequence, setSequence] = useState<number | null>(null);
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        let interval: ReturnType<typeof setInterval> | null = null;
+
+        const fetchDetail = () => {
+            if (idx === 0 && isTrackedBus(bus)) {
+                getBusDetail(bus).then((detail) => {
+                    if (detail) {
+                        setBusDetail(detail);
+                    }
+                });
+            }
+        };
+
+        fetchDetail();
+        if (idx === 0 && isTrackedBus(bus)) {
+            interval = setInterval(fetchDetail, 30000);
+        }
+
+        return () => {
+            if (interval) clearInterval(interval);
+        };
+    }, [idx === 0 && isTrackedBus(bus) ? bus.id : null]);
+
+    useEffect(() => {
+        // Only fetch if idx is 0, isTrackedBus, and bus.id has changed
+        if (idx === 0 && isTrackedBus(bus) && busDetail) {
+            const now = Date.now();
+            const progressIdx = busDetail.predictions.findIndex(
+                (p) => now < new Date(p.timestamp).getTime()
+            );
+            // If all timestamps are in the past, pick the last one
+            const seq =
+                progressIdx === -1
+                    ? busDetail.predictions[busDetail.predictions.length - 1]
+                          ?.sequence
+                    : busDetail.predictions[Math.max(0, progressIdx - 1)]
+                          ?.sequence;
+
+            let adjustedSeq = seq;
+            if (
+                bus.target_seq !== undefined &&
+                adjustedSeq !== undefined &&
+                adjustedSeq !== null &&
+                adjustedSeq >= bus.target_seq
+            ) {
+                adjustedSeq = bus.target_seq - 1;
+            }
+            setSequence(adjustedSeq ?? null);
+        }
+    }, [bus]);
+
     return (
-        <div key={bus.trip} onClick={onClick} className="cursor-pointer">
-            <div className="flex flex-row items-center justify-between">
+        <div
+            key={bus.trip}
+            onClick={onClick}
+            className={clsx(
+                "cursor-pointer",
+                isTrackedBus(bus) && bus.delay >= 2700 && "opacity-75"
+            )}>
+            <div className="flex flex-row items-center justify-between gap-x-2">
                 <div className="flex flex-col justify-around gap-1">
                     <div className="flex flex-row items-stretch mb-1">
                         <div className="flex items-center px-3 py-1 bg-blue-700 rounded-l-2xl">
@@ -41,13 +126,43 @@ function BusCard({ bus, onClick }: { bus: Departure; onClick: () => void }) {
                             )}
                         </div>
                     </div>
+                    {isTrackedBus(bus) && bus.delay >= 2700 && (
+                        <div className="flex items-center gap-1 text-xs ">
+                            <FontAwesomeIcon
+                                icon={faWarning}
+                                className="text-red-400"
+                            />
+                            This bus is quite late, it may not arrive
+                        </div>
+                    )}
 
                     <div className="flex flex-row items-center pl-2 font-semibold text gap-x-3 text-nowrap">
-                        <div className="flex gap-0.5 items-center text-sky-400">
-                            <span className="text-xs">
-                                {isTrackedBus(bus) ? "Expt:" : "Schd:"}
-                            </span>
-                            <span>{toTime(bus.expected)}</span>
+                        <div className="flex items-center gap-2">
+                            {bus.expected && bus.scheduled
+                                ? (() => {
+                                      const aimed = new Date(
+                                          bus.scheduled
+                                      ).getTime();
+                                      const expt = new Date(
+                                          bus.expected
+                                      ).getTime();
+                                      const diff = Math.abs(expt - aimed);
+                                      const isLate =
+                                          expt > aimed && diff > 60000;
+                                      return (
+                                          <div className="flex gap-2">
+                                              {isLate && (
+                                                  <span className="line-through text-neutral-500">
+                                                      {toTime(bus.scheduled)}
+                                                  </span>
+                                              )}
+                                              <span className={"text-sky-400"}>
+                                                  {toTime(bus.expected)}
+                                              </span>
+                                          </div>
+                                      );
+                                  })()
+                                : "-"}
                         </div>
                         {isTrackedBus(bus) && (
                             <span
@@ -57,56 +172,52 @@ function BusCard({ bus, onClick }: { bus: Departure; onClick: () => void }) {
                                 {lateness(bus ? bus.delay : 0)}
                             </span>
                         )}
-                        {!bus.started && !isTrackedBus(bus) && (
-                            <span className="text-sm font-medium opacity-70">
-                                Upcoming
+                        {!bus.started && (
+                            <span
+                                className="text-sm font-medium opacity-70"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    isTrackedBus(bus) &&
+                                    bus.status == "on_prev_trip"
+                                        ? navigate(`/buses/${bus.id}`)
+                                        : null;
+                                }}>
+                                {bus.status === "not_tracking"
+                                    ? "Upcoming"
+                                    : bus.status === "waiting"
+                                    ? "Not Started"
+                                    : "On prev. trip"}
                             </span>
                         )}
-                        {isTrackedBus(bus) ? (
+                        {bus.started && (
                             <div className="relative w-5 h-5">
                                 <FontAwesomeIcon
                                     icon={faSatelliteDish}
+                                    beatFade={gettingLiveData}
                                     className={clsx(
                                         "absolute top-0 left-0 w-5 h-5",
-                                        {
-                                            "text-sky-500":
-                                                bus.status === "tracking",
-                                            "text-emerald-500":
-                                                bus.status === "user_tracking",
-                                        }
+                                        gettingLiveData
+                                            ? "text-neutral-500"
+                                            : {
+                                                  "text-blue-400 opacity-40":
+                                                      bus.status ===
+                                                      "not_tracking",
+                                                  "text-sky-500":
+                                                      bus.status === "tracking",
+                                                  "text-emerald-500":
+                                                      bus.status ===
+                                                      "user_tracking",
+                                              }
                                     )}
                                 />
-                            </div>
-                        ) : (
-                            <>
-                                {bus.started && (
-                                    <div className="relative w-5 h-5">
+                                {!gettingLiveData &&
+                                    bus.status === "not_tracking" && (
                                         <FontAwesomeIcon
-                                            icon={faSatelliteDish}
-                                            className={clsx(
-                                                "absolute top-0 left-0 w-5 h-5",
-                                                {
-                                                    "text-blue-400 opacity-40":
-                                                        bus.status ===
-                                                        "not_tracking",
-                                                    "text-sky-500":
-                                                        bus.status ===
-                                                        "tracking",
-                                                    "text-emerald-500":
-                                                        bus.status ===
-                                                        "user_tracking",
-                                                }
-                                            )}
+                                            icon={faSlash}
+                                            className="absolute top-0 left-0 w-5 h-5 text-red-500"
                                         />
-                                        {bus.status === "not_tracking" && (
-                                            <FontAwesomeIcon
-                                                icon={faSlash}
-                                                className="absolute top-0 left-0 w-5 h-5 text-red-500"
-                                            />
-                                        )}
-                                    </div>
-                                )}
-                            </>
+                                    )}
+                            </div>
                         )}
                     </div>
                 </div>
@@ -130,6 +241,118 @@ function BusCard({ bus, onClick }: { bus: Departure; onClick: () => void }) {
                     </div>
                 </div>
             </div>
+            <AnimatePresence>
+                {busDetail &&
+                    idx === 0 &&
+                    isTrackedBus(bus) &&
+                    bus.target_seq !== undefined &&
+                    sequence !== null &&
+                    (() => {
+                        const startIdx = Math.max(0, bus.target_seq! - 5);
+                        const endIdx = bus.target_seq! + 2;
+                        const stopsSlice = busDetail.journey.stops.slice(
+                            startIdx,
+                            endIdx
+                        );
+                        return (
+                            bus.target_seq - sequence <
+                                stopsSlice.length - 1 && (
+                                <motion.div
+                                    key={`stop-sequence-${bus.id}`}
+                                    className="flex flex-row items-center justify-center gap-1 p-3 pt-7 flex-nowrap overflow-clip lg:absolute lg:left-1/2 lg:-translate-x-1/2 lg:-translate-y-17"
+                                    initial={{ opacity: 0, y: -10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -10 }}
+                                    transition={{
+                                        type: "spring",
+                                        stiffness: 400,
+                                        damping: 40,
+                                    }}>
+                                    {stopsSlice.map((_, index) => {
+                                        const actualIndex = startIdx + index;
+                                        return (
+                                            <div
+                                                key={actualIndex}
+                                                className="flex items-center gap-1">
+                                                {actualIndex ===
+                                                    sequence + 1 && (
+                                                    <motion.div
+                                                        layout
+                                                        key={`bus-${bus.id}-${sequence}`} // unique for position changes
+                                                        className="absolute translate-x-[-31px] flex items-center justify-center"
+                                                        initial={{
+                                                            x: -30,
+                                                            opacity: 0,
+                                                        }}
+                                                        animate={{
+                                                            x: 0,
+                                                            opacity: 1,
+                                                        }}
+                                                        exit={{
+                                                            x: 30,
+                                                            opacity: 0,
+                                                        }}
+                                                        transition={{
+                                                            type: "tween",
+                                                            stiffness: 500,
+                                                            damping: 40,
+                                                        }}>
+                                                        <span className="absolute text-xs translate-y-[-23px] text-nowrap text-neutral-400">
+                                                            {bus.target_seq !==
+                                                                undefined &&
+                                                            sequence !== null
+                                                                ? (() => {
+                                                                      const stopsAway =
+                                                                          bus.target_seq -
+                                                                          sequence -
+                                                                          1;
+                                                                      if (
+                                                                          stopsAway ===
+                                                                          0
+                                                                      )
+                                                                          return "next stop";
+                                                                      if (
+                                                                          stopsAway ===
+                                                                          1
+                                                                      )
+                                                                          return "1 stop away";
+                                                                      if (
+                                                                          stopsAway >
+                                                                          1
+                                                                      )
+                                                                          return `${stopsAway} stops away`;
+                                                                      return "Stop info unavailable";
+                                                                  })()
+                                                                : "Stop info unavailable"}
+                                                        </span>
+                                                        <div className="z-10 flex items-center justify-center w-6 h-6 p-1 rounded-full bg-rose-500">
+                                                            <FontAwesomeIcon
+                                                                icon={faBus}
+                                                                className="text-[0.8rem]"
+                                                            />
+                                                        </div>
+                                                    </motion.div>
+                                                )}
+                                                <div
+                                                    className={clsx(
+                                                        "w-2 h-2 rounded-full",
+                                                        actualIndex ===
+                                                            bus.target_seq
+                                                            ? "bg-sky-500"
+                                                            : "bg-neutral-600"
+                                                    )}></div>
+                                                {index <
+                                                    stopsSlice.length - 1 && (
+                                                    <div className="min-w-[30px] bg-neutral-700 flex-1 h-[2px]"></div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </motion.div>
+                            )
+                        );
+                    })()}
+            </AnimatePresence>
         </div>
     );
 }
@@ -145,10 +368,18 @@ const DeparturePage: React.FC = () => {
     const [stop, setStop] = useState<Stop>();
     const [closestStop, setClosest] = useState<string>();
     const [loading, setLoading] = useState(true);
+    const [gettingLiveData, setGettingLiveData] = useState(true);
     const [fetching, setFetching] = useState(false);
     const [lastRefreshed, setRefreshed] = useState(new Date());
     const [elapsed, setElapsed] = useState<string>("0s");
     const [msg, setMsg] = useState<string>("");
+
+    const [favStops, setFavStops] = useLocalStorageState<
+        Record<string, [number, number]>
+    >("favStops", {
+        defaultValue: {},
+    });
+    const isFav = !!favStops[stop_id || ""];
 
     useEffect(() => {
         const interval = setInterval(() => {
@@ -188,6 +419,7 @@ const DeparturePage: React.FC = () => {
                 return;
             }
             setFetching(true);
+            setGettingLiveData(true);
             try {
                 const stopPromise = getStopData(id);
                 const schedDeparturesPromise = fetchDepartures(id, "scheduled");
@@ -202,7 +434,7 @@ const DeparturePage: React.FC = () => {
                             stopData.coords,
                             stop_id
                         );
-                        setClosest(closestStop);
+                        setClosest(closestStop.stop_id);
                     }
                     const departures = await schedDeparturesPromise;
 
@@ -244,6 +476,7 @@ const DeparturePage: React.FC = () => {
                             setBuses(buses.updatedBuses);
                             setRefreshed(buses.timestamp);
                             setMsg("");
+                            setGettingLiveData(false);
                             setLoading(false);
                         }
                     }
@@ -273,7 +506,7 @@ const DeparturePage: React.FC = () => {
         <div className="p-5 md:mx-20">
             <div className="flex flex-col gap-4">
                 <div className="flex flex-col items-center justify-center gap-3">
-                    <span className="text-3xl font-bold md:text-4xl text-start">
+                    <span className="text-3xl font-bold text-center md:text-4xl">
                         {stop?.name}{" "}
                         {stop?.indicator
                             ? `(${stop.indicator})`
@@ -281,7 +514,7 @@ const DeparturePage: React.FC = () => {
                             ? `(${stop.bearing})`
                             : ""}
                     </span>
-                    <div className="flex flex-wrap items-center justify-center gap-4 gap-y-1">
+                    <div className="flex flex-wrap items-center justify-center gap-2 gap-y-1">
                         {closestStop && (
                             <div
                                 className="flex items-center gap-2 p-2 cursor-pointer bg-neutral-800/50 w-fit rounded-2xl"
@@ -289,7 +522,7 @@ const DeparturePage: React.FC = () => {
                                     setBuses([]);
                                     setLoading(true);
                                     firstFetch.current = true;
-                                    navigate(`/departures/${closestStop}`);
+                                    navigate(`/buses/stops/${closestStop}`);
                                 }}>
                                 Nearest Stop{" "}
                                 <FontAwesomeIcon
@@ -297,12 +530,39 @@ const DeparturePage: React.FC = () => {
                                     width="20px"></FontAwesomeIcon>
                             </div>
                         )}
+
+                        <div
+                            className="flex items-center gap-2 p-2 cursor-pointer bg-neutral-800/50 w-fit rounded-2xl"
+                            onClick={() => {
+                                if (!stop_id || !stop?.coords) return;
+                                if (isFav) {
+                                    setFavStops((prev) => {
+                                        const updated = { ...prev };
+                                        delete updated[stop_id];
+                                        return updated;
+                                    });
+                                } else {
+                                    setFavStops((prev) => ({
+                                        ...prev,
+                                        [stop_id]: stop.coords as [
+                                            number,
+                                            number
+                                        ],
+                                    }));
+                                }
+                            }}>
+                            {isFav ? "Favourited" : "Favourite"}{" "}
+                            <FontAwesomeIcon
+                                icon={isFav ? faStar : faStarRegular}
+                            />
+                        </div>
                         <a
                             className="underline text-sky-500"
                             href={`https://bustimes.org/stops/${stop?.stop_id}`}
                             target="_blank">
                             View on bustimes.org
                         </a>
+
                         {/* <a
                             className="px-2 py-1 text-neutral-400 border-1 rounded-xl border-neutral-800 bg-neutral-900"
                             href={`/departureboard/${stop?.stop_id}`}>
@@ -310,7 +570,7 @@ const DeparturePage: React.FC = () => {
                         </a> */}
                     </div>
                 </div>
-                <div className="flex flex-row justify-center gap-1 overflow-x-auto">
+                <div className="flex flex-row justify-start gap-1 overflow-x-auto">
                     {stop?.services
                         .sort((a, b) =>
                             new Intl.Collator(undefined, {
@@ -377,9 +637,19 @@ const DeparturePage: React.FC = () => {
                             ))}
                         </>
                     ) : (
-                        <>
+                        <AnimatePresence>
                             {buses.map((bus, idx) => (
-                                <>
+                                <motion.div
+                                    key={bus.trip}
+                                    layout // enables smooth reordering animations
+                                    initial={{ opacity: 0, y: 20 }} // entry animation
+                                    animate={{ opacity: 1, y: 0 }} // while present
+                                    exit={{ opacity: 0, y: -20 }} // exit animation
+                                    transition={{
+                                        type: "spring",
+                                        stiffness: 500,
+                                        damping: 40,
+                                    }}>
                                     <div className="flex items-center gap-2 mb-0.5">
                                         <div className="flex-grow border-t border-dashed border-neutral-600"></div>
                                         <span className="text-[10px] text-neutral-600">
@@ -391,13 +661,16 @@ const DeparturePage: React.FC = () => {
                                     <BusCard
                                         bus={bus}
                                         onClick={() => {
-                                            isTrackedBus(bus)
+                                            isTrackedBus(bus) &&
+                                            bus.status != "on_prev_trip"
                                                 ? navigate(`/buses/${bus.id}`)
                                                 : window.open(
                                                       `https://bustimes.org/trips/${bus.trip}`,
                                                       "_blank"
                                                   );
                                         }}
+                                        gettingLiveData={gettingLiveData}
+                                        idx={idx}
                                     />
                                     {idx === buses.length - 1 && (
                                         <div className="flex items-center gap-2 mb-0.5">
@@ -408,7 +681,7 @@ const DeparturePage: React.FC = () => {
                                             <div className="flex-grow border-t border-dashed border-neutral-600"></div>
                                         </div>
                                     )}
-                                </>
+                                </motion.div>
                             ))}
                             {buses.length === 0 && (
                                 <div className="flex justify-center">
@@ -417,7 +690,7 @@ const DeparturePage: React.FC = () => {
                                     </span>
                                 </div>
                             )}
-                        </>
+                        </AnimatePresence>
                     )}
                 </div>
             </div>

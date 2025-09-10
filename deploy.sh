@@ -3,12 +3,14 @@
 set -e
 
 echo "pulling code from repo..."
-git pull origin main
+git pull
 
-echo "stopping containers..."
-docker compose stop || true
+export COMMIT=$(git rev-parse --short HEAD)
 
-echo "rebuilding and starting containers..."
-docker compose -f docker-compose.prod.yml up --build -d
+echo "building version $COMMIT..."
+docker compose -f docker-compose.prod.yml build
+
+echo "starting..."
+docker compose -f docker-compose.prod.yml up -d
 
 echo "deployment complete."

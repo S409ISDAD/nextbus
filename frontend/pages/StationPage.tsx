@@ -80,7 +80,7 @@ function TrainCard({
                 </div>
 
                 <div className="flex flex-row flex-wrap items-center justify-end gap-2 text-sm md:gap-4 w-min md:w-auto sm:text-base">
-                    <div className="flex justify-center px-2 py-1 bg-blue-500 rounded-lg">
+                    <div className="flex justify-center px-2 py-1 bg-blue-600 rounded-lg">
                         <span className="text-xs font-bold align-middle text-neutral-950 text-nowrap">
                             Platform{" "}
                             {train.locationDetail.platform

@@ -4,7 +4,7 @@ import getBus from "../utils/getBus";
 import { useNavigate, useParams } from "react-router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { lateness, toTime } from "../utils/timeUtils";
-import generateWholeTrack from "../utils/locations";
+import { generateWholeTrack, type LatLng } from "../utils/locations";
 import {
     faBus,
     faCalendarCheck,
@@ -13,167 +13,41 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import type { Bus, Prediction } from "../models/Bus";
 import {
-    MapContainer,
+    Map as MapGL,
     Marker,
-    Polyline,
     Popup,
-    TileLayer,
-    useMap,
-} from "react-leaflet";
-import { LocateControl } from "leaflet.locatecontrol";
-import "leaflet.locatecontrol/dist/L.Control.Locate.min.css";
-
-const LocateControlComponent: React.FC<{ busLatLng: LatLngExpression }> = ({
-    busLatLng,
-}) => {
-    const map = useMap();
-
-    useEffect(() => {
-        const locateControl = new LocateControl({
-            position: "topright",
-            showPopup: false,
-            strings: {
-                title: "Show me where I am",
-            },
-            setView: false, // Don't auto-center
-        });
-        locateControl.addTo(map);
-
-        const onLocationFound = (e: any) => {
-            const userLatLng = e.latlng;
-            const bounds = L.latLngBounds([userLatLng, busLatLng]);
-            map.fitBounds(bounds, { padding: [50, 50] });
-        };
-
-        map.on("locationfound", onLocationFound);
-
-        return () => {
-            locateControl.remove();
-            map.off("locationfound", onLocationFound);
-        };
-    }, [map, busLatLng]);
-
-    return null;
-};
-
-const ResetZoomControl: React.FC = () => {
-    const map = useMap();
-
-    useEffect(() => {
-        const control = L.Control.extend({
-            options: { position: "topright" },
-            onAdd: function () {
-                const container = L.DomUtil.create("div", "leaflet-bar");
-
-                const link = L.DomUtil.create("a", "", container);
-                link.innerHTML = "<i class='fa-solid fa-magnifying-glass'></i>";
-                link.href = "#";
-                link.title = "Reset Zoom";
-
-                L.DomEvent.on(link, "click", L.DomEvent.stopPropagation)
-                    .on(link, "click", L.DomEvent.preventDefault)
-                    .on(link, "click", () => {
-                        map.setZoom(15);
-                    });
-
-                return container;
-            },
-        });
-
-        const instance = new control();
-        instance.addTo(map);
-
-        return () => {
-            instance.remove();
-        };
-    }, [map]);
-
-    return null;
-};
+    NavigationControl,
+    Source,
+    Layer,
+    type MapRef,
+} from "react-map-gl/maplibre";
+import "maplibre-gl/dist/maplibre-gl.css";
+import { useShowAppNav } from "../utils/AppNav";
 
 type MapInfoProps = {
     text: string;
-    style?: React.CSSProperties;
+    color?: string;
 };
 
-const MapInfo: React.FC<MapInfoProps> = ({ text, style }) => {
-    const map = useMap();
-
-    useEffect(() => {
-        const infoControl = new L.Control({ position: "bottomright" });
-
-        infoControl.onAdd = () => {
-            const container = L.DomUtil.create("div", "leaflet-bar");
-
-            const link = L.DomUtil.create("a", "", container);
-            link.innerHTML = text;
-            link.style.width = "100%";
-            link.style.padding = "0 5px 0 5px";
-            link.style.color = style?.color || "black";
-            return container;
-        };
-
-        infoControl.addTo(map);
-
-        return () => {
-            infoControl.remove();
-        };
-    }, [map, text, style]);
-
-    return null;
+const MapInfo: React.FC<MapInfoProps> = ({ text, color = "black" }) => {
+    return (
+        <div
+            className="absolute px-2 py-1 text-sm rounded-md shadow bottom-2 left-2 bg-neutral-900"
+            style={{ color }}>
+            {text}
+        </div>
+    );
 };
 
 type MapViewProps = {
     lat: number;
     lng: number;
     bus: Bus;
-    accuracy: string;
-    track: LatLngExpression[];
+    accuracy: "high" | "med" | "low" | "unknown";
+    track: LatLng[];
 };
-
-const MapCenterUpdater: React.FC<{ lat: number; lng: number }> = ({
-    lat,
-    lng,
-}) => {
-    const map = useMap();
-
-    useEffect(() => {
-        map.setView([lat, lng]);
-    }, [lat, lng, map]);
-
-    return null;
-};
-
-import L, { type LatLngExpression } from "leaflet";
 import React from "react";
 import { Pulse } from "../components/ui/Pulse";
-// import { Pulse } from "../components/ui/Pulse";
-
-const busIcon = L.divIcon({
-    html: `<div style="
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: #ff2056;
-    border-radius: 9999px;
-    width: 24px;
-    height: 24px;
-  ">
-    <i class="fas fa-bus" style="color: white; font-size: 12px;"></i>
-  </div>`,
-    className: "",
-    iconSize: [24, 24],
-    iconAnchor: [12, 12],
-    popupAnchor: [0, -12],
-});
-
-const pinIcon = L.divIcon({
-    html: `<i class="fas fa-circle"></i>`,
-    className: "text-blue-500",
-    iconSize: [12, 12],
-    iconAnchor: [12, 12],
-    popupAnchor: [-6, -6],
-});
 
 const MapView: React.FC<MapViewProps> = ({
     lat,
@@ -182,58 +56,157 @@ const MapView: React.FC<MapViewProps> = ({
     accuracy,
     track = [],
 }) => {
+    const [popup, setPopup] = React.useState<{
+        coords: LatLng;
+        content: React.ReactNode;
+    } | null>(null);
+
+    const mapRef = React.useRef<MapRef | null>(null);
+
+    React.useEffect(() => {
+        if (
+            mapRef.current &&
+            lat !== 0 &&
+            lng !== 0 &&
+            !mapRef.current.isMoving() &&
+            !mapRef.current.isZooming()
+        ) {
+            mapRef.current.flyTo({
+                center: [lng, lat],
+                zoom:
+                    mapRef.current.getZoom() < 9 ? 9 : mapRef.current.getZoom(),
+                bearing: 0,
+                duration: 500,
+                essential: false,
+            });
+        }
+    }, [lat, lng]);
+
+    const accuracyColor =
+        accuracy === "high"
+            ? "limegreen"
+            : accuracy === "med"
+            ? "darkorange"
+            : "red";
     return (
-        <div className="">
-            <MapContainer
-                center={[lat, lng]}
-                zoom={15}
-                style={{ height: "200px", width: "100vw" }}>
-                <TileLayer
-                    attribution='&copy; <a href="https://osm.org/copyright">OpenStreetMap</a>'
-                    url="https://tile-{s}.openstreetmap.fr/hot/{z}/{x}/{y}.png"
-                />
-                <Marker
-                    position={[lat, lng]}
-                    icon={busIcon}
-                    zIndexOffset={1000}>
-                    <Popup>Bus is here</Popup>
+        <div className="relative w-[100vw] h-[200px]">
+            <MapGL
+                ref={mapRef}
+                initialViewState={{
+                    longitude: lng,
+                    latitude: lat,
+                    zoom: 14,
+                }}
+                attributionControl={false}
+                mapStyle="https://tiles.stadiamaps.com/styles/alidade_smooth_dark.json"
+                // mapStyle={{
+                //     version: 8,
+                //     sources: {
+                //         osm: {
+                //             type: "raster",
+                //             tiles: [
+                //                 "https://tile-a.openstreetmap.fr/hot/{z}/{x}/{y}.png",
+                //                 "https://tile-b.openstreetmap.fr/hot/{z}/{x}/{y}.png",
+                //                 "https://tile-c.openstreetmap.fr/hot/{z}/{x}/{y}.png",
+                //             ],
+                //             tileSize: 256,
+                //             attribution:
+                //                 '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                //         },
+                //     },
+                //     layers: [
+                //         {
+                //             id: "osm",
+                //             type: "raster",
+                //             source: "osm",
+                //             minzoom: 0,
+                //             maxzoom: 19,
+                //         },
+                //     ],
+                // }}
+                style={{ width: "100%", height: "100%" }}>
+                <NavigationControl position="top-right" />
+
+                <Marker longitude={lng} latitude={lat} anchor="center">
+                    <div className="flex items-center justify-center w-6 h-6 rounded-full shadow-lg bg-rose-600">
+                        <i className="text-xs text-white fas fa-bus" />
+                    </div>
                 </Marker>
                 {bus.journey.stops.map((stop) => (
                     <Marker
                         key={stop.stop_id}
-                        position={[stop.coords[0], stop.coords[1]]}
-                        icon={pinIcon}>
-                        <Popup>
-                            <div className="flex flex-col">
-                                <span>{stop.name}</span>
-                                Expt: {toTime(stop.expt_time)}
-                            </div>
-                        </Popup>
+                        longitude={stop.coords[1]}
+                        latitude={stop.coords[0]}
+                        anchor="center"
+                        onClick={(e) => {
+                            e.originalEvent.stopPropagation();
+                            setPopup({
+                                coords: [stop.coords[1], stop.coords[0]],
+                                content: (
+                                    <div className="flex flex-col text-white bg-[#222]">
+                                        <a
+                                            className="font-semibold"
+                                            href={`/buses/stops/${stop.stop_id}`}>
+                                            {stop.name}
+                                        </a>
+                                        <span className="text-xs opacity-80">
+                                            Expt:{" "}
+                                            {stop.expt_time
+                                                ? new Date(
+                                                      stop.expt_time
+                                                  ).toLocaleTimeString([], {
+                                                      hour: "2-digit",
+                                                      minute: "2-digit",
+                                                  })
+                                                : "-"}
+                                        </span>
+                                    </div>
+                                ),
+                            });
+                        }}>
+                        <div className="text-blue-500">
+                            <i className="fas fa-circle text-[12px]" />
+                        </div>
                     </Marker>
                 ))}
-                <Polyline
-                    positions={track}
-                    pathOptions={{
-                        color: "black",
-                        weight: 4,
-                        opacity: 0.7,
-                    }}
-                />
-                <MapCenterUpdater lat={lat} lng={lng}></MapCenterUpdater>
-                <MapInfo
-                    text={`Accuracy: ${accuracy}`}
-                    style={{
-                        color:
-                            accuracy === "high"
-                                ? "green"
-                                : accuracy === "med"
-                                ? "darkorange"
-                                : "red",
-                    }}
-                />
-                <LocateControlComponent busLatLng={[lat, lng]} />
-                <ResetZoomControl />
-            </MapContainer>
+
+                {track.length > 0 && (
+                    <Source
+                        id="track"
+                        type="geojson"
+                        data={{
+                            type: "Feature",
+                            geometry: {
+                                type: "LineString",
+                                coordinates: track.map((p) => [p[1], p[0]]),
+                            },
+                            properties: {},
+                        }}>
+                        <Layer
+                            id="track-line"
+                            type="line"
+                            paint={{
+                                "line-color": "white",
+                                "line-width": 4,
+                                "line-opacity": 0.7,
+                            }}
+                        />
+                    </Source>
+                )}
+
+                {popup && (
+                    <Popup
+                        longitude={popup.coords[0]}
+                        latitude={popup.coords[1]}
+                        closeOnClick={true}
+                        anchor="top"
+                        onClose={() => setPopup(null)}>
+                        {popup.content}
+                    </Popup>
+                )}
+            </MapGL>
+
+            <MapInfo text={`Accuracy: ${accuracy}`} color={accuracyColor} />
         </div>
     );
 };
@@ -253,10 +226,18 @@ export const BusProgress: React.FC<{
                 style={{ transform: `translateY(${translateY}px)` }}>
                 <div className="relative flex items-center justify-center">
                     <Pulse size={34} color="bg-rose-400" duration={2} />
-                    <div
-                        className="relative z-10 flex items-center justify-center p-2 rounded-full bg-rose-500 w-9 h-9"
-                        ref={busRef}>
+                    <div className="relative z-10 flex items-center justify-center p-2 rounded-full bg-rose-500 w-9 h-9">
                         <FontAwesomeIcon icon={faBus} />
+                        <div
+                            style={{
+                                position: "absolute",
+                                top: "-100px",
+                                left: 0,
+                                width: "100%",
+                                height: 0,
+                            }}>
+                            <div ref={busRef}></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -274,13 +255,24 @@ const JourneyPage: React.FC = () => {
     const [sequence, setSeq] = useState<number>(0);
     const [progress, setProg] = useState<number>(0);
     const [location, setLoc] = useState<number[]>([0, 0]);
-    const [accuracy, setAccuracy] = useState<string>("unknown");
+    const [accuracy, setAccuracy] = useState<
+        "high" | "med" | "low" | "unknown"
+    >("unknown");
     const [journey, setJourney] = useState<Journey>();
     const [loading, setLoading] = useState(true);
     const [fetching, setFetching] = useState(false);
     const [lastRefreshed, setRefreshed] = useState(new Date());
     const [elapsed, setElapsed] = useState<string>("0s");
     const [msg, setMsg] = useState<string>("");
+    const [busInfoHeight, setBusInfoHeight] = useState(0);
+    const busInfoRef = useRef<HTMLDivElement>(null);
+    const showAppNav = useShowAppNav();
+
+    useEffect(() => {
+        if (busInfoRef.current) {
+            setBusInfoHeight(busInfoRef.current.clientHeight);
+        }
+    }, [busInfoRef, loading]);
 
     useEffect(() => {
         const interval = setInterval(() => {
@@ -297,7 +289,7 @@ const JourneyPage: React.FC = () => {
                 const age = Math.floor(
                     (now.getTime() - new Date(bus?.timestamp).getTime()) / 1000
                 );
-                let accuracy = "unknown";
+                let accuracy: "high" | "med" | "low" | "unknown" = "unknown";
 
                 if (age <= 45) {
                     accuracy = "high";
@@ -318,8 +310,13 @@ const JourneyPage: React.FC = () => {
             const now = new Date();
 
             if (!predictions || predictions.length < 2) {
-                setSeq(bus?.progress ? bus.progress.sequence : 0);
-                setProg(bus?.progress ? bus.progress.progress : 0);
+                if (bus?.started) {
+                    setSeq(bus?.progress ? bus.progress.sequence : 0);
+                    setProg(bus?.progress ? bus.progress.progress : 0);
+                } else {
+                    setSeq(0);
+                    setProg(0);
+                }
                 const lat = bus?.coords?.[1] ?? 0;
                 const lng = bus?.coords?.[0] ?? 0;
                 setLoc([lat, lng]);
@@ -448,108 +445,121 @@ const JourneyPage: React.FC = () => {
     }
 
     return (
-        <div className="">
-            <div className="flex flex-col mt-38">
-                <div className="flex flex-col gap-2 top-0 grow p-5 pb-1 pt-15 z-12  bg-[#111111] rounded-b-2xl fixed w-full">
-                    {bus ? (
-                        <div className="flex flex-col items-center justify-center gap-2">
-                            <div className="fixed flex flex-row items-stretch p-2 px-3 my-1 mb-1 z-10000000 top-15">
-                                <div className="flex items-center px-3 py-1 bg-blue-700 rounded-l-2xl">
-                                    <span className="flex items-center justify-center text-xl font-bold text-center">
-                                        {bus.service.line_name}
-                                    </span>
-                                </div>
-                                <div className="flex flex-col justify-center px-3 py-1 bg-neutral-800 rounded-r-2xl">
-                                    <span className="font-semibold text">
-                                        {bus.destination}
-                                    </span>
-
-                                    <span className="mb-0.5 text-xs text-neutral-400">
-                                        {bus.bus_type}
-                                    </span>
-                                </div>
-                            </div>
-                            <MapView
-                                lat={location[0]}
-                                lng={location[1]}
-                                bus={bus}
-                                accuracy={accuracy}
-                                track={generateWholeTrack(
-                                    bus.journey?.stops
-                                )}></MapView>
-                            <div className="flex gap-3">
-                                <a
-                                    className="underline text-sky-500"
-                                    href={`https://bustimes.org/vehicles/${bus?.id}#journeys/${bus?.journey_id}`}
-                                    target="_blank">
-                                    View on bustimes.org
-                                </a>
-                                <span className="text-center">
-                                    {journey?.stops.length} stops
+        <div className="flex flex-col">
+            <div
+                className={`flex flex-col gap-2 top-0 grow px-5 pb-1 z-12 bg-[#111111] rounded-b-2xl fixed w-full ${
+                    !showAppNav ? "pt-15" : ""
+                }`}
+                ref={busInfoRef}>
+                {bus ? (
+                    <div className="flex flex-col items-center justify-center gap-2">
+                        <div
+                            className={`fixed flex flex-row items-stretch p-2 px-3 my-1 mb-1 z-10000000 ${
+                                !showAppNav ? "top-15" : "top-0"
+                            }`}>
+                            <div className="flex items-center px-3 py-1 bg-blue-700 rounded-l-2xl">
+                                <span className="flex items-center justify-center text-xl font-bold text-center">
+                                    {bus.service.line_name}
                                 </span>
                             </div>
-                            <div className="flex items-center gap-3">
-                                <div className="flex flex-col items-center gap-1">
-                                    <span className="font-bold align-middle">
-                                        {bus?.fleet_num}
-                                    </span>
-                                    <div className="flex justify-center px-2 py-1 rounded-lg bg-amber-400">
-                                        <span className="text-xs font-bold align-middle text-neutral-950">
-                                            {bus?.reg}
-                                        </span>
-                                    </div>
-                                </div>
+                            <div className="flex flex-col justify-center px-3 py-1 bg-neutral-800 rounded-r-2xl">
+                                <span className="font-semibold text">
+                                    {bus.destination}
+                                </span>
 
-                                <div className="flex flex-col items-center gap-1">
-                                    <span className="text-xs font-bold">
-                                        {bus.livery
-                                            ? bus?.livery.name
-                                            : "No livery"}
-                                    </span>
-                                    <div
-                                        className="rounded shadow-2xl w-15 aspect-3/2"
-                                        style={{
-                                            background:
-                                                bus?.livery?.css ||
-                                                "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 200' fill='none' xmlns:xlink='http://www.w3.org/1999/xlink'><rect width='300' height='200' fill='%23222222'/><text x='150' y='110' text-anchor='middle' fill='%23999999' font-size='80' font-family='sans-serif' dy='.35em'>?</text></svg>\")",
-                                        }}></div>
-                                </div>
-                                <div className="flex justify-center px-2 py-1 rounded-lg bg-neutral-800/50">
-                                    <span className="font-bold align-middle text">
-                                        {lateness(bus ? bus.delay : 0)}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="flex flex-row items-center justify-center h-30">
-                            <div className="flex flex-row gap-3 p-3 border-2 border-red-400 bg-red-950 rounded-2xl">
-                                <FontAwesomeIcon
-                                    icon={faWarning}
-                                    size="2x"
-                                    className="text-neutral-300"></FontAwesomeIcon>
-                                <span className="text-2xl font-black text-neutral-300 wrap-normal">
-                                    Bus not active.
+                                <span className="mb-0.5 text-xs text-neutral-400">
+                                    {bus.bus_type}
                                 </span>
                             </div>
                         </div>
-                    )}
-                    {msg ? (
-                        <span className="text-center text-red-400">{msg}</span>
-                    ) : (
-                        <></>
-                    )}
+                        <MapView
+                            lat={location[0]}
+                            lng={location[1]}
+                            bus={bus}
+                            accuracy={accuracy}
+                            track={generateWholeTrack(
+                                bus.journey?.stops
+                            )}></MapView>
+                        <div className="flex gap-3">
+                            <a
+                                className="underline text-sky-500"
+                                href={`https://bustimes.org/vehicles/${bus?.id}#journeys/${bus?.journey_id}`}
+                                target="_blank">
+                                View on bustimes.org
+                            </a>
+                            <span className="text-center">
+                                {journey?.stops.length} stops
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <div className="flex flex-col items-center gap-1">
+                                <span className="font-bold align-middle">
+                                    {bus?.fleet_num}
+                                </span>
+                                <div className="flex justify-center px-2 py-1 rounded-lg bg-amber-400">
+                                    <span className="text-xs font-bold align-middle text-neutral-950">
+                                        {bus?.reg}
+                                    </span>
+                                </div>
+                            </div>
+                            <div className="flex flex-col items-center gap-1">
+                                <span className="text-xs font-bold text-center">
+                                    {bus.livery
+                                        ? bus?.livery.name
+                                        : "No livery"}
+                                </span>
+                                <div
+                                    className="rounded shadow-2xl w-15 aspect-3/2"
+                                    style={{
+                                        background:
+                                            bus?.livery?.right_css ||
+                                            "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 200' fill='none' xmlns:xlink='http://www.w3.org/1999/xlink'><rect width='300' height='200' fill='%23222222'/><text x='150' y='110' text-anchor='middle' fill='%23999999' font-size='80' font-family='sans-serif' dy='.35em'>?</text></svg>\")",
+                                    }}></div>
+                            </div>
 
-                    <div className="flex justify-center gap-2">
-                        <span className="text-xs text-neutral-400">
-                            Updated {elapsed} ago
-                        </span>
-                        <span className="text-xs text-neutral-400">·</span>
-                        <span className="text-xs text-neutral-400">
-                            Updates every 30s
-                        </span>
+                            <div className="flex justify-center px-2 py-1 rounded-lg bg-neutral-800/50">
+                                <span className="font-bold align-middle text">
+                                    {lateness(bus ? bus.delay : 0)}
+                                </span>
+                            </div>
+                        </div>
                     </div>
+                ) : (
+                    <div className="flex flex-row items-center justify-center h-30">
+                        <div className="flex flex-row gap-3 p-3 border-2 border-red-400 bg-red-950 rounded-2xl">
+                            <FontAwesomeIcon
+                                icon={faWarning}
+                                size="2x"
+                                className="text-neutral-300"></FontAwesomeIcon>
+                            <span className="text-2xl font-black text-neutral-300 wrap-normal">
+                                Bus not active.
+                            </span>
+                        </div>
+                    </div>
+                )}
+                {msg ? (
+                    <span className="text-center text-red-400">{msg}</span>
+                ) : (
+                    <></>
+                )}
+                <div className="flex items-center justify-center gap-2 text-sm text-neutral-500">
+                    <div className="w-2 h-2 rounded-full bg-sky-500"></div> =
+                    timing point (bus waits here if early)
                 </div>
+                <div className="flex justify-center gap-2">
+                    <span className="text-xs text-neutral-400">
+                        Updated {elapsed} ago
+                    </span>
+                    <span className="text-xs text-neutral-400">·</span>
+                    <span className="text-xs text-neutral-400">
+                        Updates every 30s
+                    </span>
+                </div>
+            </div>
+            <div
+                style={{
+                    marginTop: busInfoHeight - (showAppNav ? 0 : 50),
+                }}>
                 {bus?.finished || !bus ? (
                     <div className="flex flex-col gap-3 mt-4 grow h-[60vh] md:max-h-[80vh] items-center justify-center">
                         <FontAwesomeIcon
@@ -562,7 +572,7 @@ const JourneyPage: React.FC = () => {
                     </div>
                 ) : (
                     <div className="flex flex-row gap-2 px-3 md:px-0">
-                        <div className="relative flex mx-5 mt-48 md:mx-40">
+                        <div className="relative flex mx-5 md:mx-40">
                             <div className="relative flex flex-col items-center py-8">
                                 <BusProgress
                                     sequence={sequence}
@@ -581,7 +591,9 @@ const JourneyPage: React.FC = () => {
                                                     ? "rounded-bl-full"
                                                     : ""
                                             }`}></div>
-
+                                        {/* {stop.timing_status === "PTP" && (
+                                            <div className="absolute z-10 w-3 h-3 translate-y-[-30%] rounded-full bg-neutral-700 flex items-center justify-center"></div>
+                                        )} */}
                                         {idx < journey.stops.length - 1 && (
                                             <div className="w-[4px] bg-neutral-700 flex-1 min-h-[68px]"></div>
                                         )}
@@ -593,12 +605,13 @@ const JourneyPage: React.FC = () => {
                                     <div
                                         key={stop.stop_id}
                                         className="flex flex-row items-center">
-                                        <div className="w-4 bg-neutral-700 rounded-r-full h-[4px]"></div>
+                                        <div
+                                            className={`w-4 bg-neutral-700 rounded-r-full h-[4px]`}></div>
                                         <div
                                             className="p-2 w-fit h-17"
                                             onClick={() =>
                                                 navigate(
-                                                    `/departures/${stop.stop_id}`
+                                                    `/buses/stops/${stop.stop_id}`
                                                 )
                                             }
                                             style={{
@@ -613,9 +626,13 @@ const JourneyPage: React.FC = () => {
                                                 {/* <span className="px-2 py-1 font-bold bg-indigo-800 rounded-t-2xl">
                                                     {stop.name}
                                                 </span> */}
-                                                <span className="font-bold">
+                                                <div className="flex flex-row items-center gap-2 font-bold">
+                                                    {stop.timing_status ===
+                                                        "PTP" && (
+                                                        <div className="w-2 h-2 rounded-full bg-sky-500"></div>
+                                                    )}{" "}
                                                     {stop.name}
-                                                </span>
+                                                </div>
                                                 {/* <div className="flex flex-row gap-6 px-2 py-1 font-bold bg-neutral-800/50 rounded-b-2xl">
                                                     <span>
                                                         {stop.aimed_time.toLocaleTimeString(
@@ -675,47 +692,52 @@ const JourneyPage: React.FC = () => {
                                                     ) : (
                                                         <div className="flex items-center gap-2">
                                                             {stop.expt_time &&
-                                                            stop.aimed_time ? (
-                                                                <div className="flex gap-3">
-                                                                    {new Date(
-                                                                        stop.expt_time
-                                                                    ).getTime() >
-                                                                        new Date(
-                                                                            stop.aimed_time
-                                                                        ).getTime() && (
-                                                                        <span className="line-through text-neutral-500">
-                                                                            {toTime(
-                                                                                stop.aimed_time
-                                                                            )}
-                                                                        </span>
-                                                                    )}
-                                                                    <span
-                                                                        className={
-                                                                            new Date(
-                                                                                stop.expt_time
-                                                                            ).getTime() >
-                                                                            new Date(
-                                                                                stop.aimed_time
-                                                                            ).getTime()
-                                                                                ? "text-red-400"
-                                                                                : "text-green-400"
-                                                                        }>
-                                                                        {new Date(
-                                                                            stop.expt_time
-                                                                        ).getTime() >
-                                                                        new Date(
-                                                                            stop.aimed_time
-                                                                        ).getTime()
-                                                                            ? "expt: "
-                                                                            : ""}
-                                                                        {toTime(
-                                                                            stop.expt_time
-                                                                        )}
-                                                                    </span>
-                                                                </div>
-                                                            ) : (
-                                                                "-"
-                                                            )}
+                                                            stop.aimed_time
+                                                                ? (() => {
+                                                                      const aimed =
+                                                                          new Date(
+                                                                              stop.aimed_time
+                                                                          ).getTime();
+                                                                      const expt =
+                                                                          new Date(
+                                                                              stop.expt_time
+                                                                          ).getTime();
+                                                                      const diff =
+                                                                          Math.abs(
+                                                                              expt -
+                                                                                  aimed
+                                                                          );
+                                                                      const isLate =
+                                                                          expt >
+                                                                              aimed &&
+                                                                          diff >
+                                                                              60000;
+                                                                      return (
+                                                                          <div className="flex gap-3">
+                                                                              {isLate && (
+                                                                                  <span className="line-through text-neutral-500">
+                                                                                      {toTime(
+                                                                                          stop.aimed_time
+                                                                                      )}
+                                                                                  </span>
+                                                                              )}
+                                                                              <span
+                                                                                  className={
+                                                                                      isLate
+                                                                                          ? "text-red-400"
+                                                                                          : "text-green-400"
+                                                                                  }>
+                                                                                  {isLate
+                                                                                      ? "expt: "
+                                                                                      : ""}
+                                                                                  {toTime(
+                                                                                      stop.expt_time
+                                                                                  )}
+                                                                              </span>
+                                                                          </div>
+                                                                      );
+                                                                  })()
+                                                                : "-"}
                                                         </div>
                                                     )}
                                                 </div>

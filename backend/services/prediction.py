@@ -1,12 +1,14 @@
 from datetime import timedelta
 import datetime
 from geopy.distance import geodesic
-from backend.models.journey import Journey
-from backend.models.prediction import Prediction
-from backend.models.stop import StopTime
-from backend.models.times import Times
+from backend.deps import UTC
+from backend.schemas.journey import Journey
+from backend.schemas.prediction import Prediction
+from backend.schemas.stop import StopTime
+from backend.schemas.times import Times
 from backend.services.journeys import get_trip, get_vehicle_journey
 from datetime import datetime as dt
+from backend.deps import LONDON
 
 
 async def calculate_sequence(stops: list[StopTime], future_time: dt, extra: int) -> int:
@@ -78,8 +80,7 @@ async def predict_future(
     ahead: int,
     r,
 ) -> list[Prediction]:
-    uk_timezone = datetime.timezone(timedelta(hours=1))
-    current_time = dt.now(datetime.timezone.utc).astimezone(uk_timezone)
+    current_time = dt.now(tz=UTC)
 
     stops = journey.stops
 
@@ -100,8 +101,8 @@ async def predict_future(
         if timestamp:
             age = int(
                 (
-                    datetime.datetime.fromtimestamp(future_time, uk_timezone)
-                    - datetime.datetime.fromtimestamp(timestamp, uk_timezone)
+                    datetime.datetime.fromtimestamp(future_time, LONDON)
+                    - datetime.datetime.fromtimestamp(timestamp, LONDON)
                 ).total_seconds()
             )
             raw_offset = int((ideal_age - age) * sensitivity)
@@ -141,8 +142,7 @@ async def predict_future(
 async def calculate_expected(delay, sequence, stop_id, journey_id, r):
     journey = await get_vehicle_journey(journey_id, delay, r)
 
-    uk_timezone = datetime.timezone(timedelta(hours=1))
-    current_time = dt.now(datetime.timezone.utc).astimezone(uk_timezone)
+    current_time = dt.now(tz=UTC)
 
     not_started = False
     finished = False
@@ -152,16 +152,22 @@ async def calculate_expected(delay, sequence, stop_id, journey_id, r):
     scheduled_time = None
 
     stop_idx = 0
+    target_seq = None
 
     for stop_time in journey.stops:
         if stop_idx == 0:
             scheduled_time_start = stop_time.aimed_time
 
-            if (scheduled_time_start > current_time) and (sequence < 2):
+            time_till_start = (scheduled_time_start - current_time).total_seconds()
+
+            if scheduled_time_start > current_time and (
+                time_till_start > 300 or sequence < 4
+            ):
                 not_started = True
 
-        if stop_time.stop_id == stop_id:
+        if stop_time.stop_id == stop_id and not sequence > stop_idx:
             aimed = stop_time.aimed_time
+            target_seq = stop_idx
             if not aimed:
                 include = False
                 break
@@ -183,20 +189,23 @@ async def calculate_expected(delay, sequence, stop_id, journey_id, r):
 
         stop_idx += 1
 
-    return Times(
-        expected=expected_time,
-        scheduled=scheduled_time,
-        started=not not_started,
-        finished=finished,
-        include=include,
-    ), journey
+    return (
+        target_seq,
+        Times(
+            expected=expected_time,
+            scheduled=scheduled_time,
+            started=not not_started,
+            finished=finished,
+            include=include,
+        ),
+        journey,
+    )
 
 
 async def get_started_finished(trip_id, r):
     trip = await get_trip(trip_id, 0, r)
 
-    uk_timezone = datetime.timezone(timedelta(hours=1))
-    current_time = dt.now(datetime.timezone.utc).astimezone(uk_timezone)
+    current_time = dt.now(tz=UTC)
 
     not_started = False
     finished = False
@@ -205,7 +214,7 @@ async def get_started_finished(trip_id, r):
 
     for stop_time in trip.stops:
         if stop_idx == 0:
-            scheduled_time_start = stop_time.aimed_time
+            scheduled_time_start = stop_time.aimed_time.astimezone(UTC)
 
             if scheduled_time_start > current_time:
                 not_started = True

@@ -1,5 +1,5 @@
 from backend.config import API_BASE
-from backend.models.livery import Livery
+from backend.schemas.livery import Livery
 from backend.services.caching import LIVERY_CACHE, get_cached
 from backend.utils.fetch_json import fetch_json
 
@@ -11,7 +11,11 @@ async def get_livery(id: int, r):
         )
 
         if data:
-            return {"name": data.get("name"), "css": data.get("left_css")}
+            return {
+                "name": data.get("name"),
+                "left_css": data.get("left_css"),
+                "right_css": data.get("right_css"),
+            }
 
     livery = await get_cached(
         key=f"liveries:{id}",
@@ -21,4 +25,9 @@ async def get_livery(id: int, r):
         r=r,
     )
 
-    return Livery(name=livery.get("name"), css=livery.get("css"))
+    if livery.get("css"):
+        livery["left_css"] = livery["css"]
+        livery["right_css"] = livery["css"]
+        del livery["css"]
+
+    return Livery(**livery) if livery else None

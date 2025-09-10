@@ -1,12 +1,9 @@
 import asyncio
-import datetime
-import math
 from datetime import datetime as dt
-from datetime import timedelta
 import logging
 from fastapi import APIRouter, Depends, HTTPException, Request
 
-from backend.deps import get_redis, limiter
+from backend.deps import UTC, get_redis, limiter
 from backend.services import bus, stops
 
 router = APIRouter()
@@ -16,11 +13,12 @@ log = logging.getLogger(__name__)
 
 
 @router.get("/scheduled")
-@limiter.limit("20/minute")
+@limiter.limit("45/minute")
 async def departures_scheduled(
     request: Request, stop_id: str, redis=Depends(get_redis)
 ):
     try:
+        await redis.sadd("total_stops", stop_id)
         times = await stops.get_times(stop_id, redis)
 
         tasks = []
@@ -30,13 +28,7 @@ async def departures_scheduled(
         buses = await asyncio.gather(*tasks)
         buses = [bus for bus in buses if bus is not None]
 
-        uk_timezone = datetime.timezone(timedelta(hours=1))
-        current_time = (
-            dt.now(datetime.timezone.utc)
-            .astimezone(uk_timezone)
-            .isoformat()
-            .replace("+00:00", "Z")
-        )
+        current_time = dt.now(tz=UTC).isoformat()
         return {"buses": buses, "timestamp": current_time}
     except Exception as e:
         log.error(f"Unexpected error: {e}")
@@ -53,13 +45,7 @@ async def departures_live(request: Request, stop_id: str, redis=Depends(get_redi
 
         buses = await bus.fetch_buses_live(service_ids, stop_id, redis)
 
-        uk_timezone = datetime.timezone(timedelta(hours=1))
-        current_time = (
-            dt.now(datetime.timezone.utc)
-            .astimezone(uk_timezone)
-            .isoformat()
-            .replace("+00:00", "Z")
-        )
+        current_time = dt.now(tz=UTC).isoformat()
         return {"buses": buses, "timestamp": current_time}
     except Exception as e:
         log.error(f"Unexpected error: {e}")
@@ -78,13 +64,7 @@ async def departures(request: Request, stop_id: str, redis=Depends(get_redis)):
 
         buses = await bus.fetch_buses(service_ids, stop_id, times, redis)
 
-        uk_timezone = datetime.timezone(timedelta(hours=1))
-        current_time = (
-            dt.now(datetime.timezone.utc)
-            .astimezone(uk_timezone)
-            .isoformat()
-            .replace("+00:00", "Z")
-        )
+        current_time = dt.now(tz=UTC).isoformat()
 
         return {"buses": buses, "timestamp": current_time}
     except Exception as e:

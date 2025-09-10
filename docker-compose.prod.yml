@@ -1,25 +1,133 @@
 services:
+  traefik:
+    image: traefik:v3.5
+    command:
+      - "--providers.docker=true"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--api.insecure=true"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./traefik/dynamic:/etc/traefik/dynamic:ro
+    networks:
+      - web
+    restart: unless-stopped
+
+  nginx:
+    build:
+      context: .
+      dockerfile: Dockerfile.nginx
+      args:
+        COMMIT: ${COMMIT:-dev}
+    expose:
+      - "8081"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.nginx.rule=(Host(`localhost`) || Host(`nextbus.orbitix.dev`) || Host(`192.168.4.211`))"
+      - "traefik.http.routers.nginx.entrypoints=web"
+      - "traefik.http.services.nginx.loadbalancer.server.port=8081"
+      - "traefik.http.routers.nginx.priority=1"
+    depends_on:
+      - app
+    networks:
+      - web
+    restart: unless-stopped
   app:
     build:
       context: .
-      dockerfile: Dockerfile.prod
-    ports:
-    - "80:80"
-    - "8000:8000"
+      dockerfile: Dockerfile.app
+      args:
+        COMMIT: ${COMMIT:-dev}
+    expose:
+      - "8000"
     environment:
-      - REDIS_HOST=redis://redis:6379
+      REDIS_HOST: redis://redis:6379
+      RTT_USERNAME: ${RTT_USERNAME}
+      RTT_PASSWORD: ${RTT_PASSWORD}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_HOST: db
+      BOT_TOKEN: ${BOT_TOKEN}
+      PYTHONUNBUFFERED: 1
+      TZ: Europe/London
+      ENV: production
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.app.rule=(Host(`localhost`) || Host(`nextbus.orbitix.dev`) || Host(`192.168.4.211`)) && PathRegexp(`^/api(/.*)?$|^/ws(/.*)?$`)"
+      - "traefik.http.routers.app.entrypoints=web"
+      - "traefik.http.services.app.loadbalancer.server.port=8000"
+      - "traefik.http.services.app.loadbalancer.sticky.cookie=true"
+      - "traefik.http.routers.app.priority=100"
     depends_on:
       - redis
+      - db
     networks:
       - web
+    deploy:
+      replicas: 2   
+      update_config:
+        parallelism: 1 
+        failure_action: rollback
+        delay: 5s
+      restart_policy:
+        condition: on-failure
+
+  bot:
+    image: nextbus-app:latest 
+    command: ["python", "-m", "backend.bot.bot_runner"]
+    environment:
+      REDIS_HOST: redis://redis:6379
+      RTT_USERNAME: ${RTT_USERNAME}
+      RTT_PASSWORD: ${RTT_PASSWORD}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_HOST: db
+      BOT_TOKEN: ${BOT_TOKEN}
+      BOT_DISABLED: ${BOT_DISABLED}
+      PYTHONUNBUFFERED: 1
+      TZ: Europe/London
+      ENV: production
+    deploy:
+      replicas: 1
+
 
   redis:
     image: redis:latest
     ports:
       - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
     networks:
       - web
+
+  db:
+    image: imresamu/postgis:latest
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/db/init_db:/docker-entrypoint-initdb.d
+    networks:
+      - web
+
 
 networks:
   web:
     driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  frontend_dist:

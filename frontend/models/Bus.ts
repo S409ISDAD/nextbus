@@ -31,6 +31,7 @@ export interface Bus {
     scheduled: string;
     started: boolean;
     finished: boolean;
+    target_seq?: number;
     progress?: ProgressInfo;
     coords?: number[];
     predictions: Prediction[];
@@ -45,6 +46,29 @@ export interface Prediction {
     sequence: number;
     progress: number;
     location: number[];
+}
+
+export interface MapBus {
+    id: number;
+    coords: number[];
+    heading: number;
+    updated: Date;
+    destination: string;
+    trip_id: number;
+    service_id: string;
+    service: MapService;
+    vehicle: Vehicle;
+    livery?: Livery;
+}
+
+interface Vehicle {
+    name: string;
+    features: string;
+    livery: string;
+}
+
+interface MapService {
+    line_name: string;
 }
 
 export function isTrackedBus(bus: Departure): bus is Bus {

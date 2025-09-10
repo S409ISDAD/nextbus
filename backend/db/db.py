@@ -1,0 +1,78 @@
+import os
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, scoped_session
+from dotenv import load_dotenv
+from sqlalchemy_searchable import sync_trigger
+
+
+load_dotenv()
+
+POSTGRES_USER = os.getenv("POSTGRES_USER")
+POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
+POSTGRES_DB = os.getenv("POSTGRES_DB")
+POSTGRES_HOST = os.getenv("POSTGRES_HOST", "localhost")
+POSTGRES_PORT = os.getenv("POSTGRES_PORT", "5432")
+
+DATABASE_URL = f"postgresql+psycopg2://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
+
+engine = create_engine(DATABASE_URL)
+
+SessionLocal = scoped_session(
+    sessionmaker(autocommit=False, autoflush=False, bind=engine)
+)
+
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+def sync_search_vectors():
+    with engine.begin() as conn:
+        sync_trigger(
+            conn,
+            "stop",
+            "search_vector",
+            [
+                "atco_code",
+                "naptan_code",
+                "common_name",
+                "common_short_name",
+                "landmark",
+                "street",
+                "suburb",
+                "town",
+            ],
+        )
+        sync_trigger(
+            conn,
+            "service",
+            "search_vector",
+            [
+                "service_code",
+                "description",
+                "origin",
+                "destination",
+                "vias",
+                "line_names",
+            ],
+        )
+        sync_trigger(
+            conn,
+            "operator",
+            "search_vector",
+            ["name", "noc"],
+        )
+        sync_trigger(
+            conn,
+            "line",
+            "search_vector",
+            [
+                "line_name",
+                "inbound_description",
+                "outbound_description",
+            ],
+        )

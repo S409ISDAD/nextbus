@@ -1,6 +1,9 @@
 import type { StopTime } from "../models/StopTime";
+import toast from "react-hot-toast";
 
-export function toLatLngArray(track?: number[][]): L.LatLngExpression[] {
+export type LatLng = [number, number];
+
+export function toLatLngArray(track?: number[][]): LatLng[] {
     if (!track || !Array.isArray(track)) return [];
 
     return track
@@ -11,12 +14,15 @@ export function toLatLngArray(track?: number[][]): L.LatLngExpression[] {
         );
 }
 
-export default function generateWholeTrack(stops: StopTime[]): L.LatLngExpression[] {
+export function generateWholeTrack(stops: StopTime[]): LatLng[] {
     return stops.flatMap(stop => toLatLngArray(stop.track));
 }
 
 export function getCurrentPosition(): Promise<GeolocationPosition> {
     return new Promise((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject);
+        navigator.geolocation.getCurrentPosition(resolve, (error) => {
+            toast.error("Failed to get current position.", { id: 'geolocation-error-toast', duration: 3000 });
+            reject(error);
+        });
     });
 }

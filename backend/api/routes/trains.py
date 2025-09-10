@@ -2,13 +2,12 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from backend.deps import get_redis, limiter
-from backend.models.trains import TrainService, StationResponse
+from backend.schemas.trains import TrainService, StationResponse
 from backend.services.trains import (
     get_departures,
     get_arrivals,
     get_detailed_route_trains,
     get_service,
-    get_route_trains,
 )
 from enum import Enum
 

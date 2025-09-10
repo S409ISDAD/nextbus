@@ -1,6 +1,6 @@
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Request
-from backend.models.bus import TrackedBus
+from backend.schemas.bus import TrackedBus
 from backend.services import bus
 from backend.deps import get_redis
 import logging
@@ -13,7 +13,7 @@ log = logging.getLogger(__name__)
 
 
 @router.get("/", response_model=Optional[TrackedBus])
-@limiter.limit("20/minute")
+@limiter.limit("30/minute")
 async def get_bus(request: Request, bus_id: int, redis=Depends(get_redis)):
     try:
         this_bus = await bus.build_bus(bus_id, redis)

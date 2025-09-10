@@ -9,10 +9,14 @@ import { getCurrentPosition } from "../utils/locations";
 import getStopData from "../utils/getStopData";
 import type { Stop } from "../models/Stop";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSatelliteDish, faSlash } from "@fortawesome/free-solid-svg-icons";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+    faSatelliteDish,
+    faSlash,
+    faWarning,
+} from "@fortawesome/free-solid-svg-icons";
 import clsx from "clsx";
 import { WebSocketManager } from "../websockets/ws_manager";
-import React from "react";
 
 interface Props {
     stop_id: string;
@@ -20,9 +24,25 @@ interface Props {
     filter?: string;
 }
 
-function BusCard({ bus, onClick }: { bus: Departure; onClick: () => void }) {
+function BusCard({
+    bus,
+    onClick,
+    gettingLiveData,
+}: {
+    bus: Departure;
+    onClick: () => void;
+    gettingLiveData: boolean;
+}) {
     return (
-        <div className="cursor-pointer" key={bus.trip} onClick={onClick}>
+        <div
+            className={clsx(
+                "cursor-pointer",
+                isTrackedBus(bus) &&
+                    bus.delay >= 2700 &&
+                    "opacity-75 pointer-events-none"
+            )}
+            key={bus.trip}
+            onClick={onClick}>
             <div className="flex flex-row items-center justify-between gap-2">
                 <div className="flex flex-col justify-around">
                     <div className="flex flex-row items-stretch mb-1">
@@ -39,12 +59,42 @@ function BusCard({ bus, onClick }: { bus: Departure; onClick: () => void }) {
                             </span>
                         </div>
                     </div>
+                    {isTrackedBus(bus) && bus.delay >= 2700 && (
+                        <div className="flex items-center gap-1 text-xs ">
+                            <FontAwesomeIcon
+                                icon={faWarning}
+                                className="text-red-400"
+                            />
+                            This bus is quite late, it may not arrive
+                        </div>
+                    )}
                     <div className="flex flex-row items-center gap-3 font-semibold text-nowrap">
-                        <div className="flex gap-0.5 items-center text-sky-400">
-                            <span className="text-xs">
-                                {isTrackedBus(bus) ? "Expt:" : "Schd:"}
-                            </span>
-                            <span>{toTime(bus.expected)}</span>
+                        <div className="flex items-center gap-2">
+                            {bus.expected && bus.scheduled
+                                ? (() => {
+                                      const aimed = new Date(
+                                          bus.scheduled
+                                      ).getTime();
+                                      const expt = new Date(
+                                          bus.expected
+                                      ).getTime();
+                                      const diff = Math.abs(expt - aimed);
+                                      const isLate =
+                                          expt > aimed && diff > 60000;
+                                      return (
+                                          <div className="flex gap-2">
+                                              {isLate && (
+                                                  <span className="line-through text-neutral-500">
+                                                      {toTime(bus.scheduled)}
+                                                  </span>
+                                              )}
+                                              <span className={"text-sky-400"}>
+                                                  {toTime(bus.expected)}
+                                              </span>
+                                          </div>
+                                      );
+                                  })()
+                                : "-"}
                         </div>
                         {isTrackedBus(bus) && (
                             <span
@@ -54,56 +104,44 @@ function BusCard({ bus, onClick }: { bus: Departure; onClick: () => void }) {
                                 {lateness(bus ? bus.delay : 0)}
                             </span>
                         )}
-                        {!bus.started && !isTrackedBus(bus) && (
+                        {!bus.started && (
                             <span className="text-sm font-medium opacity-70">
-                                Upcoming
+                                {bus.status === "not_tracking"
+                                    ? "Upcoming"
+                                    : bus.status === "waiting"
+                                    ? "Not Started"
+                                    : "On prev. trip"}
                             </span>
                         )}
-                        {isTrackedBus(bus) ? (
+                        {bus.started && (
                             <div className="relative w-5 h-5">
                                 <FontAwesomeIcon
                                     icon={faSatelliteDish}
+                                    beatFade={gettingLiveData}
                                     className={clsx(
                                         "absolute top-0 left-0 w-5 h-5",
-                                        {
-                                            "text-sky-500":
-                                                bus.status === "tracking",
-                                            "text-emerald-500":
-                                                bus.status === "user_tracking",
-                                        }
+                                        gettingLiveData
+                                            ? "text-neutral-500"
+                                            : {
+                                                  "text-blue-400 opacity-40":
+                                                      bus.status ===
+                                                      "not_tracking",
+                                                  "text-sky-500":
+                                                      bus.status === "tracking",
+                                                  "text-emerald-500":
+                                                      bus.status ===
+                                                      "user_tracking",
+                                              }
                                     )}
                                 />
-                            </div>
-                        ) : (
-                            <>
-                                {bus.started && (
-                                    <div className="relative w-5 h-5">
+                                {!gettingLiveData &&
+                                    bus.status === "not_tracking" && (
                                         <FontAwesomeIcon
-                                            icon={faSatelliteDish}
-                                            className={clsx(
-                                                "absolute top-0 left-0 w-5 h-5",
-                                                {
-                                                    "text-blue-400 opacity-40":
-                                                        bus.status ===
-                                                        "not_tracking",
-                                                    "text-sky-500":
-                                                        bus.status ===
-                                                        "tracking",
-                                                    "text-emerald-500":
-                                                        bus.status ===
-                                                        "user_tracking",
-                                                }
-                                            )}
+                                            icon={faSlash}
+                                            className="absolute top-0 left-0 w-5 h-5 text-red-500"
                                         />
-                                        {bus.status === "not_tracking" && (
-                                            <FontAwesomeIcon
-                                                icon={faSlash}
-                                                className="absolute top-0 left-0 w-5 h-5 text-red-500"
-                                            />
-                                        )}
-                                    </div>
-                                )}
-                            </>
+                                    )}
+                            </div>
                         )}
                     </div>
                 </div>
@@ -123,6 +161,7 @@ function DepartureBoard({ stop_id, closest, filter }: Props) {
     const [stop, setStop] = useState<Stop>();
     const [stopID, setStopID] = useState<string>("");
     const [loading, setLoading] = useState(true);
+    const [gettingLiveData, setGettingLiveData] = useState(true);
     const [fetching, setFetching] = useState(false);
     const [lastRefreshed, setRefreshed] = useState(new Date());
     const [elapsed, setElapsed] = useState<string>("0s");
@@ -207,10 +246,11 @@ function DepartureBoard({ stop_id, closest, filter }: Props) {
                 let stop_id = id;
                 if (closest) {
                     const pos = await getCurrentPosition();
-                    stop_id = await getClosestStop([
+                    const closestStop = await getClosestStop([
                         pos.coords.latitude,
                         pos.coords.longitude,
                     ]);
+                    stop_id = closestStop.stop_id;
                     if (!stop_id) {
                         setMsg("No stop found nearby");
                         setLoading(false);
@@ -238,6 +278,7 @@ function DepartureBoard({ stop_id, closest, filter }: Props) {
                             setRefreshed(buses.timestamp);
                             setMsg("");
                             setLoading(false);
+                            setGettingLiveData(false);
                         }
                     }
                 });
@@ -261,12 +302,12 @@ function DepartureBoard({ stop_id, closest, filter }: Props) {
     }, [stop_id, closest]);
 
     return (
-        <div className="min-w-[350px] w-[100vw] sm:w-[25vw]">
+        <div className="min-w-[350px] w-full sm:w-[25vw]">
             <Card>
                 <div className="flex flex-col gap-2">
                     <div
                         className="flex flex-col justify-center gap-1 cursor-pointer"
-                        onClick={() => navigate(`/departures/${stopID}`)}>
+                        onClick={() => navigate(`/buses/stops/${stopID}`)}>
                         {closest && (
                             <div className="flex items-center justify-center gap-1 p-1 bg-indigo-800 rounded-lg w-fit h-fit">
                                 <span className="text-xs font-bold ">
@@ -300,9 +341,28 @@ function DepartureBoard({ stop_id, closest, filter }: Props) {
                                             </span>
                                         </div>
                                     ) : (
-                                        <>
+                                        <AnimatePresence>
                                             {buses.map((bus, idx) => (
-                                                <React.Fragment key={bus.trip}>
+                                                <motion.div
+                                                    key={bus.trip}
+                                                    layout
+                                                    initial={{
+                                                        opacity: 0,
+                                                        y: 20,
+                                                    }}
+                                                    animate={{
+                                                        opacity: 1,
+                                                        y: 0,
+                                                    }}
+                                                    exit={{
+                                                        opacity: 0,
+                                                        y: -20,
+                                                    }}
+                                                    transition={{
+                                                        type: "spring",
+                                                        stiffness: 500,
+                                                        damping: 40,
+                                                    }}>
                                                     <BusCard
                                                         bus={bus}
                                                         onClick={() => {
@@ -315,6 +375,9 @@ function DepartureBoard({ stop_id, closest, filter }: Props) {
                                                                       "_blank"
                                                                   );
                                                         }}
+                                                        gettingLiveData={
+                                                            gettingLiveData
+                                                        }
                                                     />
                                                     {idx !==
                                                         buses.length - 1 && (
@@ -326,7 +389,7 @@ function DepartureBoard({ stop_id, closest, filter }: Props) {
                                                             <div className="flex-grow border-t border-dashed border-neutral-600"></div>
                                                         </div>
                                                     )}
-                                                </React.Fragment>
+                                                </motion.div>
                                             ))}
                                             {buses.length === 0 ? (
                                                 <div className="flex justify-center">
@@ -335,7 +398,7 @@ function DepartureBoard({ stop_id, closest, filter }: Props) {
                                                     </span>
                                                 </div>
                                             ) : null}
-                                        </>
+                                        </AnimatePresence>
                                     )}
                                 </div>
                             </div>

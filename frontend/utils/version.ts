@@ -1,1 +1,2 @@
-export default "0.5.0";
+const commit = import.meta.env.VITE_VERSION || "dev";
+export default commit;
