@@ -8,6 +8,7 @@ print("Starting discord bot...")
 dotenv.load_dotenv()
 token = os.getenv("BOT_TOKEN")
 env = os.getenv("ENV", "development")
+disabled = os.getenv("BOT_DISABLED", "false").lower() == "true"
 
 
 async def run_bot(token):
@@ -35,7 +36,9 @@ async def run_bot(token):
 if env == "development":
     print("Running in development mode, bot will not start.")
 else:
-    if token:
+    if disabled:
+        print("Bot is disabled via BOT_DISABLED environment variable.")
+    elif token:
         asyncio.run(run_bot(token))
     else:
         print("No BOT_TOKEN found in environment, bot will not start.")
