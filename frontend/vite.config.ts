@@ -13,7 +13,7 @@ export default defineConfig({
     manifest: {
       "name": "nextbus",
       "short_name": "nextbus",
-      "description": "Super easy bus and train tracking for the UK.",
+      "description": "a simple but powerful bus tracking and planning website (with trains too) ",
       "id": "/",
       "start_url": "/",
       "icons": [
