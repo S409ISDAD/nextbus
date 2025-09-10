@@ -48,7 +48,6 @@ type MapViewProps = {
 };
 import React from "react";
 import { Pulse } from "../components/ui/Pulse";
-import { map } from "leaflet";
 
 const MapView: React.FC<MapViewProps> = ({
     lat,
