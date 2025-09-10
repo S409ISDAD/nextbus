@@ -120,12 +120,6 @@ async def lifespan(app: FastAPI):
         await redis.set("total_ws_connections", "0")
     else:
         print("This instance is not the leader.")
-    print("Setting up database...")
-    Base.metadata.create_all(bind=engine)
-    # we dont actually need to sync vectors every startup
-    # print("Syncing search vectors...")
-    # asyncio.create_task(asyncio.to_thread(sync_search_vectors))
-    print("Database setup complete.")
 
     scheduler = AsyncIOScheduler()
     if is_leader:
@@ -138,14 +132,14 @@ async def lifespan(app: FastAPI):
         )
         scheduler.add_job(
             clear_redis_stats,
-            CronTrigger(hour="0", minute="0", second="0"),
+            CronTrigger(hour="0", minute="0", second="0"),  # daily at midnight
             id="clear_redis_stats",
             replace_existing=True,
             args=[redis],
         )
         scheduler.add_job(
             import_datasets,
-            CronTrigger(hour="2", minute="0", second="0"),
+            CronTrigger(hour="2", minute="0", second="0"),  # daily at 2am
             id="import_datasets",
             replace_existing=True,
         )

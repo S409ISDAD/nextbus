@@ -11,7 +11,6 @@ from sqlalchemy import (
     Enum,
     Float,
     ForeignKey,
-    Index,
     Integer,
     Interval,
     String,
@@ -227,8 +226,6 @@ class Stop(Base):
     stop_times = relationship("StopTime", back_populates="stop")
     lines = relationship("Line", secondary="line_stop_usage", back_populates="stops")
 
-    __table_args__ = (Index("ix_stop_point", "point", postgresql_using="gist"),)
-
     search_vector = deferred(
         Column(
             TSVectorType(
@@ -329,14 +326,12 @@ class StopArea(Base):
         passive_deletes=True,
     )
 
-    __table_args__ = (Index("ix_stoparea_point", "point", postgresql_using="gist"),)
-
 
 class Operator(Base):
     __tablename__ = "operator"
 
     noc = Column(String, nullable=False, primary_key=True)
-    ref = Column(Integer, nullable=True)
+    ref = Column(String, nullable=True)
     name = Column(String, nullable=False)
 
     services = relationship(

@@ -654,13 +654,13 @@ class TXCImporter:
             with sentry_sdk.start_span(op="txc", name="Import TXC File"):
                 try:
                     for txc_operator in self.txc_data.operators:
-                        db_operator = (
-                            self.db.query(Operator)
-                            .filter_by(noc=txc_operator.national_operator_code)
-                            .first()
+                        noc = (
+                            txc_operator.national_operator_code
+                            or txc_operator.operator_code
                         )
+                        db_operator = self.db.query(Operator).filter_by(noc=noc).first()
                         operator = Operator(
-                            noc=txc_operator.national_operator_code,
+                            noc=noc,
                             ref=txc_operator.operator_id,
                             name=txc_operator.operator_name_on_licence
                             or txc_operator.trading_name,
