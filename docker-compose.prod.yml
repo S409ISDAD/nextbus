@@ -89,6 +89,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_HOST: db
       BOT_TOKEN: ${BOT_TOKEN}
+      BOT_DISABLED: ${BOT_DISABLED}
       PYTHONUNBUFFERED: 1
       TZ: Europe/London
       ENV: production
