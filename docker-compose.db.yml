@@ -2,7 +2,7 @@
 services:
   db:
     image: imresamu/postgis
-    container_name: nextbus_db
+    container_name: nextbus-db-1
     restart: unless-stopped
     ports:
       - "5432:5432"

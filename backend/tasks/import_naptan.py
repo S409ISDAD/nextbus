@@ -19,6 +19,7 @@ from ciso8601 import parse_datetime
 
 from backend.utils.bulk_upsert import bulk_upsert
 from backend.utils.download_to_static import download_to_static
+import argparse
 
 new_stops = []
 new_stop_areas = []
@@ -117,7 +118,8 @@ def get_stop_area(element: ET.Element):
 
         try:
             type = StopAreaTypeEnum(element.findtext("StopAreaType"))
-        except:
+        except Exception as e:
+            print(f"an error occurred parsing stop area type: {e}")
             return None
 
         return {
@@ -163,16 +165,20 @@ def handle_stop_point(element: ET.Element):
     new_stops.append(stop)
 
 
-def create_or_update(db: Session):
+def create_or_update(db: Session, no_update: bool):
     if new_stop_areas:
         print(f"Importing {len(new_stop_areas)} Stop Areas.")
-        bulk_upsert(
-            db,
-            StopArea,
-            new_stop_areas,
-            ["id"],
-            ["name", "point", "active", "type", "revision_number"],
-        )
+        if no_update:
+            db.bulk_insert_mappings(StopArea, new_stop_areas)
+            db.commit()
+        else:
+            bulk_upsert(
+                db,
+                StopArea,
+                new_stop_areas,
+                ["id"],
+                ["name", "point", "active", "type", "revision_number"],
+            )
 
     stop_areas = {code[0] for code in db.query(StopArea.id).all()}
 
@@ -199,33 +205,37 @@ def create_or_update(db: Session):
 
     if new_stops:
         print(f"Importing {len(new_stops)} Stops.")
-        bulk_upsert(
-            db,
-            Stop,
-            new_stops,
-            ["atco_code"],
-            [
-                "naptan_code",
-                "point",
-                "common_name",
-                "landmark",
-                "street",
-                "indicator",
-                "crossing",
-                "suburb",
-                "town",
-                "stop_type",
-                "bus_stop_type",
-                "timing_status",
-                "stop_area_id",
-                "modified_at",
-                "created_at",
-                "revision_number",
-            ],
-        )
+        if no_update:
+            db.bulk_insert_mappings(Stop, new_stops)
+            db.commit()
+        else:
+            bulk_upsert(
+                db,
+                Stop,
+                new_stops,
+                ["atco_code"],
+                [
+                    "naptan_code",
+                    "point",
+                    "common_name",
+                    "landmark",
+                    "street",
+                    "indicator",
+                    "crossing",
+                    "suburb",
+                    "town",
+                    "stop_type",
+                    "bus_stop_type",
+                    "timing_status",
+                    "stop_area_id",
+                    "modified_at",
+                    "created_at",
+                    "revision_number",
+                ],
+            )
 
 
-def import_naptan_data(file_path: Path):
+def import_naptan_data(file_path: Path, no_update=False):
     print("Importing NAPTAN data...")
 
     global new_stops, existing_stop_ids, stop_area_ids, new_stop_areas
@@ -246,7 +256,7 @@ def import_naptan_data(file_path: Path):
                     if element.tag == "StopArea":
                         handle_stop_area(element)
 
-            create_or_update(db)
+            create_or_update(db, no_update)
             print("Updating search vectors...")
             with engine.begin() as conn:
                 sync_trigger(
@@ -274,8 +284,15 @@ def import_naptan_data(file_path: Path):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Import NaPTAN data.")
+    parser.add_argument("file", nargs="?", help="Path to NaPTAN XML file")
+    parser.add_argument(
+        "--no_update", action="store_true", help="Do not update search vectors"
+    )
+    args = parser.parse_args()
+
     from_internet = False
-    if len(sys.argv) < 2:
+    if not args.file:
         from_internet = True
         url = "https://beta-naptan.dft.gov.uk/Download/National/xml"
 
@@ -285,10 +302,10 @@ if __name__ == "__main__":
             print("Failed to download NAPTAN data.")
             sys.exit(1)
     else:
-        naptan_path = Path(sys.argv[1])
+        naptan_path = Path(args.file)
 
     try:
-        import_naptan_data(naptan_path)
+        import_naptan_data(naptan_path, args.no_update)
     except KeyboardInterrupt:
         print("Stopped by user.")
     finally:

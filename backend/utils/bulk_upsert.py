@@ -1,5 +1,6 @@
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
+from more_itertools import chunked
 
 
 def bulk_upsert(
@@ -38,12 +39,11 @@ def bulk_upsert(
         for row in rows
     ]
 
-    stmt = insert(model).values(normalized_rows)
-
-    # Build update mapping for on_conflict_do_update
-    update_dict = {col: getattr(stmt.excluded, col) for col in update_cols}
-
-    stmt = stmt.on_conflict_do_update(index_elements=conflict_cols, set_=update_dict)
-
-    session.execute(stmt)
+    for batch in chunked(normalized_rows, 10000):
+        stmt = insert(model).values(batch)
+        stmt = stmt.on_conflict_do_update(
+            index_elements=conflict_cols,
+            set_={col: getattr(stmt.excluded, col) for col in update_cols},
+        )
+        session.execute(stmt)
     session.commit()

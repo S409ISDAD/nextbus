@@ -1,8 +1,7 @@
 import asyncio
 import pathlib
 from backend.tasks.import_holidays import import_bank_holidays
-from backend.tasks.import_txc import import_txc_zip, import_datasource
-from backend.tasks.import_naptan import import_naptan_data
+from backend.tasks.import_txc import import_datasource
 from backend.db.db import SessionLocal
 from backend.models import DataSource
 
@@ -28,7 +27,7 @@ async def do_import():
             db.commit()
             db.refresh(datasource)
         else:
-            datasource.url = str(scso_url)
+            datasource.url = str(scso_url)  # type: ignore
             db.commit()
         datasource_id = datasource.id
 

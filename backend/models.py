@@ -192,7 +192,7 @@ class DataSource(Base):
 class Stop(Base):
     __tablename__ = "stop"
 
-    atco_code = Column(String, primary_key=True)  # atco_code
+    atco_code = Column(String, primary_key=True, index=True)  # atco_code
     naptan_code = Column(String, nullable=True)  # naptan_code
     common_name = Column(String, nullable=False)  # stop_name
     common_short_name = Column(String, nullable=True)  # stop_short_name
@@ -472,7 +472,7 @@ class Calendar(Base):
 
         if not (
             self.start_date <= date and (self.end_date is None or self.end_date >= date)
-        ):
+        ):  # type: ignore
             return False
 
         # check day

@@ -29,3 +29,4 @@ discord.py
 pytest-asyncio
 sentry-sdk[fastapi]
 pydantic_settings
+more_itertools
