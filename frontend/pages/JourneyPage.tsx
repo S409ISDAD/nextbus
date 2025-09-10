@@ -503,7 +503,7 @@ const JourneyPage: React.FC = () => {
                                 </div>
                             </div>
                             <div className="flex flex-col items-center gap-1">
-                                <span className="text-xs font-bold">
+                                <span className="text-xs font-bold text-center">
                                     {bus.livery
                                         ? bus?.livery.name
                                         : "No livery"}

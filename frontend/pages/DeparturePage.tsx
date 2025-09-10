@@ -105,7 +105,7 @@ function BusCard({
                 "cursor-pointer",
                 isTrackedBus(bus) && bus.delay >= 2700 && "opacity-75"
             )}>
-            <div className="flex flex-row items-center justify-between">
+            <div className="flex flex-row items-center justify-between gap-x-2">
                 <div className="flex flex-col justify-around gap-1">
                     <div className="flex flex-row items-stretch mb-1">
                         <div className="flex items-center px-3 py-1 bg-blue-700 rounded-l-2xl">
@@ -514,7 +514,7 @@ const DeparturePage: React.FC = () => {
                             ? `(${stop.bearing})`
                             : ""}
                     </span>
-                    <div className="flex flex-wrap items-center justify-center gap-4 gap-y-1">
+                    <div className="flex flex-wrap items-center justify-center gap-2 gap-y-1">
                         {closestStop && (
                             <div
                                 className="flex items-center gap-2 p-2 cursor-pointer bg-neutral-800/50 w-fit rounded-2xl"
@@ -530,12 +530,6 @@ const DeparturePage: React.FC = () => {
                                     width="20px"></FontAwesomeIcon>
                             </div>
                         )}
-                        <a
-                            className="underline text-sky-500"
-                            href={`https://bustimes.org/stops/${stop?.stop_id}`}
-                            target="_blank">
-                            View on bustimes.org
-                        </a>
 
                         <div
                             className="flex items-center gap-2 p-2 cursor-pointer bg-neutral-800/50 w-fit rounded-2xl"
@@ -562,6 +556,12 @@ const DeparturePage: React.FC = () => {
                                 icon={isFav ? faStar : faStarRegular}
                             />
                         </div>
+                        <a
+                            className="underline text-sky-500"
+                            href={`https://bustimes.org/stops/${stop?.stop_id}`}
+                            target="_blank">
+                            View on bustimes.org
+                        </a>
 
                         {/* <a
                             className="px-2 py-1 text-neutral-400 border-1 rounded-xl border-neutral-800 bg-neutral-900"
@@ -570,7 +570,7 @@ const DeparturePage: React.FC = () => {
                         </a> */}
                     </div>
                 </div>
-                <div className="flex flex-row justify-center gap-1 overflow-x-auto">
+                <div className="flex flex-row justify-start gap-1 overflow-x-auto">
                     {stop?.services
                         .sort((a, b) =>
                             new Intl.Collator(undefined, {
