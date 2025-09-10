@@ -2,7 +2,7 @@ import asyncio
 import os
 import signal
 import dotenv
-from backend.bot.bot import bot, send_status_message
+from backend.bot.bot import bot, send_message
 
 print("Starting discord bot...")
 dotenv.load_dotenv()
@@ -24,7 +24,7 @@ async def run_bot(token):
     try:
         bot_task = asyncio.create_task(bot.start(token))
         await stop_event.wait()
-        await send_status_message("down")
+        await send_message("Server Restarting...")
         await bot.close()
         bot_task.cancel()
     except Exception as e:

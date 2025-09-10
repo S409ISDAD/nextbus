@@ -140,6 +140,20 @@ class DirectionType(enum.Enum):
     unknown = "unknown"
 
 
+class BotStatusEnum(enum.Enum):
+    up = "up"
+    down = "down"
+    degraded = "degraded"
+    restarting = "restarting"
+
+
+class BotStatus(Base):
+    __tablename__ = "bot_status"
+    channel_id = Column(Integer, nullable=False, primary_key=True)
+    timestamp = Column(DateTime(timezone=True), server_default=func.now())
+    last_status = Column(Enum(BotStatusEnum), nullable=False)
+
+
 class BotConfig(Base):
     __tablename__ = "bot_dashboard"
     id = Column(Integer, primary_key=True)
@@ -155,6 +169,24 @@ class ActiveUsersSnapshot(Base):
     )
     total_connections = Column(Integer, nullable=False)
     unique_connections = Column(Integer, nullable=False)
+
+
+class DataSource(Base):
+    __tablename__ = "data_source"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String, nullable=False, unique=True)
+    description = Column(String, nullable=True)
+    url = Column(String, nullable=True)
+    last_modified = Column(DateTime, nullable=True)
+
+    services = relationship(
+        "Service",
+        back_populates="data_source",
+    )
+
+    def __repr__(self):
+        return f"<DataSource(name={self.name}, url={self.url})>"
 
 
 class Stop(Base):
@@ -173,7 +205,9 @@ class Stop(Base):
     )  # PostGIS point for (lat, lon)
     lat = Column(Float, Computed("ST_Y(point::geometry)"), nullable=False)
     lon = Column(Float, Computed("ST_X(point::geometry)"), nullable=False)
-    stop_area_id = Column(String, ForeignKey("stoparea.id"), nullable=True)
+    stop_area_id = Column(
+        String, ForeignKey("stoparea.id", ondelete="CASCADE"), nullable=True
+    )
 
     suburb = Column(String, nullable=True)
     town = Column(String, nullable=True)
@@ -288,7 +322,12 @@ class StopArea(Base):
 
     parent = relationship("StopArea", remote_side=[id], backref="children")
 
-    stops = relationship("Stop", back_populates="stop_area")
+    stops = relationship(
+        "Stop",
+        back_populates="stop_area",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
 
     __table_args__ = (Index("ix_stoparea_point", "point", postgresql_using="gist"),)
 
@@ -300,7 +339,12 @@ class Operator(Base):
     ref = Column(Integer, nullable=True)
     name = Column(String, nullable=False)
 
-    services = relationship("Service", back_populates="operator")
+    services = relationship(
+        "Service",
+        back_populates="operator",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
 
     search_vector = deferred(Column(TSVectorType("name", "noc")))
 
@@ -311,12 +355,16 @@ class BankHoliday(Base):
     name = Column(String, nullable=False, unique=True)
 
     dates = relationship(
-        "BankHolidayDate", back_populates="bank_holiday", cascade="all, delete-orphan"
+        "BankHolidayDate",
+        back_populates="bank_holiday",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
     )
     calendar_links = relationship(
         "CalendarToBankHoliday",
         back_populates="bank_holiday",
         cascade="all, delete-orphan",
+        passive_deletes=True,
     )
 
     calendars = association_proxy("calendar_links", "calendar")
@@ -381,15 +429,26 @@ class Calendar(Base):
     end_date = Column(Date, nullable=True)  # no end date means it is valid indefinitely
 
     calendar_bank_holiday = relationship(
-        "CalendarToBankHoliday", back_populates="calendar", cascade="all, delete-orphan"
+        "CalendarToBankHoliday",
+        back_populates="calendar",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
     )
 
     bank_holidays = association_proxy("calendar_bank_holiday", "bank_holiday")
     calendar_exceptions = relationship(
-        "CalendarException", back_populates="calendar", cascade="all, delete-orphan"
+        "CalendarException",
+        back_populates="calendar",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
     )
 
-    journeys = relationship("Journey", back_populates="calendar")
+    journeys = relationship(
+        "Journey",
+        back_populates="calendar",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
 
     @property
     def days_of_week(self):
@@ -473,9 +532,25 @@ class Service(Base):
     operator_noc = Column(String, ForeignKey("operator.noc"), nullable=True)
     line_names = Column(String, nullable=True)  # List of line names
 
+    data_source_id = Column(
+        Integer, ForeignKey("data_source.id", ondelete="SET NULL"), nullable=True
+    )
+
+    data_source = relationship("DataSource", back_populates="services")
+
     operator = relationship("Operator", back_populates="services")
-    lines = relationship("Line", back_populates="service")
-    journeys = relationship("Journey", back_populates="service")
+    lines = relationship(
+        "Line",
+        back_populates="service",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    journeys = relationship(
+        "Journey",
+        back_populates="service",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
     search_vector = deferred(
         Column(
             TSVectorType(
@@ -504,11 +579,19 @@ class Line(Base):
     geometry = Column(
         Geometry(geometry_type="MULTILINESTRING", srid=4326), nullable=True
     )  # an overall geometry of the line, merged from all track sections
-    service_code = Column(String, ForeignKey("service.service_code"), nullable=False)
+    service_code = Column(
+        String, ForeignKey("service.service_code", ondelete="CASCADE"), nullable=False
+    )
 
     service = relationship("Service", back_populates="lines")
     journeys = relationship("Journey", back_populates="line")
-    routes = relationship("Route", back_populates="lines", secondary="line_to_route")
+    routes = relationship(
+        "Route",
+        back_populates="lines",
+        secondary="line_to_route",
+        cascade="all",
+        passive_deletes=True,
+    )
     stops = relationship("Stop", secondary="line_stop_usage", back_populates="lines")
 
     __table_args__ = (
@@ -567,9 +650,17 @@ class LineStopUsage(Base):
     """
 
     __tablename__ = "line_stop_usage"
-    line_id = Column(String, ForeignKey("line.id"), primary_key=True, nullable=False)
+    line_id = Column(
+        String,
+        ForeignKey("line.id", ondelete="CASCADE"),
+        primary_key=True,
+        nullable=False,
+    )
     stop_id = Column(
-        String, ForeignKey("stop.atco_code"), primary_key=True, nullable=False
+        String,
+        ForeignKey("stop.atco_code", ondelete="CASCADE"),
+        primary_key=True,
+        nullable=False,
     )
 
     __table_args__ = (
@@ -583,8 +674,18 @@ class LineToRoute(Base):
     """
 
     __tablename__ = "line_to_route"
-    line_id = Column(String, ForeignKey("line.id"), primary_key=True, nullable=False)
-    route_id = Column(String, ForeignKey("route.id"), primary_key=True, nullable=False)
+    line_id = Column(
+        String,
+        ForeignKey("line.id", ondelete="CASCADE"),
+        primary_key=True,
+        nullable=False,
+    )
+    route_id = Column(
+        String,
+        ForeignKey("route.id", ondelete="CASCADE"),
+        primary_key=True,
+        nullable=False,
+    )
 
     __table_args__ = (UniqueConstraint("line_id", "route_id", name="uq_line_to_route"),)
 
@@ -601,7 +702,9 @@ class TrackSection(Base):
     distance = Column(Float, nullable=True)  # distance in meters
     geometry = Column(Geometry(geometry_type="LINESTRING", srid=4326), nullable=False)
     route_link_ref = Column(String, nullable=True)  # Reference to the route link
-    route_section_id = Column(String, ForeignKey("route_section.id"), nullable=False)
+    route_section_id = Column(
+        String, ForeignKey("route_section.id", ondelete="CASCADE"), nullable=False
+    )
 
     route_section = relationship("RouteSection", back_populates="track")
 
@@ -616,9 +719,17 @@ class RouteSection(Base):
     geometry = Column(Geometry(geometry_type="LINESTRING", srid=4326), nullable=True)
 
     track = relationship(
-        "TrackSection", back_populates="route_section", cascade="all, delete-orphan"
+        "TrackSection",
+        back_populates="route_section",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
     )
-    route = relationship("Route", back_populates="route_section")
+    route = relationship(
+        "Route",
+        back_populates="route_section",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
 
 
 class Route(Base):
@@ -630,7 +741,9 @@ class Route(Base):
     id = Column(String, primary_key=True)
     private_code = Column(String, nullable=True)
     description = Column(String, nullable=True)
-    route_section_id = Column(String, ForeignKey("route_section.id"), nullable=True)
+    route_section_id = Column(
+        String, ForeignKey("route_section.id", ondelete="CASCADE"), nullable=True
+    )
 
     lines = relationship("Line", back_populates="routes", secondary="line_to_route")
     route_section = relationship("RouteSection", back_populates="route")
@@ -644,15 +757,19 @@ class Journey(Base):
     __tablename__ = "journey"
     id = Column(String, primary_key=True)
     bt_trip_id = Column(Integer, nullable=True)
-    service_code = Column(String, ForeignKey("service.service_code"), nullable=False)
+    service_code = Column(
+        String, ForeignKey("service.service_code", ondelete="CASCADE"), nullable=False
+    )
     vehicle_journey_code = Column(String, nullable=True)
     ticket_machine_code = Column(String, nullable=True)
-    line_id = Column(String, ForeignKey("line.id"), nullable=True)
+    line_id = Column(String, ForeignKey("line.id", ondelete="CASCADE"), nullable=True)
     block_id = Column(String, nullable=True)
     direction = Column(Enum(DirectionType))
     start_time = Column(Interval, nullable=False)
     end_time = Column(Interval)
-    calendar_id = Column(Integer, ForeignKey("calendar.id"), nullable=True)
+    calendar_id = Column(
+        Integer, ForeignKey("calendar.id", ondelete="CASCADE"), nullable=True
+    )
 
     calendar = relationship("Calendar", back_populates="journeys")
 
@@ -755,8 +872,12 @@ class StopTime(Base):
 
     __tablename__ = "stop_time"
     id = Column(Integer, primary_key=True, autoincrement=True)
-    journey_id = Column(String, ForeignKey("journey.id"), nullable=False)
-    stop_id = Column(String, ForeignKey("stop.atco_code"), nullable=False)
+    journey_id = Column(
+        String, ForeignKey("journey.id", ondelete="CASCADE"), nullable=False
+    )
+    stop_id = Column(
+        String, ForeignKey("stop.atco_code", ondelete="CASCADE"), nullable=False
+    )
     stop_sequence = Column(Integer, nullable=False)
     arrival_time = Column(Interval, nullable=True)
     departure_time = Column(Interval, nullable=True)

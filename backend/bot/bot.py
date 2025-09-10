@@ -4,7 +4,7 @@ from discord import app_commands
 from discord.ext import commands
 from backend.db.db import SessionLocal
 from backend.deps import LONDON, UTC
-from backend.models import Line, BotConfig
+from backend.models import Line, BotConfig, BotStatusEnum, BotStatus
 from backend.utils.fetch_json import fetch_json
 from datetime import datetime, timedelta
 from sqlalchemy import event
@@ -17,9 +17,6 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 
 DASHBOARD_CHANNEL_ID = 1411756379542392953
 STATUS_CHANNEL_ID = 1404456642090897669
-
-last_status = None
-not_healthy_time = None
 
 update_queue = asyncio.Queue()
 
@@ -114,26 +111,55 @@ async def get_status():
 
 
 async def monitor_status(interval: int = 60):
-    global last_status
-    global not_healthy_time
     await bot.wait_until_ready()
+    not_healthy_time = None
     while True:
-        status = await get_status()
-        if status != last_status:
+        with SessionLocal() as db:
+            status = await get_status()
+            bot_status = (
+                db.query(BotStatus)
+                .filter(BotStatus.channel_id == str(STATUS_CHANNEL_ID))
+                .first()
+            )
+            last_status = bot_status.last_status if bot_status else None
+            last_not_healthy_time = bot_status.not_healthy_time if bot_status else None
+
             downtime_duration = None
-            if status != "up":
-                if not_healthy_time is None:
-                    not_healthy_time = datetime.now(tz=UTC)
-            else:
-                downtime_duration = (
-                    datetime.now(tz=UTC) - not_healthy_time
-                    if not_healthy_time
-                    else None
-                )
-                not_healthy_time = None
-            await send_status_message(status, downtime_duration)
-            last_status = status
-        await asyncio.sleep(interval)
+            if status != last_status:
+                if status != "up":
+                    if not last_not_healthy_time:
+                        not_healthy_time = datetime.now(tz=UTC)
+                        if bot_status:
+                            bot_status.not_healthy_time = not_healthy_time
+                        else:
+                            bot_status = BotStatus(
+                                channel_id=int(STATUS_CHANNEL_ID),
+                                last_status=status,
+                                not_healthy_time=not_healthy_time,
+                            )
+                            db.add(bot_status)
+                    else:
+                        not_healthy_time = last_not_healthy_time
+                else:
+                    if last_not_healthy_time:
+                        downtime_duration = datetime.now(tz=UTC) - last_not_healthy_time
+                    not_healthy_time = None
+                    if bot_status:
+                        bot_status.not_healthy_time = None
+
+                await send_status_message(status, downtime_duration)
+
+                if bot_status:
+                    bot_status.last_status = status
+                else:
+                    bot_status = BotStatus(
+                        channel_id=str(STATUS_CHANNEL_ID),
+                        last_status=status,
+                        not_healthy_time=not_healthy_time,
+                    )
+                    db.add(bot_status)
+                db.commit()
+            await asyncio.sleep(interval)
 
 
 async def send_status_message(status: str, downtime_duration: timedelta | None = None):
@@ -154,6 +180,15 @@ async def send_status_message(status: str, downtime_duration: timedelta | None =
         duration = " ".join(downtime_str)
         message += f"\n(down for {duration})"
 
+    message += f"\n-# <t:{int(datetime.now(tz=LONDON).timestamp())}:F>"
+
+    channel = bot.get_channel(STATUS_CHANNEL_ID)
+    if channel and isinstance(channel, discord.TextChannel):
+        await channel.send(message)
+
+
+async def send_message(msg: str):
+    message = f"# ℹ️ {msg}"
     message += f"\n-# <t:{int(datetime.now(tz=LONDON).timestamp())}:F>"
 
     channel = bot.get_channel(STATUS_CHANNEL_ID)

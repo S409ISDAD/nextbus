@@ -12,6 +12,8 @@ from shapely.geometry import LineString
 from sqlalchemy import func, select, update
 import sentry_sdk
 from sqlalchemy_searchable import sync_trigger
+from backend.utils.download_if_modified import download_if_modified
+from pathlib import Path
 
 from backend.db.db import SessionLocal, engine
 from backend.deps import LONDON
@@ -20,6 +22,7 @@ from backend.models import (
     Calendar,
     CalendarException,
     CalendarToBankHoliday,
+    DataSource,
     Journey,
     Line,
     LineToRoute,
@@ -36,6 +39,21 @@ from backend.txc import txc
 from backend.utils.bulk_upsert import bulk_upsert
 
 logger = logging.getLogger(__name__)
+
+
+async def import_datasource(id, folder: Path):
+    with SessionLocal() as db:
+        datasource = db.query(DataSource).filter(DataSource.id == id).first()
+
+        if not datasource:
+            print(f"No DataSource with id {id} found.")
+            return
+
+        download_if_modified(datasource, folder / f"data_source_{id}.zip")
+
+        print(f"Importing data from {folder / f'data_source_{id}.zip'}")
+
+        await import_txc_zip(folder / f"data_source_{id}.zip")
 
 
 async def import_txc_zip(zip_path):
@@ -70,6 +88,11 @@ async def import_txc_zip(zip_path):
         else:
             duration = f"{int(time_taken)}s"
         print(f"Total TXC Import completed in {duration}")
+        print(f"Removing data source file {zip_path}")
+        try:
+            zip_path.unlink()
+        except Exception as e:
+            print(f"Error removing file: {e}")
         print("Updating search vectors...")
         with engine.begin() as conn:
             sync_trigger(
@@ -142,6 +165,19 @@ class TXCImporter:
         if not runtime or not runtime.startswith("PT"):
             return timedelta(0)
         return isodate.parse_duration(runtime)
+
+    def clear_data_for_import(self, service_code):
+        print("Clearing existing TXC data...")
+
+        service = (
+            self.db.query(Service)
+            .filter(Service.service_code == service_code)
+            .one_or_none()
+        )
+        if service:
+            print(f"Deleting existing service {service_code} and related data")
+            self.db.delete(service)
+            self.db.commit()
 
     def get_calendar_exception(
         self,
@@ -612,7 +648,10 @@ class TXCImporter:
                         with sentry_sdk.start_span(
                             op="txc_service", name="Handle Service"
                         ):
+                            with sentry_sdk.start_span(op="txc", name="Clear old data"):
+                                self.clear_data_for_import(txc_service.service_code)
                             self.handle_service(txc_service)
+                        # exit()
                     with sentry_sdk.start_span(
                         op="db_add_journeys", name="Add Journeys"
                     ):

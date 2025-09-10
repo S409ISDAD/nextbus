@@ -61,9 +61,9 @@ async def match_service_line(db: Session, service_id: int, r) -> Line | None:
 
 async def match_trip_journey(db: Session, trip_id: int, r) -> Journey | None:
     # try to find a matching Line in our DB for this service_id
-    line = db.query(Journey).filter(Journey.bt_trip_id == trip_id).first()
-    if line:
-        return line
+    journey = db.query(Journey).filter(Journey.bt_trip_id == trip_id).first()
+    if journey:
+        return journey
 
     # if no match by bt_service_id, try to match with other parameters
     trip = await get_trip(trip_id, 0, r)
