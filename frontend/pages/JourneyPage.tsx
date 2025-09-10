@@ -90,6 +90,7 @@ const MapView: React.FC<MapViewProps> = ({
                     latitude: lat,
                     zoom: 12,
                 }}
+                attributionControl={false}
                 mapStyle="https://tiles.stadiamaps.com/styles/alidade_smooth_dark.json"
                 // mapStyle={{
                 //     version: 8,
