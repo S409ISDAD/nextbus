@@ -232,8 +232,8 @@ async def health_check(db: Session = Depends(get_db), redis=Depends(get_redis)):
         db.execute(text("SELECT 1"))
         await redis.ping()
         return {"status": "healthy"}
-    except Exception as e:
-        return {"status": "degraded", "error": str(e)}
+    except Exception:
+        return {"status": "degraded"}
 
 
 app.include_router(ws_router)
