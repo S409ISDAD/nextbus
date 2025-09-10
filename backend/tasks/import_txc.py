@@ -54,7 +54,7 @@ async def import_datasource(id, folder: Path):
         if path:
             print(f"Importing data from {path}")
 
-            await import_txc_zip(folder / f"data_source_{id}.zip", datasource.id)
+            await import_txc_zip(folder / f"txc_source_{id}.zip", id)
 
 
 async def import_txc_zip(zip_path, ds_id=None):
