@@ -1,5 +1,6 @@
 import asyncio
 import pathlib
+from backend.deps import STATIC_DATA_DIR
 from backend.tasks.import_holidays import import_bank_holidays
 from backend.tasks.import_txc import import_datasource
 from backend.db.db import SessionLocal
@@ -8,9 +9,6 @@ from backend.models import DataSource
 
 async def do_import():
     # Always resolve static_data relative to this script
-    script_dir = pathlib.Path(__file__).resolve().parent
-    static_data_dir = script_dir / "../../static_data"
-    static_data_dir = static_data_dir.resolve()  # normalize path
 
     # import_naptan_data(static_data_dir / "NaPTAN.xml")
     # print("✔ NAPTAN data imported successfully")
@@ -31,7 +29,7 @@ async def do_import():
             db.commit()
         datasource_id = datasource.id
 
-    await import_datasource(datasource_id, static_data_dir)
+    await import_datasource(datasource_id, STATIC_DATA_DIR)
     print("✔ TXC data imported successfully")
 
     import_bank_holidays()

@@ -8,6 +8,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 import sentry_sdk
 from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
+from backend.tasks.import_txc import import_datasource
 from backend.api.routes import (
     departures,
     lines,
@@ -21,9 +22,16 @@ from backend.api.routes import (
 )
 from sqlalchemy.orm import Session
 from backend.db.db import SessionLocal, engine, get_db
-from backend.models import ActiveUsersSnapshot, Base
+from backend.models import ActiveUsersSnapshot, Base, DataSource
 from backend.websockets.routes import ws_router
-from backend.deps import floor_to_30s, get_redis_client, get_redis, limiter, VERSION
+from backend.deps import (
+    STATIC_DATA_DIR,
+    floor_to_30s,
+    get_redis_client,
+    get_redis,
+    limiter,
+    VERSION,
+)
 import logging
 from prometheus_fastapi_instrumentator import Instrumentator
 from slowapi import _rate_limit_exceeded_handler
@@ -84,6 +92,16 @@ async def record_snapshot(redis):
         print("Error recording active users:", e)
 
 
+async def import_datasets():
+    print("running dataset import...")
+    with SessionLocal() as db:
+        datasources = db.query(DataSource).all()
+        for datasource in datasources:
+            await import_datasource(datasource.id, STATIC_DATA_DIR)
+
+    print("dataset import complete.")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     redis = get_redis_client()
@@ -124,6 +142,12 @@ async def lifespan(app: FastAPI):
             id="clear_redis_stats",
             replace_existing=True,
             args=[redis],
+        )
+        scheduler.add_job(
+            import_datasets,
+            CronTrigger(hour="2", minute="0", second="0"),
+            id="import_datasets",
+            replace_existing=True,
         )
     scheduler.start()
     print("App startup complete.")
@@ -190,8 +214,8 @@ async def timing_middleware(request: Request, call_next):
     start = time.time()
     client_id = request.headers.get("X-Client-ID")
     if client_id:
-        await redis.sadd("total_clients", client_id)
-        await redis.sadd("total_users", client_id)
+        await redis.sadd("total_clients", client_id)  # type: ignore
+        await redis.sadd("total_users", client_id)  # type: ignore
     response = await call_next(request)
     duration = time.time() - start
     print(f"{request.method} {request.url} completed in {duration:.3f}s")

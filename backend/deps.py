@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta, timezone
 import json
+import pathlib
 import redis.asyncio as redis
 import os
 from slowapi import Limiter
@@ -9,6 +10,11 @@ from pathlib import Path
 
 UTC = timezone.utc
 LONDON = ZoneInfo("Europe/London")
+
+
+script_dir = pathlib.Path(__file__).resolve().parent
+static_data_dir = script_dir / "../static_data"
+STATIC_DATA_DIR = static_data_dir.resolve()  # normalize path
 
 
 def get_version() -> str:

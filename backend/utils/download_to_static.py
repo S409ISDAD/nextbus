@@ -1,13 +1,10 @@
-import pathlib
 import requests
+
+from backend.deps import STATIC_DATA_DIR
 
 
 def download_to_static(url: str, filename: str):
-    script_dir = pathlib.Path(__file__).resolve().parent
-    static_data_dir = script_dir / "../../static_data"
-    static_data_dir = static_data_dir.resolve()  # normalize path
-
-    path = static_data_dir / filename
+    path = STATIC_DATA_DIR / filename
 
     response = requests.get(url)
 

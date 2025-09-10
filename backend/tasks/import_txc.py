@@ -42,19 +42,47 @@ logger = logging.getLogger(__name__)
 
 
 async def import_datasource(id, folder: Path):
+    logs: dict[datetime, str] = {}
     with SessionLocal() as db:
         datasource = db.query(DataSource).filter(DataSource.id == id).first()
 
         if not datasource:
             print(f"No DataSource with id {id} found.")
+            logs[datetime.now(tz=LONDON)] = f"No DataSource with id {id} found."
             return
+
+        logs[datetime.now(tz=LONDON)] = (
+            f"Trying to import data source {datasource.name} from {datasource.url}"
+        )
 
         path = download_if_modified(datasource, folder / f"txc_source_{id}.zip")
 
         if path:
+            logs[datetime.now(tz=LONDON)] = f"Importing data from {path}..."
             print(f"Importing data from {path}")
 
             await import_txc_zip(folder / f"txc_source_{id}.zip", id)
+
+            logs[datetime.now(tz=LONDON)] = (
+                f"Import completed for data source {datasource.name}"
+            )
+            print(f"Import completed for data source {datasource.name}")
+
+        else:
+            logs[datetime.now(tz=LONDON)] = (
+                f"No updates for data source {datasource.name}"
+            )
+            print(f"No updates for data source {datasource.name}")
+
+    log_dir = folder / "logs"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    log_file = log_dir / f"import_log_{id}.log"
+
+    log_file.touch()
+
+    with log_file.open("w") as f:
+        for ts, log in logs.items():
+            f.write(f"{ts.strftime('%d/%m/%Y, %H:%M:%S')} - {log}\n")
 
 
 async def import_txc_zip(zip_path, ds_id=None):
