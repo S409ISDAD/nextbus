@@ -65,7 +65,7 @@ async def closest_stop_for_service(
 
 
 @router.get("/nearby", response_model=list[Service] | None)
-@limiter.limit("10/minute")
+@limiter.limit("20/minute")
 async def nearby_services(
     request: Request,
     lat: float,

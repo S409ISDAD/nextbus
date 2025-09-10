@@ -15,11 +15,7 @@ async def service_details(request: Request, service_id: int, redis=Depends(get_r
     try:
         service_details = await services.get_service_info(service_id, redis)
 
-        return Service(
-            id=service_details.id,
-            line_name=service_details.line_name,
-            detail=service_details.detail,
-        )
+        return service_details
     except Exception as e:
         log.error(f"Unexpected error: {e}")
         raise HTTPException(500, detail="An unexpected error occured")

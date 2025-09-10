@@ -13,7 +13,7 @@ log = logging.getLogger(__name__)
 
 
 @router.get("/scheduled")
-@limiter.limit("30/minute")
+@limiter.limit("45/minute")
 async def departures_scheduled(
     request: Request, stop_id: str, redis=Depends(get_redis)
 ):

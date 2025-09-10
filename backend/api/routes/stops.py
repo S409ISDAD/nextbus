@@ -11,7 +11,7 @@ log = logging.getLogger(__name__)
 
 
 @router.get("/", response_model=Stop)
-@limiter.limit("45/minute")
+@limiter.limit("90/minute")
 async def stop_details(request: Request, stop_id: str, redis=Depends(get_redis)):
     try:
         if not stop_id:

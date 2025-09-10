@@ -75,6 +75,7 @@ const MapView: React.FC<MapViewProps> = ({
                 center: [lng, lat],
                 zoom:
                     mapRef.current.getZoom() < 9 ? 9 : mapRef.current.getZoom(),
+                bearing: 0,
                 duration: 500,
                 essential: false,
             });
