@@ -9,7 +9,7 @@ from backend.db.db import SessionLocal
 from backend.models import Line, Service, Stop, Operator
 
 
-def fuzzy_search_service(query, db, limit=10, threshold=0.2):
+def fuzzy_search_service(query, db, limit=10, threshold=0.3):
     # Fuzzy search on Service.description and Service.line_names
     return (
         db.query(Service)
@@ -51,7 +51,7 @@ def merge_service_line(service: Service, line: Line):
 def search_services_and_lines(query, db: Session, limit: int = 10):
     results = []
 
-    service_query = search(select(Service), query).limit(limit)
+    service_query = search(select(Service), query, sort=True).limit(limit)
     services = list(db.scalars(service_query).all())
     # If not enough results, try fuzzy search
     if len(services) < limit:
@@ -63,7 +63,7 @@ def search_services_and_lines(query, db: Session, limit: int = 10):
                 services.append(s)
         services = services[:limit]
 
-    line_query = search(select(Line), query).limit(limit)
+    line_query = search(select(Line), query, sort=True).limit(limit)
     lines = list(db.scalars(line_query).all())
 
     seen_line_ids = set()
@@ -85,14 +85,14 @@ def search_services_and_lines(query, db: Session, limit: int = 10):
 async def search_db(query: str, db: Session, limit: int = 10):
     results = defaultdict(list)
 
-    operators_query = search(select(Operator), query).limit(limit)
+    operators_query = search(select(Operator), query, sort=True).limit(limit)
     operators = list(db.scalars(operators_query).all())
     results["operators"] = operators
 
     services_and_lines = search_services_and_lines(query, db, limit)
     results["lines"].extend(services_and_lines)
 
-    stops_query = search(select(Stop), query).limit(limit)
+    stops_query = search(select(Stop), query, sort=True).limit(limit)
     stops = list(db.scalars(stops_query).all())
     for s in stops:
         if hasattr(s, "point"):
@@ -103,7 +103,7 @@ async def search_db(query: str, db: Session, limit: int = 10):
 
 
 if __name__ == "__main__":
-    search_query = "64 Morn Hill, Alresford, Four Marks"
+    search_query = "alton"
     with SessionLocal() as db:
         results = asyncio.run(search_db(search_query, db))
         print(f"Search results for query '{search_query}':")

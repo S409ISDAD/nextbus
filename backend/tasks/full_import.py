@@ -1,5 +1,4 @@
 import asyncio
-import pathlib
 from backend.deps import STATIC_DATA_DIR
 from backend.tasks.import_holidays import import_bank_holidays
 from backend.tasks.import_txc import import_datasource

@@ -8,7 +8,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 import sentry_sdk
 from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
-from backend.tasks.import_txc import import_datasource
+from backend.tasks.import_all_datasets import import_datasets
 from backend.api.routes import (
     departures,
     lines,
@@ -22,11 +22,10 @@ from backend.api.routes import (
     trains,
 )
 from sqlalchemy.orm import Session
-from backend.db.db import SessionLocal, engine, get_db
-from backend.models import ActiveUsersSnapshot, Base, DataSource
+from backend.db.db import SessionLocal, get_db
+from backend.models import ActiveUsersSnapshot
 from backend.websockets.routes import ws_router
 from backend.deps import (
-    STATIC_DATA_DIR,
     floor_to_30s,
     get_redis_client,
     get_redis,
@@ -91,16 +90,6 @@ async def record_snapshot(redis):
                 db.commit()
     except Exception as e:
         print("Error recording active users:", e)
-
-
-async def import_datasets():
-    print("running dataset import...")
-    with SessionLocal() as db:
-        datasources = db.query(DataSource).all()
-        for datasource in datasources:
-            await import_datasource(datasource.id, STATIC_DATA_DIR)
-
-    print("dataset import complete.")
 
 
 @asynccontextmanager
