@@ -7,9 +7,14 @@ import { getCurrentPosition } from "../utils/locations";
 import type { ServiceInfo } from "../models/ServiceInfo";
 import getNearby from "../utils/getNearby";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBus, faWarning } from "@fortawesome/free-solid-svg-icons";
+import {
+    faBus,
+    faMagnifyingGlass,
+    faWarning,
+} from "@fortawesome/free-solid-svg-icons";
 import { getClosestStop } from "../utils/closestStop";
 import { useNavigate } from "react-router";
+import SearchBar from "../components/SearchBar";
 
 const Home: React.FC = () => {
     // const navigate = useNavigate();
@@ -17,6 +22,7 @@ const Home: React.FC = () => {
     const [services, setServices] = React.useState<ServiceInfo[]>([]);
     const [closestStop, setClosestStop] = React.useState<string | null>(null);
     const [showStop, setShowStop] = React.useState(false);
+    const [searchQuery, setSearchQuery] = React.useState("");
 
     const navigate = useNavigate();
 
@@ -125,28 +131,7 @@ const Home: React.FC = () => {
                         </div>
                     )}
 
-                    {/* <div className="flex items-center w-full py-2 rounded-full shadow-2xl border-1 border-neutral-800 bg-neutral-900">
-                        <div className="ml-4 mr-2 text-gray-500">
-                            <FontAwesomeIcon
-                                icon={faMagnifyingGlass}
-                                width={16}
-                                height={16}
-                            />
-                        </div>
-
-                        <input
-                            type="text"
-                            placeholder="Enter Stop Code (e.g. 1990PH130449)"
-                            className="flex-grow font-medium placeholder-gray-400 bg-transparent focus:outline-none"
-                        />
-                        <button className="mr-2 px-4 py-1.5 font-bold text-black rounded-full bg-teal-400  transition cursor-pointer shadow-[0_0_5px_1px_rgba(0,187,167,0.5)] hover:shadow-[0_0_10px_2px_rgba(0,187,167,0.6)]">
-                            Go
-                        </button>
-                    </div> */}
-                    {/* <span className="text-xl font-bold text-center">
-                        See your nearest bus stop:
-                    </span> */}
-                    {/* <DepartureBoard stop_id="" closest={true}></DepartureBoard> */}
+                    <SearchBar />
 
                     <div className="flex flex-row flex-wrap items-start justify-center w-full gap-5 p-5">
                         <Card className="max-w-[90vw] flex flex-col items-center gap-2">

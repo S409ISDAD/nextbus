@@ -4,6 +4,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
     faBus,
     faHome,
+    faMagnifyingGlass,
     faMap,
     faTrainSubway,
 } from "@fortawesome/free-solid-svg-icons";
@@ -75,12 +76,17 @@ export default function Layout() {
                                 buses
                             </button>
                         </Link>
-                        <Link to="/trains">
+                        {/* <Link to="/trains">
                             <button className="p-2 px-3 transition-all cursor-pointer border-neutral-800 h-max rounded-2xl border-1 hover:border-blue-700 ">
                                 trains
                             </button>
-                        </Link>
+                        </Link> */}
                     </div>
+                    <Link to="/search">
+                        <button className="p-2 px-3 transition-all cursor-pointer border-neutral-800 h-max rounded-2xl border-1 hover:border-blue-700 ">
+                            search
+                        </button>
+                    </Link>
                 </div>
                 <main>
                     <div className="h-15"></div>
@@ -98,7 +104,15 @@ export default function Layout() {
         ];
         return (
             <div className="h-full">
-                <nav className="bottom-0 left-0 right-0 flex justify-around items-center p-3 z-[99] border-t border-neutral-800 rounded-t-2xl fixed w-full shadow-2xl md:shadow-xl bg-[#131313]">
+                <Link
+                    to="/search"
+                    className="fixed z-[100] bottom-22 right-4 bg-sky-500/30 text-white rounded-full shadow-lg w-12 h-12 flex items-center justify-center transition-all"
+                    aria-label="Search">
+                    <span className="text-lg font-bold">
+                        <FontAwesomeIcon icon={faMagnifyingGlass} />
+                    </span>
+                </Link>
+                <nav className="bottom-0 left-0 text-neutral-200 right-0 flex justify-around items-center p-3 z-[99] border-t border-neutral-800 rounded-t-2xl fixed w-full shadow-2xl md:shadow-xl bg-[#131313]">
                     {items.map((item) => (
                         <Link
                             to={item.href}
@@ -112,7 +126,12 @@ export default function Layout() {
                                         : ""
                                 } transition-all p-1`}
                             />
-                            <span className="px-2 text-xs font-semibold">
+                            <span
+                                className={`${
+                                    whereAmI() == item.name
+                                        ? "text-blue-300 font-bold"
+                                        : ""
+                                } px-2 text-xs font-semibold`}>
                                 {item.name}
                             </span>
                         </Link>

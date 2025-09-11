@@ -25,6 +25,7 @@ import version from "../utils/version";
 import { useShowAppNav } from "../utils/AppNav";
 import toast from "react-hot-toast";
 import { MotionConfig } from "framer-motion";
+import SearchPage from "../pages/Search";
 
 import { useState, useEffect } from "react";
 import {
@@ -188,6 +189,10 @@ function App() {
                             <Route path="/terms" element={<Terms />} />
                             <Route path="/data" element={<Data />} />
                             <Route path="/stats" element={<StatsPage />} />
+                            <Route
+                                path="/search/:query?"
+                                element={<SearchPage />}
+                            />
                             <Route path="/map" element={<Map />} />
                             <Route path="/buses" element={<BusPage />} />
                             <Route
