@@ -7,6 +7,7 @@ import Terms from "../pages/Terms";
 import Data from "../pages/Data";
 import BusPage from "../pages/BusPage";
 import ServicePage from "../pages/ServicePage";
+import LinePage from "../pages/LinePage";
 import Layout from "../components/Layout";
 import StationPage from "../pages/StationPage";
 import TrainPage from "../pages/TrainPage";
@@ -206,6 +207,10 @@ function App() {
                             <Route
                                 path="buses/services/:service_id"
                                 element={<ServicePage />}
+                            />
+                            <Route
+                                path="buses/lines/:line_id"
+                                element={<LinePage />}
                             />
                             <Route
                                 path="/trains"

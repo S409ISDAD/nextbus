@@ -1,16 +1,22 @@
 export interface Search {
     stops: StopResult[];
     lines: LineResult[];
-    services: ServiceResult[];
 }
 
-interface LineResult {
-    bt_service_id: string | null;
+export interface LineResult {
+    line_id: string;
     line_name: string;
-    outbound_description: string;
-    service_code: string;
-    id: string;
     inbound_description: string;
+    outbound_description: string;
+    geometry: any | null;
+    bt_service_id: string;
+    service_code: string;
+    description: string | null;
+    origin: string | null;
+    destination: string | null;
+    vias: string | null;
+    operator_noc: string | null;
+    line_names: string;
 }
 
 interface StopResult {
@@ -31,15 +37,4 @@ interface StopResult {
     bearing: string | null;
     naptan_code: string;
     stop_type: string;
-}
-
-interface ServiceResult {
-    description: string;
-    origin: string;
-    vias: string;
-    line_names: string;
-    service_code: string;
-    destination: string;
-    operator_noc: string;
-    data_source_id: string | null;
 }

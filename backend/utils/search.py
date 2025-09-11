@@ -30,6 +30,58 @@ def fuzzy_search_service(query, db, limit=10, threshold=0.2):
     )
 
 
+def merge_service_line(service: Service, line: Line):
+    return {
+        "line_id": line.id,
+        "line_name": line.line_name,
+        "inbound_description": line.inbound_description,
+        "outbound_description": line.outbound_description,
+        "geometry": None,
+        "bt_service_id": line.bt_service_id,
+        "service_code": service.service_code if service else line.service_code,
+        "description": service.description if service else None,
+        "origin": service.origin if service else None,
+        "destination": service.destination if service else None,
+        "vias": service.vias if service else None,
+        "operator_noc": service.operator_noc if service else None,
+        "line_names": service.line_names if service else line.line_name,
+    }
+
+
+def search_services_and_lines(query, db: Session, limit: int = 10):
+    results = []
+
+    service_query = search(select(Service), query).limit(limit)
+    services = list(db.scalars(service_query).all())
+    # If not enough results, try fuzzy search
+    if len(services) < limit:
+        fuzzy_services = fuzzy_search_service(query, db, limit=limit)
+        # Avoid duplicates
+        service_ids = {s.service_code for s in services}
+        for s in fuzzy_services:
+            if s.service_code not in service_ids:
+                services.append(s)
+        services = services[:limit]
+
+    line_query = search(select(Line), query).limit(limit)
+    lines = list(db.scalars(line_query).all())
+
+    seen_line_ids = set()
+
+    for service in services:
+        for line in service.lines:
+            if line.id not in seen_line_ids:
+                seen_line_ids.add(line.id)
+                results.append(merge_service_line(service, line))
+
+    for line in lines:
+        if line.id not in seen_line_ids:
+            seen_line_ids.add(line.id)
+            results.append(merge_service_line(line.service, line))
+
+    return results[:limit]
+
+
 async def search_db(query: str, db: Session, limit: int = 10):
     results = defaultdict(list)
 
@@ -37,31 +89,14 @@ async def search_db(query: str, db: Session, limit: int = 10):
     operators = list(db.scalars(operators_query).all())
     results["operators"] = operators
 
-    service_query = search(select(Service), query).limit(limit)
-    service = list(db.scalars(service_query).all())
-    # If not enough results, try fuzzy search
-    if len(service) < limit:
-        fuzzy_services = fuzzy_search_service(query, db, limit=limit)
-        # Avoid duplicates
-        service_ids = {s.service_code for s in service}
-        for s in fuzzy_services:
-            if s.service_code not in service_ids:
-                service.append(s)
-        service = service[:limit]
-    results["services"] = service
-
-    line_query = search(select(Line), query).limit(limit)
-    line = list(db.scalars(line_query).all())
-    for l in line:
-        if hasattr(l, "geometry"):
-            l.geometry = None
-    results["lines"] = line
+    services_and_lines = search_services_and_lines(query, db, limit)
+    results["lines"].extend(services_and_lines)
 
     stops_query = search(select(Stop), query).limit(limit)
     stops = list(db.scalars(stops_query).all())
     for s in stops:
         if hasattr(s, "point"):
-            s.point = None
+            setattr(s, "point", None)
     results["stops"] = stops
 
     return results
@@ -77,11 +112,7 @@ if __name__ == "__main__":
             for item in items:
                 if isinstance(item, Operator):
                     print(f"- {item.name} (NOC: {item.noc})")
-                elif isinstance(item, Service):
-                    print(
-                        f"- {item.description} | {item.line_names} (ID: {item.service_code})"
-                    )
-                elif isinstance(item, Line):
-                    print(f"- {item.line_name} | {item.outbound_description}")
+                elif isinstance(item, dict):
+                    print(f"- {item['line_name']} | {item['description']}")
                 elif isinstance(item, Stop):
                     print(f"- {item.common_name} (ID: {item.atco_code})")

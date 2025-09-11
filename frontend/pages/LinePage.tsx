@@ -7,13 +7,13 @@ import { getClosestStopForService } from "../utils/closestStop";
 import { useParams } from "react-router";
 import { getCurrentPosition } from "../utils/locations";
 
-import { getService } from "../utils/getService";
-import type { ServiceInfo } from "../models/ServiceInfo";
+import { getDBService } from "../utils/getService";
+import type { LineResult } from "../models/Search";
 
-const ServicePage: React.FC = () => {
-    const { service_id } = useParams();
+const linePage: React.FC = () => {
+    const { line_id } = useParams();
 
-    const [service, setService] = useState<ServiceInfo>();
+    const [line, setline] = useState<LineResult>();
     const [loading, setLoading] = useState(true);
     const [stopID, setStopID] = useState<string>("");
 
@@ -24,15 +24,15 @@ const ServicePage: React.FC = () => {
 
         const getData = async (id: string) => {
             try {
-                const service = await getService(id);
+                const line = await getDBService(id);
 
-                if (service) {
-                    setService(service);
-                    document.title = `Service ${service.line_name} | nextbus`;
+                if (line) {
+                    setline(line);
+                    document.title = `Service ${line.line_name} | nextbus`;
                     const pos = await getCurrentPosition();
                     const closest_stop = await getClosestStopForService(
                         [pos.coords.latitude, pos.coords.longitude],
-                        service_id ? service_id : ""
+                        line_id ? line_id : ""
                     );
                     console.log("closest_stop", closest_stop);
                     setStopID(closest_stop);
@@ -45,24 +45,24 @@ const ServicePage: React.FC = () => {
                 setLoading(false);
             }
         };
-        const init = async (service_id: string) => {
+        const init = async (line_id: string) => {
             try {
-                await getData(service_id);
+                await getData(line_id);
             } catch (error) {
                 console.error("Init error:", error);
-                setMsg("Unable to get service data.");
+                setMsg("Unable to get line data.");
                 setLoading(false);
             }
         };
 
-        if (service_id) {
-            init(service_id);
+        if (line_id) {
+            init(line_id);
         }
 
         return () => {
             clearInterval(interval);
         };
-    }, [service_id]);
+    }, [line_id]);
 
     return (
         <div className="p-5 md:mx-20">
@@ -70,19 +70,21 @@ const ServicePage: React.FC = () => {
                 <div className="flex flex-col items-center justify-center gap-6">
                     <div className="flex flex-col items-center justify-center gap-3">
                         <span className="text-4xl font-bold md:text-4xl text-start">
-                            Service {service?.line_name}
+                            {line?.line_name}
                         </span>
-                        <span className="text-xl font-semibold text-neutral-300">
-                            Via: {service?.detail}
+                        <span className="text-xl font-semibold text-center text-neutral-300">
+                            {line?.description}
                         </span>
-                        <div className="flex flex-wrap items-center justify-center gap-4 gap-y-1">
-                            <a
-                                className="underline text-sky-500"
-                                href={`https://bustimes.org/services/${service_id}`}
-                                target="_blank">
-                                View on bustimes.org
-                            </a>
-                        </div>
+                        {line?.bt_service_id && (
+                            <div className="flex flex-wrap items-center justify-center gap-4 gap-y-1">
+                                <a
+                                    className="underline text-sky-500"
+                                    href={`https://bustimes.org/services/${line?.bt_service_id}`}
+                                    target="_blank">
+                                    View on bustimes.org
+                                </a>
+                            </div>
+                        )}
                     </div>
                 </div>
                 {msg && <span className="text-red-500 ">{msg}</span>}
@@ -92,11 +94,11 @@ const ServicePage: React.FC = () => {
                 {stopID && (
                     <DepartureBoard
                         stop_id={stopID}
-                        filter={service?.line_name}></DepartureBoard>
+                        filter={line?.line_name}></DepartureBoard>
                 )}
             </div>
         </div>
     );
 };
 
-export default ServicePage;
+export default linePage;

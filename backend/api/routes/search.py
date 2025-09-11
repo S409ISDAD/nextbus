@@ -9,12 +9,12 @@ log = logging.getLogger(__name__)
 
 
 @router.get("/")
-async def search(query: str, db=Depends(get_db)):
+async def search(query: str, limit: int = 10, db=Depends(get_db)):
     try:
         if not query or len(query) < 1:
             raise HTTPException(400, detail="Query can't be empty")
 
-        results = await search_db(query, db)
+        results = await search_db(query, db, limit)
         return results
 
     except Exception as e:

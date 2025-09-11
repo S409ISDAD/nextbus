@@ -7,6 +7,7 @@ from backend.models import Line, Service
 from backend.db.db import get_db
 from sqlalchemy.orm import joinedload
 from backend.utils.match_bt import match_service_line
+from backend.utils.search import merge_service_line
 
 router = APIRouter()
 
@@ -37,10 +38,10 @@ async def line(
         if not line:
             raise HTTPException(404, detail="Line not found")
 
-        line_dict = line.__dict__.copy()
-        line_dict.pop("geometry", None)
+        service = line.service
+        line_service = merge_service_line(service, line)
 
-        return line_dict
+        return line_service
     except Exception as e:
         log.error(f"Unexpected error: {e}")
         raise HTTPException(500, detail="An unexpected error occured")

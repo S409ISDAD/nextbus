@@ -35,7 +35,6 @@ const Home: React.FC = () => {
             {query && (
                 <div className="flex flex-col w-full max-w-3xl gap-4 mt-4">
                     {results?.lines.length === 0 &&
-                    results.services.length === 0 &&
                     results.stops.length === 0 ? (
                         <span className="text-xl font-medium text-center text-gray-400">
                             No results found
@@ -44,54 +43,57 @@ const Home: React.FC = () => {
                         <>
                             <div className="flex flex-col gap-2">
                                 <span className="text-2xl font-bold">
-                                    Lines
-                                </span>
-                                {results?.lines.length === 0 && (
-                                    <span className="text-sm text-gray-400">
-                                        No lines found.
-                                    </span>
-                                )}
-                                {results?.lines.map((line) => (
-                                    <Card
-                                        key={line.id}
-                                        className="flex flex-col cursor-pointer"
-                                        onClick={() => {
-                                            navigate(
-                                                line.bt_service_id
-                                                    ? `/buses/services/${line.bt_service_id}`
-                                                    : ""
-                                            );
-                                        }}>
-                                        <span className="text-lg font-bold">
-                                            {line.line_name}
-                                        </span>
-                                        <span className="text-sm text-gray-400">
-                                            {line.inbound_description}
-                                        </span>
-                                    </Card>
-                                ))}
-                            </div>
-                            <div className="flex flex-col gap-2">
-                                <span className="text-2xl font-bold">
                                     Services
                                 </span>
-                                {results?.services.length === 0 && (
+                                {results?.lines.length === 0 && (
                                     <span className="text-sm text-gray-400">
                                         No services found.
                                     </span>
                                 )}
-                                {results?.services.map((service) => (
-                                    <Card
-                                        key={service.service_code}
-                                        className="flex flex-col cursor-pointer">
-                                        <span className="text-lg font-bold">
-                                            {service.line_names} -{" "}
-                                            {service.description}
-                                        </span>
-                                        <span className="text-sm text-gray-400">
-                                            Via: {service.vias}
-                                        </span>
-                                    </Card>
+
+                                {results?.lines.map((line, idx) => (
+                                    <>
+                                        <div className="flex items-center gap-2 mb-0.5">
+                                            <div className="flex-grow border-t border-dashed border-neutral-600"></div>
+                                            <span className="text-[10px] text-neutral-600">
+                                                nextbus
+                                            </span>
+                                            <div className="flex-grow border-t border-dashed border-neutral-600"></div>
+                                        </div>
+                                        <div
+                                            key={line.line_id}
+                                            className="flex flex-col cursor-pointer"
+                                            onClick={() => {
+                                                navigate(
+                                                    `/buses/lines/${line.line_id}`
+                                                );
+                                            }}>
+                                            <div className="flex flex-row items-stretch mb-1">
+                                                <div className="flex items-center px-3 py-1 bg-blue-700 rounded-l-2xl">
+                                                    <span className="flex items-center justify-center text-xl font-bold text-center">
+                                                        {line.line_name}
+                                                    </span>
+                                                </div>
+                                                <div className="flex flex-col justify-center px-3 bg-neutral-800/50 rounded-r-2xl">
+                                                    <span className="font-semibold text">
+                                                        {line.description}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <span className="text-sm text-gray-400">
+                                                {line.vias}
+                                            </span>
+                                        </div>
+                                        {idx === results.lines.length - 1 && (
+                                            <div className="flex items-center gap-2 mb-0.5">
+                                                <div className="flex-grow border-t border-dashed border-neutral-600"></div>
+                                                <span className="text-[10px] text-neutral-600">
+                                                    nextbus
+                                                </span>
+                                                <div className="flex-grow border-t border-dashed border-neutral-600"></div>
+                                            </div>
+                                        )}
+                                    </>
                                 ))}
                             </div>
                             <div className="flex flex-col gap-2">

@@ -1,9 +1,10 @@
 import api from "../src/api"
 
 import type { ServiceInfo } from "../models/ServiceInfo";
+import type { LineResult } from "../models/Search";
 
 
-const getService = async (service_id: string) => {
+export const getService = async (service_id: string) => {
     try {
         const response = await api.get<ServiceInfo>(
             `/services/?service_id=${service_id}`
@@ -21,4 +22,16 @@ const getService = async (service_id: string) => {
     }
 };
 
-export default getService
+export const getDBService = async (service_id: string) => {
+    try {
+        const response = await api.get<LineResult>(
+            `/lines/${service_id}`
+        );
+
+        return response.data;
+
+    } catch (error) {
+        console.error("failed to get stop", error);
+        return null;
+    }
+};
