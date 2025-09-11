@@ -126,7 +126,6 @@ async def import_txc_zip(zip_path, ds_id=None):
                 "service",
                 "search_vector",
                 [
-                    "service_code",
                     "description",
                     "origin",
                     "destination",
