@@ -1,4 +1,4 @@
-import { Link, Outlet } from "react-router";
+import { Link, Outlet, useNavigate } from "react-router";
 import { useShowAppNav, whereAmI } from "../utils/AppNav";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -10,6 +10,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { faDiscord, faGithub } from "@fortawesome/free-brands-svg-icons";
 import version from "../utils/version";
+import { motion } from "framer-motion";
 
 const footer = (currentYear: number) => (
     <footer className="flex flex-row flex-wrap items-start justify-center w-full gap-2 p-3 text-sm text-gray-200 border-t-2 max-h-fit border-neutral-800">
@@ -50,6 +51,7 @@ const footer = (currentYear: number) => (
 export default function Layout() {
     const currentYear = new Date().getFullYear();
     const showAppNav = useShowAppNav();
+    const navigate = useNavigate();
     if (!showAppNav) {
         return (
             <div className="h-full">
@@ -104,14 +106,17 @@ export default function Layout() {
         ];
         return (
             <div className="h-full">
-                <Link
-                    to="/search"
+                <motion.div
+                    whileTap={{ scale: 0.9, transition: { duration: 0.1 } }}
+                    onClick={() => {
+                        navigate("/search");
+                    }}
                     className="fixed z-[100] bottom-22 right-4 bg-sky-500/30 text-white rounded-full shadow-lg w-12 h-12 flex items-center justify-center transition-all"
                     aria-label="Search">
                     <span className="text-lg font-bold">
                         <FontAwesomeIcon icon={faMagnifyingGlass} />
                     </span>
-                </Link>
+                </motion.div>
                 <nav className="bottom-0 left-0 text-neutral-200 right-0 flex justify-around items-center p-3 z-[99] border-t border-neutral-800 rounded-t-2xl fixed w-full shadow-2xl md:shadow-xl bg-[#131313]">
                     {items.map((item) => (
                         <Link

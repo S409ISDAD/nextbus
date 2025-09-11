@@ -7,11 +7,7 @@ import { getCurrentPosition } from "../utils/locations";
 import type { ServiceInfo } from "../models/ServiceInfo";
 import getNearby from "../utils/getNearby";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-    faBus,
-    faMagnifyingGlass,
-    faWarning,
-} from "@fortawesome/free-solid-svg-icons";
+import { faBus, faWarning } from "@fortawesome/free-solid-svg-icons";
 import { getClosestStop } from "../utils/closestStop";
 import { useNavigate } from "react-router";
 import SearchBar from "../components/SearchBar";
@@ -22,7 +18,6 @@ const Home: React.FC = () => {
     const [services, setServices] = React.useState<ServiceInfo[]>([]);
     const [closestStop, setClosestStop] = React.useState<string | null>(null);
     const [showStop, setShowStop] = React.useState(false);
-    const [searchQuery, setSearchQuery] = React.useState("");
 
     const navigate = useNavigate();
 

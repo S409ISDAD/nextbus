@@ -5,8 +5,8 @@ export const useShowAppNav = (): boolean => {
     const [show, setShow] = useState<boolean>(false);
 
     useEffect(() => {
-        // const isPWA = window.matchMedia("(display-mode: standalone)");
-        const isPWA = window.matchMedia("(display-mode: browser)");
+        const isPWA = window.matchMedia("(display-mode: standalone)");
+        // const isPWA = window.matchMedia("(display-mode: browser)");
         if (isPWA.matches) {
             const isMobileView = window.matchMedia("(max-width: 640px)");
             setShow(isMobileView.matches);
