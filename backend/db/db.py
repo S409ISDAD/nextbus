@@ -37,8 +37,6 @@ def sync_search_vectors():
             "stop",
             "search_vector",
             [
-                "atco_code",
-                "naptan_code",
                 "common_name",
                 "common_short_name",
                 "landmark",
@@ -52,7 +50,6 @@ def sync_search_vectors():
             "service",
             "search_vector",
             [
-                "service_code",
                 "description",
                 "origin",
                 "destination",

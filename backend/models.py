@@ -229,14 +229,20 @@ class Stop(Base):
     search_vector = deferred(
         Column(
             TSVectorType(
-                "atco_code",
-                "naptan_code",
                 "common_name",
                 "common_short_name",
                 "landmark",
                 "street",
                 "suburb",
                 "town",
+                weights={
+                    "common_name": "A",
+                    "common_short_name": "A",
+                    "landmark": "B",
+                    "street": "B",
+                    "suburb": "C",
+                    "town": "C",
+                },
             ),
         )
     )
@@ -549,12 +555,18 @@ class Service(Base):
     search_vector = deferred(
         Column(
             TSVectorType(
-                "service_code",
                 "description",
                 "origin",
                 "destination",
                 "vias",
                 "line_names",
+                weights={
+                    "line_names": "A",
+                    "description": "B",
+                    "origin": "C",
+                    "destination": "C",
+                    "vias": "C",
+                },
             ),
         )
     )
@@ -599,6 +611,11 @@ class Line(Base):
                 "line_name",
                 "inbound_description",
                 "outbound_description",
+                weights={
+                    "line_name": "A",
+                    "inbound_description": "B",
+                    "outbound_description": "B",
+                },
             ),
         )
     )

@@ -103,7 +103,7 @@ async def search_db(query: str, db: Session, limit: int = 10):
 
 
 if __name__ == "__main__":
-    search_query = "alton"
+    search_query = "13"
     with SessionLocal() as db:
         results = asyncio.run(search_db(search_query, db))
         print(f"Search results for query '{search_query}':")
