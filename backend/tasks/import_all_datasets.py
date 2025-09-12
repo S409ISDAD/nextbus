@@ -9,9 +9,9 @@ from backend.tasks.import_txc import import_datasource
 async def import_datasets():
     print("running dataset import...")
     with SessionLocal() as db:
-        datasources = db.query(DataSource).all()
-        for datasource in datasources:
-            await import_datasource(datasource.id, STATIC_DATA_DIR)
+        datasource_ids = [id[0] for id in db.query(DataSource.id).all()]
+    for id in datasource_ids:
+        await import_datasource(id, STATIC_DATA_DIR)
 
     print("dataset import complete.")
 

@@ -58,18 +58,18 @@ async def import_datasource(id, folder: Path):
 
         path = download_if_modified(datasource, folder / f"txc_source_{id}.zip")
 
-        if path:
-            logs[datetime.now(tz=LONDON)] = f"Importing data from {path}..."
-            print(f"Importing data from {path}")
+    if path:
+        logs[datetime.now(tz=LONDON)] = f"Importing data from {path}..."
+        print(f"Importing data from {path}")
 
-            await import_txc_zip(folder / f"txc_source_{id}.zip", id)
+        await import_txc_zip(folder / f"txc_source_{id}.zip", id)
 
-            logs[datetime.now(tz=LONDON)] = f"Import completed for data source {name}"
-            print(f"Import completed for data source {name}")
+        logs[datetime.now(tz=LONDON)] = f"Import completed for data source {name}"
+        print(f"Import completed for data source {name}")
 
-        else:
-            logs[datetime.now(tz=LONDON)] = f"No updates for data source {name}"
-            print(f"No updates for data source {name}")
+    else:
+        logs[datetime.now(tz=LONDON)] = f"No updates for data source {name}"
+        print(f"No updates for data source {name}")
 
     log_dir = folder / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
