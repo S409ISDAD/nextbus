@@ -1,7 +1,7 @@
 import asyncio
 from collections import defaultdict
 
-from sqlalchemy import select, func, or_
+from sqlalchemy import select, func
 from sqlalchemy.orm import Session
 from sqlalchemy_searchable import search
 
@@ -9,28 +9,7 @@ from backend.db.db import SessionLocal
 from backend.models import Line, Service, Stop, Operator
 
 
-def fuzzy_search_service(query, db, limit=10, threshold=0.3):
-    # Fuzzy search on Service.description and Service.line_names
-    return (
-        db.query(Service)
-        .filter(
-            or_(
-                func.similarity(Service.description, query) > threshold,
-                func.similarity(Service.line_names, query) > threshold,
-            )
-        )
-        .order_by(
-            func.greatest(
-                func.similarity(Service.description, query),
-                func.similarity(Service.line_names, query),
-            ).desc()
-        )
-        .limit(limit)
-        .all()
-    )
-
-
-def merge_service_line(service: Service, line: Line):
+def merge_service_line(service: Service, line: Line, rank: float):
     return {
         "line_id": line.id,
         "line_name": line.line_name,
@@ -45,39 +24,45 @@ def merge_service_line(service: Service, line: Line):
         "vias": service.vias if service else None,
         "operator_noc": service.operator_noc if service else None,
         "line_names": service.line_names if service else line.line_name,
+        "rank": rank,
     }
 
 
 def search_services_and_lines(query, db: Session, limit: int = 10):
     results = []
 
-    service_query = search(select(Service), query, sort=True).limit(limit)
-    services = list(db.scalars(service_query).all())
-    # If not enough results, try fuzzy search
-    if len(services) < limit:
-        fuzzy_services = fuzzy_search_service(query, db, limit=limit)
-        # Avoid duplicates
-        service_ids = {s.service_code for s in services}
-        for s in fuzzy_services:
-            if s.service_code not in service_ids:
-                services.append(s)
-        services = services[:limit]
+    if len(query) <= 3:
+        service_query = (
+            db.query(Service, Line)
+            .join(Line, Service.service_code == Line.service_code)
+            .filter(
+                Line.line_name.ilike(f"%{query}%"),
+            )
+            .add_columns(
+                func.ts_rank_cd(
+                    Line.search_vector, func.websearch_to_tsquery(query)
+                ).label("rank")
+            )
+        )
+    else:
+        service_query = search(
+            select(Service, Line).join(Line, Service.service_code == Line.service_code),
+            query,
+            sort=True,
+        ).add_columns(
+            func.greatest(
+                func.ts_rank_cd(
+                    Service.search_vector, func.websearch_to_tsquery(query)
+                ),
+                func.ts_rank_cd(Line.search_vector, func.websearch_to_tsquery(query)),
+            ).label("rank")
+        )
 
-    line_query = search(select(Line), query, sort=True).limit(limit)
-    lines = list(db.scalars(line_query).all())
+    services_and_lines = db.execute(service_query).all()
+    for service, line, rank in services_and_lines:
+        results.append(merge_service_line(service, line, rank))
 
-    seen_line_ids = set()
-
-    for service in services:
-        for line in service.lines:
-            if line.id not in seen_line_ids:
-                seen_line_ids.add(line.id)
-                results.append(merge_service_line(service, line))
-
-    for line in lines:
-        if line.id not in seen_line_ids:
-            seen_line_ids.add(line.id)
-            results.append(merge_service_line(line.service, line))
+    results.sort(key=lambda x: x["rank"], reverse=True)
 
     return results[:limit]
 
@@ -103,7 +88,7 @@ async def search_db(query: str, db: Session, limit: int = 10):
 
 
 if __name__ == "__main__":
-    search_query = "13"
+    search_query = "alton"
     with SessionLocal() as db:
         results = asyncio.run(search_db(search_query, db))
         print(f"Search results for query '{search_query}':")
@@ -113,6 +98,8 @@ if __name__ == "__main__":
                 if isinstance(item, Operator):
                     print(f"- {item.name} (NOC: {item.noc})")
                 elif isinstance(item, dict):
-                    print(f"- {item['line_name']} | {item['description']}")
+                    print(
+                        f"- {item['line_name']} | {item['description']} (rank: {item['rank']})"
+                    )
                 elif isinstance(item, Stop):
                     print(f"- {item.common_name} (ID: {item.atco_code})")
