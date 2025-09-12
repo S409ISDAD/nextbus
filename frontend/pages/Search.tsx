@@ -5,18 +5,21 @@ import type { Search } from "../models/Search";
 import { useNavigate, useParams } from "react-router";
 import { Card } from "../components/ui/Card";
 
-const Home: React.FC = () => {
+const SearchPage: React.FC = () => {
     const navigate = useNavigate();
     const [results, setResults] = React.useState<Search>();
+    const [loading, setLoading] = React.useState(false);
     const { query } = useParams();
 
     useEffect(() => {
-        document.title = `"${query}" | nextbus`;
+        document.title = `"${query ?? "search"}" | nextbus`;
         if (!query) return;
         const getSearch = async () => {
             try {
                 console.log("searching for", query);
+                setLoading(true);
                 const searchResults = await doSearch(query);
+                setLoading(false);
                 if (searchResults) {
                     setResults(searchResults);
                 }
@@ -32,7 +35,12 @@ const Home: React.FC = () => {
         <div className="flex flex-col items-center justify-center w-full gap-6 p-8">
             <span className="text-4xl font-bold">Search nextbus</span>
             <SearchBar query={query} />
-            {query && (
+            {loading && (
+                <span className="text-xl font-medium text-center text-gray-400">
+                    Loading...
+                </span>
+            )}
+            {query && !loading && (
                 <div className="flex flex-col w-full max-w-3xl gap-4 mt-4">
                     {results?.lines.length === 0 &&
                     results.stops.length === 0 ? (
@@ -132,4 +140,4 @@ const Home: React.FC = () => {
     );
 };
 
-export default Home;
+export default SearchPage;
