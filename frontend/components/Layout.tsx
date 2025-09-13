@@ -37,13 +37,13 @@ const footer = (currentYear: number) => (
             rel="noopener noreferrer">
             <FontAwesomeIcon icon={faDiscord} />
         </a>{" "}
-        ·
+        {/* ·
         <a
             href="https://github.com/Orbitix/nextbus"
             target="_blank"
             rel="noopener noreferrer">
             <FontAwesomeIcon icon={faGithub} />
-        </a>
+        </a> */}
         ·<span>{version}</span>
     </footer>
 );
