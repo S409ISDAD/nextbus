@@ -3,6 +3,11 @@ import DepartureBoard from "../components/DepartureBoard";
 import useLocalStorageState from "use-local-storage-state";
 import haversine from "haversine-distance";
 import { getCurrentPosition } from "../utils/locations";
+import {
+    canUseGeolocation,
+    LocationPrompt,
+} from "../components/LocationPrompt";
+import { Card } from "../components/ui/Card";
 
 const BusPage: React.FC = () => {
     useEffect(() => {
@@ -18,6 +23,7 @@ const BusPage: React.FC = () => {
 
     useEffect(() => {
         const getUserCoords = async () => {
+            if (!canUseGeolocation()) return;
             const userCoords = await getCurrentPosition();
             setUserCoords([
                 userCoords.coords.latitude,
@@ -29,11 +35,13 @@ const BusPage: React.FC = () => {
 
     return (
         <div className="flex flex-row flex-wrap items-center justify-center gap-3 p-4">
-            <div className="flex flex-col items-center justify-center gap-2 p-2 rounded-[32px] bg-neutral-900">
+            <Card className="flex flex-col items-center justify-center gap-2 p-2 rounded-[32px] bg-neutral-900">
                 <span className="text-2xl font-bold">Closest Stop</span>
-                <DepartureBoard stop_id="" closest={true}></DepartureBoard>
-            </div>
-            <div className="flex flex-col items-center justify-center gap-2 p-2 rounded-[32px] bg-neutral-900">
+                <LocationPrompt className="p-3 w-80">
+                    <DepartureBoard stop_id="" closest={true}></DepartureBoard>
+                </LocationPrompt>
+            </Card>
+            <Card className="flex flex-col items-center justify-center gap-2 p-2 rounded-[32px] bg-neutral-900">
                 <span className="text-2xl font-bold">Favorite Stops</span>
                 <div className="flex flex-row flex-wrap items-center justify-center gap-3">
                     {Object.keys(favStops).length > 0 ? (
@@ -62,7 +70,7 @@ const BusPage: React.FC = () => {
                     onClick={() => setFavStops({})}>
                     Clear Favorites
                 </button>
-            </div>
+            </Card>
         </div>
     );
 };
