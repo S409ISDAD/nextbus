@@ -28,6 +28,8 @@ export interface Bus {
     journey_id: number;
     delay: number;
     expected: string;
+    min_expected?: string;
+    max_expected?: string;
     scheduled: string;
     started: boolean;
     finished: boolean;
