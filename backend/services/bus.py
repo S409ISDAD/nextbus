@@ -386,6 +386,13 @@ async def build_bus(
         delay, progress.get("sequence", 0), stop_id, journey_id, r
     )
 
+    sequence = progress.get("sequence", None)
+    prog = progress.get("progress", None)
+    if sequence and prog and target_seq:
+        if sequence >= target_seq and prog >= 0.1:
+            print("bus has likely passed the stop")
+            return None  # bus has likely passed the stop
+
     service_info = await get_service_info(journey.service_id, r)
 
     if not times:
@@ -413,9 +420,13 @@ async def build_bus(
     if not times.started:
         status = "waiting"
 
-    min_expected, max_expected = await calculate_expected_difference(
-        timestamp, times.expected, times.scheduled
-    )  # type: ignore
+    min_expected = None
+    max_expected = None
+
+    if times.started:
+        min_expected, max_expected = await calculate_expected_difference(
+            timestamp, times.expected, times.scheduled
+        )  # type: ignore
 
     return TrackedBus(
         type="tracked",

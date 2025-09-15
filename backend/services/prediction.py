@@ -167,9 +167,12 @@ async def calculate_expected(delay, sequence, stop_id, journey_id, r):
             ):
                 not_started = True
 
+        if stop_time.stop_id == stop_id:
+            target_seq = stop_idx
+
         if stop_time.stop_id == stop_id and not sequence > stop_idx:
             aimed = stop_time.aimed_time
-            target_seq = stop_idx
+
             if not aimed:
                 include = False
                 break
@@ -206,7 +209,7 @@ async def calculate_expected(delay, sequence, stop_id, journey_id, r):
 
 async def calculate_expected_difference(timestamp: str, expected: dt, scheduled: dt):
     def func(x):
-        return 5 + math.sqrt(x) * 6
+        return 5 + math.sqrt(x) * 7
 
     if not timestamp or not expected:
         return None, None
@@ -219,7 +222,9 @@ async def calculate_expected_difference(timestamp: str, expected: dt, scheduled:
 
     print(f"age: {age}, diff: {diff}")
 
-    max_expected = expected + timedelta(seconds=diff)
+    max_expected = expected + timedelta(
+        seconds=diff + 60
+    )  # add 1 min buffer, as "max" really means "definitely not later than this"
     min_expected = max(expected - timedelta(seconds=diff), scheduled)
 
     return min_expected, max_expected

@@ -14,7 +14,7 @@ export default function timeTo(bus: Departure) {
 export function timeToDiff(minDiff: number, maxDiff: number) {
     const diff = maxDiff - minDiff;
 
-    if (diff < 60) {
+    if (diff < 75) {
         return generateTimeTo(minDiff);
     }
     minDiff = Math.max(0, minDiff);

@@ -13,7 +13,7 @@ import { useNavigate } from "react-router";
 import SearchBar from "../components/SearchBar";
 import {
     LocationPrompt,
-    useIsLocationGranted,
+    // useIsLocationGranted,
 } from "../components/LocationPrompt";
 import { useGeolocated } from "react-geolocated";
 
@@ -27,7 +27,7 @@ const Home: React.FC = () => {
         coords,
         isGeolocationAvailable,
         isGeolocationEnabled,
-        getPosition,
+        // getPosition,
     } = useGeolocated({
         positionOptions: {
             enableHighAccuracy: false,
@@ -45,8 +45,8 @@ const Home: React.FC = () => {
     useEffect(() => {
         const fetchServices = async () => {
             try {
-                console.log(isGeolocationAvailable, isGeolocationEnabled);
-                if (!isGeolocationAvailable || !isGeolocationEnabled) return;
+                // console.log(isGeolocationAvailable, isGeolocationEnabled);
+                // if (!isGeolocationAvailable || !isGeolocationEnabled) return;
 
                 const pos = await getCurrentPosition();
 
@@ -71,8 +71,8 @@ const Home: React.FC = () => {
                 }
 
                 const services = await getNearby([
-                    coords.latitude,
-                    coords.longitude,
+                    pos.coords.latitude,
+                    pos.coords.longitude,
                 ]);
 
                 if (services) {
@@ -171,7 +171,7 @@ const Home: React.FC = () => {
                                 Your nearby bus services
                             </span>
                             <div className="w-full max-w-[400px]">
-                                <LocationPrompt
+                                {/* <LocationPrompt
                                     isGeolocationAvailable={
                                         isGeolocationAvailable
                                     }
@@ -191,7 +191,22 @@ const Home: React.FC = () => {
                                             </a>
                                         ))}
                                     </div>
-                                </LocationPrompt>
+                                </LocationPrompt> */}
+                                <div className="flex flex-row items-center gap-2 overflow-x-auto whitespace-nowrap">
+                                    {services.length === 0 && (
+                                        <span className="text-sm text-neutral-400">
+                                            No nearby services found.
+                                        </span>
+                                    )}
+                                    {services.map((service) => (
+                                        <a
+                                            key={service.id}
+                                            className="flex items-center justify-center px-3 py-1 text-lg font-bold text-center cursor-pointer rounded-xl bg-neutral-800/50"
+                                            href={`/buses/services/${service.id}`}>
+                                            {service.line_name}
+                                        </a>
+                                    ))}
+                                </div>
                             </div>
                         </Card>
                     </div>
