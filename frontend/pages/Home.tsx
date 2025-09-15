@@ -12,9 +12,10 @@ import { getClosestStop } from "../utils/closestStop";
 import { useNavigate } from "react-router";
 import SearchBar from "../components/SearchBar";
 import {
-    canUseGeolocation,
     LocationPrompt,
+    useIsLocationGranted,
 } from "../components/LocationPrompt";
+import { useGeolocated } from "react-geolocated";
 
 const Home: React.FC = () => {
     // const navigate = useNavigate();
@@ -22,6 +23,18 @@ const Home: React.FC = () => {
     const [services, setServices] = React.useState<ServiceInfo[]>([]);
     const [closestStop, setClosestStop] = React.useState<string | null>(null);
     const [showStop, setShowStop] = React.useState(false);
+    const {
+        coords,
+        isGeolocationAvailable,
+        isGeolocationEnabled,
+        getPosition,
+    } = useGeolocated({
+        positionOptions: {
+            enableHighAccuracy: false,
+        },
+        suppressLocationOnMount: true,
+        userDecisionTimeout: 5000,
+    });
 
     const navigate = useNavigate();
 
@@ -32,9 +45,10 @@ const Home: React.FC = () => {
     useEffect(() => {
         const fetchServices = async () => {
             try {
-                if (!canUseGeolocation()) return;
+                console.log(isGeolocationAvailable, isGeolocationEnabled);
+                if (!isGeolocationAvailable || !isGeolocationEnabled) return;
+
                 const pos = await getCurrentPosition();
-                // const fakeCoords = [51.08087, -1.15937];
 
                 const closestStop = await getClosestStop([
                     pos.coords.latitude,
@@ -57,8 +71,8 @@ const Home: React.FC = () => {
                 }
 
                 const services = await getNearby([
-                    pos.coords.latitude,
-                    pos.coords.longitude,
+                    coords.latitude,
+                    coords.longitude,
                 ]);
 
                 if (services) {
@@ -70,7 +84,7 @@ const Home: React.FC = () => {
         };
 
         fetchServices();
-    }, []);
+    }, [coords]);
 
     return (
         <div>
@@ -157,7 +171,11 @@ const Home: React.FC = () => {
                                 Your nearby bus services
                             </span>
                             <div className="w-full max-w-[400px]">
-                                <LocationPrompt>
+                                <LocationPrompt
+                                    isGeolocationAvailable={
+                                        isGeolocationAvailable
+                                    }
+                                    isGeolocationEnabled={isGeolocationEnabled}>
                                     <div className="flex flex-row items-center gap-2 overflow-x-auto whitespace-nowrap">
                                         {services.length === 0 && (
                                             <span className="text-sm text-neutral-400">

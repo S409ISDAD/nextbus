@@ -4,8 +4,8 @@ import useLocalStorageState from "use-local-storage-state";
 import haversine from "haversine-distance";
 import { getCurrentPosition } from "../utils/locations";
 import {
-    canUseGeolocation,
     LocationPrompt,
+    useIsLocationGranted,
 } from "../components/LocationPrompt";
 import { Card } from "../components/ui/Card";
 
@@ -20,10 +20,11 @@ const BusPage: React.FC = () => {
         defaultValue: {},
     });
     const [userCoords, setUserCoords] = useState<[number, number] | null>(null);
+    const isGranted = useIsLocationGranted();
 
     useEffect(() => {
         const getUserCoords = async () => {
-            if (!canUseGeolocation()) return;
+            if (!isGranted) return;
             const userCoords = await getCurrentPosition();
             setUserCoords([
                 userCoords.coords.latitude,
