@@ -27,12 +27,13 @@ const linePage: React.FC = () => {
                 const line = await getDBService(id);
 
                 if (line) {
+                    console.log(line);
                     setline(line);
                     document.title = `Service ${line.line_name} | nextbus`;
                     const pos = await getCurrentPosition();
                     const closest_stop = await getClosestStopForService(
                         [pos.coords.latitude, pos.coords.longitude],
-                        line_id ? line_id : ""
+                        line.bt_service_id ? line.bt_service_id : ""
                     );
                     console.log("closest_stop", closest_stop);
                     setStopID(closest_stop);
@@ -70,11 +71,16 @@ const linePage: React.FC = () => {
                 <div className="flex flex-col items-center justify-center gap-6">
                     <div className="flex flex-col items-center justify-center gap-3">
                         <span className="text-4xl font-bold md:text-4xl text-start">
-                            {line?.line_name}
+                            Service {line?.line_name}
                         </span>
                         <span className="text-xl font-semibold text-center text-neutral-300">
                             {line?.description}
                         </span>
+                        {line?.vias && (
+                            <span className="font-semibold text-center text-neutral-400">
+                                Via {line?.vias}
+                            </span>
+                        )}
                         {line?.bt_service_id && (
                             <div className="flex flex-wrap items-center justify-center gap-4 gap-y-1">
                                 <a
@@ -88,6 +94,18 @@ const linePage: React.FC = () => {
                     </div>
                 </div>
                 {msg && <span className="text-red-500 ">{msg}</span>}
+                {line?.outbound_description && (
+                    <div className="flex flex-col items-center justify-center gap-1">
+                        <span className="text-lg font-semibold">
+                            Outbound: {line.outbound_description}
+                        </span>
+                        {line.inbound_description && (
+                            <span className="text-lg font-semibold">
+                                Inbound: {line.inbound_description}
+                            </span>
+                        )}
+                    </div>
+                )}
                 {loading && (
                     <span className="text-neutral-300">Loading...</span>
                 )}
