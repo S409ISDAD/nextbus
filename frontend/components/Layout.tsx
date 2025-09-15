@@ -1,5 +1,5 @@
 import { Link, Outlet, useNavigate } from "react-router";
-import { useShowAppNav, whereAmI } from "../utils/AppNav";
+import { useShowAppNav, whereAmI, isIOS } from "../utils/AppNav";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
     faBus,
@@ -117,7 +117,9 @@ export default function Layout() {
                         <FontAwesomeIcon icon={faMagnifyingGlass} />
                     </span>
                 </motion.div>
-                <nav className="bottom-0 left-0 text-neutral-200 right-0 flex justify-around items-center p-3 z-[99] border-t border-neutral-800 rounded-t-2xl fixed w-full shadow-2xl md:shadow-xl bg-[#131313]">
+                <nav
+                    className="bottom-0 left-0 text-neutral-200 right-0 flex justify-around items-center p-3 z-[99] border-t border-neutral-800 rounded-t-2xl fixed w-full shadow-2xl md:shadow-xl bg-[#131313]"
+                    style={isIOS() ? { paddingBottom: "20px" } : {}}>
                     {items.map((item) => (
                         <Link
                             to={item.href}

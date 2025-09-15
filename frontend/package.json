@@ -27,6 +27,7 @@
         "haversine-distance": "^1.2.4",
         "leaflet.locatecontrol": "^0.85.1",
         "maplibre-gl": "^5.7.1",
+        "mobile-detect": "^1.4.5",
         "motion": "^12.23.12",
         "path": "^0.12.7",
         "react": "^19.1.1",

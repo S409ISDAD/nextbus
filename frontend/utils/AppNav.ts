@@ -1,12 +1,13 @@
 import { useLocation } from "react-router";
 import { useEffect, useState } from "react";
+import MobileDetect from "mobile-detect";
 
 export const useShowAppNav = (): boolean => {
     const [show, setShow] = useState<boolean>(false);
 
     useEffect(() => {
-        const isPWA = window.matchMedia("(display-mode: standalone)");
-        // const isPWA = window.matchMedia("(display-mode: browser)");
+        // const isPWA = window.matchMedia("(display-mode: standalone)");
+        const isPWA = window.matchMedia("(display-mode: browser)");
         if (isPWA.matches) {
             const isMobileView = window.matchMedia("(max-width: 640px)");
             setShow(isMobileView.matches);
@@ -18,7 +19,17 @@ export const useShowAppNav = (): boolean => {
     }, []);
 
     return show;
+    // return true;
 };
+
+export const isIOS = (): boolean => {
+    const md = new MobileDetect(window.navigator.userAgent);
+    if (md.os() === "iOS") {
+        return true;
+    }
+    return false;
+    // return true;
+}
 
 export const whereAmI = () => {
     // use location to get the current path, and from there determine what section of the app we are in.

@@ -232,7 +232,7 @@ function BusCard({
                     )}
 
                     <div className="flex items-center justify-center gap-1 p-[0.3rem] min-w-18 rounded-xl bg-neutral-800/50 h-fit">
-                        <span className="text-lg font-bold ">
+                        <span className="text-lg font-bold text-nowrap">
                             {bus.timeTo.split(" ")[0]}
                         </span>
                         <span className="self-end h-full mb-[0.15rem] text-sm font-bold ">
