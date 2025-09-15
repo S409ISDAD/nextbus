@@ -231,7 +231,7 @@ function BusCard({
                         </div>
                     )}
 
-                    <div className="flex items-center justify-center gap-1 p-[0.3rem] w-18 rounded-xl bg-neutral-800/50  h-fit">
+                    <div className="flex items-center justify-center gap-1 p-[0.3rem] min-w-18 rounded-xl bg-neutral-800/50 h-fit">
                         <span className="text-lg font-bold ">
                             {bus.timeTo.split(" ")[0]}
                         </span>

@@ -33,6 +33,10 @@ class TrackedBus(BaseModel):
     journey_id: int
     delay: int  # how many seconds behind/ahead e.g. 120 = 2 min late, -60 = 1 min early
     expected: Optional[datetime]  # expected arrival time at stop (iso string)
+    min_expected: Optional[
+        datetime
+    ]  # earliest expected arrival time at stop (iso string)
+    max_expected: Optional[datetime]  # latest expected arrival time at stop (iso string
     scheduled: Optional[datetime]  # scheduled arrival time at stop (iso string)
     started: bool  # if the bus has started the route or is waiting at the first stop
     finished: bool  # if the bus has finished the route

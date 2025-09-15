@@ -18,6 +18,7 @@ from backend.services.caching import BUS_CACHE, get_cached
 from backend.services.livery import get_livery
 from backend.services.prediction import (
     calculate_expected,
+    calculate_expected_difference,
     get_started_finished,
     predict_future,
 )
@@ -412,6 +413,10 @@ async def build_bus(
     if not times.started:
         status = "waiting"
 
+    min_expected, max_expected = await calculate_expected_difference(
+        timestamp, times.expected, times.scheduled
+    )  # type: ignore
+
     return TrackedBus(
         type="tracked",
         id=bus_id,
@@ -425,6 +430,8 @@ async def build_bus(
         journey_id=journey_id,
         delay=delay,
         expected=times.expected,
+        min_expected=min_expected,
+        max_expected=max_expected,
         scheduled=times.scheduled,
         started=times.started,
         finished=times.finished,

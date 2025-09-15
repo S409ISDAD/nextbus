@@ -4,8 +4,36 @@ export default function timeTo(bus: Departure) {
     const now = new Date()
     const diffMs = new Date(bus.expected).getTime() - now.getTime();
     const diffSec = Math.floor(diffMs / 1000);
+    const minDiff = 'min_expected' in bus && bus.min_expected ? (new Date(bus.min_expected).getTime() / 1000 - Math.floor(now.getTime() / 1000)) : diffSec;
+    const maxDiff = 'max_expected' in bus && bus.max_expected ? (new Date(bus.max_expected).getTime() / 1000 - Math.floor(now.getTime() / 1000)) : diffSec;
 
-    return generateTimeTo(diffSec)
+    return timeToDiff(minDiff, maxDiff);
+
+}
+
+export function timeToDiff(minDiff: number, maxDiff: number) {
+    const diff = maxDiff - minDiff;
+
+    if (diff < 60) {
+        return generateTimeTo(minDiff);
+    }
+    minDiff = Math.max(0, minDiff);
+
+    if (minDiff < 10) {
+        return `Due`;
+    }
+
+    if (Math.floor(minDiff / 3600) >= 1 || Math.floor(maxDiff / 3600) >= 1) {
+        return generateTimeTo(minDiff);
+    }
+
+    var min_num = "";
+    var max_num = "";
+
+    min_num = `${Math.ceil(minDiff / 60)}`;
+    max_num = `${Math.ceil(maxDiff / 60)}`;
+
+    return `${min_num}-${max_num} min`;
 
 }
 

@@ -1,6 +1,6 @@
 import api from "../src/api"
 import type { Bus, ScheduledBus } from "../models/Bus"
-import { generateTimeTo } from "./timeUtils";
+import { generateTimeTo, timeToDiff } from "./timeUtils";
 
 
 export interface Departures {
@@ -18,11 +18,13 @@ export const parseDepartures = async (departures: Departures, filter?: string) =
                 const now = new Date();
 
                 const diffSec = expected.getTime() / 1000 - Math.floor(now.getTime() / 1000);
+                const minDiff = 'min_expected' in bus && bus.min_expected ? (new Date(bus.min_expected).getTime() / 1000 - Math.floor(now.getTime() / 1000)) : diffSec;
+                const maxDiff = 'max_expected' in bus && bus.max_expected ? (new Date(bus.max_expected).getTime() / 1000 - Math.floor(now.getTime() / 1000)) : diffSec;
 
                 return {
                     ...bus,
                     timestamp: departures.timestamp,
-                    timeTo: generateTimeTo(diffSec),
+                    timeTo: timeToDiff(minDiff, maxDiff),
                 };
             })
             .filter((bus) => {

@@ -1,5 +1,7 @@
 from datetime import timedelta
 import datetime
+import math
+from dateutil.parser import isoparse
 from geopy.distance import geodesic
 from backend.deps import UTC
 from backend.schemas.journey import Journey
@@ -200,6 +202,27 @@ async def calculate_expected(delay, sequence, stop_id, journey_id, r):
         ),
         journey,
     )
+
+
+async def calculate_expected_difference(timestamp: str, expected: dt, scheduled: dt):
+    def func(x):
+        return 5 + math.sqrt(x) * 6
+
+    if not timestamp or not expected:
+        return None, None
+
+    age = int(
+        (dt.now(tz=LONDON) - isoparse(timestamp).astimezone(LONDON)).total_seconds()
+    )
+
+    diff = func(age)
+
+    print(f"age: {age}, diff: {diff}")
+
+    max_expected = expected + timedelta(seconds=diff)
+    min_expected = max(expected - timedelta(seconds=diff), scheduled)
+
+    return min_expected, max_expected
 
 
 async def get_started_finished(trip_id, r):
