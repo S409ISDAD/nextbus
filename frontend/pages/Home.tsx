@@ -11,10 +11,10 @@ import { faBus, faWarning } from "@fortawesome/free-solid-svg-icons";
 import { getClosestStop } from "../utils/closestStop";
 import { useNavigate } from "react-router";
 import SearchBar from "../components/SearchBar";
-import {
-    LocationPrompt,
-    // useIsLocationGranted,
-} from "../components/LocationPrompt";
+// import {
+//     LocationPrompt,
+//     useIsLocationGranted,
+// } from "../components/LocationPrompt";
 import { useGeolocated } from "react-geolocated";
 
 const Home: React.FC = () => {
@@ -25,8 +25,8 @@ const Home: React.FC = () => {
     const [showStop, setShowStop] = React.useState(false);
     const {
         coords,
-        isGeolocationAvailable,
-        isGeolocationEnabled,
+        // isGeolocationAvailable,
+        // isGeolocationEnabled,
         // getPosition,
     } = useGeolocated({
         positionOptions: {

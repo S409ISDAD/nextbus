@@ -1,6 +1,6 @@
 import api from "../src/api"
 import type { Bus, ScheduledBus } from "../models/Bus"
-import { generateTimeTo, timeToDiff } from "./timeUtils";
+import { timeToDiff } from "./timeUtils";
 
 
 export interface Departures {
