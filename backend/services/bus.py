@@ -389,7 +389,7 @@ async def build_bus(
     sequence = progress.get("sequence", None)
     prog = progress.get("progress", None)
     if sequence and prog and target_seq:
-        if sequence >= target_seq and prog >= 0.1:
+        if (sequence == target_seq and prog >= 0.1) or sequence > target_seq:
             print("bus has likely passed the stop")
             return None  # bus has likely passed the stop
 

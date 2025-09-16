@@ -12,6 +12,10 @@ import { useShowAppNav } from "../utils/AppNav";
 import type { MapBus } from "../models/Bus";
 import getLivery from "../utils/getLivery";
 import { SHOW_BUSES } from "../src/settings";
+import {useNavigate} from "react-router";
+import timeTo, {timeSince, toTime} from "../utils/timeUtils.ts";
+import {TimeSince} from "./ui/TimeSince.tsx";
+import parse from 'html-react-parser';
 
 type Stop = {
     stop_id: string;
@@ -39,6 +43,8 @@ const MapView: React.FC<MapViewProps> = ({
     const [zoom, setZoom] = useState(9);
 
     const showAppNav = useShowAppNav();
+
+    const navigate = useNavigate();
 
     const [popup, setPopup] = useState<{
         lngLat: [number, number];
@@ -163,25 +169,30 @@ const MapView: React.FC<MapViewProps> = ({
                         longitude={bus.coords[1]}
                         latitude={bus.coords[0]}
                         anchor="center"
-                        onClick={() =>
+                        onClick={(e) =>{
+                            e.originalEvent.stopPropagation();
                             setPopup({
                                 lngLat: [bus.coords[1], bus.coords[0]],
                                 content: (
-                                    <div className="flex flex-col">
-                                        <span>
+                                    <div className="flex flex-col font-bold text-white bg-[#222]">
+                                        <span className="text-sky-500 underline cursor-pointer"
+                                        onClick={() =>
+                                            navigate(`/buses/${bus.id}`)
+                                        }>
                                             {bus.service.line_name} to{" "}
                                             {bus.destination}
                                         </span>
-                                        <span className="text-sm text-gray-500">
-                                            {bus.vehicle.features}
-                                        </span>
-                                        <span className="text-sm text-gray-500">
+                                        <span className="text-xs text-gray-300">
                                             {bus.vehicle.name}
                                         </span>
+                                        <span className="text-xs font-normal text-gray-400">
+                                            {parse(bus.vehicle.features)}
+                                        </span>
+                                            <TimeSince className="text-xs text-gray-300" time={bus.updated} />
                                     </div>
                                 ),
                             })
-                        }>
+                        }}>
                         <div
                             style={{
                                 width: 24,
