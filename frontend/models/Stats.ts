@@ -6,6 +6,12 @@ export interface Stats {
     total_users: number;
 }
 
+export interface DBStats {
+    lines: number;
+    stops: number;
+    operators: number;
+}
+
 export interface StatsTimeSeries {
     timestamp: string;
     unique: number;

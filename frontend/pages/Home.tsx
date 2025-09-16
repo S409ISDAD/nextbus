@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, {useEffect, useState} from "react";
 // import DepartureBoard from "../components/DepartureBoard";
 // import { faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
 // import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -16,6 +16,8 @@ import SearchBar from "../components/SearchBar";
 //     useIsLocationGranted,
 // } from "../components/LocationPrompt";
 import { useGeolocated } from "react-geolocated";
+import type {DBStats} from "../models/Stats.ts";
+import {getDBStats} from "../utils/getStats.ts";
 
 const Home: React.FC = () => {
     // const navigate = useNavigate();
@@ -23,6 +25,7 @@ const Home: React.FC = () => {
     const [services, setServices] = React.useState<ServiceInfo[]>([]);
     const [closestStop, setClosestStop] = React.useState<string | null>(null);
     const [showStop, setShowStop] = React.useState(false);
+    const [stats, setStats] = useState<DBStats>();
     const {
         coords,
         // isGeolocationAvailable,
@@ -82,7 +85,17 @@ const Home: React.FC = () => {
                 console.log("uh oh", error);
             }
         };
-
+        const fetchStats = async () => {
+            try {
+                const stats = await getDBStats();
+                if (stats) {
+                    setStats(stats.dbStats);
+                }
+            } catch {
+                console.log("uh oh");
+            }
+        };
+        fetchStats();
         fetchServices();
     }, [coords]);
 
@@ -144,6 +157,33 @@ const Home: React.FC = () => {
                             </div>
                         </div>
                     )}
+                    <div className="flex flex-wrap items-center justify-center w-full gap-4 mb-4">
+                    <div className="flex flex-col items-center p-2 px-6 shadow bg-neutral-800/50 rounded-xl">
+                        <span className="text-xl font-bold text-sky-400">
+                            {stats?.lines?.toLocaleString() ?? "--"}
+                        </span>
+                        <span className="mt-1 text-sm text-neutral-400">
+                            Services
+                        </span>
+                    </div>
+                    <div className="flex flex-col items-center p-2 px-6 shadow bg-neutral-800/50 rounded-xl">
+                        <span className="text-xl font-bold text-purple-400">
+                            {stats?.stops?.toLocaleString() ?? "--"}
+                        </span>
+                        <span className="mt-1 text-sm text-neutral-400">
+                           Stops
+                        </span>
+                    </div>
+                    <div className="flex flex-col items-center p-2 px-6 shadow bg-neutral-800/50 rounded-xl">
+                        <span className="text-xl font-bold text-emerald-400">
+                            {stats?.operators?.toLocaleString() ?? "--"}
+                        </span>
+                        <span className="mt-1 text-sm text-neutral-400">
+                            Operators
+                        </span>
+                    </div>
+
+                </div>
 
                     <SearchBar />
 

@@ -1,5 +1,5 @@
 
-import type { Stats, StatsTimeSeries } from "../models/Stats";
+import type { Stats, DBStats, StatsTimeSeries } from "../models/Stats";
 import api from "../src/api"
 
 export const timespans = [
@@ -10,6 +10,22 @@ export const timespans = [
     { label: "Last 3 days", value: "3d", ms: 3 * 24 * 60 * 60 * 1000 },
     { label: "Last 7 days", value: "7d", ms: 7 * 24 * 60 * 60 * 1000 },
 ];
+
+export const getDBStats = async () => {
+    try {
+        const response = await api.get<DBStats>(
+            `/stats/db`
+        );
+
+        const dbStats = response.data;
+
+        return { dbStats: dbStats, };
+
+    } catch (error) {
+        console.error("failed to get db stats", error);
+        return null;
+    }
+};
 
 const getStats = async (selectedTimespan: typeof timespans[number]) => {
     try {

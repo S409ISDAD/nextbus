@@ -1,12 +1,14 @@
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 import logging
 
 from backend.db.db import get_db
 from backend.deps import floor_to_30s, get_redis
-from backend.models import ActiveUsersSnapshot
+from backend.models import ActiveUsersSnapshot, Line, Stop, Operator
 from fastapi import Query
 from datetime import timedelta
+
+from backend.services.caching import get_cached
 
 router = APIRouter()
 
@@ -28,6 +30,30 @@ async def stats(redis=Depends(get_redis)):
             "total_stops": total_stops,
             "total_users": total_users,
         }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/db")
+async def db_stats(request: Request, db=Depends(get_db), redis=Depends(get_redis)):
+    async def get_stats(db):
+        total_lines = db.query(Line).count()
+        total_stops = db.query(Stop).filter(Stop.active == True).count()
+        total_operators = db.query(Operator).count()
+        return {
+            "lines": total_lines,
+            "stops": total_stops,
+            "operators": total_operators,
+        }
+
+    try:
+        cached_stats = await get_cached(
+            "db_stats",
+            get_stats,
+            (db,),
+            300, # 5 minutes
+            redis,
+        )
+        return cached_stats
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
