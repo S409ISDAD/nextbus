@@ -34,7 +34,7 @@ export default function SearchBar(queryProp?: { query?: string }) {
                 }}
             />
             <button
-                className="mr-2 px-4 py-1.5 font-bold text-white rounded-full bg-blue-500  transition cursor-pointer shadow-[0_0_5px_1px_rgba(0,187,167,0.5)] hover:shadow-[0_0_10px_2px_rgba(0,187,167,0.6)]"
+                className="mr-2 px-4 py-1.5 font-bold text-white rounded-full bg-blue-500  transition cursor-pointer shadow-[0_0_5px_1px_rgba(43,127,255,0.5)] hover:shadow-[0_0_10px_2px_rgba(43,127,255,0.6)]"
                 onClick={() => {
                     navigate(`/search/${searchQuery}`);
                 }}>
