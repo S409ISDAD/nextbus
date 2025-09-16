@@ -65,8 +65,8 @@ const Home: React.FC = () => {
                         "distance",
                         closestStop.dist
                     );
-                    if (closestStop.dist < 8 && closestStop.stop_id) {
-                        // 8 meters
+                    if (closestStop.dist < 10 && closestStop.stop_id) {
+                        // 10 meters
                         console.log("stop is close enough, showing popup");
                         setClosestStop(closestStop.stop_id);
                         setShowStop(true);
