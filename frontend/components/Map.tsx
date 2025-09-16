@@ -13,7 +13,6 @@ import type { MapBus } from "../models/Bus";
 import getLivery from "../utils/getLivery";
 import { SHOW_BUSES } from "../src/settings";
 import {useNavigate} from "react-router";
-import timeTo, {timeSince, toTime} from "../utils/timeUtils.ts";
 import {TimeSince} from "./ui/TimeSince.tsx";
 import parse from 'html-react-parser';
 
