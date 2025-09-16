@@ -220,12 +220,14 @@ async def calculate_expected_difference(timestamp: str, expected: dt, scheduled:
 
     diff = func(age)
 
-    print(f"age: {age}, diff: {diff}")
+    # print(f"age: {age}, diff: {diff}")
 
     max_expected = expected + timedelta(
         seconds=diff + 60
     )  # add 1 min buffer, as "max" really means "definitely not later than this"
-    min_expected = max(expected - timedelta(seconds=diff), scheduled)
+    min_expected = max(
+        expected - timedelta(seconds=diff), scheduled
+    )  # don't go earlier than scheduled
 
     return min_expected, max_expected
 

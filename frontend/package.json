@@ -25,6 +25,7 @@
         "clsx": "^2.1.1",
         "fuse.js": "^7.1.0",
         "haversine-distance": "^1.2.4",
+        "html-react-parser": "^5.2.6",
         "leaflet.locatecontrol": "^0.85.1",
         "maplibre-gl": "^5.7.1",
         "mobile-detect": "^1.4.5",
