@@ -1,11 +1,12 @@
 from datetime import datetime as dt
 from datetime import timedelta
 
+from dateutil.parser import isoparse
 from geopy.distance import geodesic
 
-from backend.config import API_BASE
+from backend.config import API_BASE, BASE
 from backend.deps import LONDON, UTC
-from backend.schemas.journey import Journey, Trip
+from backend.schemas.journey import Journey, Trip, LiveJourney, Location
 from backend.schemas.stop import StopTime
 from backend.services.caching import (
     JOURNEY_CACHE,
@@ -145,6 +146,91 @@ async def get_vehicle_journey(journey_id, delay, r) -> Journey:
         route_name=journey.get("route_name"),
         destination=journey.get("destination"),
         service_id=journey.get("service").get("id"),
+        stops=stops,
+    )
+
+async def get_live_journey(journey_id, r) -> LiveJourney:
+    async def fetch(journey_id):
+        data = await fetch_json(
+            BASE + f"/journeys/{journey_id}.json",
+        )
+
+        if not data:
+            return
+
+        locations = data["locations"]
+        times = data["stops"]
+        for i, stop in enumerate(times):
+            aimed_key = (
+                "aimed_arrival_time" if i == len(times) - 1 else "aimed_departure_time"
+            )
+
+            aimed = stop.get(aimed_key)
+            if aimed:
+                aimed_dt = dt.strptime(aimed, "%H:%M")
+                scheduled_time = timedelta(hours=aimed_dt.hour, minutes=aimed_dt.minute)
+
+                expt_time = scheduled_time
+
+                stop["aimed_time"] = scheduled_time.total_seconds()
+                stop["expt_time"] = expt_time.total_seconds()
+
+        for i, location in enumerate(locations):
+            coords = location["coordinates"]
+            location["coords"] = [coords[1], coords[0]] # geojson is backwards
+            location["timestamp"] = isoparse(location["datetime"])
+
+
+        return data
+
+    live_journey = await get_cached(
+        key=f"live_journeys:{journey_id}",
+        func=fetch,
+        args=(journey_id,),
+        exp=JOURNEY_CACHE,
+        r=r,
+    )
+
+    json_stops = live_journey.get("stops")
+    stops: list[StopTime] = []
+    locations: list[Location] = []
+
+    for stop_idx, stop in enumerate(json_stops):
+        departed = False
+        if stop.get("actual_departure_time"):
+            departed = True
+        stops.append(
+            StopTime(
+                stop_id=stop.get("atco_code"),
+                name=stop.get("name"),
+                aimed_time=stop.get("aimed_time"),
+                expt_time=stop.get("expt_time"),
+                departed=departed,
+                track=None,
+                coords=[0,0],
+                set_down=False,
+                timing_status="OTH",
+            )
+        )
+
+    for location in live_journey.get("locations"):
+        locations.append(
+            Location(
+                coords=location.get("coords"),
+                direction=location.get("direction"),
+                timestamp=location.get("timestamp"),
+            )
+        )
+
+    return LiveJourney(
+        current=live_journey.get("current"),
+        vehicle_id=live_journey.get("vehicle_id"),
+        trip_id=live_journey.get("trip_id"),
+        start_time=isoparse(live_journey.get("datetime")),
+        route_name=live_journey.get("route_name"),
+        destination=live_journey.get("destination"),
+        service_id=live_journey.get("service_id"),
+        locations=live_journey.get("locations"),
         stops=stops,
     )
 

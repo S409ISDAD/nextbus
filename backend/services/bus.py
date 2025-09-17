@@ -23,6 +23,7 @@ from backend.services.prediction import (
     predict_future,
 )
 from backend.services.services import fetch_active_buses, get_service_info
+from backend.services.tracking_confidence import calculate_confidence
 from backend.utils.fetch_json import fetch_json
 from sqlalchemy.orm import joinedload
 from datetime import datetime, timedelta
@@ -381,6 +382,8 @@ async def build_bus(
     # journey = await get_vehicle_journey(bus_id, journey_id, r)
 
     delay += 10  # account for stopping and various other things that increase delay
+
+    confidence = await calculate_confidence(delay, coords, journey_id, this_bus.get("trip_id"), r)
 
     target_seq, times, journey = await calculate_expected(
         delay, progress.get("sequence", 0), stop_id, journey_id, r
