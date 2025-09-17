@@ -1,3 +1,4 @@
+pyproj
 fastapi[standard]
 redis[async]
 aiohttp

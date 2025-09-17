@@ -1,5 +1,6 @@
 from datetime import datetime as dt
 from datetime import timedelta
+from types import NoneType
 
 from dateutil.parser import isoparse
 from geopy.distance import geodesic
@@ -217,7 +218,7 @@ async def get_live_journey(journey_id, r) -> LiveJourney:
         locations.append(
             Location(
                 coords=location.get("coords"),
-                direction=location.get("direction"),
+                direction=location.get("direction") or 0,
                 timestamp=location.get("timestamp"),
             )
         )
@@ -230,7 +231,7 @@ async def get_live_journey(journey_id, r) -> LiveJourney:
         route_name=live_journey.get("route_name"),
         destination=live_journey.get("destination"),
         service_id=live_journey.get("service_id"),
-        locations=live_journey.get("locations"),
+        locations=locations,
         stops=stops,
     )
 

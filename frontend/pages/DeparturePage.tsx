@@ -44,7 +44,13 @@ function BusCard({
 }) {
     const [busDetail, setBusDetail] = useState<Bus | null>(null);
     const [sequence, setSequence] = useState<number | null>(null);
+    const [trackingBroken, setTrackingBroken] = useState(false);
+    const [notLoggedOff, setNotLoggedOff] = useState(false);
+    const [brokenDown, setBrokenDown] = useState(false);
+    const [isOnDiversion, setIsOnDiversion] = useState(false);
     const navigate = useNavigate();
+
+
 
     useEffect(() => {
         let interval: ReturnType<typeof setInterval> | null = null;
@@ -71,6 +77,18 @@ function BusCard({
 
     useEffect(() => {
         // Only fetch if idx is 0, isTrackedBus, and bus.id has changed
+        if (isTrackedBus(bus) && bus.confidence.broken_tracking_confidence >= 0.65) {
+            setTrackingBroken(true);
+        }
+        if (isTrackedBus(bus) && bus.confidence.broken_down_confidence >= 0.65) {
+            setBrokenDown(true);
+        }
+        if (isTrackedBus(bus) && bus.confidence.log_off_confidence >= 0.65) {
+            setNotLoggedOff(true);
+        }
+        if (isTrackedBus(bus) && bus.confidence.diversion_confidence >= 0.65) {
+            setIsOnDiversion(true);
+        }
         if (idx === 0 && isTrackedBus(bus) && busDetail) {
             const now = Date.now();
             const progressIdx = busDetail.predictions.findIndex(
@@ -103,7 +121,7 @@ function BusCard({
             onClick={onClick}
             className={clsx(
                 "cursor-pointer",
-                isTrackedBus(bus) && bus.delay >= 2700 && "opacity-75"
+                isTrackedBus(bus) && (bus.delay >= 2700 || trackingBroken || brokenDown || notLoggedOff) && "opacity-75"
             )}>
             <div className="flex flex-row items-center justify-between gap-x-2">
                 <div className="flex flex-col justify-around gap-1">
@@ -132,7 +150,44 @@ function BusCard({
                                 icon={faWarning}
                                 className="text-red-400"
                             />
-                            This bus is quite late, it may not arrive
+                            This bus is quite late, it may not arrive.
+                        </div>
+                    )}
+                    {trackingBroken && (
+                        <div className="flex items-center gap-1 text-xs ">
+                            <FontAwesomeIcon
+                                icon={faWarning}
+                                className="text-red-400"
+                            />
+                            This bus may not be tracking properly.
+                        </div>
+                    )}
+
+                    {brokenDown && (
+                        <div className="flex items-center gap-1 text-xs ">
+                            <FontAwesomeIcon
+                                icon={faWarning}
+                                className="text-red-400"
+                            />
+                            This bus may have broken down or is not moving.
+                        </div>
+                    )}
+                    {notLoggedOff && (
+                        <div className="flex items-center gap-1 text-xs ">
+                            <FontAwesomeIcon
+                                icon={faWarning}
+                                className="text-red-400"
+                            />
+                            This bus may have finished its route.
+                        </div>
+                    )}
+                    {isOnDiversion && (
+                        <div className="flex items-center gap-1 text-xs ">
+                            <FontAwesomeIcon
+                                icon={faWarning}
+                                className="text-red-400"
+                            />
+                            This bus may be on diversion.
                         </div>
                     )}
 
@@ -164,13 +219,17 @@ function BusCard({
                                   })()
                                 : "-"}
                         </div>
-                        {isTrackedBus(bus) && (
+                        {isTrackedBus(bus) && (<>
+                            {trackingBroken ? (
                             <span
+                                className="text-sm font-medium opacity-70">
+                                no data
+                            </span>) : (<span
                                 className={`text-${
                                     bus.delay >= 60 ? "red" : "green"
                                 }-400`}>
                                 {lateness(bus ? bus.delay : 0)}
-                            </span>
+                            </span>)}</>
                         )}
                         {!bus.started && (
                             <span
@@ -189,7 +248,7 @@ function BusCard({
                                     : "On prev. trip"}
                             </span>
                         )}
-                        {bus.started && (
+                        {bus.started && !trackingBroken && (
                             <div className="relative w-5 h-5">
                                 <FontAwesomeIcon
                                     icon={faSatelliteDish}

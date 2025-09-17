@@ -39,6 +39,7 @@ export interface Bus {
     predictions: Prediction[];
     livery?: Livery
     journey: Journey
+    confidence: Confidence;
     timeTo: string;
     status: string;
 }
@@ -48,6 +49,14 @@ export interface Prediction {
     sequence: number;
     progress: number;
     location: number[];
+}
+
+export interface Confidence {
+    final_confidence: number;
+    broken_down_confidence: number;
+    log_off_confidence: number;
+    diversion_confidence: number;
+    broken_tracking_confidence: number;
 }
 
 export interface MapBus {

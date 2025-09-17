@@ -6,6 +6,7 @@ from backend.schemas.journey import Journey
 from backend.schemas.livery import Livery
 from backend.schemas.prediction import Prediction
 from backend.schemas.service import Service
+from .confidence import Confidence
 from .progress import Progress
 
 
@@ -46,5 +47,6 @@ class TrackedBus(BaseModel):
     predictions: list[Prediction]
     livery: Optional[Livery]
     journey: Journey
+    confidence: Confidence
     coords: list[float]
     status: str

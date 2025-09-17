@@ -1,11 +1,16 @@
 from pydantic import BaseModel
 
+from backend.deps import LONDON
 from backend.schemas.confidence import Confidence
 from backend.services.journeys import get_trip, get_live_journey
 from backend.schemas.journey import Trip, LiveJourney
 from redis.asyncio import Redis
 from datetime import datetime as dt
-from geopy import distance
+from geopy.distance import geodesic, great_circle
+from pyproj import Geod
+from shapely.geometry import LineString, Point
+
+geod = Geod(ellps="WGS84")
 
 broken_down_weight = 0.1
 log_off_weight = 0.1
@@ -22,7 +27,7 @@ async def calculate_confidence(delay: int, location: list[float], journey_id: in
     diversion_confidence = check_diversion(trip, live_journey)
     broken_tracking_confidence = check_broken_tracking(trip, live_journey)
 
-    final_confidence: float = 0.0
+    final_confidence: float = min(broken_tracking_confidence + diversion_confidence + log_off_confidence + broken_down_confidence, 1)
 
     return Confidence(
         final_confidence=final_confidence,
@@ -34,35 +39,117 @@ async def calculate_confidence(delay: int, location: list[float], journey_id: in
 
 
 def check_broken_down(live_journey: LiveJourney, delay: int) -> float:
-    return 0.0
+    if len(live_journey.locations) < 5:
+        return 0.0
+    loc_history = LineString(live_journey.generate_location_history()[-10:])
+
+    dist_moved = geod.geometry_length(loc_history)
+
+    if dist_moved >= 15:
+        return 0.0
+
+    confidence = 1 - (dist_moved / 15)
+    return max(0.0, min(1.0, confidence))
+
 
 def check_log_off(trip: Trip, live_journey: LiveJourney) -> float:
-    return 0.0
+    if len(live_journey.locations) < 5:
+        return 0.0
+    end_time = trip.stops[-1].aimed_time
+    now = dt.now(LONDON)
+
+    ended_ago = now - end_time
+
+    if ended_ago.total_seconds() < 60 * 5: # if it hasn't ended yet, we don't need to check
+        return 0.0
+
+    last_locs = live_journey.generate_location_history()[-5:]
+    last_headings = [loc.direction for loc in live_journey.locations[-5:]]
+
+    track = LineString(trip.generate_full_track())
+
+    diffs = []
+
+    fwd_dist = 50 # meters ahead to calculate bearing
+
+    for loc, heading in zip(last_locs, last_headings):
+        p = Point(loc)
+        nearest = track.interpolate(track.project(p))
+
+        end_dist = track.project(nearest) + fwd_dist
+        if end_dist > track.length:
+            end_dist = track.length
+        fwd_point = track.interpolate(end_dist)
+
+        fwd_azimuth, _, _ = geod.inv(nearest.x, nearest.y, fwd_point.x, fwd_point.y)
+
+        diffs.append(fwd_azimuth - heading)
+        track_bearing = fwd_azimuth % 360
+
+        diff = round((heading - track_bearing + 180) % 360 - 180, 5)
+        diffs.append(diff)
+
+    avg_diff = sum(diffs) / len(diffs)
+    if avg_diff < 0:
+        avg_diff += 360
+    top_end = 180 # highest possible diff
+    bottom_end = 60 # lowest diff before triggering
+
+    confidence = 1 - ((max(0.0, 1.0 - abs(avg_diff) / 180)) * (1 - (top_end - abs(avg_diff)) / (top_end - bottom_end)))
+
+    return round(confidence, 5)
 
 def check_diversion(trip: Trip, live_journey: LiveJourney) -> float:
-    return 0.0
+    """
+        Return confidence of diversion if similarity is less than 92%
+        :param trip:
+        :param live_journey:
+        :return float:
+    """
+    if len(live_journey.locations) < 10:
+        return 0.0
+
+    loc_history = LineString(live_journey.generate_location_history())
+    track = LineString(trip.generate_full_track())
+    similarity = track_location_similarity(track, loc_history)
+
+    top_end = 0.92
+    bottom_end = 0.65
+
+    if similarity > 0.92:
+        return 0.0
+    confidence = 1 - (similarity * 1 - (top_end - similarity) / (top_end - bottom_end))
+    return max(0.0, min(1.0, confidence))
 
 def check_broken_tracking(trip: Trip, live_journey: LiveJourney) -> float:
-    loc_history = live_journey.generate_location_history()
-    similarity = track_location_similarity(loc_history, trip.generate_full_track())
-    print(f"Similarity: {similarity}")
+    now = dt.now(LONDON)
 
-    dist_moved = 0
-    for loc in loc_history:
-        dist_moved += distance.distance(loc, loc_history[loc_history.index(loc) - 1]).m
+    started_ago = now - live_journey.start_time
 
-    print(dist_moved)
+    if started_ago.seconds < 60 * 5: # dont bother if started recently
+        return 0.0
 
-    return similarity * (1 - dist_moved / 1000)
+    loc_history = LineString(live_journey.generate_location_history())
+    track = LineString(trip.generate_full_track())
+    similarity = track_location_similarity(track, loc_history)
+
+    total_dist = geod.geometry_length(track)
+
+    dist_moved = geod.geometry_length(loc_history)
+
+    completion = dist_moved / total_dist
+
+    return 1-(similarity * 1- completion/10)
 
 
-def track_location_similarity(track: list[list[float]], locations: list[list[float]]) -> float:
+def track_location_similarity(track: LineString, locations: LineString) -> float:
     deviation = []
 
-    for loc1, loc2 in zip(track, locations):
-        loc1 = [round(loc1[0], 6), round(loc1[1], 6)]
-        dist = distance.geodesic(loc1, loc2).m
-        deviation.append(dist)
+    for lon, lat in locations.coords:
+        p = Point(lon, lat)
+        nearest_point = track.interpolate(track.project(p))  # closest point on route
+        d = geodesic((lat, lon), (nearest_point.y, nearest_point.x)).meters # distance to the closest point
+        deviation.append(d)
 
     total_deviation = sum(deviation)
     max_allowed_deviation = 1000 * len(deviation)  # 1km per point maximum deviation

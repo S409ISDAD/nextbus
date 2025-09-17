@@ -382,8 +382,16 @@ async def build_bus(
     # journey = await get_vehicle_journey(bus_id, journey_id, r)
 
     delay += 10  # account for stopping and various other things that increase delay
-
     confidence = await calculate_confidence(delay, coords, journey_id, this_bus.get("trip_id"), r)
+    print(f"confidence: {confidence}")
+
+    if confidence.broken_tracking_confidence > 0.65:
+        print("bus likely has broken tracking, ignoring delay")
+        delay = 0
+
+    if confidence.broken_down_confidence > 0.65:
+        print("bus likely has broken down, ignoring delay")
+        delay = 0
 
     target_seq, times, journey = await calculate_expected(
         delay, progress.get("sequence", 0), stop_id, journey_id, r
@@ -391,7 +399,7 @@ async def build_bus(
 
     sequence = progress.get("sequence", None)
     prog = progress.get("progress", None)
-    if sequence and prog and target_seq:
+    if sequence and prog and target_seq and confidence.final_confidence < 0.75:
         if (sequence == target_seq and prog >= 0.1) or sequence > target_seq:
             print("bus has likely passed the stop")
             return None  # bus has likely passed the stop
@@ -457,6 +465,7 @@ async def build_bus(
         journey=journey,
         livery=livery,
         speed=None,
+        confidence=confidence,
         coords=coords,
         status=status,
     )

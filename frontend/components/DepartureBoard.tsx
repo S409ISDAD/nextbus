@@ -33,13 +33,29 @@ function BusCard({
     onClick: () => void;
     gettingLiveData: boolean;
 }) {
+        const [trackingBroken, setTrackingBroken] = useState(false);
+    const [notLoggedOff, setNotLoggedOff] = useState(false);
+    const [brokenDown, setBrokenDown] = useState(false);
+    const [isOnDiversion, setIsOnDiversion] = useState(false);
+
+    useEffect(() => {
+        if (isTrackedBus(bus) && bus.confidence.broken_tracking_confidence >= 0.65) {
+            setTrackingBroken(true);
+        }
+        if (isTrackedBus(bus) && bus.confidence.broken_down_confidence >= 0.65) {
+            setBrokenDown(true);
+        }
+        if (isTrackedBus(bus) && bus.confidence.log_off_confidence >= 0.65) {
+            setNotLoggedOff(true);
+        }
+        if (isTrackedBus(bus) && bus.confidence.diversion_confidence >= 0.65) {
+            setIsOnDiversion(true);
+        }}, [bus]);
     return (
         <div
             className={clsx(
                 "cursor-pointer",
-                isTrackedBus(bus) &&
-                    bus.delay >= 2700 &&
-                    "opacity-75 pointer-events-none"
+                isTrackedBus(bus) && (bus.delay >= 2700 || trackingBroken || brokenDown || notLoggedOff) && "opacity-75"
             )}
             key={bus.trip}
             onClick={onClick}>
@@ -66,6 +82,43 @@ function BusCard({
                                 className="text-red-400"
                             />
                             This bus is quite late, it may not arrive
+                        </div>
+                    )}
+                    {trackingBroken && (
+                        <div className="flex items-center gap-1 text-xs ">
+                            <FontAwesomeIcon
+                                icon={faWarning}
+                                className="text-red-400"
+                            />
+                            This bus may not be tracking properly.
+                        </div>
+                    )}
+
+                    {brokenDown && (
+                        <div className="flex items-center gap-1 text-xs ">
+                            <FontAwesomeIcon
+                                icon={faWarning}
+                                className="text-red-400"
+                            />
+                            This bus may have broken down or is not moving.
+                        </div>
+                    )}
+                    {notLoggedOff && (
+                        <div className="flex items-center gap-1 text-xs ">
+                            <FontAwesomeIcon
+                                icon={faWarning}
+                                className="text-red-400"
+                            />
+                            This bus may have finished its route.
+                        </div>
+                    )}
+                    {isOnDiversion && (
+                        <div className="flex items-center gap-1 text-xs ">
+                            <FontAwesomeIcon
+                                icon={faWarning}
+                                className="text-red-400"
+                            />
+                            This bus may be on diversion.
                         </div>
                     )}
                     <div className="flex flex-row items-center gap-3 font-semibold text-nowrap">
