@@ -9,8 +9,8 @@ load_dotenv()
 
 ssl_context = ssl.create_default_context(cafile=certifi.where())
 
-RTT_USERNAME = os.getenv("RTT_USERNAME")
-RTT_PASSWORD = os.getenv("RTT_PASSWORD")
+RTT_USERNAME = os.getenv("RTT_USERNAME", "abc")
+RTT_PASSWORD = os.getenv("RTT_PASSWORD", "abc")
 ENVIRONMENT = config.env
 
 if ENVIRONMENT == "production":
