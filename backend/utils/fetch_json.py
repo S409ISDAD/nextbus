@@ -3,6 +3,7 @@ import ssl
 import certifi
 import os
 from dotenv import load_dotenv
+from backend.config import config
 
 load_dotenv()
 
@@ -10,9 +11,11 @@ ssl_context = ssl.create_default_context(cafile=certifi.where())
 
 RTT_USERNAME = os.getenv("RTT_USERNAME")
 RTT_PASSWORD = os.getenv("RTT_PASSWORD")
+ENVIRONMENT = config.env
 
-if not RTT_USERNAME or not RTT_PASSWORD:
-    raise RuntimeError("RTT_USERNAME and RTT_PASSWORD must be set")
+if ENVIRONMENT == "production":
+    if not RTT_USERNAME or not RTT_PASSWORD:
+        raise RuntimeError("RTT_USERNAME and RTT_PASSWORD must be set")
 auth = aiohttp.BasicAuth(RTT_USERNAME, RTT_PASSWORD)
 
 
