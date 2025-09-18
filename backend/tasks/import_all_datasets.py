@@ -7,7 +7,7 @@ from backend.tasks import import_nptg, import_naptan, import_holidays
 from backend.tasks.import_txc import import_datasource
 
 
-async def import_datasets():
+async def import_weekly_data():
     print("importing holidays")
     import_holidays.import_bank_holidays()
 
@@ -17,6 +17,7 @@ async def import_datasets():
     print("importing naptan")
     import_naptan.main()
 
+async def import_datasets():
     print("running dataset import...")
     with SessionLocal() as db:
         datasource_ids = [id[0] for id in db.query(DataSource.id).all()]
@@ -27,4 +28,5 @@ async def import_datasets():
 
 
 if __name__ == "__main__":
+    asyncio.run(import_weekly_data())
     asyncio.run(import_datasets())

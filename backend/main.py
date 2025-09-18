@@ -1,14 +1,20 @@
 import asyncio
-from datetime import timedelta, timezone, datetime
+import logging
 import time
-from fastapi import Depends, FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+from datetime import timedelta, timezone, datetime
+
+import sentry_sdk
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
-import sentry_sdk
+from fastapi import Depends, FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from prometheus_fastapi_instrumentator import Instrumentator
 from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
-from backend.tasks.import_all_datasets import import_datasets
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from sqlalchemy.orm import Session
+
 from backend.api.routes import (
     departures,
     lines,
@@ -21,10 +27,8 @@ from backend.api.routes import (
     livery,
     trains,
 )
-from sqlalchemy.orm import Session
+from backend.config import config
 from backend.db.db import SessionLocal, get_db
-from backend.models import ActiveUsersSnapshot
-from backend.websockets.routes import ws_router
 from backend.deps import (
     floor_to_30s,
     get_redis_client,
@@ -32,12 +36,9 @@ from backend.deps import (
     limiter,
     VERSION,
 )
-import logging
-from prometheus_fastapi_instrumentator import Instrumentator
-from slowapi import _rate_limit_exceeded_handler
-from slowapi.errors import RateLimitExceeded
-from backend.config import config
-
+from backend.models import ActiveUsersSnapshot
+from backend.tasks.import_all_datasets import import_datasets, import_weekly_data
+from backend.websockets.routes import ws_router
 
 log = logging.getLogger(__name__)
 
@@ -131,6 +132,12 @@ async def lifespan(app: FastAPI):
             import_datasets,
             CronTrigger(hour="2", minute="0", second="0"),  # daily at 2am
             id="import_datasets",
+            replace_existing=True,
+        )
+        scheduler.add_job(
+            import_weekly_data,
+            CronTrigger(day_of_week="0", hour="1", minute="30", second="0"),  # weekly at 1:30am on sunday
+            id="import_weekly_data",
             replace_existing=True,
         )
     scheduler.start()
