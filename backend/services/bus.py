@@ -393,6 +393,10 @@ async def build_bus(
         print("bus likely has broken down, ignoring delay")
         delay = 0
 
+    if confidence.log_off_confidence > 0.65:
+        print("bus likely has finished, ignoring delay")
+        delay = 0
+
     target_seq, times, journey = await calculate_expected(
         delay, progress.get("sequence", 0), stop_id, journey_id, r
     )
@@ -411,9 +415,8 @@ async def build_bus(
     if not times.include:
         return None
 
-    if times.finished and stop_id:
-        return None
-
+    # if times.finished and stop_id:
+    #     return None
     if not times.started:
         delay = 0
 
