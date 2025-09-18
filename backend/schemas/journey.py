@@ -1,7 +1,6 @@
 from typing import Optional
 from pydantic import BaseModel
-from datetime import timedelta, datetime
-
+from datetime import datetime
 from backend.schemas.stop import StopTime
 
 
@@ -22,11 +21,15 @@ class LiveJourney(BaseModel):
     locations: list["Location"]
     stops: list[StopTime]
 
-    def generate_location_history(self):
+    def generate_location_history(self, exclude_start=False):
         full_track = []
 
         for location in self.locations:
-            full_track.append(location.coords)
+            if exclude_start:
+                if location.timestamp > self.start_time:
+                    full_track.append(location.coords)
+            else:
+                full_track.append(location.coords)
         return full_track
 
 class Location(BaseModel):

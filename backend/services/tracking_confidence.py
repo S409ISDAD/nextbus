@@ -109,7 +109,7 @@ def check_diversion(trip: Trip, live_journey: LiveJourney) -> float:
     if len(live_journey.locations) < 10:
         return 0.0
 
-    loc_history = LineString(live_journey.generate_location_history())
+    loc_history = LineString(live_journey.generate_location_history(exclude_start=True))
     track = LineString(trip.generate_full_track())
     similarity = track_location_similarity(track, loc_history)
 
