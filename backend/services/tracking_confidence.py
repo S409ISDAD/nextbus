@@ -60,7 +60,10 @@ def check_log_off(trip: Trip, live_journey: LiveJourney) -> float:
 
     ended_ago = now - end_time
 
-    if ended_ago.total_seconds() < 60 * 5: # if it hasn't ended yet, we don't need to check
+    if len(live_journey.locations) < 2:
+        return 0.0
+
+    if ended_ago.total_seconds() < 60 * 15: # if it hasn't ended yet, we don't need to check
         return 0.0
 
     last_locs = live_journey.generate_location_history()[-5:]
@@ -106,7 +109,7 @@ def check_diversion(trip: Trip, live_journey: LiveJourney) -> float:
         :param live_journey:
         :return float:
     """
-    if len(live_journey.locations) < 10:
+    if len(live_journey.locations) < 8:
         return 0.0
 
     loc_history = LineString(live_journey.generate_location_history(exclude_start=True))
@@ -126,7 +129,10 @@ def check_broken_tracking(trip: Trip, live_journey: LiveJourney) -> float:
 
     started_ago = now - live_journey.start_time
 
-    if started_ago.seconds < 60 * 5: # dont bother if started recently
+    if started_ago.total_seconds() < 60 * 5: # dont bother if started recently
+        return 0.0
+
+    if len(live_journey.locations) < 2:
         return 0.0
 
     loc_history = LineString(live_journey.generate_location_history())

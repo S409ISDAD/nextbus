@@ -285,6 +285,7 @@ async def build_scheduled_db(
                 bus.status = "on_prev_trip"
                 service = service_info if service_info else bus.service
                 bus.service = service
+                bus.confidence.log_off_confidence = 0.0
 
                 # Don't show if expected is more than 2 hours away
                 if (bus.expected - datetime.now(tz=LONDON)).total_seconds() < 4 * 3600:

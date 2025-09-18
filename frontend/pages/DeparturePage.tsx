@@ -77,6 +77,10 @@ function BusCard({
 
     useEffect(() => {
         // Only fetch if idx is 0, isTrackedBus, and bus.id has changed
+        setTrackingBroken(false);
+        setBrokenDown(false);
+        setNotLoggedOff(false);
+        setIsOnDiversion(false);
         if (isTrackedBus(bus) && bus.confidence.broken_tracking_confidence >= 0.65) {
             setTrackingBroken(true);
         }

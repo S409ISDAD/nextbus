@@ -39,6 +39,10 @@ function BusCard({
     const [isOnDiversion, setIsOnDiversion] = useState(false);
 
     useEffect(() => {
+        setTrackingBroken(false);
+        setBrokenDown(false);
+        setNotLoggedOff(false);
+        setIsOnDiversion(false);
         if (isTrackedBus(bus) && bus.confidence.broken_tracking_confidence >= 0.65) {
             setTrackingBroken(true);
         }
