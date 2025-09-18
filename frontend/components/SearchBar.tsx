@@ -1,8 +1,8 @@
-import { faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { useState } from "react";
-import { useNavigate } from "react-router";
-import { motion } from "framer-motion";
+import {faMagnifyingGlass} from "@fortawesome/free-solid-svg-icons";
+import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
+import {useState} from "react";
+import {useNavigate} from "react-router";
+import {motion} from "framer-motion";
 
 export default function SearchBar(queryProp?: { query?: string }) {
     const [searchQuery, setSearchQuery] = useState(queryProp?.query || "");
@@ -23,7 +23,7 @@ export default function SearchBar(queryProp?: { query?: string }) {
 
             <input
                 type="text"
-                placeholder="Search for a stop or route"
+                placeholder="Search for a route or place"
                 className="flex-grow font-medium placeholder-gray-400 bg-transparent focus:outline-none"
                 onChange={(e) => setSearchQuery(e.target.value)}
                 value={searchQuery}
