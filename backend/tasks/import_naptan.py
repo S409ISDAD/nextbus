@@ -309,7 +309,7 @@ def import_naptan_data(file_path: Path, no_update=False):
             db.rollback()
 
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser(description="Import NaPTAN data.")
     parser.add_argument("file", nargs="?", help="Path to NaPTAN XML file")
     parser.add_argument(
@@ -338,3 +338,7 @@ if __name__ == "__main__":
         if from_internet:
             naptan_path.unlink()
         print("done.")
+
+
+if __name__ == "__main__":
+    main()

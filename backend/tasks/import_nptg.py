@@ -142,7 +142,7 @@ def import_nptg_data():
             db.rollback()
 
 
-if __name__ == "__main__":
+def main():
     url = "https://naptan.api.dft.gov.uk/v1/nptg"
 
     print(f"Downloading NPTG data from {url}...")
@@ -156,3 +156,6 @@ if __name__ == "__main__":
         print("Stopped by user.")
     finally:
         nptg_path.unlink()
+
+if __name__ == "__main__":
+    main()

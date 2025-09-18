@@ -3,10 +3,20 @@ import asyncio
 from backend.db.db import SessionLocal
 from backend.deps import STATIC_DATA_DIR
 from backend.models import DataSource
+from backend.tasks import import_nptg, import_naptan, import_holidays
 from backend.tasks.import_txc import import_datasource
 
 
 async def import_datasets():
+    print("importing holidays")
+    import_holidays.import_bank_holidays()
+
+    print("importing nptg")
+    import_nptg.main()
+
+    print("importing naptan")
+    import_naptan.main()
+
     print("running dataset import...")
     with SessionLocal() as db:
         datasource_ids = [id[0] for id in db.query(DataSource.id).all()]
