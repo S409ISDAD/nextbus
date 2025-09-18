@@ -1,21 +1,13 @@
 import calendar
-from datetime import datetime, timezone, timedelta
-from shapely import Point
 import xml.etree.cElementTree as ET
+from datetime import timedelta
 
-uk_timezone = timezone(timedelta(hours=1))
+from shapely import Point
+
+from backend.utils.time import to_datetime
 
 WEEKDAYS = {day: i for i, day in enumerate(calendar.day_name)}
 
-
-def to_datetime(date_str):
-    """Convert a date string to a datetime object."""
-    if not date_str:
-        return None
-    try:
-        return datetime.strptime(date_str, "%Y-%m-%d").astimezone(uk_timezone).date()
-    except ValueError:
-        return None
 
 
 def parse_time(string: str) -> timedelta:

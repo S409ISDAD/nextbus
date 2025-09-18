@@ -1,9 +1,9 @@
 import os
+
+from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session
-from dotenv import load_dotenv
 from sqlalchemy_searchable import sync_trigger
-
 
 load_dotenv()
 
@@ -71,5 +71,14 @@ def sync_search_vectors():
                 "line_name",
                 "inbound_description",
                 "outbound_description",
+            ],
+        )
+        sync_trigger(
+            conn,
+            "locality",
+            "search_vector",
+            [
+                "name",
+                "qualifier_name",
             ],
         )

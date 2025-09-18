@@ -1,41 +1,37 @@
+import argparse
+import sys
+import xml.etree.ElementTree as ET
 from pathlib import Path
+
+from ciso8601 import parse_datetime
 from geoalchemy2.shape import from_shape
 from shapely.geometry import Point
+from sqlalchemy.orm import Session
+from sqlalchemy_searchable import sync_trigger
+
 from backend.db.db import SessionLocal
+from backend.db.db import engine
+from backend.deps import LONDON
 from backend.models import (
     Stop,
     StopArea,
-    StopAreaTypeEnum,
+    StopAreaTypeEnum, AdminArea, Locality,
 )
-from sqlalchemy.orm import Session
-import sys
-import xml.etree.ElementTree as ET
-from datetime import timedelta, timezone
-from sqlalchemy_searchable import sync_trigger
-from backend.db.db import engine
-
-
-from ciso8601 import parse_datetime
-
 from backend.utils.bulk_upsert import bulk_upsert
 from backend.utils.download_to_static import download_to_static
-import argparse
 
 new_stops = []
 new_stop_areas = []
+admin_areas = set()
+localities = set()
 
-
-def generate_point(lat, lon):
-    """Generate a Point object from latitude and longitude."""
-    return from_shape(Point(lon, lat), srid=4326)
 
 
 def get_datetime(string):
     if string:
         datetime = parse_datetime(string)
         if not datetime.tzinfo:
-            uk_timezone = timezone(timedelta(hours=1))
-            return datetime.replace(tzinfo=uk_timezone)
+            return datetime.replace(tzinfo=LONDON)
         return datetime
 
 
@@ -88,9 +84,20 @@ def get_stop(element, atco_code):
 
     naptan_code = element.findtext("NaptanCode")
 
+    bearing = element.findtext(
+        "StopClassification/OnStreet/Bus/MarkedPoint/Bearing/CompassPoint"
+    )
+    if bearing is None:
+        bearing = element.findtext(
+            "StopClassification/OnStreet/Bus/UnmarkedPoint/Bearing/CompassPoint"
+        )
+    if bearing is None:
+        bearing = ""
+
     stop = {
         "atco_code": atco_code,
         "naptan_code": naptan_code,
+        "bearing": bearing,
         "point": point,
     }
 
@@ -117,17 +124,18 @@ def get_stop_area(element: ET.Element):
         point = get_point(element.find("Location"))
 
         try:
-            type = StopAreaTypeEnum(element.findtext("StopAreaType"))
+            stop_area_type = StopAreaTypeEnum(element.findtext("StopAreaType"))
         except Exception as e:
             print(f"an error occurred parsing stop area type: {e}")
-            return None
+            stop_area_type = None
 
         return {
             "id": code,
             "name": element.findtext("Name"),
             "point": point,
             "active": element.attrib.get("Status", "active") == "active",
-            "type": type,
+            "admin_area_id": element.findtext("AdministrativeAreaRef"),
+            "type": stop_area_type,
             "revision_number": element.attrib.get("RevisionNumber"),
         }
     return None
@@ -153,6 +161,22 @@ def handle_stop_point(element: ET.Element):
     stop = get_stop(element, atco_code)
     if not stop:
         return
+
+    locality_id = element.findtext("Place/NptgLocalityRef")
+    if locality_id not in localities:
+        if locality_id not in localities_not_exist:
+            print(f"locality {locality_id} does not exist")
+            localities_not_exist.add(locality_id)
+        locality_id = None
+
+    stop["locality_id"] = locality_id
+
+    admin_area_id = int(element.findtext("AdministrativeAreaRef"))
+    if admin_area_id not in admin_areas:
+        print(f"admin area {admin_area_id} does not exist")
+        admin_area_id = None
+
+    stop["admin_area_id"] = admin_area_id
 
     stop["modified_at"] = modified_at
     stop["created_at"] = created_at
@@ -238,8 +262,7 @@ def create_or_update(db: Session, no_update: bool):
 def import_naptan_data(file_path: Path, no_update=False):
     print("Importing NAPTAN data...")
 
-    global new_stops, existing_stop_ids, stop_area_ids, new_stop_areas
-
+    global new_stops, existing_stop_ids, stop_area_ids, new_stop_areas, admin_areas, localities, localities_not_exist
     iterator = ET.iterparse(file_path, events=("start", "end"))
     with SessionLocal() as db:
         try:
@@ -247,6 +270,9 @@ def import_naptan_data(file_path: Path, no_update=False):
                 atco_code[0] for atco_code in db.query(Stop.atco_code).all()
             }
             stop_area_ids = {code[0] for code in db.query(StopArea.id).all()}
+            admin_areas = {a[0] for a in db.query(AdminArea.id).all()}
+            localities = {l[0] for l in db.query(Locality.id).all()}
+            localities_not_exist = set()
             print("Loaded existing data")
             for event, element in iterator:
                 element.tag = element.tag.removeprefix("{http://www.naptan.org.uk/}")
@@ -294,7 +320,7 @@ if __name__ == "__main__":
     from_internet = False
     if not args.file:
         from_internet = True
-        url = "https://beta-naptan.dft.gov.uk/Download/National/xml"
+        url = "https://naptan.api.dft.gov.uk/v1/access-nodes?dataFormat=xml"
 
         print(f"Downloading NAPTAN data from {url}...")
         naptan_path = download_to_static(url, "NaPTAN.xml")

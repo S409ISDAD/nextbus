@@ -1,5 +1,5 @@
-from datetime import date, datetime, timedelta
 import enum
+from datetime import date, datetime, timedelta
 
 from geoalchemy2 import Geometry
 from sqlalchemy import (
@@ -17,14 +17,14 @@ from sqlalchemy import (
     UniqueConstraint,
     func,
 )
+from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, Session, joinedload, deferred
 from sqlalchemy_searchable import make_searchable
-from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy_utils.types import TSVectorType
-from backend.deps import LONDON
 
 from backend.config import API_BASE
+from backend.deps import LONDON
 from backend.utils.fetch_json import fetch_json
 
 Base = declarative_base()
@@ -177,7 +177,7 @@ class DataSource(Base):
     name = Column(String, nullable=False, unique=True)
     description = Column(String, nullable=True)
     url = Column(String, nullable=True)
-    last_modified = Column(DateTime, nullable=True)
+    last_modified = Column(DateTime(timezone=True), nullable=True)
 
     services = relationship(
         "Service",
@@ -186,6 +186,74 @@ class DataSource(Base):
 
     def __repr__(self):
         return f"<DataSource(name={self.name}, url={self.url})>"
+
+
+class Region(Base):
+    __tablename__ = "region"
+
+    id = Column(String, primary_key=True)
+    name = Column(String, nullable=False)
+    created_at = Column(DateTime(timezone=True), nullable=True)
+    modified_at = Column(DateTime(timezone=True), nullable=True)
+
+    admin_areas = relationship("AdminArea", back_populates="region")
+
+
+class AdminArea(Base):
+    __tablename__ = "admin_area"
+
+    id = Column(Integer, primary_key=True)
+    atco_code = Column(String)
+    name = Column(String)
+    short_name = Column(String, nullable=True)
+    country = Column(String, nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=True)
+    modified_at = Column(DateTime(timezone=True), nullable=True)
+    region_id = Column(String, ForeignKey("region.id"))
+
+    region = relationship("Region", back_populates="admin_areas")
+    districts = relationship("District", back_populates="admin_area")
+    localities = relationship("Locality", back_populates="admin_area")
+    stops = relationship("Stop", back_populates="admin_area")
+    stop_areas = relationship("StopArea", back_populates="admin_area")
+
+
+class District(Base):
+    __tablename__ = "district"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String, nullable=False)
+    created_at = Column(DateTime(timezone=True), nullable=True)
+    modified_at = Column(DateTime(timezone=True), nullable=True)
+    admin_area_id = Column(Integer, ForeignKey("admin_area.id"))
+
+    admin_area = relationship("AdminArea", back_populates="districts")
+    localities = relationship("Locality", back_populates="district")
+
+
+class Locality(Base):
+    __tablename__ = "locality"
+
+    id = Column(String, primary_key=True)
+    name = Column(String, nullable=False)
+    qualifier_name = Column(String, nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=True)
+    modified_at = Column(DateTime(timezone=True), nullable=True)
+    admin_area_id = Column(Integer, ForeignKey("admin_area.id"), nullable=True)
+    district_id = Column(Integer, ForeignKey("district.id"), nullable=True)
+    parent_id = Column(String, ForeignKey("locality.id"), nullable=True)
+    point = Column(
+        Geometry(geometry_type="POINT"), nullable=False
+    )  # PostGIS point for (lat, lon)
+    lat = Column(Float, Computed("ST_Y(point::geometry)"), nullable=False)
+    lon = Column(Float, Computed("ST_X(point::geometry)"), nullable=False)
+
+    parent = relationship("Locality", remote_side=[id], backref="children")
+    district = relationship("District", back_populates="localities")
+    admin_area = relationship("AdminArea", back_populates="localities")
+    stops = relationship("Stop", back_populates="locality")
+
+    search_vector = deferred(Column(TSVectorType("name", "qualifier_name", )))
 
 
 class Stop(Base):
@@ -207,6 +275,8 @@ class Stop(Base):
     stop_area_id = Column(
         String, ForeignKey("stoparea.id", ondelete="CASCADE"), nullable=True
     )
+    locality_id = Column(String, ForeignKey("locality.id"), nullable=True)
+    admin_area_id = Column(Integer, ForeignKey("admin_area.id"), nullable=True)
 
     suburb = Column(String, nullable=True)
     town = Column(String, nullable=True)
@@ -218,11 +288,13 @@ class Stop(Base):
     timing_status = Column(String, nullable=True)
     active = Column(Boolean, nullable=False, default=True)
 
-    created_at = Column(DateTime, nullable=True)
-    modified_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=True)
+    modified_at = Column(DateTime(timezone=True), nullable=True)
     revision_number = Column(Integer, nullable=True)
 
     stop_area = relationship("StopArea", back_populates="stops")
+    locality = relationship("Locality", back_populates="stops")
+    admin_area = relationship("AdminArea", back_populates="stops")
     stop_times = relationship("StopTime", back_populates="stop")
     lines = relationship("Line", secondary="line_stop_usage", back_populates="stops")
 
@@ -261,7 +333,7 @@ class Stop(Base):
         return lines
 
     def times_from_stop(
-        self, db: Session, date: datetime | None = None, limit: int = 10
+            self, db: Session, date: datetime | None = None, limit: int = 10
     ) -> list["StopTime"]:
         """
         Returns a list of upcoming StopTime objects for this stop, with joined journey, line, and service.
@@ -320,10 +392,12 @@ class StopArea(Base):
     lon = Column(Float, Computed("ST_X(point::geometry)"), nullable=True)
     type = Column(Enum(StopAreaTypeEnum), nullable=True)
     parent_id = Column(String, ForeignKey("stoparea.id"), nullable=True)
+    admin_area_id = Column(Integer, ForeignKey("admin_area.id"))
     active = Column(Boolean, nullable=False)
     revision_number = Column(Integer, nullable=True)
 
     parent = relationship("StopArea", remote_side=[id], backref="children")
+    admin_area = relationship("AdminArea", back_populates="stop_areas")
 
     stops = relationship(
         "Stop",
@@ -472,7 +546,7 @@ class Calendar(Base):
             date = datetime.now(tz=LONDON).date()
 
         if not (
-            self.start_date <= date and (self.end_date is None or self.end_date >= date)
+                self.start_date <= date and (self.end_date is None or self.end_date >= date)
         ):  # type: ignore
             return False
 
@@ -804,7 +878,7 @@ class Journey(Base):
         return self.calendar.is_valid(date)
 
     def get_previous_journey(
-        self, db: Session, date: date | None = None
+            self, db: Session, date: date | None = None
     ) -> "Journey | None":
         """
         Returns the previous journey in the same block, active on the same date, ordered by end_time.

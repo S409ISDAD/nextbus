@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy_searchable import search
 
 from backend.db.db import SessionLocal
-from backend.models import Line, Service, Stop, Operator
+from backend.models import Line, Service, Stop, Operator, Locality
 
 
 def merge_service_line(service: Service, line: Line, rank: float):
@@ -77,18 +77,25 @@ async def search_db(query: str, db: Session, limit: int = 10):
     services_and_lines = search_services_and_lines(query, db, limit)
     results["lines"].extend(services_and_lines)
 
-    stops_query = search(select(Stop), query, sort=True).limit(limit)
-    stops = list(db.scalars(stops_query).all())
-    for s in stops:
-        if hasattr(s, "point"):
-            setattr(s, "point", None)
-    results["stops"] = stops
+    # stops_query = search(select(Stop), query, sort=True).limit(limit)
+    # stops = list(db.scalars(stops_query).all())
+    # for s in stops:
+    #     if hasattr(s, "point"):
+    #         setattr(s, "point", None)
+    # results["stops"] = stops
+
+    localities_query = search(select(Locality), query, sort=True).limit(limit)
+    localities = list(db.scalars(localities_query).all())
+    for l in localities:
+        if hasattr(l, "point"):
+            setattr(l, "point", None)
+    results["localities"] = localities
 
     return results
 
 
 if __name__ == "__main__":
-    search_query = "alton"
+    search_query = "alresford"
     with SessionLocal() as db:
         results = asyncio.run(search_db(search_query, db))
         print(f"Search results for query '{search_query}':")
@@ -103,3 +110,5 @@ if __name__ == "__main__":
                     )
                 elif isinstance(item, Stop):
                     print(f"- {item.common_name} (ID: {item.atco_code})")
+                elif isinstance(item, Locality):
+                    print(f"- {item.name} ({item.qualifier_name or "none"})")

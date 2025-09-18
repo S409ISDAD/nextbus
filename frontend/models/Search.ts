@@ -1,5 +1,5 @@
 export interface Search {
-    stops: StopResult[];
+    localities: LocalityResult[];
     lines: LineResult[];
 }
 
@@ -19,22 +19,15 @@ export interface LineResult {
     line_names: string;
 }
 
-interface StopResult {
-    atco_code: string;
-    bus_stop_type: string;
-    common_name: string;
+interface LocalityResult {
+    id: string;
+    name: string;
+    qualifier_name: string;
+    admin_area_id: number;
+    district_id: number;
+    parent_id: string | null;
     lat: number;
     lon: number;
-    common_short_name: string | null;
-    active: boolean;
-    landmark: string;
-    suburb: string | null;
-    street: string;
-    town: string | null;
-    crossing: string | null;
-    heading: string | null;
-    indicator: string;
-    bearing: string | null;
-    naptan_code: string;
-    stop_type: string;
+    created_at: string;
+    modified_at: string;
 }
