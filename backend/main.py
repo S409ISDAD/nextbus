@@ -136,7 +136,7 @@ async def lifespan(app: FastAPI):
         )
         scheduler.add_job(
             import_weekly_data,
-            CronTrigger(day_of_week="0", hour="1", minute="30", second="0"),  # weekly at 1:30am on sunday
+            CronTrigger(day_of_week="0", hour="5", minute="30", second="0"),  # weekly at 5:30am on sunday
             id="import_weekly_data",
             replace_existing=True,
         )

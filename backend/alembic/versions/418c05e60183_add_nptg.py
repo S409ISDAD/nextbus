@@ -109,23 +109,10 @@ def downgrade() -> None:
                     existing_nullable=True)
     op.drop_column('stop', 'admin_area_id')
     op.drop_column('stop', 'locality_id')
-    op.drop_constraint('uq_line_to_route', 'line_to_route', type_='unique')
-    op.drop_constraint('uq_line_stop_usage', 'line_stop_usage', type_='unique')
     op.alter_column('data_source', 'last_modified',
                     existing_type=sa.DateTime(timezone=True),
                     type_=postgresql.TIMESTAMP(),
                     existing_nullable=True)
-    op.create_table('spatial_ref_sys',
-                    sa.Column('srid', sa.INTEGER(), autoincrement=False, nullable=False),
-                    sa.Column('auth_name', sa.VARCHAR(length=256), autoincrement=False, nullable=True),
-                    sa.Column('auth_srid', sa.INTEGER(), autoincrement=False, nullable=True),
-                    sa.Column('srtext', sa.VARCHAR(length=2048), autoincrement=False, nullable=True),
-                    sa.Column('proj4text', sa.VARCHAR(length=2048), autoincrement=False, nullable=True),
-                    sa.CheckConstraint('srid > 0 AND srid <= 998999', name=op.f('spatial_ref_sys_srid_check')),
-                    sa.PrimaryKeyConstraint('srid', name=op.f('spatial_ref_sys_pkey'))
-                    )
-    op.drop_index('ix_locality_search_vector', table_name='locality', postgresql_using='gin')
-    op.drop_index('idx_locality_point', table_name='locality', postgresql_using='gist')
     op.drop_table('locality')
     op.drop_table('district')
     op.drop_table('admin_area')

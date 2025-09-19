@@ -1,18 +1,20 @@
 import asyncio
+from datetime import datetime, timedelta
+
 from dateutil import parser
 from redis.asyncio import Redis
+from sqlalchemy.orm import joinedload
 
 from backend.config import VEHICLES_BASE
 from backend.db.db import SessionLocal
 from backend.deps import LONDON
 from backend.models import (
-    DirectionType,
     Journey,
     Line,
-    StopTime,
+    StopTime, Stop,
 )
-from backend.schemas.livery import Livery
 from backend.schemas.bus import ScheduledBus, TrackedBus
+from backend.schemas.livery import Livery
 from backend.schemas.progress import Progress
 from backend.services.caching import BUS_CACHE, get_cached
 from backend.services.livery import get_livery
@@ -25,9 +27,6 @@ from backend.services.prediction import (
 from backend.services.services import fetch_active_buses, get_service_info
 from backend.services.tracking_confidence import calculate_confidence
 from backend.utils.fetch_json import fetch_json
-from sqlalchemy.orm import joinedload
-from datetime import datetime, timedelta
-
 from backend.utils.match_bt import match_trip_journey
 
 
@@ -114,18 +113,19 @@ async def fetch_buses(
             if trip_id:
                 active_by_trip.setdefault(trip_id, []).append(bus)
 
+
     tasks = []
 
     for time in times:
         trip_id = time.get("trip_id")
+        with SessionLocal() as db:
+            journey = await match_trip_journey(db, trip_id, r)
+            journey_id = journey.id if journey else None
+            use_db = journey_id is not None
         matched_buses = active_by_trip.get(trip_id, [])
         if matched_buses:
-            tasks.append(build_bus_candidates(matched_buses, r, stop_id))
+            tasks.append(build_bus_candidates(matched_buses, r, stop_id, journey_id))
         else:
-            with SessionLocal() as db:
-                journey = await match_trip_journey(db, trip_id, r)
-                journey_id = journey.id if journey else None
-            use_db = journey_id is not None
             if use_db:
                 tasks.append(
                     build_scheduled_db(
@@ -202,7 +202,10 @@ async def build_scheduled_db(
             .options(
                 joinedload(StopTime.journey)
                 .joinedload(Journey.line)
-                .joinedload(Line.service)
+                .joinedload(Line.service), joinedload(StopTime.journey)
+                .joinedload(Journey.destination)
+                .joinedload(Stop.locality),
+
             )
             .first()
         )
@@ -227,11 +230,7 @@ async def build_scheduled_db(
             print("Scheduled too far in future")
             return None
 
-        dest = (
-            stop_time.journey.line.service.destination
-            if stop_time.journey.direction == DirectionType.outbound
-            else stop_time.journey.line.service.origin
-        )
+        dest = stop_time.headsign
 
         scheduled_bus = ScheduledBus(
             destination=dest,
@@ -304,10 +303,10 @@ async def build_scheduled_db(
 
 
 async def build_bus_candidates(
-    buses: list[dict], r: Redis, stop_id: str
+        buses: list[dict], r: Redis, stop_id: str, journey_id: str | None = None
 ) -> TrackedBus | None:
     results = await asyncio.gather(
-        *[build_bus(bus["id"], r, stop_id, get_journey=False) for bus in buses]
+        *[build_bus(bus["id"], r, stop_id, journey_id, get_journey=False) for bus in buses]
     )
 
     valid = [
@@ -329,6 +328,7 @@ async def build_bus(
     bus_id: int,
     r: Redis,
     stop_id: str = "",
+        journey_id: str | None = None,
     get_journey: bool = True,
 ) -> TrackedBus | None:
     this_bus = await fetch_bus(bus_id, r)
@@ -337,6 +337,25 @@ async def build_bus(
         return None
 
     delay = this_bus.get("delay")
+
+    db_stoptime = None
+
+    if journey_id:
+        with SessionLocal() as db:
+            db_stoptime: StopTime | None = (
+                db.query(StopTime)
+                .filter(StopTime.journey_id == journey_id, StopTime.stop_id == stop_id)
+                .options(
+                    joinedload(StopTime.journey)
+                    .joinedload(Journey.line)
+                    .joinedload(Line.service), joinedload(StopTime.journey)
+                    .joinedload(Journey.destination)
+                    .joinedload(Stop.locality),
+
+                )
+                .first()
+            )
+
 
     tracking = True
 
@@ -442,6 +461,9 @@ async def build_bus(
         min_expected, max_expected = await calculate_expected_difference(
             timestamp, times.expected, times.scheduled
         )  # type: ignore
+
+    if db_stoptime:
+        destination = db_stoptime.headsign or destination
 
     return TrackedBus(
         type="tracked",

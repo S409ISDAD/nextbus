@@ -1,10 +1,10 @@
 from datetime import datetime, timedelta
+
 from sqlalchemy.orm import Session
 
 from backend.db.db import SessionLocal
 from backend.deps import UTC
 from backend.models import (
-    DirectionType,
     Stop,
 )
 
@@ -26,8 +26,7 @@ def times_from_stop(stop_id: str, db: Session, limit: int = 10):
     results = []
     for st in stop_times[:limit]:
         line_name = st.journey.line.line_name if st.journey.line else None
-        outbound = st.journey.direction == DirectionType.outbound
-        dest = st.journey.service.destination if outbound else st.journey.service.origin
+        dest = st.headsign
         dep_str = st.departure_time_str
         time_to = st.departure_time - current_time
         mins = int(time_to.total_seconds() // 60)
@@ -60,6 +59,6 @@ def times_from_stop(stop_id: str, db: Session, limit: int = 10):
 
 
 if __name__ == "__main__":
-    stop_id = "1900HA110364"
+    stop_id = "1900HA110749"
     with SessionLocal() as db:
         times_from_stop(stop_id, db)

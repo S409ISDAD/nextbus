@@ -553,7 +553,7 @@ class Calendar(Base):
         # check day
         weekday = date.strftime("%A").lower()
         if not getattr(self, weekday):
-            # print("Not valid on this weekday, active days:", self.calendar.days_of_week)
+            # print("Not valid on this weekday, active days:", self.days_of_week)
             return False
 
         # check exceptions
@@ -570,6 +570,7 @@ class Calendar(Base):
             bh = link.bank_holiday
             for bh_date in bh.dates:
                 if bh_date.date == date:
+                    print(f"Bank holiday valid, and operating={link.operating}")
                     return link.operating
 
         return True
@@ -837,7 +838,7 @@ class Route(Base):
 
 class Journey(Base):
     """
-    full scheduled trip,has a one to many relationship with stop times to generate a schedule
+    full scheduled trip, has a one to many relationship with stop times to generate a schedule
     """
 
     __tablename__ = "journey"
@@ -851,13 +852,19 @@ class Journey(Base):
     line_id = Column(String, ForeignKey("line.id", ondelete="CASCADE"), nullable=True)
     block_id = Column(String, nullable=True)
     direction = Column(Enum(DirectionType))
+    headsign = Column(String, nullable=True)
     start_time = Column(Interval, nullable=False)
     end_time = Column(Interval)
+    origin_stop_id = Column(String, ForeignKey("stop.atco_code"), nullable=True)
+    destination_stop_id = Column(String, ForeignKey("stop.atco_code"), nullable=True)
     calendar_id = Column(
         Integer, ForeignKey("calendar.id", ondelete="CASCADE"), nullable=True
     )
 
     calendar = relationship("Calendar", back_populates="journeys")
+
+    origin = relationship("Stop", foreign_keys=[origin_stop_id])
+    destination = relationship("Stop", foreign_keys=[destination_stop_id])
 
     service = relationship("Service", back_populates="journeys")
     line = relationship("Line", back_populates="journeys")
@@ -967,6 +974,7 @@ class StopTime(Base):
     stop_sequence = Column(Integer, nullable=False)
     arrival_time = Column(Interval, nullable=True)
     departure_time = Column(Interval, nullable=True)
+    dest_display = Column(String, nullable=True)
     timing_status = Column(String, nullable=True)
     pick_up = Column(Boolean, nullable=True)
     drop_off = Column(Boolean, nullable=True)
@@ -975,6 +983,15 @@ class StopTime(Base):
 
     journey = relationship("Journey", back_populates="stop_times")
     stop = relationship("Stop", back_populates="stop_times")
+
+    @property
+    def headsign(self):
+        # return self.journey.destination.locality.name
+        return self.journey.destination.locality.name or self.journey.headsign or (
+            self.journey.line.service.destination
+            if self.journey.direction == DirectionType.outbound
+            else self.journey.line.service.origin
+        )
 
     @property
     def departure_time_str(self):

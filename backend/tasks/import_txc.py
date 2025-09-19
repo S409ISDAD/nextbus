@@ -5,15 +5,14 @@ import sys
 import time
 import zipfile
 from datetime import datetime, timedelta
-import isodate
+from pathlib import Path
 
+import isodate
 from geoalchemy2.shape import from_shape, to_shape
 from shapely import MultiLineString, Point
 from shapely.geometry import LineString
 from sqlalchemy import func, select, update
 from sqlalchemy_searchable import sync_trigger
-from backend.utils.download_if_modified import download_if_modified
-from pathlib import Path
 
 from backend.db.db import SessionLocal, engine
 from backend.deps import LONDON
@@ -37,6 +36,7 @@ from backend.models import (
 )
 from backend.txc import txc
 from backend.utils.bulk_upsert import bulk_upsert
+from backend.utils.download_if_modified import download_if_modified
 
 logger = logging.getLogger(__name__)
 
@@ -338,6 +338,9 @@ class TXCImporter:
         )
         track_section_map = {str(ts.route_link_ref): ts for ts in track_sections}
 
+        last_to_stop = None
+        last_to_seq = None
+
         for timing_link in txc_journey.timing_links:
             journey_pattern_timing_link = journey_pattern_section.timing_links.get(
                 timing_link.journey_pattern_timing_link_ref
@@ -353,16 +356,36 @@ class TXCImporter:
             to_stop = journey_pattern_timing_link.to_stop
             to_seq = journey_pattern_timing_link.to_stop.sequence_number
 
+            headsign = to_stop.dynamic_destination_display
+
             if from_stop and to_stop:
-                stop_sequence[from_stop] = int(from_seq)
-                stop_sequence[to_stop] = int(to_seq)
+                stop_sequence[from_stop.stop_point_ref] = int(from_seq)
+                stop_sequence[to_stop.stop_point_ref] = int(to_seq)
 
             stops[from_stop.stop_point_ref] = {
                 "activity": from_stop.activity,
                 "timing_status": from_stop.timing_status,
                 "runtime": self.parse_runtime(timing_link.run_time),
+                "headsign": headsign,
                 "distance": track_section.distance if track_section else 0.0,
             }
+
+            last_to_stop = to_stop
+            last_to_seq = to_seq
+
+        if last_to_stop:
+            stop_ref = last_to_stop.stop_point_ref
+            if stop_ref not in stops:
+                stops[stop_ref] = {
+                    "activity": last_to_stop.activity,
+                    "timing_status": last_to_stop.timing_status,
+                    "headsign": last_to_stop.dynamic_destination_display,
+                    "runtime": timedelta(0),
+                    "distance": 0.0,
+                }
+
+            if stop_ref not in stop_sequence and last_to_seq is not None:
+                stop_sequence[stop_ref] = int(last_to_seq)
 
         cumulative_distance = 0.0
         cumulative_time = start_time
@@ -378,8 +401,6 @@ class TXCImporter:
             seq = i
             stop_data = stops.get(stop_ref)
 
-            cumulative_distance += stop_data["distance"] if stop_data else 0.0
-
             activity = stop_data.get("activity") if stop_data else None
             pick_up = "pickup" in activity.lower() if activity else False
             drop_off = "setdown" in activity.lower() if activity else False
@@ -391,6 +412,7 @@ class TXCImporter:
                 "departure_time": cumulative_time,
                 "arrival_time": cumulative_time,
                 "stop_sequence": seq,
+                "dest_display": stop_data["headsign"],
                 "distance_traveled": cumulative_distance,
                 "timing_status": stop_data["timing_status"]
                 if stop_data and "timing_status" in stop_data
@@ -403,6 +425,15 @@ class TXCImporter:
                 if stop_data and "runtime" in stop_data
                 else timedelta(0)
             )
+            cumulative_distance += stop_data["distance"] if stop_data else 0.0
+
+        first_stop = sorted_stops[0][0]
+        final_stop = sorted_stops[-1][0]
+        headsign = ""
+        for stop in sorted_stops:
+            if stop[1]["headsign"]:
+                headsign = stop[1]["headsign"]
+                break
 
         journey = {
             "id": journey_code,
@@ -411,6 +442,9 @@ class TXCImporter:
             "ticket_machine_code": txc_journey.ticket_machine_code,
             "line_id": line.id,
             "block_id": txc_journey.block,
+            "headsign": headsign,
+            "origin_stop_id": first_stop,
+            "destination_stop_id": final_stop,
             "direction": journey_pattern.direction if journey_pattern else None,
             "start_time": start_time,
             "end_time": cumulative_time,
