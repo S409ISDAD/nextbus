@@ -1,14 +1,14 @@
-from pydantic import BaseModel
+from datetime import datetime as dt
+
+from geopy.distance import geodesic
+from pyproj import Geod
+from redis.asyncio import Redis
+from shapely.geometry import LineString, Point
 
 from backend.deps import LONDON
 from backend.schemas.confidence import Confidence
-from backend.services.journeys import get_trip, get_live_journey
 from backend.schemas.journey import Trip, LiveJourney
-from redis.asyncio import Redis
-from datetime import datetime as dt
-from geopy.distance import geodesic, great_circle
-from pyproj import Geod
-from shapely.geometry import LineString, Point
+from backend.services.journeys import get_trip, get_live_journey
 
 geod = Geod(ellps="WGS84")
 
@@ -160,5 +160,7 @@ def track_location_similarity(track: LineString, locations: LineString) -> float
     total_deviation = sum(deviation)
     max_allowed_deviation = 1000 * len(deviation)  # 1km per point maximum deviation
 
+    if max_allowed_deviation == 0:  # prevent division by zero
+        return 1.0
     normalised = 1 - min(total_deviation / max_allowed_deviation, 1.0)
     return normalised
