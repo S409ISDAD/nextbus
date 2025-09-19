@@ -988,13 +988,28 @@ class StopTime(Base):
     @property
     def headsign(self):
         # return self.journey.destination.locality.name
-        show_headsign = True
-        if self.journey.headsign and len(self.journey.headsign) > 20:
-            show_headsign = False
-        if not self.journey.headsign:
-            show_headsign = False
 
-        final_headsign = self.journey.headsign if show_headsign and self.journey.headsign else (
+        main_dest = (
+            self.journey.line.service.destination
+            if self.journey.direction == DirectionType.outbound
+            else self.journey.line.service.origin
+        )
+
+        line_dest = (
+            self.journey.line.outbound_description
+            if self.journey.direction == DirectionType.outbound
+            else self.journey.line.inbound_description
+        )
+
+        show_headsign = False
+        headsign = self.dest_display or self.journey.headsign
+        if headsign and len(headsign) < 25:
+            show_headsign = True
+
+        if (headsign in main_dest) and (headsign in line_dest):
+            show_headsign = True
+
+        final_headsign = headsign if show_headsign and headsign else (
             self.journey.line.service.destination
             if self.journey.direction == DirectionType.outbound
             else self.journey.line.service.origin
@@ -1003,7 +1018,7 @@ class StopTime(Base):
         if self.journey.destination is None or self.journey.destination.locality is None:
             return final_headsign
 
-        return self.journey.destination.locality.name or final_headsign
+        return final_headsign if show_headsign else self.journey.destination.locality.name
 
     @property
     def departure_time_str(self):
