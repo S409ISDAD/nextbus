@@ -351,6 +351,7 @@ class Stop(Base):
         stop_times = (
             db.query(StopTime)
             .filter(StopTime.stop_id == self.atco_code)
+            .filter(StopTime.pick_up == True)
             .join(Journey)
             .join(Calendar)
             .options(
@@ -987,17 +988,20 @@ class StopTime(Base):
     @property
     def headsign(self):
         # return self.journey.destination.locality.name
-        if self.journey.destination is None:
-            return self.journey.headsign or (
-                self.journey.line.service.destination
-                if self.journey.direction == DirectionType.outbound
-                else self.journey.line.service.origin
-            )
-        return self.journey.destination.locality.name or self.journey.headsign or (
+        show_headsign = True
+        if len(self.journey.headsign) > 20:
+            show_headsign = False
+
+        final_headsign = self.journey.headsign if show_headsign and self.journey.headsign else (
             self.journey.line.service.destination
             if self.journey.direction == DirectionType.outbound
             else self.journey.line.service.origin
         )
+
+        if self.journey.destination is None or self.journey.destination.locality is None:
+            return final_headsign
+
+        return self.journey.destination.locality.name or final_headsign
 
     @property
     def departure_time_str(self):
