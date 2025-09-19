@@ -289,6 +289,10 @@ async def build_scheduled_db(
                 # Don't show if expected is more than 2 hours away
                 if (bus.expected - datetime.now(tz=LONDON)).total_seconds() < 4 * 3600:
                     return bus
+                if layover_time.total_seconds() > 30 * 60:  # bus is not necessarily going straight on the next trip, might have to drive there which affects delay
+                    print("Layover too long")
+                    bus.delay = 0
+
                 print("Bus expected too far in future")
 
         return ScheduledBus(
@@ -368,6 +372,10 @@ async def build_bus(
         print(f"ignoring bus with delay of {round(delay / 60)} minutes")
         return None
 
+    # Reset delay if earlier than 15 mins, it has probably logged on early
+    if delay < 15 * 60:
+        delay = 0
+
     await r.sadd("total_buses", bus_id)
 
     timestamp = this_bus.get("datetime")
@@ -423,7 +431,7 @@ async def build_bus(
 
     sequence = progress.get("sequence", None)
     prog = progress.get("progress", None)
-    if sequence and prog and target_seq and confidence.final_confidence < 0.75:
+    if sequence and prog and target_seq and confidence.final_confidence < 0.75 and sequence > 5:  # bus may be logging on early
         if (sequence == target_seq and prog >= 0.1) or sequence > target_seq:
             print("bus has likely passed the stop")
             return None  # bus has likely passed the stop
