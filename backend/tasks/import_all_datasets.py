@@ -28,5 +28,5 @@ async def import_datasets():
 
 
 if __name__ == "__main__":
-    asyncio.run(import_weekly_data())
+    # asyncio.run(import_weekly_data())
     asyncio.run(import_datasets())
