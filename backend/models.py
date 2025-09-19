@@ -989,7 +989,9 @@ class StopTime(Base):
     def headsign(self):
         # return self.journey.destination.locality.name
         show_headsign = True
-        if len(self.journey.headsign) > 20:
+        if self.journey.headsign and len(self.journey.headsign) > 20:
+            show_headsign = False
+        if not self.journey.headsign:
             show_headsign = False
 
         final_headsign = self.journey.headsign if show_headsign and self.journey.headsign else (
