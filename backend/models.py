@@ -1001,12 +1001,12 @@ class StopTime(Base):
             else self.journey.line.inbound_description
         )
 
+
         show_headsign = False
         headsign = self.dest_display or self.journey.headsign
-        if headsign and len(headsign) < 25:
-            show_headsign = True
 
-        if (headsign in main_dest) and (headsign in line_dest):
+        if headsign and len(headsign) < 25 and any(
+                word in headsign.split() for word in main_dest.split() + line_dest.split()):
             show_headsign = True
 
         final_headsign = headsign if show_headsign and headsign else (
@@ -1015,10 +1015,13 @@ class StopTime(Base):
             else self.journey.line.service.origin
         )
 
+        # if not show_headsign:
+        #     print(f"not using headsign {headsign}, using {self.journey.headsign} instead")
+
         if self.journey.destination is None or self.journey.destination.locality is None:
             return final_headsign
 
-        return final_headsign if show_headsign else self.journey.destination.locality.name
+        return final_headsign if show_headsign else self.journey.headsign or self.journey.destination.locality.name
 
     @property
     def departure_time_str(self):
