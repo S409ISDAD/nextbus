@@ -987,6 +987,12 @@ class StopTime(Base):
     @property
     def headsign(self):
         # return self.journey.destination.locality.name
+        if self.journey.destination is None:
+            return self.journey.headsign or (
+                self.journey.line.service.destination
+                if self.journey.direction == DirectionType.outbound
+                else self.journey.line.service.origin
+            )
         return self.journey.destination.locality.name or self.journey.headsign or (
             self.journey.line.service.destination
             if self.journey.direction == DirectionType.outbound
