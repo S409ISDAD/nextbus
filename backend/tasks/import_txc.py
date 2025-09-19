@@ -429,11 +429,7 @@ class TXCImporter:
 
         first_stop = sorted_stops[0][0]
         final_stop = sorted_stops[-1][0]
-        headsign = ""
-        for stop in sorted_stops:
-            if stop[1]["headsign"]:
-                headsign = stop[1]["headsign"]
-                break
+        headsign = next((stop[1]["headsign"] for stop in sorted_stops if stop[1]["headsign"]), "")
 
         journey = {
             "id": journey_code,
