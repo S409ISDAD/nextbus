@@ -1021,7 +1021,7 @@ class StopTime(Base):
         if self.journey.destination is None or self.journey.destination.locality is None:
             return final_headsign
 
-        return final_headsign if show_headsign else self.journey.headsign or self.journey.destination.locality.name
+        return final_headsign if show_headsign else self.journey.destination.locality.name or self.journey.headsign
 
     @property
     def departure_time_str(self):

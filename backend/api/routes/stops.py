@@ -1,4 +1,5 @@
 import logging
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from backend.deps import get_redis, limiter
@@ -46,6 +47,7 @@ async def stop_details(request: Request, stop_id: str, redis=Depends(get_redis))
             indicator=stop_details.get("indicator", ""),
             bearing=bearing,
             services=services,
+            dist=0
         )
 
     except Exception as e:

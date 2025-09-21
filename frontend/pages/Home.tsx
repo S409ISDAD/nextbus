@@ -2,30 +2,31 @@ import React, {useEffect, useState} from "react";
 // import DepartureBoard from "../components/DepartureBoard";
 // import { faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
 // import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { Card } from "../components/ui/Card";
-import { getCurrentPosition } from "../utils/locations";
-import type { ServiceInfo } from "../models/ServiceInfo";
-import getNearby from "../utils/getNearby";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBus, faWarning } from "@fortawesome/free-solid-svg-icons";
-import { getClosestStop } from "../utils/closestStop";
-import { useNavigate } from "react-router";
+import {Card} from "../components/ui/Card";
+import {getCurrentPosition} from "../utils/locations";
+import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
+import {faBus, faMap, faRotateRight, faTrainSubway, faWarning} from "@fortawesome/free-solid-svg-icons";
+import {getClosestStop} from "../utils/closestStop";
+import {useNavigate} from "react-router";
 import SearchBar from "../components/SearchBar";
 // import {
 //     LocationPrompt,
 //     useIsLocationGranted,
 // } from "../components/LocationPrompt";
-import { useGeolocated } from "react-geolocated";
+import {useGeolocated} from "react-geolocated";
 import type {DBStats} from "../models/Stats.ts";
 import {getDBStats} from "../utils/getStats.ts";
+import type {Locality} from "../models/Locality.ts";
+import {getDestinations} from "../utils/JourneyPlanning.ts";
 
 const Home: React.FC = () => {
     // const navigate = useNavigate();
 
-    const [services, setServices] = React.useState<ServiceInfo[]>([]);
     const [closestStop, setClosestStop] = React.useState<string | null>(null);
     const [showStop, setShowStop] = React.useState(false);
     const [stats, setStats] = useState<DBStats>();
+    const [destinations, setDestinations] = useState<Locality[]>([]);
+    const [loadingDestinations, setLoadingDestinations] = useState(false);
     const {
         coords,
         // isGeolocationAvailable,
@@ -45,8 +46,31 @@ const Home: React.FC = () => {
         document.title = "nextbus";
     }, []);
 
+    const fetchLocalities = async () => {
+        try {
+            // console.log(isGeolocationAvailable, isGeolocationEnabled);
+            // if (!isGeolocationAvailable || !isGeolocationEnabled) return;
+            setLoadingDestinations(true);
+
+            const pos = await getCurrentPosition();
+
+            const destinations = await getDestinations([pos.coords.latitude, pos.coords.longitude], undefined)
+            if (destinations) {
+                console.log(
+                    "destinations",
+                    destinations
+                );
+                setDestinations(destinations);
+            }
+        } catch (error) {
+            console.log("uh oh", error);
+        } finally {
+            setLoadingDestinations(false);
+        }
+    }
+
     useEffect(() => {
-        const fetchServices = async () => {
+        const getClosest = async () => {
             try {
                 // console.log(isGeolocationAvailable, isGeolocationEnabled);
                 // if (!isGeolocationAvailable || !isGeolocationEnabled) return;
@@ -72,15 +96,6 @@ const Home: React.FC = () => {
                         setShowStop(true);
                     }
                 }
-
-                const services = await getNearby([
-                    pos.coords.latitude,
-                    pos.coords.longitude,
-                ]);
-
-                if (services) {
-                    setServices(services);
-                }
             } catch (error) {
                 console.log("uh oh", error);
             }
@@ -95,8 +110,11 @@ const Home: React.FC = () => {
                 console.log("uh oh");
             }
         };
+
+
+        getClosest();
+        fetchLocalities();
         fetchStats();
-        fetchServices();
     }, [coords]);
 
     return (
@@ -136,7 +154,7 @@ const Home: React.FC = () => {
                         <div className="flex flex-col items-center gap-2 p-3 bg-neutral-800 rounded-[24px]">
                             <span className="px-5 font-semibold text-center text-neutral-300 text">
                                 It looks like you're at a bus stop!
-                                <br /> Would you like to see the departures?
+                                <br/> Would you like to see the departures?
                             </span>
                             <div className="flex flex-row w-full gap-2">
                                 <button
@@ -158,58 +176,89 @@ const Home: React.FC = () => {
                         </div>
                     )}
                     <div className="flex flex-wrap items-center justify-center w-full gap-4 mb-4">
-                    <div className="flex flex-col items-center p-2 px-6 shadow bg-neutral-800/50 rounded-xl">
+                        <div className="flex flex-col items-center p-2 px-6 shadow bg-neutral-800/50 rounded-xl">
                         <span className="text-xl font-bold text-sky-400">
                             {stats?.lines?.toLocaleString() ?? "--"}
                         </span>
-                        <span className="mt-1 text-sm text-neutral-400">
+                            <span className="mt-1 text-sm text-neutral-400">
                             Services
                         </span>
-                    </div>
-                    <div className="flex flex-col items-center p-2 px-6 shadow bg-neutral-800/50 rounded-xl">
+                        </div>
+                        <div className="flex flex-col items-center p-2 px-6 shadow bg-neutral-800/50 rounded-xl">
                         <span className="text-xl font-bold text-purple-400">
                             {stats?.stops?.toLocaleString() ?? "--"}
                         </span>
-                        <span className="mt-1 text-sm text-neutral-400">
+                            <span className="mt-1 text-sm text-neutral-400">
                            Stops
                         </span>
-                    </div>
-                    <div className="flex flex-col items-center p-2 px-6 shadow bg-neutral-800/50 rounded-xl">
+                        </div>
+                        <div className="flex flex-col items-center p-2 px-6 shadow bg-neutral-800/50 rounded-xl">
                         <span className="text-xl font-bold text-emerald-400">
                             {stats?.operators?.toLocaleString() ?? "--"}
                         </span>
-                        <span className="mt-1 text-sm text-neutral-400">
+                            <span className="mt-1 text-sm text-neutral-400">
                             Operators
                         </span>
+                        </div>
+
                     </div>
 
-                </div>
-
-                    <SearchBar />
+                    <SearchBar/>
 
                     <div className="flex flex-row flex-wrap items-start justify-center w-full gap-5 p-5">
                         <Card className="max-w-[90vw] flex flex-col items-center gap-2">
                             <div className="flex flex-col items-center justify-center">
                                 <span className="text-xl font-bold text-center">
-                                    Your bus dashboard
-                                </span>
-                                <span className="text-sm font-semibold text-center text-neutral-500">
-                                    (favorite stops, etc.)
+                                    Quick Links
                                 </span>
                             </div>
-                            <button
-                                className="button"
-                                onClick={() => {
-                                    navigate("/buses");
-                                }}>
-                                Bus Dashboard <FontAwesomeIcon icon={faBus} />
-                            </button>
+                            <div className="flex flex-row gap-2 items-center justify-center flex-wrap">
+                                <button
+                                    className="button max-w-fit"
+                                    onClick={() => {
+                                        navigate("/buses");
+                                    }}>
+                                    Bus Dashboard <FontAwesomeIcon icon={faBus}/>
+                                </button>
+                                <button
+                                    className="button max-w-fit"
+                                    onClick={() => {
+                                        navigate("/map");
+                                    }}>
+                                    Map <FontAwesomeIcon icon={faMap}/>
+                                </button>
+                                <button
+                                    className="button max-w-fit"
+                                    onClick={() => {
+                                        navigate("/trains");
+                                    }}>
+                                    Trains <FontAwesomeIcon icon={faTrainSubway}/>
+                                </button>
+                            </div>
+
                         </Card>
 
                         <Card className="max-w-[90vw] flex flex-col items-center gap-2">
-                            <span className="text-xl font-bold text-center">
-                                Your nearby bus services
-                            </span>
+                            <div className="flex flex-row items-center justify-center gap-3">
+                                <div className="flex flex-col items-center justify-center gap-1">
+                                    <div className="flex flex-row items-center justify-center gap-1">
+                                    <span className="text-xl font-bold text-center text-nowrap">
+                                        Where to?
+                                    </span>
+                                        <button
+                                            className="p-1 rounded-2xl bg-blue-600 w-8 h-8"
+                                            onClick={async () => {
+                                                await fetchLocalities();
+                                            }}>
+                                            <FontAwesomeIcon icon={faRotateRight} className="text-xs"/>
+                                        </button>
+                                    </div>
+                                    <span className="text-sm font-semibold text-center text-neutral-500">
+                                        finds possible destinations based on buses you could take right now (work in progress)
+                                    </span>
+                                </div>
+
+                            </div>
                             <div className="w-full max-w-[400px]">
                                 {/* <LocationPrompt
                                     isGeolocationAvailable={
@@ -232,21 +281,28 @@ const Home: React.FC = () => {
                                         ))}
                                     </div>
                                 </LocationPrompt> */}
-                                <div className="flex flex-row items-center gap-2 overflow-x-auto whitespace-nowrap">
-                                    {services.length === 0 && (
+                                <div
+                                    className="flex flex-row items-center justify-center gap-2 flex-wrap whitespace-nowrap">
+                                    {loadingDestinations && (
                                         <span className="text-sm text-neutral-400">
-                                            No nearby services found.
+                                            loading...
                                         </span>
                                     )}
-                                    {services.map((service) => (
+                                    {destinations.length === 0 && !loadingDestinations && (
+                                        <span className="text-sm text-neutral-400">
+                                            No possible destinations found.
+                                        </span>
+                                    )}
+                                    {destinations.map((dest) => (
                                         <a
-                                            key={service.id}
+                                            key={dest.id}
                                             className="flex items-center justify-center px-3 py-1 text-lg font-bold text-center cursor-pointer rounded-xl bg-neutral-800/50"
-                                            href={`/buses/services/${service.id}`}>
-                                            {service.line_name}
+                                            href={`/buses/journeysearch/${dest.id}`}>
+                                            {dest.name}
                                         </a>
                                     ))}
                                 </div>
+
                             </div>
                         </Card>
                     </div>

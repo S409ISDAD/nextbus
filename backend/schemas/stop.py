@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import Literal, Optional
+
 from pydantic import BaseModel
 
 from backend.schemas.service import Service
@@ -14,6 +15,7 @@ class Stop(BaseModel):
     active: bool
     coords: list[float]
     services: Optional[list[Service]]
+    dist: Optional[float]  # distance from user (if needed)
 
 
 class StopTime(BaseModel):

@@ -26,6 +26,7 @@ from backend.api.routes import (
     buses,
     livery,
     trains,
+    journey_planning,
 )
 from backend.config import config
 from backend.db.db import SessionLocal, get_db
@@ -175,7 +176,6 @@ if config.env != "development":
         profile_lifecycle="trace",
     )
 
-
 print(f"running in {config.env} mode")
 app = FastAPI(lifespan=lifespan, redirect_slashes=False)
 
@@ -190,7 +190,6 @@ app.add_middleware(
 )
 
 app.router.redirect_slashes = False
-
 
 app.state.limiter = limiter
 app.add_exception_handler(
@@ -238,3 +237,4 @@ app.include_router(trains.router, prefix="/api/v1/trains")
 app.include_router(lines.router, prefix="/api/v1/lines")
 app.include_router(stats.router, prefix="/api/v1/stats")
 app.include_router(search.router, prefix="/api/v1/search")
+app.include_router(journey_planning.router, prefix="/api/v1/planning")

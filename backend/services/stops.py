@@ -1,7 +1,9 @@
 from geopy.distance import geodesic
+from redis.asyncio import Redis
+
 from backend.config import API_BASE, BASE, STOPS_BASE
-from backend.schemas.stop import Stop
 from backend.schemas.service import Service
+from backend.schemas.stop import Stop
 from backend.services.caching import (
     SERVICES_CACHE,
     STOPS_CACHE,
@@ -9,7 +11,6 @@ from backend.services.caching import (
     get_cached,
 )
 from backend.utils.fetch_json import fetch_json
-from redis.asyncio import Redis
 
 
 async def get_stop_details(stop_id, r: Redis):
@@ -125,6 +126,8 @@ async def get_nearby_stops(lat, lng, dist=0.005):
         bearing = stop["properties"].get("bearing", None)
         indicator = stop["properties"].get("indicator", "")
 
+        dist = geodesic((lat, lng), (stop_lat, stop_lng)).meters
+
         nearby_stops.append(
             Stop(
                 stop_id=stop["properties"]["url"].split("/")[2],
@@ -135,6 +138,7 @@ async def get_nearby_stops(lat, lng, dist=0.005):
                 bearing=bearing,
                 active=stop["properties"].get("active", True),
                 services=None,  # Services will be fetched separately if needed
+                dist=dist,
             )
         )
 

@@ -15,27 +15,22 @@ import NotFound from "../pages/NotFound";
 import StatsPage from "../pages/Stats";
 import TrainSearchPage from "../pages/TrainSearchPage";
 import TrainsDashboard from "../pages/Trains";
-import { BrowserRouter, Routes, Route, useLocation } from "react-router";
-import { Toaster } from "react-hot-toast";
-import { faXmark } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {BrowserRouter, Route, Routes, useLocation} from "react-router";
+import toast, {Toaster} from "react-hot-toast";
+import {faXmark} from "@fortawesome/free-solid-svg-icons";
+import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import useReloadPrompt from "../components/ReloadPrompt";
 import InstallToast from "../components/InstallPrompt";
 import useLocalStorageState from "use-local-storage-state";
 import version from "../utils/version";
-import { useShowAppNav } from "../utils/AppNav";
-import toast from "react-hot-toast";
-import { MotionConfig } from "framer-motion";
+import {useShowAppNav} from "../utils/AppNav";
+import {MotionConfig} from "framer-motion";
 import SearchPage from "../pages/Search";
 
-import { useState, useEffect } from "react";
-import {
-    Dialog,
-    DialogBackdrop,
-    DialogPanel,
-    DialogTitle,
-} from "@headlessui/react";
+import {useEffect, useState} from "react";
+import {Dialog, DialogBackdrop, DialogPanel, DialogTitle,} from "@headlessui/react";
 import Map from "../components/Map";
+import PossibleJourneysPage from "../pages/PossibleJourneysPage.tsx";
 
 function UsefulBanner() {
     const location = useLocation();
@@ -196,6 +191,10 @@ function App() {
                             />
                             <Route path="/map" element={<Map />} />
                             <Route path="/buses" element={<BusPage />} />
+                            <Route
+                                path="/buses/journeysearch/:locality/:datetime?"
+                                element={<PossibleJourneysPage/>}
+                            />
                             <Route
                                 path="/buses/stops/:stop_id"
                                 element={<DeparturePage />}
