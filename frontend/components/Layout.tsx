@@ -1,16 +1,52 @@
-import { Link, Outlet, useNavigate } from "react-router";
-import { useShowAppNav, whereAmI, isIOS } from "../utils/AppNav";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-    faBus,
-    faHome,
-    faMagnifyingGlass,
-    faMap,
-    faTrainSubway,
-} from "@fortawesome/free-solid-svg-icons";
-import { faDiscord } from "@fortawesome/free-brands-svg-icons";
+import {Link, Outlet, useNavigate} from "react-router";
+import {isIOS, useShowAppNav, whereAmI} from "../utils/AppNav";
+import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
+import {faBus, faHome, faMagnifyingGlass, faMap, faTrainSubway,} from "@fortawesome/free-solid-svg-icons";
+import {faDiscord} from "@fortawesome/free-brands-svg-icons";
 import version from "../utils/version";
-import { motion } from "framer-motion";
+import {motion} from "framer-motion";
+import {useState} from "react";
+
+function NavSearchBar(queryProp?: { query?: string }) {
+    const [searchQuery, setSearchQuery] = useState(queryProp?.query || "");
+    const navigate = useNavigate();
+    return (
+        <motion.div
+            layout
+            key={"search-bar-nav"}
+            layoutId="search-bar-nav"
+            className="flex items-center w-fit rounded-full shadow-2xl border-1 border-neutral-800 bg-neutral-900">
+            <div className="ml-3 mr-2 text-gray-500">
+                <FontAwesomeIcon
+                    icon={faMagnifyingGlass}
+                    width={12}
+                    height={12}
+                />
+            </div>
+
+            <input
+                type="text"
+                placeholder="Search for a route or place"
+                className="flex-grow font-medium text-sm placeholder-gray-400 bg-transparent focus:outline-none"
+                onChange={(e) => setSearchQuery(e.target.value)}
+                value={searchQuery}
+                onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                        navigate(`/search/${searchQuery}`);
+                    }
+                }}
+            />
+            <button
+                className="mr-2 px-3 py-1 font-bold text-sm text-white rounded-full bg-blue-500  transition cursor-pointer shadow-[0_0_5px_1px_rgba(43,127,255,0.5)] hover:shadow-[0_0_10px_2px_rgba(43,127,255,0.6)]"
+                onClick={() => {
+                    navigate(`/search/${searchQuery}`);
+                }}>
+                Go
+            </button>
+        </motion.div>
+    );
+}
+
 
 const footer = (currentYear: number) => (
     <footer className="flex flex-row flex-wrap items-start justify-center w-full gap-2 p-3 text-sm text-gray-200 border-t-2 max-h-fit border-neutral-800">
@@ -84,11 +120,8 @@ export default function Layout() {
                             </button>
                         </Link> */}
                     </div>
-                    <Link to="/search">
-                        <button className="p-2 px-3 transition-all cursor-pointer border-neutral-800 h-max rounded-2xl border-1 hover:border-blue-700 ">
-                            search
-                        </button>
-                    </Link>
+                    <NavSearchBar/>
+
                 </div>
                 <main>
                     <div className="h-15"></div>
