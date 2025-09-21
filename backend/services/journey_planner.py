@@ -109,7 +109,9 @@ async def get_possible_journeys(lat: float, lon: float, locality: str, r, now: d
                 .joinedload(Line.service),
                 joinedload(Journey.destination)
                 .joinedload(Stop.locality),
-                joinedload(ST_curr.journey)
+                joinedload(ST_curr.journey),
+                joinedload(S_curr.locality),
+                joinedload(S_dest.locality),
 
             )).all()
 
@@ -160,9 +162,9 @@ async def get_possible_journeys(lat: float, lon: float, locality: str, r, now: d
                         "line_id": line,
                         "line_name": journey.line.line_name,
                         "origin_stop_id": s_curr.atco_code,
-                        "origin_stop_name": s_curr.common_name,
+                        "origin_stop_name": s_curr.name,
                         "dest_stop_id": s_dest.atco_code,
-                        "dest_stop_name": s_dest.common_name,
+                        "dest_stop_name": s_dest.name,
                         "headsign": headsign,
                         "departure": departure,
                         "arrival": arrival,

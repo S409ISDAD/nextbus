@@ -90,8 +90,12 @@ const SearchPage: React.FC = () => {
                                                 </div>
                                             </div>
                                             <span className="text-sm text-gray-400">
-                                                {line.vias}
+                                                {line.operator}
                                             </span>
+                                            {line.vias && (
+                                                <span className="text-sm text-gray-400">
+                                                via {line.vias}
+                                            </span>)}
                                         </div>
                                         {idx === results.lines.length - 1 && (
                                             <div className="flex items-center gap-2 mb-0.5">
@@ -111,7 +115,7 @@ const SearchPage: React.FC = () => {
                                 <span className="text-2xl font-bold">
                                     {results?.localities.length} Places
                                 </span>
-                                <span className="text-sm text-gray-400 mb-2">
+                                <span className="text-sm text-gray-400 mb-5">
                                     (not clickable yet)
                                 </span>
                                 {results?.localities.length === 0 && (
@@ -119,7 +123,7 @@ const SearchPage: React.FC = () => {
                                         No places found.
                                     </span>
                                 )}
-                                <div className="flex flex-col gap-2">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
                                     {results?.localities.map((locality) => (
                                         <div
                                             key={locality.id}

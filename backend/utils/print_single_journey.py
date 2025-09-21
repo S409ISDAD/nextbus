@@ -12,7 +12,7 @@ def print_journey(journey_id: str, db: Session):
 
     stops = []
     for st in stop_times:
-        stop = st.stop.common_name
+        stop = st.stop.long_name
         dest = st.headsign
         dep_str = st.departure_time_str
         stops.append((stop, dest, dep_str))

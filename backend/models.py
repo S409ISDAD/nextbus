@@ -15,15 +15,16 @@ from sqlalchemy import (
     Interval,
     String,
     UniqueConstraint,
-    func,
+    func, Index,
 )
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship, Session, joinedload, deferred
+from sqlalchemy.orm import relationship, Session, joinedload, deferred, aliased
 from sqlalchemy_searchable import make_searchable
 from sqlalchemy_utils.types import TSVectorType
 
 from backend.config import API_BASE
+from backend.db.db import SessionLocal
 from backend.deps import LONDON
 from backend.utils.fetch_json import fetch_json
 
@@ -275,7 +276,7 @@ class Stop(Base):
     stop_area_id = Column(
         String, ForeignKey("stoparea.id", ondelete="CASCADE"), nullable=True
     )
-    locality_id = Column(String, ForeignKey("locality.id"), nullable=True)
+    locality_id = Column(String, ForeignKey("locality.id"), nullable=True, index=True)
     admin_area_id = Column(Integer, ForeignKey("admin_area.id"), nullable=True)
 
     suburb = Column(String, nullable=True)
@@ -319,11 +320,22 @@ class Stop(Base):
         )
     )
 
+    @property
+    def name(self):
+        locality_name = self.locality.name if self.locality else ""
+        if locality_name.lower() in self.common_name.lower():
+            return self.common_name
+        return f"{self.locality.name} {self.common_name}"
+
+    @property
+    def long_name(self):
+        return f"{self.name} ({self.indicator or self.bearing})"
+
     def lines_served(self, db: Session) -> list["Line"]:
         """
         Returns a list of lines that serve this stop.
         """
-        lines = (
+        lines: list["Line"] = (
             db.query(Line)
             .join(LineStopUsage, Line.id == LineStopUsage.line_id)
             .filter(LineStopUsage.stop_id == self.atco_code)
@@ -331,6 +343,38 @@ class Stop(Base):
             .all()
         )
         return lines
+
+    def localities_towards(self):
+        with SessionLocal() as db:
+            line_ids = [line.id for line in self.lines_served(db)]
+            if not line_ids:
+                return []
+
+            ST_origin = aliased(StopTime)
+
+            localities = (
+                db.query(Locality)
+                .join(Stop, Stop.locality_id == Locality.id)
+                .join(Journey, Journey.destination_stop_id == Stop.atco_code)
+                .join(ST_origin, ST_origin.journey_id == Journey.id)
+                .filter(
+                    Journey.line_id.in_(line_ids),
+                    ST_origin.stop_id == self.atco_code,
+                    Stop.locality_id.isnot(None)
+                )
+                .distinct()
+            ).all()
+
+            # resolve parents in Python
+            result = []
+            seen = set()
+            for loc in localities:
+                parent = loc.parent if loc.parent else loc
+                if parent.id != self.locality_id and parent.id not in seen:
+                    seen.add(parent.id)
+                    result.append(parent)
+
+            return result
 
     def times_from_stop(
             self, db: Session, date: datetime | None = None, limit: int = 10
@@ -654,7 +698,7 @@ class Line(Base):
     """
 
     __tablename__ = "line"
-    id = Column(String, primary_key=True)
+    id = Column(String, primary_key=True, index=True)
     bt_service_id = Column(Integer, nullable=True)
     line_name = Column(String, nullable=False)
     inbound_description = Column(String)
@@ -695,6 +739,29 @@ class Line(Base):
             ),
         )
     )
+
+    def get_dest_localities(self):
+        with SessionLocal() as db:
+            localities = (
+                db.query(Locality)
+                .join(Stop, Stop.locality_id == Locality.id)
+                .join(Journey, Journey.destination_stop_id == Stop.atco_code)
+                .filter(Journey.line_id == self.id)
+                .filter(Stop.locality_id.isnot(None))
+                .distinct()
+                .all()
+            )
+
+            result_localities = []
+            for locality in localities:
+                if locality.parent_id:
+                    parent = db.query(Locality).get(locality.parent_id)
+                    if parent not in result_localities:
+                        result_localities.append(parent)
+                elif locality not in result_localities:
+                    result_localities.append(locality)
+
+        return result_localities
 
     async def get_bt_service_id(self, db: Session) -> int | None:
         """
@@ -743,12 +810,14 @@ class LineStopUsage(Base):
         ForeignKey("line.id", ondelete="CASCADE"),
         primary_key=True,
         nullable=False,
+        index=True,
     )
     stop_id = Column(
         String,
         ForeignKey("stop.atco_code", ondelete="CASCADE"),
         primary_key=True,
         nullable=False,
+        index=True,
     )
 
     __table_args__ = (
@@ -850,14 +919,14 @@ class Journey(Base):
     )
     vehicle_journey_code = Column(String, nullable=True)
     ticket_machine_code = Column(String, nullable=True)
-    line_id = Column(String, ForeignKey("line.id", ondelete="CASCADE"), nullable=True)
+    line_id = Column(String, ForeignKey("line.id", ondelete="CASCADE"), nullable=True, index=True)
     block_id = Column(String, nullable=True)
     direction = Column(Enum(DirectionType))
     headsign = Column(String, nullable=True)
     start_time = Column(Interval, nullable=False)
     end_time = Column(Interval)
-    origin_stop_id = Column(String, ForeignKey("stop.atco_code"), nullable=True)
-    destination_stop_id = Column(String, ForeignKey("stop.atco_code"), nullable=True)
+    origin_stop_id = Column(String, ForeignKey("stop.atco_code"), nullable=True, index=True)
+    destination_stop_id = Column(String, ForeignKey("stop.atco_code"), nullable=True, index=True)
     calendar_id = Column(
         Integer, ForeignKey("calendar.id", ondelete="CASCADE"), nullable=True
     )
@@ -967,14 +1036,14 @@ class StopTime(Base):
     __tablename__ = "stop_time"
     id = Column(Integer, primary_key=True, autoincrement=True)
     journey_id = Column(
-        String, ForeignKey("journey.id", ondelete="CASCADE"), nullable=False
+        String, ForeignKey("journey.id", ondelete="CASCADE"), nullable=False, index=True
     )
     stop_id = Column(
-        String, ForeignKey("stop.atco_code", ondelete="CASCADE"), nullable=False
+        String, ForeignKey("stop.atco_code", ondelete="CASCADE"), nullable=False, index=True
     )
     stop_sequence = Column(Integer, nullable=False)
     arrival_time = Column(Interval, nullable=True)
-    departure_time = Column(Interval, nullable=True)
+    departure_time = Column(Interval, nullable=True, index=True)
     dest_display = Column(String, nullable=True)
     timing_status = Column(String, nullable=True)
     pick_up = Column(Boolean, nullable=True)
@@ -984,6 +1053,10 @@ class StopTime(Base):
 
     journey = relationship("Journey", back_populates="stop_times")
     stop = relationship("Stop", back_populates="stop_times")
+
+    __table_args__ = (
+        Index("ix_stoptime_journey_seq", "journey_id", "stop_sequence"),
+    )
 
     @property
     def headsign(self):

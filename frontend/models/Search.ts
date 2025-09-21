@@ -16,6 +16,7 @@ export interface LineResult {
     destination: string | null;
     vias: string | null;
     operator_noc: string | null;
+    operator: string | null;
     line_names: string;
 }
 

@@ -45,7 +45,7 @@ def times_from_stop(stop_id: str, db: Session, limit: int = 10):
         return
 
     print(
-        f"Departures from {stop.common_name if stop else stop_id} ({stop.indicator}):"
+        f"Departures from {stop.long_name}:"
     )
 
     # 6️⃣ Print nicely

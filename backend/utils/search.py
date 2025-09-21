@@ -9,7 +9,7 @@ from backend.db.db import SessionLocal
 from backend.models import Line, Service, Stop, Operator, Locality
 
 
-def merge_service_line(service: Service, line: Line, rank: float):
+def merge_service_line(service: Service, line: Line, operator: Operator, rank: float):
     return {
         "line_id": line.id,
         "line_name": line.line_name,
@@ -23,6 +23,7 @@ def merge_service_line(service: Service, line: Line, rank: float):
         "destination": service.destination if service else None,
         "vias": service.vias if service else None,
         "operator_noc": service.operator_noc if service else None,
+        "operator": operator.name,
         "line_names": service.line_names if service else line.line_name,
         "rank": rank,
     }
@@ -33,8 +34,9 @@ def search_services_and_lines(query, db: Session, limit: int = 10):
 
     if len(query) <= 3:
         service_query = (
-            db.query(Service, Line)
+            db.query(Service, Line, Operator)
             .join(Line, Service.service_code == Line.service_code)
+            .join(Operator, Service.operator_noc == Operator.noc)
             .filter(
                 Line.line_name.ilike(f"%{query}%"),
             )
@@ -46,7 +48,8 @@ def search_services_and_lines(query, db: Session, limit: int = 10):
         )
     else:
         service_query = search(
-            select(Service, Line).join(Line, Service.service_code == Line.service_code),
+            select(Service, Line, Operator).join(Line, Service.service_code == Line.service_code).join(Operator,
+                                                                                                       Service.operator_noc == Operator.noc),
             query,
             sort=True,
         ).add_columns(
@@ -59,15 +62,15 @@ def search_services_and_lines(query, db: Session, limit: int = 10):
         )
 
     services_and_lines = db.execute(service_query).all()
-    for service, line, rank in services_and_lines:
-        results.append(merge_service_line(service, line, rank))
+    for service, line, operator, rank in services_and_lines:
+        results.append(merge_service_line(service, line, operator, rank))
 
     results.sort(key=lambda x: x["rank"], reverse=True)
 
     return results[:limit]
 
 
-async def search_db(query: str, db: Session, limit: int = 10):
+async def search_db(query: str, db: Session, limit: int = 20):
     results = defaultdict(list)
 
     operators_query = search(select(Operator), query, sort=True).limit(limit)
@@ -84,18 +87,21 @@ async def search_db(query: str, db: Session, limit: int = 10):
     #         setattr(s, "point", None)
     # results["stops"] = stops
 
-    localities_query = search(select(Locality), query, sort=True).limit(limit)
-    localities = list(db.scalars(localities_query).all())
-    for l in localities:
-        if hasattr(l, "point"):
-            setattr(l, "point", None)
-    results["localities"] = localities
+    if len(query) >= 4:
+        localities_query = search(select(Locality), query, sort=True).limit(500)
+        localities = list(db.scalars(localities_query).all())
+        for l in localities:
+            if hasattr(l, "point"):
+                setattr(l, "point", None)
+        results["localities"] = localities
+    else:
+        results["localities"] = []
 
     return results
 
 
 if __name__ == "__main__":
-    search_query = "alresford"
+    search_query = "hant"
     with SessionLocal() as db:
         results = asyncio.run(search_db(search_query, db))
         print(f"Search results for query '{search_query}':")
@@ -109,6 +115,6 @@ if __name__ == "__main__":
                         f"- {item['line_name']} | {item['description']} (rank: {item['rank']})"
                     )
                 elif isinstance(item, Stop):
-                    print(f"- {item.common_name} (ID: {item.atco_code})")
+                    print(f"- {item.name} (ID: {item.atco_code})")
                 elif isinstance(item, Locality):
                     print(f"- {item.name} ({item.qualifier_name or "none"})")
