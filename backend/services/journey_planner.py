@@ -207,7 +207,8 @@ async def possible_destinations(lat: float, lon: float, time: dt = None):
                         journey.is_valid(time.date()) and journey.end_time > current_timedelta]
 
             for journey in journeys:
-                localities.add(journey.destination.locality.id)
+                if journey.destination.locality:
+                    localities.add(journey.destination.locality.id)
 
         data = []
 

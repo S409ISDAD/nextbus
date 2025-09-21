@@ -1,4 +1,4 @@
-import type { StopTime } from "../models/StopTime";
+import type {StopTime} from "../models/StopTime";
 import toast from "react-hot-toast";
 
 export type LatLng = [number, number];
@@ -23,6 +23,9 @@ export function getCurrentPosition(): Promise<GeolocationPosition> {
         navigator.geolocation.getCurrentPosition(resolve, (error) => {
             toast.error("Failed to get current position.", { id: 'geolocation-error-toast', duration: 3000 });
             reject(error);
+        }, {
+            enableHighAccuracy: false,
+            maximumAge: 6000
         });
     });
 }

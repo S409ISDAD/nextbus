@@ -16,7 +16,7 @@
 }
 
 .button {
-    @apply w-full p-2 px-5 mt-2 font-semibold text-white transition-all bg-blue-600 cursor-pointer rounded-xl hover:bg-blue-700;
+    @apply w-full p-2 px-5 font-semibold text-white transition-all bg-blue-600 cursor-pointer rounded-xl hover:bg-blue-700;
 }
 
 html,
