@@ -24,6 +24,7 @@ from sqlalchemy.orm import relationship, Session, joinedload, deferred, aliased
 from sqlalchemy_searchable import make_searchable
 from sqlalchemy_utils.types import TSVectorType
 
+from backend.autoslug import AutoSlug, AutoSlugMixin
 from backend.config import API_BASE
 from backend.db.db import SessionLocal
 from backend.deps import LONDON
@@ -236,12 +237,13 @@ class District(Base):
     localities = relationship("Locality", back_populates="district")
 
 
-class Locality(Base):
+class Locality(Base, AutoSlugMixin):
     __tablename__ = "locality"
 
     id = Column(String, primary_key=True)
     name = Column(String, nullable=False)
     qualifier_name = Column(String, nullable=True)
+    slug = AutoSlug(source="get_full_name", max_length=100, unique=True, nullable=False)
     created_at = Column(DateTime(timezone=True), nullable=True)
     modified_at = Column(DateTime(timezone=True), nullable=True)
     admin_area_id = Column(Integer, ForeignKey("admin_area.id"), nullable=True)
@@ -266,6 +268,12 @@ class Locality(Base):
             )
         )
     )
+
+    @property
+    def get_full_name(self):
+        if self.qualifier_name:
+            return f"{self.name}, {self.qualifier_name}"
+        return self.name
 
     def lines_served(self):
         with SessionLocal() as db:
@@ -716,7 +724,7 @@ class Service(Base):
     )
 
 
-class Line(Base):
+class Line(Base, AutoSlugMixin):
     """
     A line is a specific route of a service, e.g. 67, 667, 67X
     """
@@ -727,6 +735,7 @@ class Line(Base):
     line_name = Column(String, nullable=False)
     inbound_description = Column(String)
     outbound_description = Column(String)
+    slug = AutoSlug(source="get_full_name", max_length=100, unique=True, nullable=False)
     geometry = Column(
         Geometry(geometry_type="MULTILINESTRING", srid=4326), nullable=True
     )  # an overall geometry of the line, merged from all track sections
@@ -763,6 +772,10 @@ class Line(Base):
             ),
         )
     )
+
+    @property
+    def get_full_name(self):
+        return f"{self.line_name} {self.service.description}".strip()
 
     def get_dest_localities(self):
         with SessionLocal() as db:
