@@ -256,6 +256,16 @@ class Locality(Base):
 
     search_vector = deferred(Column(TSVectorType("name", "qualifier_name", )))
 
+    def lines_served(self):
+        with SessionLocal() as db:
+            lines: list["Line"] | list[None] = (db.query(Line)
+                                                .join(LineStopUsage, Line.id == LineStopUsage.line_id)
+                                                .join(Stop, Stop.atco_code == LineStopUsage.stop_id)
+                                                .filter(Stop.locality_id == self.id)
+                                                .distinct().all())
+
+            return lines
+
 
 class Stop(Base):
     __tablename__ = "stop"

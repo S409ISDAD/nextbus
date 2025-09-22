@@ -77,15 +77,8 @@ async def search_db(query: str, db: Session, limit: int = 20):
     operators = list(db.scalars(operators_query).all())
     results["operators"] = operators
 
-    services_and_lines = search_services_and_lines(query, db, limit)
-    results["lines"].extend(services_and_lines)
-
-    # stops_query = search(select(Stop), query, sort=True).limit(limit)
-    # stops = list(db.scalars(stops_query).all())
-    # for s in stops:
-    #     if hasattr(s, "point"):
-    #         setattr(s, "point", None)
-    # results["stops"] = stops
+    lines = []
+    line_ids = set()
 
     if len(query) >= 4:
         localities_query = search(select(Locality), query, sort=True).limit(500)
@@ -96,6 +89,38 @@ async def search_db(query: str, db: Session, limit: int = 20):
         results["localities"] = localities
     else:
         results["localities"] = []
+
+    services_and_lines = search_services_and_lines(query, db, limit)
+    lines.extend(services_and_lines)
+    line_ids.update([l["line_id"] for l in services_and_lines])
+
+    lines_served = set()
+
+    for locality in results["localities"]:
+        served = locality.lines_served()
+        for line in served:
+            if line:
+                lines_served.add(line.id)
+
+    service_query = (db.query(Service, Line, Operator)
+                     .join(Line, Service.service_code == Line.service_code)
+                     .join(Operator, Service.operator_noc == Operator.noc)
+                     .filter(Line.id.in_(lines_served)).all())
+
+    for service, line, operator in service_query:
+        if line.id not in line_ids:
+            lines.append(merge_service_line(service, line, operator, 1.0))
+
+    results["lines"] = lines
+    results["lines"].sort(key=lambda x: x["rank"], reverse=True)
+
+    # stops_query = search(select(Stop), query, sort=True).limit(limit)
+    # stops = list(db.scalars(stops_query).all())
+    # for s in stops:
+    #     if hasattr(s, "point"):
+    #         setattr(s, "point", None)
+    # results["stops"] = stops
+
 
     return results
 

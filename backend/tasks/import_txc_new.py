@@ -1,5 +1,5 @@
-import asyncio
 import gc
+import json
 import logging
 import sys
 import time
@@ -7,7 +7,6 @@ import zipfile
 from datetime import datetime, timedelta
 from pathlib import Path
 
-import isodate
 from geoalchemy2.shape import from_shape, to_shape
 from shapely import MultiLineString, Point
 from shapely.geometry import LineString
@@ -15,7 +14,7 @@ from sqlalchemy import func, select, update
 from sqlalchemy_searchable import sync_trigger
 
 from backend.db.db import SessionLocal, engine
-from backend.deps import LONDON
+from backend.deps import LONDON, STATIC_DATA_DIR
 from backend.models import (
     BankHoliday,
     Calendar,
@@ -34,7 +33,7 @@ from backend.models import (
     TrackSection,
     LineStopUsage,
 )
-from backend.txc import txc
+from backend.transxchange.transxchange_parser import txc
 from backend.utils.bulk_upsert import bulk_upsert
 from backend.utils.download_if_modified import download_if_modified
 
@@ -163,11 +162,81 @@ async def import_txc_zip(zip_path, ds_id=None):
 #                     txc_importer.handle_txc_file()
 
 
+class TXCOperator:
+    """A TransXChange Operator."""
+
+    def __init__(self, element):
+        self.id = element.get("id")
+        self.noc = element.findtext("NationalOperatorCode")
+        self.operator_code = element.findtext("OperatorCode")
+        self.operator_short_name = element.findtext("OperatorShortName")
+        self.trading_name = element.findtext("TradingName")
+        self.licence_number = element.findtext("LicenceNumber")
+        self.element = element
+
+    @property
+    def name(self):
+        return self.operator_short_name or self.trading_name
+
+    def __str__(self):
+        return self.noc if self.noc else self.operator_code
+
+
+def getOperators(operatorsElement):
+    operators = {}
+    for operatorElement in operatorsElement:
+        operator = TXCOperator(operatorElement)
+        operators[operator.id] = operator
+    return operators
+
+
+def get_service_data(path):
+    txc_data = txc.TransXChange(path)
+    operators = getOperators(txc_data.operators)
+
+    print(operators)
+
+    revision_num = txc_data.attributes.get("RevisionNumber")
+    filename = txc_data.attributes.get("FileName")
+
+    services = []
+
+    for service in txc_data.services.values():
+        service_id = service.service_code
+        operator = operators[service.operator].noc
+
+        services.append([operator, service_id, revision_num])
+
+    return services
+
+
+def generate_txc_map(dataset: Path):
+    txc_map = {}
+
+    files = dataset.glob("*.xml")
+    for file in files:
+        print(file)
+
+        services = get_service_data(file)
+        for service in services:
+            operator, service_id, revision_num = service
+
+            print(service)
+            if service_id in txc_map:
+                if revision_num in txc_map[service_id]:
+                    txc_map[service_id][revision_num].append(file.as_posix())
+                else:
+                    txc_map[service_id][revision_num] = [file.as_posix()]
+            else:
+                txc_map[service_id] = {revision_num: [file.as_posix()]}
+    return txc_map
+
+
 class TXCImporter:
-    def __init__(self, xml_file, ds_id=None):
-        self.txc_data = txc.TransXChange(xml_file)
+    def __init__(self, folder: Path, ds_id=None):
+        self.txc_data = None
+        self.dataset = folder
         self.today = datetime.now(tz=LONDON)
-        self.service_id = None
         self.calendar_cache = {}
         self.db = SessionLocal()
         self.journeys_to_add = []
@@ -175,11 +244,27 @@ class TXCImporter:
         self.line_to_routes = {}  # Maps line_id to a list of route IDs
         self.line_to_stops = {}  # Maps line_id to a list of stop IDs
         self.ds_id = ds_id
+        self.map = {}
 
-    def get_id(self, id: str) -> str:
-        """Generate a unique ID for the object based on the service code, as e.g. RS3 is only unique within a service."""
+    def generate_txc_map(self):
+        txc_map = {}
 
-        return f"{self.service_id}:{id}" if self.service_id else id
+        for file in self.dataset.glob("*.xml"):
+            print(file)
+
+            services = get_service_data(file)
+            for service in services:
+                operator, service_id, revision_num = service
+
+                print(service)
+                if service_id in txc_map:
+                    if revision_num in txc_map[service_id]:
+                        txc_map[service_id][revision_num].append(file.as_posix())
+                    else:
+                        txc_map[service_id][revision_num] = [file.as_posix()]
+                else:
+                    txc_map[service_id] = {revision_num: [file.as_posix()]}
+        self.map = txc_map
 
     def get_description(self, txc_service: txc.Service):
         description = txc_service.description
@@ -187,12 +272,6 @@ class TXCImporter:
             description = f"{txc_service.origin} - {txc_service.destination}"
 
         return description.strip() if description else "No description available"
-
-    def parse_runtime(self, runtime: str) -> timedelta:
-        """Parse the runtime string in ISO 8601 format (e.g., PT1H30M15S) and return a timedelta."""
-        if not runtime or not runtime.startswith("PT"):
-            return timedelta(0)
-        return isodate.parse_duration(runtime)
 
     def clear_data_for_import(self, service_code):
         print("Clearing existing TXC data...")
@@ -208,11 +287,11 @@ class TXCImporter:
             self.db.commit()
 
     def get_calendar_exception(
-        self,
-        date_range: txc.DateRange | None = None,
-        date=None,
-        operation=True,
-        description="",
+            self,
+            date_range: txc.DateRange | None = None,
+            date=None,
+            operation=True,
+            description="",
     ):
         if date_range:
             start_date = date_range.start_date
@@ -230,11 +309,11 @@ class TXCImporter:
         )
 
     def handle_journey(
-        self,
-        txc_journey: txc.VehicleJourney,
-        txc_service: txc.Service,
-        service: Service,
-        line: Line,
+            self,
+            txc_journey: txc.VehicleJourney,
+            txc_service: txc.Service,
+            service: Service,
+            line: Line,
     ):
         journey_code = self.get_id(line.line_name + ":" + txc_journey.journey_code)
 
@@ -454,7 +533,7 @@ class TXCImporter:
         skip_journeys = False
 
         end_date = (
-            txc_service.operating_period.end_date
+            txc_service.operating_period.end
             if txc_service.operating_period
             else None
         )
@@ -468,8 +547,6 @@ class TXCImporter:
         description = self.get_description(txc_service)
         print(f"{txc_service.lines[0].line_name} {description}")
 
-        self.service_id = txc_service.service_code
-
         db_service = (
             self.db.query(Service)
             .filter_by(service_code=txc_service.service_code)
@@ -477,7 +554,7 @@ class TXCImporter:
         )
         operator = (
             self.db.query(Operator)
-            .filter_by(ref=txc_service.registered_operator_ref)
+            .filter_by(ref=txc_service.operator)
             .first()
         )
         service = Service(
@@ -532,7 +609,7 @@ class TXCImporter:
             if skip_journeys:
                 continue
             for txc_journey in self.txc_data.get_journeys(
-                txc_line.line_id, txc_service.service_code
+                    txc_line.line_id, txc_service.service_code
             ):
                 if not txc_journey.journey_code:
                     print(
@@ -609,7 +686,7 @@ class TXCImporter:
             print(f"Geometry updated for line {line_id}")
 
     def merge_line_routes(
-        self, line_id: str, simplify_tolerance=0.0001, snap_tolerance=0.0001
+            self, line_id: str, simplify_tolerance=0.0001, snap_tolerance=0.0001
     ):
         """
         Given a line_id, merge the geometries of all its related routes into one LineString overview,
@@ -670,33 +747,39 @@ class TXCImporter:
             )
             return None
 
-    async def handle_txc_file(self):
+    async def import_from_map(self):
+        for service_id in self.map.keys():
+            self.clear_data_for_import(service_id)
+
+            for revision in self.map[service_id]:
+                for file in self.map[service_id][revision]:
+                    await self.handle_txc_file(Path(file))
+
+    async def handle_txc_file(self, file: Path):
         start = time.time()
         try:
-            for txc_operator in self.txc_data.operators:
+            self.txc_data = txc.TransXChange(file)
+            for op in self.txc_data.operators:
+                txc_operator = TXCOperator(op)
                 noc = (
-                    txc_operator.national_operator_code
-                    or txc_operator.operator_code
+                        txc_operator.noc
+                        or txc_operator.operator_code
                 )
                 db_operator = self.db.query(Operator).filter_by(noc=noc).first()
-                operator = Operator(
-                    noc=noc,
-                    ref=txc_operator.operator_id,
-                    name=txc_operator.operator_name_on_licence
-                    or txc_operator.trading_name,
-                )
                 if not db_operator:
+                    operator = Operator(
+                        noc=noc,
+                        ref=txc_operator.id,
+                        name=txc_operator.name
+                    )
                     print(
-                        f"Adding operator {txc_operator.operator_name_on_licence}"
+                        f"Adding operator {txc_operator.name}"
                     )
                     self.db.add(operator)
-
             self.db.commit()
 
             for txc_service in self.txc_data.services:
-                self.clear_data_for_import(txc_service.service_code)
                 self.handle_service(txc_service)
-                # exit()
             bulk_upsert(
                 session=self.db,
                 model=Journey,
@@ -716,7 +799,6 @@ class TXCImporter:
             print(f"Added {len(self.journeys_to_add)} journeys")
             self.journeys_to_add.clear()
             self.db.flush()
-
 
             bulk_upsert(
                 session=self.db,
@@ -820,17 +902,27 @@ class TXCImporter:
             print(f"TXC Import completed in {end - start:.2f} seconds")
 
 
+# if __name__ == "__main__":
+#     if len(sys.argv) != 2:
+#         print("Usage: python import_txc_new.py <path_to_zip_or_xml>")
+#         exit(1)
+#     input_path = sys.argv[1]
+#     if input_path.lower().endswith(".zip"):
+#         asyncio.run(import_txc_zip(input_path))
+#     elif input_path.lower().endswith(".xml"):
+#         with open(input_path, "rb") as xml_file:
+#             txc_importer = TXCImporter(xml_file)
+#             asyncio.run(txc_importer.handle_txc_file())
+#     else:
+#         print("Error: Input must be a .zip or .xml file")
+#         exit(1)
+
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        print("Usage: python import_txc.py <path_to_zip_or_xml>")
+        print("Usage: python import_txc_new.py <path_to_zip_or_xml>")
         exit(1)
     input_path = sys.argv[1]
-    if input_path.lower().endswith(".zip"):
-        asyncio.run(import_txc_zip(input_path))
-    elif input_path.lower().endswith(".xml"):
-        with open(input_path, "rb") as xml_file:
-            txc_importer = TXCImporter(xml_file)
-            asyncio.run(txc_importer.handle_txc_file())
-    else:
-        print("Error: Input must be a .zip or .xml file")
-        exit(1)
+    path = STATIC_DATA_DIR / input_path
+    map = generate_txc_map(Path(path))
+    with open("txc_map.json", "w") as f:
+        json.dump(map, f, indent=4)
