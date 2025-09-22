@@ -1,3 +1,4 @@
+from logging.config import dictConfig
 from pydantic_settings import BaseSettings
 
 BASE = "https://bustimes.org"
@@ -16,9 +17,7 @@ LOGGING_CONFIG = {
     "version": 1,
     "disable_existing_loggers": True,
     "formatters": {
-        "standard": {
-            "format": "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
-        },
+        "standard": {"format": "%(asctime)s [%(levelname)s] %(name)s: %(message)s"},
     },
     "handlers": {
         "console": {
@@ -61,3 +60,7 @@ LOGGING_CONFIG = {
         },
     },
 }
+
+
+def setup_logging():
+    dictConfig(LOGGING_CONFIG)

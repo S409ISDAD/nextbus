@@ -29,7 +29,7 @@ from backend.api.routes import (
     trains,
     journey_planning,
 )
-from backend.config import config, LOGGING_CONFIG
+from backend.config import config, LOGGING_CONFIG, setup_logging
 from backend.db.db import SessionLocal, get_db
 from backend.deps import (
     floor_to_30s,
@@ -42,8 +42,9 @@ from backend.models import ActiveUsersSnapshot
 from backend.tasks.import_all_datasets import import_datasets, import_weekly_data
 from backend.websockets.routes import ws_router
 
-dictConfig(LOGGING_CONFIG)
+setup_logging()
 log = logging.getLogger(__name__)
+
 
 async def clear_redis_stats(redis):
     log.debug("Clearing Redis stats...")
@@ -70,7 +71,9 @@ async def record_snapshot(redis):
                     db.query(ActiveUsersSnapshot).filter_by(timestamp=timestamp).first()
                 )
                 if not exists:
-                    log.debug(f"Logging {unique} active users at {timestamp.isoformat()}")
+                    log.debug(
+                        f"Logging {unique} active users at {timestamp.isoformat()}"
+                    )
                     db.add(
                         ActiveUsersSnapshot(
                             total_connections=total,
@@ -131,7 +134,9 @@ async def lifespan(app: FastAPI):
         )
         scheduler.add_job(
             import_weekly_data,
-            CronTrigger(day_of_week="0", hour="5", minute="30", second="0"),  # weekly at 5:30am on sunday
+            CronTrigger(
+                day_of_week="0", hour="5", minute="30", second="0"
+            ),  # weekly at 5:30am on sunday
             id="import_weekly_data",
             replace_existing=True,
         )
@@ -190,7 +195,6 @@ app.add_exception_handler(
     RateLimitExceeded,
     lambda request, exc: _rate_limit_exceeded_handler(request, exc),  # type: ignore
 )
-
 
 
 @app.middleware("http")

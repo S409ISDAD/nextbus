@@ -1107,6 +1107,8 @@ class StopTime(Base):
             else self.journey.line.inbound_description
         )
 
+        vias = self.journey.line.service.vias or ""
+
         raw_headsign = self.dest_display or self.journey.headsign
         fallback_headsign = main_dest
 
@@ -1115,12 +1117,11 @@ class StopTime(Base):
         show_headsign = False
         if raw_headsign:
             short_enough = len(raw_headsign) < 25
-            overlaps_main = any(
+            overlaps = any(
                 word in raw_headsign.split()
-                for word in (main_dest.split() + line_dest.split())
+                for word in (main_dest.split() + line_dest.split() + vias.split(", "))
             )
-            show_headsign = short_enough and overlaps_main
-
+            show_headsign = short_enough and overlaps
         if do_makeshift:
             if show_headsign:
                 final = raw_headsign
@@ -1135,7 +1136,6 @@ class StopTime(Base):
                 final = raw_headsign
             else:
                 final = fallback_headsign
-
         if self.journey.destination and self.journey.destination.locality:
             return final or self.journey.destination.locality.name
 

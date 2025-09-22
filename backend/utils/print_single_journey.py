@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
 
+from backend.config import setup_logging
 from backend.db.db import SessionLocal
 from backend.models import (
     StopTime,
@@ -34,6 +35,7 @@ def print_journey(journey_id: str, db: Session):
 
 
 if __name__ == "__main__":
-    journey_id = "PH0005857:165:64:VJ89"
+    setup_logging()
+    journey_id = "PH0005857:167:67:VJ98"
     with SessionLocal() as db:
         print_journey(journey_id, db)
