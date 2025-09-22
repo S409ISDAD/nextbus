@@ -32,6 +32,7 @@ async def localities(
             "id": locality.id,
             "name": locality.name,
             "qualifier": locality.qualifier_name,
+            "slug": locality.slug,
             "lines": lines,
             "stops": stops,
         }

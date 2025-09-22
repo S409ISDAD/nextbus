@@ -286,7 +286,7 @@ class Locality(Base, AutoSlugMixin):
                 .all()
             )
 
-            return lines
+            return lines if lines else []
 
 
 class Stop(Base):
