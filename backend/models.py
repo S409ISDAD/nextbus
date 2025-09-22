@@ -1084,7 +1084,6 @@ class StopTime(Base):
             else self.journey.line.inbound_description
         )
 
-
         show_headsign = False
         headsign = self.dest_display or self.journey.headsign
 
@@ -1098,13 +1097,18 @@ class StopTime(Base):
             else self.journey.line.service.origin
         )
 
-        # if not show_headsign:
-        #     print(f"not using headsign {headsign}, using {self.journey.headsign} instead")
+        makeshift_headsign = f"{main_dest} {headsign}"
+
+        if not show_headsign:
+            print(f"not using headsign {headsign}, using {makeshift_headsign} instead")
 
         if self.journey.destination is None or self.journey.destination.locality is None:
-            return final_headsign
+            return final_headsign if show_headsign else makeshift_headsign
 
-        return final_headsign if show_headsign else self.journey.destination.locality.name or self.journey.headsign
+
+        final = final_headsign if show_headsign else makeshift_headsign or self.journey.destination.locality.name or self.journey.headsign
+
+        return final
 
     @property
     def departure_time_str(self):
