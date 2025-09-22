@@ -15,7 +15,8 @@ from sqlalchemy import (
     Interval,
     String,
     UniqueConstraint,
-    func, Index,
+    func,
+    Index,
 )
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.ext.declarative import declarative_base
@@ -27,6 +28,9 @@ from backend.config import API_BASE
 from backend.db.db import SessionLocal
 from backend.deps import LONDON
 from backend.utils.fetch_json import fetch_json
+import logging
+
+log = logging.getLogger(__name__)
 
 Base = declarative_base()
 make_searchable(Base.metadata)
@@ -254,15 +258,25 @@ class Locality(Base):
     admin_area = relationship("AdminArea", back_populates="localities")
     stops = relationship("Stop", back_populates="locality")
 
-    search_vector = deferred(Column(TSVectorType("name", "qualifier_name", )))
+    search_vector = deferred(
+        Column(
+            TSVectorType(
+                "name",
+                "qualifier_name",
+            )
+        )
+    )
 
     def lines_served(self):
         with SessionLocal() as db:
-            lines: list["Line"] | list[None] = (db.query(Line)
-                                                .join(LineStopUsage, Line.id == LineStopUsage.line_id)
-                                                .join(Stop, Stop.atco_code == LineStopUsage.stop_id)
-                                                .filter(Stop.locality_id == self.id)
-                                                .distinct().all())
+            lines: list["Line"] | list[None] = (
+                db.query(Line)
+                .join(LineStopUsage, Line.id == LineStopUsage.line_id)
+                .join(Stop, Stop.atco_code == LineStopUsage.stop_id)
+                .filter(Stop.locality_id == self.id)
+                .distinct()
+                .all()
+            )
 
             return lines
 
@@ -370,7 +384,7 @@ class Stop(Base):
                 .filter(
                     Journey.line_id.in_(line_ids),
                     ST_origin.stop_id == self.atco_code,
-                    Stop.locality_id.isnot(None)
+                    Stop.locality_id.isnot(None),
                 )
                 .distinct()
             ).all()
@@ -387,7 +401,7 @@ class Stop(Base):
             return result
 
     def times_from_stop(
-            self, db: Session, date: datetime | None = None, limit: int = 10
+        self, db: Session, date: datetime | None = None, limit: int = 10
     ) -> list["StopTime"]:
         """
         Returns a list of upcoming StopTime objects for this stop, with joined journey, line, and service.
@@ -601,7 +615,7 @@ class Calendar(Base):
             date = datetime.now(tz=LONDON).date()
 
         if not (
-                self.start_date <= date and (self.end_date is None or self.end_date >= date)
+            self.start_date <= date and (self.end_date is None or self.end_date >= date)
         ):  # type: ignore
             return False
 
@@ -929,14 +943,20 @@ class Journey(Base):
     )
     vehicle_journey_code = Column(String, nullable=True)
     ticket_machine_code = Column(String, nullable=True)
-    line_id = Column(String, ForeignKey("line.id", ondelete="CASCADE"), nullable=True, index=True)
+    line_id = Column(
+        String, ForeignKey("line.id", ondelete="CASCADE"), nullable=True, index=True
+    )
     block_id = Column(String, nullable=True)
     direction = Column(Enum(DirectionType))
     headsign = Column(String, nullable=True)
     start_time = Column(Interval, nullable=False)
     end_time = Column(Interval)
-    origin_stop_id = Column(String, ForeignKey("stop.atco_code"), nullable=True, index=True)
-    destination_stop_id = Column(String, ForeignKey("stop.atco_code"), nullable=True, index=True)
+    origin_stop_id = Column(
+        String, ForeignKey("stop.atco_code"), nullable=True, index=True
+    )
+    destination_stop_id = Column(
+        String, ForeignKey("stop.atco_code"), nullable=True, index=True
+    )
     calendar_id = Column(
         Integer, ForeignKey("calendar.id", ondelete="CASCADE"), nullable=True
     )
@@ -965,7 +985,7 @@ class Journey(Base):
         return self.calendar.is_valid(date)
 
     def get_previous_journey(
-            self, db: Session, date: date | None = None
+        self, db: Session, date: date | None = None
     ) -> "Journey | None":
         """
         Returns the previous journey in the same block, active on the same date, ordered by end_time.
@@ -1049,7 +1069,10 @@ class StopTime(Base):
         String, ForeignKey("journey.id", ondelete="CASCADE"), nullable=False, index=True
     )
     stop_id = Column(
-        String, ForeignKey("stop.atco_code", ondelete="CASCADE"), nullable=False, index=True
+        String,
+        ForeignKey("stop.atco_code", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     stop_sequence = Column(Integer, nullable=False)
     arrival_time = Column(Interval, nullable=True)
@@ -1064,9 +1087,7 @@ class StopTime(Base):
     journey = relationship("Journey", back_populates="stop_times")
     stop = relationship("Stop", back_populates="stop_times")
 
-    __table_args__ = (
-        Index("ix_stoptime_journey_seq", "journey_id", "stop_sequence"),
-    )
+    __table_args__ = (Index("ix_stoptime_journey_seq", "journey_id", "stop_sequence"),)
 
     @property
     def headsign(self):
@@ -1075,12 +1096,14 @@ class StopTime(Base):
         is_outbound = self.journey.direction == DirectionType.outbound
 
         main_dest = (
-            self.journey.line.service.destination if is_outbound
+            self.journey.line.service.destination
+            if is_outbound
             else self.journey.line.service.origin
         )
 
         line_dest = (
-            self.journey.line.outbound_description if is_outbound
+            self.journey.line.outbound_description
+            if is_outbound
             else self.journey.line.inbound_description
         )
 
@@ -1102,11 +1125,16 @@ class StopTime(Base):
             if show_headsign:
                 final = raw_headsign
             else:
-                makeshift = f"{main_dest} {raw_headsign}" if raw_headsign else fallback_headsign
+                makeshift = (
+                    f"{main_dest} {raw_headsign}" if raw_headsign else fallback_headsign
+                )
                 log.debug("using makeshift headsign", makeshift)
                 final = makeshift
         else:
-            final = fallback_headsign
+            if show_headsign:
+                final = raw_headsign
+            else:
+                final = fallback_headsign
 
         if self.journey.destination and self.journey.destination.locality:
             return final or self.journey.destination.locality.name
