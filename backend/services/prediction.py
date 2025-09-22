@@ -1,17 +1,19 @@
-from datetime import timedelta
 import datetime
+import logging
 import math
+from datetime import datetime as dt
+from datetime import timedelta
+
 from dateutil.parser import isoparse
 from geopy.distance import geodesic
+
+from backend.deps import LONDON
 from backend.deps import UTC
 from backend.schemas.journey import Journey
 from backend.schemas.prediction import Prediction
 from backend.schemas.stop import StopTime
 from backend.schemas.times import Times
 from backend.services.journeys import get_trip, get_vehicle_journey
-from datetime import datetime as dt
-from backend.deps import LONDON
-import logging
 
 log = logging.getLogger(__name__)
 
@@ -177,6 +179,7 @@ async def calculate_expected(delay, sequence, stop_id, journey_id, r):
             aimed = stop_time.aimed_time
 
             if not aimed:
+                log.warning(f"not including bus, no scheduled time for stop {stop_id}")
                 include = False
                 break
             scheduled_time = aimed
@@ -186,9 +189,6 @@ async def calculate_expected(delay, sequence, stop_id, journey_id, r):
 
             expected_time = scheduled_time + timedelta(seconds=delay)
 
-            if expected_time + timedelta(minutes=1) < current_time:
-                include = False
-                break
         if stop_idx == len(journey.stops) - 1:
             scheduled_time_end = stop_time.aimed_time
 

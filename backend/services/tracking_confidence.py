@@ -1,4 +1,6 @@
-from datetime import datetime as dt
+import logging
+import math
+from datetime import datetime as dt, timedelta
 
 from geopy.distance import geodesic
 from pyproj import Geod
@@ -9,7 +11,6 @@ from backend.deps import LONDON
 from backend.schemas.confidence import Confidence
 from backend.schemas.journey import Trip, LiveJourney
 from backend.services.journeys import get_trip, get_live_journey
-import logging
 
 log = logging.getLogger(__name__)
 
@@ -27,8 +28,8 @@ async def calculate_confidence(delay: int, location: list[float], journey_id: in
 
     broken_down_confidence = check_broken_down(live_journey, delay)
     log_off_confidence = check_log_off(trip, live_journey)
-    diversion_confidence = check_diversion(trip, live_journey)
-    broken_tracking_confidence = check_broken_tracking(trip, live_journey)
+    diversion_confidence = check_diversion(trip, live_journey, delay)
+    broken_tracking_confidence = check_broken_tracking(trip, live_journey, delay)
 
     final_confidence: float = min(broken_tracking_confidence + diversion_confidence + log_off_confidence + broken_down_confidence, 1)
 
@@ -89,23 +90,22 @@ def check_log_off(trip: Trip, live_journey: LiveJourney) -> float:
 
         fwd_azimuth, _, _ = geod.inv(nearest.x, nearest.y, fwd_point.x, fwd_point.y)
 
-        diffs.append(fwd_azimuth - heading)
         track_bearing = fwd_azimuth % 360
 
         diff = round((heading - track_bearing + 180) % 360 - 180, 5)
         diffs.append(diff)
+    log.debug(diffs)
 
-    avg_diff = sum(diffs) / len(diffs)
-    if avg_diff < 0:
-        avg_diff += 360
-    top_end = 180 # highest possible diff
-    bottom_end = 60 # lowest diff before triggering
+    # avg_diff = sum(abs(d) for d in diffs) / len(diffs)
 
-    confidence = 1 - ((max(0.0, 1.0 - abs(avg_diff) / 180)) * (1 - (top_end - abs(avg_diff)) / (top_end - bottom_end)))
+    rms_diff = math.sqrt(sum(d * d for d in diffs) / len(diffs))
+
+    confidence = max(0.0, rms_diff / 180.0)
 
     return round(confidence, 5)
 
-def check_diversion(trip: Trip, live_journey: LiveJourney) -> float:
+
+def check_diversion(trip: Trip, live_journey: LiveJourney, delay) -> float:
     """
         Return confidence of diversion if similarity is less than 92%
         :param trip:
@@ -118,7 +118,9 @@ def check_diversion(trip: Trip, live_journey: LiveJourney) -> float:
     end_time = trip.stops[-1].aimed_time
     now = dt.now(LONDON)
 
-    ended_ago = now - end_time
+    delay_secs = max(0, int(delay or 0))
+
+    ended_ago = now - (end_time + timedelta(seconds=delay_secs))
 
     if ended_ago.total_seconds() > 60 * 15:  # trip has ended, no need to check
         return 0.0
@@ -135,7 +137,8 @@ def check_diversion(trip: Trip, live_journey: LiveJourney) -> float:
     confidence = 1 - (similarity * 1 - (top_end - similarity) / (top_end - bottom_end))
     return max(0.0, min(1.0, confidence))
 
-def check_broken_tracking(trip: Trip, live_journey: LiveJourney) -> float:
+
+def check_broken_tracking(trip: Trip, live_journey: LiveJourney, delay) -> float:
     now = dt.now(LONDON)
 
     started_ago = now - live_journey.start_time
@@ -143,15 +146,20 @@ def check_broken_tracking(trip: Trip, live_journey: LiveJourney) -> float:
     end_time = trip.stops[-1].aimed_time
     now = dt.now(LONDON)
 
-    ended_ago = now - end_time
+    delay_secs = max(0, int(delay or 0))
+
+    ended_ago = now - (end_time + timedelta(seconds=delay_secs))
 
     if started_ago.total_seconds() < 60 * 5: # dont bother if started recently
+        log.debug("Started recently, skipping")
         return 0.0
 
     if ended_ago.total_seconds() > 60 * 15:  # trip has ended, no need to check
+        log.debug("Trip ended recently, skipping")
         return 0.0
 
     if len(live_journey.locations) < 2:
+        log.debug("Not enough locations, skipping")
         return 0.0
 
     loc_history = LineString(live_journey.generate_location_history())

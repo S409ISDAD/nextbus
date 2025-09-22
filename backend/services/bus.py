@@ -413,7 +413,8 @@ async def build_bus(
 
     delay += 10  # account for stopping and various other things that increase delay
     confidence = await calculate_confidence(delay, coords, journey_id, this_bus.get("trip_id"), r)
-    log.debug(f"confidence: {confidence}")
+    log.debug(
+        f"final={round(confidence.final_confidence, 5)}, brokendown={round(confidence.broken_down_confidence, 5)}, logoff={round(confidence.log_off_confidence, 5)}, diversion={round(confidence.diversion_confidence, 5)}, brokentracking={round(confidence.broken_tracking_confidence, 5)} id={bus_id}, reg={reg}")
 
     if confidence.broken_tracking_confidence > 0.65:
         log.warning(f"bus likely has broken tracking, ignoring delay. id: {bus_id}, reg: {reg}")
@@ -444,7 +445,7 @@ async def build_bus(
         log.warning(f"no times. id: {bus_id}, reg: {reg}")
         return None
     if not times.include:
-        log.warning(f"not including bus. id: {bus_id}, reg: {reg}")
+        log.warning(f"id: {bus_id}, reg: {reg}")
         return None
 
     # if times.finished and stop_id:
