@@ -39,7 +39,8 @@ async def line(
             raise HTTPException(404, detail="Line not found")
 
         service = line.service
-        line_service = merge_service_line(service, line, 1)
+        operator = service.operator
+        line_service = merge_service_line(service, line, operator, 1)
 
         return line_service
     except Exception as e:

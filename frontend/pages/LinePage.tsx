@@ -76,21 +76,27 @@ const linePage: React.FC = () => {
                         <span className="text-xl font-semibold text-center text-neutral-300">
                             {line?.description}
                         </span>
-                        {line?.vias && (
-                            <span className="font-semibold text-center text-neutral-400">
-                                Via {line?.vias}
+                        <div className="flex flex-col items-center justify-center gap-1">
+                            {line?.vias && (
+                                <span className="font-semibold text-center text-neutral-400">
+                                    Via {line?.vias}
+                                </span>
+                            )}
+                            <span className="text-sm font-semibold text-center text-neutral-400">
+                                Operated by{" "}
+                                {line?.operator ? line?.operator : "N/A"}
                             </span>
-                        )}
-                        {line?.bt_service_id && (
-                            <div className="flex flex-wrap items-center justify-center gap-4 gap-y-1">
-                                <a
-                                    className="underline text-sky-500"
-                                    href={`https://bustimes.org/services/${line?.bt_service_id}`}
-                                    target="_blank">
-                                    View on bustimes.org
-                                </a>
-                            </div>
-                        )}
+                            {line?.bt_service_id && (
+                                <div className="flex flex-wrap items-center justify-center gap-4 gap-y-1">
+                                    <a
+                                        className="underline text-sky-500"
+                                        href={`https://bustimes.org/services/${line?.bt_service_id}`}
+                                        target="_blank">
+                                        View on bustimes.org
+                                    </a>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
                 {msg && <span className="text-red-500 ">{msg}</span>}
