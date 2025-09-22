@@ -1,7 +1,8 @@
+import logging
+
 from backend.deps import STATIC_DATA_DIR
 from backend.transxchange.txc import TransXChange
 from backend.utils.time_taken import time_taken
-import logging
 
 log = logging.getLogger(__name__)
 
