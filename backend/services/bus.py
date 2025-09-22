@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from datetime import datetime, timedelta
 
 from dateutil import parser
@@ -28,7 +29,6 @@ from backend.services.services import fetch_active_buses, get_service_info
 from backend.services.tracking_confidence import calculate_confidence
 from backend.utils.fetch_json import fetch_json
 from backend.utils.match_bt import match_trip_journey
-import logging
 
 log = logging.getLogger(__name__)
 
@@ -371,7 +371,7 @@ async def build_bus(
 
     # Ignore buses with a delay of over 2 hours, they are likely broken down or similar
     if delay > 2 * 60 * 60:
-        log.debug(f"ignoring bus with delay of {round(delay / 60)} minutes")
+        log.warning(f"ignoring bus with delay of {round(delay / 60)} minutes")
         return None
 
     # Reset delay if earlier than 15 mins, it has probably logged on early
@@ -416,15 +416,15 @@ async def build_bus(
     log.debug(f"confidence: {confidence}")
 
     if confidence.broken_tracking_confidence > 0.65:
-        log.debug("bus likely has broken tracking, ignoring delay")
+        log.warning("bus likely has broken tracking, ignoring delay")
         delay = 0
 
     if confidence.broken_down_confidence > 0.65:
-        log.debug("bus likely has broken down, ignoring delay")
+        log.warning("bus likely has broken down, ignoring delay")
         delay = 0
 
     if confidence.log_off_confidence > 0.65:
-        log.debug("bus likely has finished, ignoring delay")
+        log.warning("bus likely has finished, ignoring delay")
         delay = 0
 
     target_seq, times, journey = await calculate_expected(
@@ -435,14 +435,16 @@ async def build_bus(
     prog = progress.get("progress", None)
     if sequence and prog and target_seq and confidence.final_confidence < 0.75 and sequence > 5:  # bus may be logging on early
         if (sequence == target_seq and prog >= 0.1) or sequence > target_seq:
-            log.debug("bus has likely passed the stop")
+            log.warning("bus has likely passed the stop")
             return None  # bus has likely passed the stop
 
     service_info = await get_service_info(journey.service_id, r)
 
     if not times:
+        log.warning("no times")
         return None
     if not times.include:
+        log.warning("not including bus")
         return None
 
     # if times.finished and stop_id:
