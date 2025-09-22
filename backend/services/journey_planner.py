@@ -10,7 +10,9 @@ from backend.models import Line, LineStopUsage, Journey, Stop, Locality, StopTim
 from backend.schemas.stop import Stop as StopSchema
 from backend.services.bus import fetch_bus_trip, build_bus
 from backend.services.stops import get_nearby_stops
+import logging
 
+log = logging.getLogger(__name__)
 
 async def get_possible_journeys(lat: float, lon: float, locality: str, r, now: dt = None):
     if not now:
@@ -120,7 +122,7 @@ async def get_possible_journeys(lat: float, lon: float, locality: str, r, now: d
             ]
 
             if valid_journeys:
-                print(f"Found {len(valid_journeys)} valid journeys for line {line}")
+                log.debug(f"Found {len(valid_journeys)} valid journeys for line {line}")
 
                 for journey, st_curr, st_dest, s_curr, s_dest in valid_journeys:
                     wait = (st_curr.departure_time - current_timedelta).total_seconds()
@@ -137,7 +139,7 @@ async def get_possible_journeys(lat: float, lon: float, locality: str, r, now: d
                         live_bus = await build_bus(trip_bus["id"], r, s_curr.atco_code, journey.id)
 
                     if live_bus:
-                        print(live_bus.reg)
+                        log.debug(live_bus.reg)
                         wait += live_bus.delay
                     headsign = st_curr.headsign
 
@@ -153,7 +155,7 @@ async def get_possible_journeys(lat: float, lon: float, locality: str, r, now: d
                     total = walk_time + wait_time + in_vehicle
 
                     if wait_time < 0:
-                        print("cant walk there in time")
+                        log.debug("cant walk there in time")
                         continue
 
                     candidates.append({

@@ -1,10 +1,12 @@
 import calendar
 import xml.etree.cElementTree as ET
 from datetime import timedelta
-
+import logging
 from shapely import Point
 
 from backend.utils.time import to_datetime
+
+log = logging.getLogger(__name__)
 
 WEEKDAYS = {day: i for i, day in enumerate(calendar.day_name)}
 
@@ -457,23 +459,23 @@ if __name__ == "__main__":
     import sys
 
     if len(sys.argv) != 2:
-        print("Usage: <path_to_transxchange_xml>")
+        log.debug("Usage: <path_to_transxchange_xml>")
         sys.exit(1)
     xml_file = sys.argv[1]
     # try:
     #     transxchange = parse_transxchange(xml_file)
-    #     print(transxchange.operators)
-    #     print(f"Parsed TransXChange data from {xml_file}")
+    #     log.debug(transxchange.operators)
+    #     log.debug(f"Parsed TransXChange data from {xml_file}")
     # except ET.ParseError as e:
-    #     print(f"Failed to parse XML: {e}")
+    #     log.debug(f"Failed to parse XML: {e}")
     # except Exception as e:
-    #     print(f"An error occurred: {e}")
+    #     log.debug(f"An error occurred: {e}")
 
     transxchange = parse_transxchange(xml_file)
-    print(len(transxchange.serviced_organisations), "serviced organisations found")
-    print(len(transxchange.services), "services found")
-    print(len(transxchange.routes), "routes found")
-    print(len(transxchange.operators), "operators found")
-    print(len(transxchange.stop_points), "stop points found")
-    print(len(transxchange.vehicle_journeys), "vehicle journeys found")
-    print(f"Parsed TransXChange data from {xml_file}")
+    log.debug(len(transxchange.serviced_organisations), "serviced organisations found")
+    log.debug(len(transxchange.services), "services found")
+    log.debug(len(transxchange.routes), "routes found")
+    log.debug(len(transxchange.operators), "operators found")
+    log.debug(len(transxchange.stop_points), "stop points found")
+    log.debug(len(transxchange.vehicle_journeys), "vehicle journeys found")
+    log.debug(f"Parsed TransXChange data from {xml_file}")

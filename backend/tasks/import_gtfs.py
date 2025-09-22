@@ -115,7 +115,7 @@ def upsert(
                 counter += 1
                 if len(batch) >= batch_size:
                     percent = (counter) / len(rows) * 100
-                    print(f"Upserting batch {counter // batch_size} ({percent:.2f}%)")
+                    log.debug(f"Upserting batch {counter // batch_size} ({percent:.2f}%)")
                     stmt = pg_insert(model).values(batch)
                     if update_columns:
                         stmt = stmt.on_conflict_do_update(
@@ -128,7 +128,7 @@ def upsert(
         # Upsert any remaining rows
         if batch:
             percent = 100
-            print(f"Upserting final batch ({percent:.2f}%)")
+            log.debug(f"Upserting final batch ({percent:.2f}%)")
             stmt = pg_insert(model).values(batch)
             if update_columns:
                 stmt = stmt.on_conflict_do_update(
@@ -156,9 +156,9 @@ def generate_point(lat, lon):
 
 
 def import_feed_info(db: Session, feed_info: pd.DataFrame):
-    print("Importing feed info...")
+    log.debug("Importing feed info...")
     if feed_info is None or feed_info.empty:
-        print("No feed info available in GTFS feed.")
+        log.debug("No feed info available in GTFS feed.")
         return
 
     feed_info = feed_info.where(pd.notnull(feed_info), None)
@@ -173,13 +173,13 @@ def import_feed_info(db: Session, feed_info: pd.DataFrame):
     }
 
     upsert(db, FeedInfo, feed_info, ["publisher_name"], mapping)
-    print(f"Imported {len(feed_info)} feed info entries.")
+    log.debug(f"Imported {len(feed_info)} feed info entries.")
 
 
 def import_agencies(db: Session, agencies: pd.DataFrame):
-    print("Importing agencies...")
+    log.debug("Importing agencies...")
     if agencies is None or agencies.empty:
-        print("No agencies available in GTFS feed.")
+        log.debug("No agencies available in GTFS feed.")
         return
 
     agencies = agencies.where(pd.notnull(agencies), None)
@@ -195,13 +195,13 @@ def import_agencies(db: Session, agencies: pd.DataFrame):
     }
 
     upsert(db, Agency, agencies, ["id"], mapping)
-    print(f"Imported {len(agencies)} agencies.")
+    log.debug(f"Imported {len(agencies)} agencies.")
 
 
 def import_routes(db: Session, routes: pd.DataFrame):
-    print("Importing routes...")
+    log.debug("Importing routes...")
     if routes is None or routes.empty:
-        print("No routes available in GTFS feed.")
+        log.debug("No routes available in GTFS feed.")
         return
 
     routes = routes.where(pd.notnull(routes), None)
@@ -220,11 +220,11 @@ def import_routes(db: Session, routes: pd.DataFrame):
     }
 
     upsert(db, Route, routes, ["id"], mapping)
-    print(f"Imported {len(routes)} routes.")
+    log.debug(f"Imported {len(routes)} routes.")
 
 
 def import_calendar(db: Session, calendar_df: pd.DataFrame):
-    print(f"Importing {len(calendar_df)} calendar entries...")
+    log.debug(f"Importing {len(calendar_df)} calendar entries...")
 
     calendar_df = calendar_df.where(pd.notnull(calendar_df), None)
     calendar_df["start_date"] = pd.to_datetime(
@@ -246,11 +246,11 @@ def import_calendar(db: Session, calendar_df: pd.DataFrame):
     }
 
     upsert(db, Calendar, calendar_df, ["service_id"], mapping)
-    print(f"Imported {len(calendar_df)} calendar entries.")
+    log.debug(f"Imported {len(calendar_df)} calendar entries.")
 
 
 def import_calendar_dates(db: Session, calendar_dates_df: pd.DataFrame):
-    print(f"Importing {len(calendar_dates_df)} calendar dates...")
+    log.debug(f"Importing {len(calendar_dates_df)} calendar dates...")
 
     calendar_dates_df = calendar_dates_df.where(pd.notnull(calendar_dates_df), None)
     calendar_dates_df["date"] = pd.to_datetime(
@@ -267,11 +267,11 @@ def import_calendar_dates(db: Session, calendar_dates_df: pd.DataFrame):
     }
 
     upsert(db, CalendarDate, calendar_dates_df, ["service_id", "date"], mapping)
-    print(f"Imported {len(calendar_dates_df)} calendar date entries.")
+    log.debug(f"Imported {len(calendar_dates_df)} calendar date entries.")
 
 
 def import_shapes(db: Session, shapes: pd.DataFrame):
-    print(f"Importing {len(shapes)} shapes...")
+    log.debug(f"Importing {len(shapes)} shapes...")
 
     shapes = shapes.where(pd.notnull(shapes), None)
 
@@ -281,11 +281,11 @@ def import_shapes(db: Session, shapes: pd.DataFrame):
     }
 
     upsert(db, Shape, shapes, ["shape_id"], mapping)
-    print(f"Imported {len(shapes)} shapes.")
+    log.debug(f"Imported {len(shapes)} shapes.")
 
 
 def import_trips(db: Session, trips: pd.DataFrame, shapes: pd.DataFrame):
-    print(f"Importing {len(trips)} trips...")
+    log.debug(f"Importing {len(trips)} trips...")
 
     trips = trips.where(pd.notnull(trips), None)
 
@@ -335,11 +335,11 @@ def import_trips(db: Session, trips: pd.DataFrame, shapes: pd.DataFrame):
     }
 
     upsert(db, Trip, trips, ["id"], mapping)
-    print(f"Imported {len(trips)} trips.")
+    log.debug(f"Imported {len(trips)} trips.")
 
 
 def import_stop_times(db: Session, stop_times: pd.DataFrame):
-    print(f"Importing {len(stop_times)} stop times...")
+    log.debug(f"Importing {len(stop_times)} stop times...")
 
     stop_times = stop_times.where(pd.notnull(stop_times), None)
 
@@ -363,17 +363,17 @@ def import_stop_times(db: Session, stop_times: pd.DataFrame):
         "timepoint": "timepoint",
     }
 
-    print("Removing duplicates...")
+    log.debug("Removing duplicates...")
     # Remove duplicates within the batch based on (trip_id, stop_id) using DataFrame
     unique_stop_times = stop_times.drop_duplicates(subset=["trip_id", "stop_id"])
-    print(f"Total stop times to import: {len(stop_times)}")
+    log.debug(f"Total stop times to import: {len(stop_times)}")
 
     upsert(db, StopTime, unique_stop_times, ["trip_id", "stop_id"], mapping)
-    print(f"Imported {len(unique_stop_times)} stop times.")
+    log.debug(f"Imported {len(unique_stop_times)} stop times.")
 
 
 def import_frequencies(db: Session, frequencies_df: pd.DataFrame):
-    print(f"Importing {len(frequencies_df)} frequencies...")
+    log.debug(f"Importing {len(frequencies_df)} frequencies...")
 
     frequencies_df = frequencies_df.where(pd.notnull(frequencies_df), None)
 
@@ -386,11 +386,11 @@ def import_frequencies(db: Session, frequencies_df: pd.DataFrame):
     }
 
     upsert(db, Frequency, frequencies_df, ["trip_id"], mapping)
-    print(f"Imported {len(frequencies_df)} frequencies.")
+    log.debug(f"Imported {len(frequencies_df)} frequencies.")
 
 
 def import_gtfs(zip_file_path: str):
-    print("Starting GTFS import...")
+    log.debug("Starting GTFS import...")
 
     config = ptg.config.geo_config()
     config.remove_edges_from(list(config.out_edges("stops.txt")))
@@ -400,12 +400,12 @@ def import_gtfs(zip_file_path: str):
     # feed = ptg.load_geo_feed(zip_file_path)
 
     if not feed:
-        print("No GTFS feed found or feed is empty.")
+        log.debug("No GTFS feed found or feed is empty.")
         return
 
-    print(f"GTFS feed loaded from {zip_file_path}")
+    log.debug(f"GTFS feed loaded from {zip_file_path}")
 
-    # print(
+    # log.debug(
     #     f"GTFS feed contains {len(feed.agency)} agencies, {len(feed.routes)} routes, and {len(feed.trips)} trips."
     # )
 
@@ -420,7 +420,7 @@ def import_gtfs(zip_file_path: str):
             existing_service_ids = {service.id for service in db.query(Service).all()}
             service_ids = set(feed.trips.service_id)
             new_services = service_ids - existing_service_ids
-            print(f"Inserting {len(new_services)} new services...")
+            log.debug(f"Inserting {len(new_services)} new services...")
             new_services_models = []
             for service_id in new_services:
                 new_services_models.append(Service(id=service_id))
@@ -430,7 +430,7 @@ def import_gtfs(zip_file_path: str):
                 db.commit()
 
             services_check = db.query(Service).all()
-            print(f"Total services in DB: {len(services_check)}")
+            log.debug(f"Total services in DB: {len(services_check)}")
 
             import_trips(db, feed.trips, feed.shapes)
 
@@ -443,19 +443,19 @@ def import_gtfs(zip_file_path: str):
             import_stop_times(db, feed.stop_times)
 
             db.commit()
-            print("GTFS import completed successfully.")
+            log.debug("GTFS import completed successfully.")
 
         except Exception as e:
-            print("An error occurred during GTFS import:")
+            log.debug("An error occurred during GTFS import:")
             error_str = e.__str__()
-            print(error_str[:1000])
-            # print(error_str)
+            log.debug(error_str[:1000])
+            # log.debug(error_str)
             db.rollback()
 
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: python import_gtfs.py <path_to_gtfs_zip> [--test]")
+        log.debug("Usage: python import_gtfs.py <path_to_gtfs_zip> [--test]")
         sys.exit(1)
     test_mode = "--test" in sys.argv[2:]
     gtfs_path = ""
@@ -463,4 +463,4 @@ if __name__ == "__main__":
         gtfs_path = sys.argv[1]
 
     import_gtfs(gtfs_path)
-    print("done.")
+    log.debug("done.")

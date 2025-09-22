@@ -17,6 +17,9 @@ from datetime import datetime
 from datetime import timezone, timedelta
 import asyncio
 from backend.deps import LONDON, UTC
+import logging
+
+log = logging.getLogger(__name__)
 
 
 async def parse_operator(atocName: str):
@@ -27,7 +30,7 @@ async def parse_operator(atocName: str):
     if operator_map.get(atocName):
         return operator_map[atocName]
     code = "".join([w[:1].upper() for w in atocName.split(" ")])
-    print("Unknown operator:", atocName)
+    log.warning("Unknown operator:", atocName)
     return {"code": code, "color": "#1447E6"}
 
 
@@ -130,7 +133,7 @@ async def parse_trains(trains: dict) -> StationResponse | None:
         )
         return StationResponse(**trains_dict)
     except Exception as error:
-        print("failed to get departures", error)
+        log.error("failed to get departures", error)
         return None
 
 
@@ -227,7 +230,7 @@ async def parse_train(train) -> TrainService | None:
         )
         return TrainService(**train_dict)
     except Exception as error:
-        print("failed to get departures", error)
+        log.error("failed to get departures", error)
         return None
 
 

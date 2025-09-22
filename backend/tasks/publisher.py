@@ -7,6 +7,9 @@ from typing import Set
 from datetime import datetime, timezone
 from .get_departures import get_departures
 from backend.deps import DateTimeEncoder
+import logging
+
+log = logging.getLogger(__name__)
 
 active: dict[str, Set[str]] = {}
 publish_tasks: dict[str, asyncio.Task] = {}
@@ -56,16 +59,16 @@ async def start_publishing(channel: str, key: str, redis: Redis):
     active.setdefault(channel, set())
     if key not in active[channel]:
         active[channel].add(key)
-        print(f"starting pub task for {key}")
+        log.debug(f"starting pub task for {key}")
         task = asyncio.create_task(publish_loop(channel, key, redis))
         publish_tasks[key] = task
     else:
-        print("task already started")
+        log.warning("task already started")
 
 
 async def stop_publishing(key: str):
     task = publish_tasks.get(key)
     if task:
-        print(f"stopping pub task for {key}")
+        log.debug(f"stopping pub task for {key}")
 
         task.cancel()

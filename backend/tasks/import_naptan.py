@@ -19,6 +19,9 @@ from backend.models import (
 )
 from backend.utils.bulk_upsert import bulk_upsert
 from backend.utils.download_to_static import download_to_static
+import logging
+
+log = logging.getLogger(__name__)
 
 new_stops = []
 new_stop_areas = []
@@ -126,7 +129,7 @@ def get_stop_area(element: ET.Element):
         try:
             stop_area_type = StopAreaTypeEnum(element.findtext("StopAreaType"))
         except Exception as e:
-            print(f"an error occurred parsing stop area type: {e}")
+            log.debug(f"an error occurred parsing stop area type: {e}")
             stop_area_type = None
 
         return {
@@ -165,7 +168,7 @@ def handle_stop_point(element: ET.Element):
     locality_id = element.findtext("Place/NptgLocalityRef")
     if locality_id not in localities:
         if locality_id not in localities_not_exist:
-            print(f"locality {locality_id} does not exist")
+            log.debug(f"locality {locality_id} does not exist")
             localities_not_exist.add(locality_id)
         locality_id = None
 
@@ -173,7 +176,7 @@ def handle_stop_point(element: ET.Element):
 
     admin_area_id = int(element.findtext("AdministrativeAreaRef"))
     if admin_area_id not in admin_areas:
-        print(f"admin area {admin_area_id} does not exist")
+        log.debug(f"admin area {admin_area_id} does not exist")
         admin_area_id = None
 
     stop["admin_area_id"] = admin_area_id
@@ -191,7 +194,7 @@ def handle_stop_point(element: ET.Element):
 
 def create_or_update(db: Session, no_update: bool):
     if new_stop_areas:
-        print(f"Importing {len(new_stop_areas)} Stop Areas.")
+        log.debug(f"Importing {len(new_stop_areas)} Stop Areas.")
         if no_update:
             db.bulk_insert_mappings(StopArea, new_stop_areas)
             db.commit()
@@ -223,12 +226,12 @@ def create_or_update(db: Session, no_update: bool):
         new_stop_areas_2.append(stop_area)
 
     if new_stop_areas_2:
-        print(f"Importing {len(new_stop_areas_2)} Stop Areas that didnt exist")
+        log.debug(f"Importing {len(new_stop_areas_2)} Stop Areas that didnt exist")
         db.bulk_save_objects(new_stop_areas_2)
         db.commit()
 
     if new_stops:
-        print(f"Importing {len(new_stops)} Stops.")
+        log.debug(f"Importing {len(new_stops)} Stops.")
         if no_update:
             db.bulk_insert_mappings(Stop, new_stops)
             db.commit()
@@ -260,7 +263,7 @@ def create_or_update(db: Session, no_update: bool):
 
 
 def import_naptan_data(file_path: Path, no_update=False):
-    print("Importing NAPTAN data...")
+    log.debug("Importing NAPTAN data...")
 
     global new_stops, existing_stop_ids, stop_area_ids, new_stop_areas, admin_areas, localities, localities_not_exist
     iterator = ET.iterparse(file_path, events=("start", "end"))
@@ -273,7 +276,7 @@ def import_naptan_data(file_path: Path, no_update=False):
             admin_areas = {a[0] for a in db.query(AdminArea.id).all()}
             localities = {l[0] for l in db.query(Locality.id).all()}
             localities_not_exist = set()
-            print("Loaded existing data")
+            log.debug("Loaded existing data")
             for event, element in iterator:
                 element.tag = element.tag.removeprefix("{http://www.naptan.org.uk/}")
                 if event == "end":
@@ -283,7 +286,7 @@ def import_naptan_data(file_path: Path, no_update=False):
                         handle_stop_area(element)
 
             create_or_update(db, no_update)
-            print("Updating search vectors...")
+            log.debug("Updating search vectors...")
             with engine.begin() as conn:
                 sync_trigger(
                     conn,
@@ -300,12 +303,12 @@ def import_naptan_data(file_path: Path, no_update=False):
                         "town",
                     ],
                 )
-            print("Import complete.")
+            log.debug("Import complete.")
         except Exception as e:
-            print("An error occurred during NaPTAN import:")
+            log.debug("An error occurred during NaPTAN import:")
             error_str = e.__str__()
-            print(error_str[:1000])
-            # print(error_str)
+            log.debug(error_str[:1000])
+            # log.debug(error_str)
             db.rollback()
 
 
@@ -322,10 +325,10 @@ def main():
         from_internet = True
         url = "https://naptan.api.dft.gov.uk/v1/access-nodes?dataFormat=xml"
 
-        print(f"Downloading NAPTAN data from {url}...")
+        log.debug(f"Downloading NAPTAN data from {url}...")
         naptan_path = download_to_static(url, "NaPTAN.xml")
         if not naptan_path:
-            print("Failed to download NAPTAN data.")
+            log.debug("Failed to download NAPTAN data.")
             sys.exit(1)
     else:
         naptan_path = Path(args.file)
@@ -333,11 +336,11 @@ def main():
     try:
         import_naptan_data(naptan_path, args.no_update)
     except KeyboardInterrupt:
-        print("Stopped by user.")
+        log.debug("Stopped by user.")
     finally:
         if from_internet:
             naptan_path.unlink()
-        print("done.")
+        log.debug("done.")
 
 
 if __name__ == "__main__":

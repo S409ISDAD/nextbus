@@ -4,6 +4,9 @@ import certifi
 import os
 from dotenv import load_dotenv
 from backend.config import config
+import logging
+
+log = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -35,8 +38,8 @@ async def fetch_rtt_json(url: str) -> dict | None:
             url, headers={"Accept": "application/json"}, ssl=ssl_context
         ) as response:
             if response.status != 200 or "error" in (await response.json()):
-                print(f"RTT API failed: {response.status}")
-                print(url)
-                print(await response.json())
+                log.error(f"RTT API failed: {response.status}")
+                log.error(url)
+                log.error(await response.json())
                 return None
             return await response.json()

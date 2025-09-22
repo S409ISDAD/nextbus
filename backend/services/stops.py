@@ -11,6 +11,9 @@ from backend.services.caching import (
     get_cached,
 )
 from backend.utils.fetch_json import fetch_json
+import logging
+
+log = logging.getLogger(__name__)
 
 
 async def get_stop_details(stop_id, r: Redis):
@@ -165,7 +168,7 @@ async def get_closest_stop(lat, lng, ignore, dist=0.005):
         return {"stop_id": "", "dist": 0, "lat": 0, "lng": 0}
 
     stop_id = closest_stop.stop_id
-    print(stop_id)
+    log.debug(stop_id)
 
     return {
         "stop_id": stop_id,

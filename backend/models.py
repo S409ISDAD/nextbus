@@ -608,7 +608,7 @@ class Calendar(Base):
         # check day
         weekday = date.strftime("%A").lower()
         if not getattr(self, weekday):
-            # print("Not valid on this weekday, active days:", self.days_of_week)
+            # log.debug("Not valid on this weekday, active days:", self.days_of_week)
             return False
 
         # check exceptions
@@ -625,7 +625,7 @@ class Calendar(Base):
             bh = link.bank_holiday
             for bh_date in bh.dates:
                 if bh_date.date == date:
-                    print(f"Bank holiday valid, and operating={link.operating}")
+                    log.debug(f"Bank holiday valid, and operating={link.operating}")
                     return link.operating
 
         return True
@@ -973,7 +973,7 @@ class Journey(Base):
         """
 
         if self.block_id is None:
-            print(f"No block_id for journey {self.id}")
+            log.debug(f"No block_id for journey {self.id}")
             return None
 
         if not date:
@@ -992,11 +992,11 @@ class Journey(Base):
         )
 
         valid_candidates = [j for j in candidate_journeys if j.is_valid(date)]
-        # print(
+        # log.debug(
         #     f"Candidate journeys for {self.ticket_machine_code} block {self.block_id} on {date} starting {self.start_time}:"
         # )
         # for j in valid_candidates:
-        #     print(
+        #     log.debug(
         #         f"  tmc: {j.ticket_machine_code}, End Time: {j.end_time}, Valid: {j.is_valid(date)}"
         #     )
 
@@ -1070,45 +1070,48 @@ class StopTime(Base):
 
     @property
     def headsign(self):
-        # return self.journey.destination.locality.name
+        # return self.journey.destination.locality.name#
+
+        is_outbound = self.journey.direction == DirectionType.outbound
 
         main_dest = (
-            self.journey.line.service.destination
-            if self.journey.direction == DirectionType.outbound
+            self.journey.line.service.destination if is_outbound
             else self.journey.line.service.origin
         )
 
         line_dest = (
-            self.journey.line.outbound_description
-            if self.journey.direction == DirectionType.outbound
+            self.journey.line.outbound_description if is_outbound
             else self.journey.line.inbound_description
         )
 
+        raw_headsign = self.dest_display or self.journey.headsign
+        fallback_headsign = main_dest
+
+        do_makeshift = False
+
         show_headsign = False
-        headsign = self.dest_display or self.journey.headsign
+        if raw_headsign:
+            short_enough = len(raw_headsign) < 25
+            overlaps_main = any(
+                word in raw_headsign.split()
+                for word in (main_dest.split() + line_dest.split())
+            )
+            show_headsign = short_enough and overlaps_main
 
-        if headsign and len(headsign) < 25 and any(
-                word in headsign.split() for word in main_dest.split() + line_dest.split()):
-            show_headsign = True
+        if do_makeshift:
+            if show_headsign:
+                final = raw_headsign
+            else:
+                makeshift = f"{main_dest} {raw_headsign}" if raw_headsign else fallback_headsign
+                log.debug("using makeshift headsign", makeshift)
+                final = makeshift
+        else:
+            final = fallback_headsign
 
-        final_headsign = headsign if show_headsign and headsign else (
-            self.journey.line.service.destination
-            if self.journey.direction == DirectionType.outbound
-            else self.journey.line.service.origin
-        )
+        if self.journey.destination and self.journey.destination.locality:
+            return final or self.journey.destination.locality.name
 
-        makeshift_headsign = f"{main_dest} {headsign}"
-
-        if not show_headsign:
-            print(f"not using headsign {headsign}, using {makeshift_headsign} instead")
-
-        if self.journey.destination is None or self.journey.destination.locality is None:
-            return final_headsign if show_headsign else makeshift_headsign
-
-
-        final = final_headsign if show_headsign else makeshift_headsign or self.journey.destination.locality.name or self.journey.headsign
-
-        return final
+        return final or fallback_headsign
 
     @property
     def departure_time_str(self):

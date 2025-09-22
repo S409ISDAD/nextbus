@@ -3,7 +3,9 @@ from backend.models import Journey, Line, Service
 from sqlalchemy.orm import Session
 from backend.services.journeys import get_trip
 from backend.services.services import get_service_info
+import logging
 
+log = logging.getLogger(__name__)
 
 def fuzzy_search_service(query, db, limit=10, threshold=0.2):
     return (
@@ -42,7 +44,7 @@ async def match_service_line(db: Session, service_id: int, r) -> Line | None:
         if db_service:
             db_service = db_service[0]
             line_ids = db_service.line_names.split(", ")
-            print(db_service.service_code)
+            log.debug(db_service.service_code)
             line = (
                 db.query(Line)
                 .filter(Line.service_code == db_service.service_code)
@@ -50,7 +52,7 @@ async def match_service_line(db: Session, service_id: int, r) -> Line | None:
                 .first()
             )
         if line:
-            print(
+            log.debug(
                 f"Matched service {service_id} to line {line.line_name} via fuzzy search"
             )
             line.bt_service_id = service_id
@@ -78,7 +80,7 @@ async def match_trip_journey(db: Session, trip_id: int, r) -> Journey | None:
             query = query.filter(Journey.block_id == trip.block)
         journey = query.first()
         if journey:
-            print(f"Matched trip {trip_id} to journey {journey.id}")
+            log.debug(f"Matched trip {trip_id} to journey {journey.id}")
             journey.bt_trip_id = trip_id
             db.commit()
             return journey

@@ -8,6 +8,9 @@ from fastapi import WebSocket, WebSocketDisconnect
 from backend.deps import datetime_decoder
 from backend.tasks.publisher import start_publishing, stop_publishing
 from backend.websockets.manager import manager
+import logging
+
+log = logging.getLogger(__name__)
 
 
 def convert(obj):
@@ -48,7 +51,7 @@ async def stop_subscribe(stop_id: str, redis: redis.Redis):
         if pubsub:
             await pubsub.unsubscribe(f"stop:departures:{stop_id}")
     except Exception as e:
-        print(f"[Redis subscriber error] {e}")
+        log.debug(f"[Redis subscriber error] {e}")
 
 
 async def handle_departures(channel: str, key: str, websocket: WebSocket, redis):
@@ -61,7 +64,7 @@ async def handle_departures(channel: str, key: str, websocket: WebSocket, redis)
         cached = await redis.get(f"stop:departures:{key}")
 
         if cached:
-            print(f"sending cached on first conn {key}")
+            log.debug(f"sending cached on first conn {key}")
             data = json.loads(cached, object_hook=datetime_decoder)
             data_serializable = convert(data)
 

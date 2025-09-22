@@ -30,9 +30,9 @@ def route_changed(mapper, connection, target):
         if loop.is_running():
             loop.create_task(update_queue.put(True))
         else:
-            print("No running event loop; dashboard update not queued.")
+            log.debug("No running event loop; dashboard update not queued.")
     except RuntimeError:
-        print("No running event loop; dashboard update not queued.")
+        log.debug("No running event loop; dashboard update not queued.")
 
 
 async def update_dashboard_worker():
@@ -63,7 +63,7 @@ async def on_app_command_error(interaction, error):
 
 @bot.event
 async def on_ready():
-    print(f"Bot logged in as {bot.user}")
+    log.debug(f"Bot logged in as {bot.user}")
     # Initial update
     if not getattr(bot, "_dashboard_worker_started", False):
         bot.loop.create_task(update_dashboard_worker())
@@ -198,7 +198,7 @@ async def send_message(msg: str):
 
 async def update_dashboard():
     await bot.wait_until_ready()
-    print("Updating dashboard message...")
+    log.debug("Updating dashboard message...")
     with SessionLocal() as db:
         lines = db.query(Line).options(joinedload(Line.service)).all()
         lines_text = ""
@@ -250,6 +250,6 @@ async def update_dashboard():
             db.commit()
         if message:
             await message.edit(content=msg_content, suppress=True)
-            print("Dashboard message updated.")
+            log.debug("Dashboard message updated.")
         else:
-            print("Could not find or create dashboard message.")
+            log.debug("Could not find or create dashboard message.")

@@ -11,6 +11,9 @@ from backend.schemas.times import Times
 from backend.services.journeys import get_trip, get_vehicle_journey
 from datetime import datetime as dt
 from backend.deps import LONDON
+import logging
+
+log = logging.getLogger(__name__)
 
 
 async def calculate_sequence(stops: list[StopTime], future_time: dt, extra: int) -> int:
@@ -109,7 +112,7 @@ async def predict_future(
             )
             raw_offset = int((ideal_age - age) * sensitivity)
             extra = max(-max_offset, min(max_offset, raw_offset))
-            print(f"data is {age}s old, adding {extra}s")
+            log.debug(f"data is {age}s old, adding {extra}s")
         else:
             extra = 0
 
@@ -220,7 +223,7 @@ async def calculate_expected_difference(timestamp: str, expected: dt, scheduled:
 
     diff = func(age)
 
-    # print(f"age: {age}, diff: {diff}")
+    # log.debug(f"age: {age}, diff: {diff}")
 
     max_expected = expected + timedelta(
         seconds=diff + 60

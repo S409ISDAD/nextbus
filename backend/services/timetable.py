@@ -1,5 +1,7 @@
 from geopy.distance import geodesic
+import logging
 
+log = logging.getLogger(__name__)
 
 async def calculate_distances(stops: list) -> list[float]:
     distances = []
@@ -82,7 +84,7 @@ async def check_similarity(stops: list, new_times: list[int], distances, speeds)
     for error, dist, speed in zip(errors, distances, speeds):
         output += f"error: {error} dist: {round(dist)}m speed: {speed}m/s \n"
 
-    print(output)
+    log.debug(output)
     mean_error = sum(errors) / len(errors)
     mean_abs_error = sum(abs(e) for e in errors) / len(errors)
 
@@ -90,9 +92,9 @@ async def check_similarity(stops: list, new_times: list[int], distances, speeds)
 
     std_error = statistics.stdev(errors)
 
-    print(f"Mean error: {mean_error:.1f} seconds")
-    print(f"Mean absolute error: {mean_abs_error:.1f} seconds")
-    print(f"Standard deviation: {std_error:.1f} seconds")
+    log.debug(f"Mean error: {mean_error:.1f} seconds")
+    log.debug(f"Mean absolute error: {mean_abs_error:.1f} seconds")
+    log.debug(f"Standard deviation: {std_error:.1f} seconds")
 
 
 async def recalculate_timetable(stops: list, journey_id: int, r):

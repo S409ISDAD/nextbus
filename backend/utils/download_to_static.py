@@ -1,4 +1,7 @@
 import requests
+import logging
+
+log = logging.getLogger(__name__)
 
 from backend.deps import STATIC_DATA_DIR
 
@@ -12,7 +15,7 @@ def download_to_static(url: str, filename: str):
         with open(path, "wb") as f:
             for chunk in response.iter_content(chunk_size=102400):
                 f.write(chunk)
-        print(f"Downloaded updated file: {path}")
+        log.debug(f"Downloaded updated file: {path}")
 
         return path
     return None

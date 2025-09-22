@@ -15,7 +15,7 @@
 
 #         distance = geodesic(prev_coords, (lat, lon)).miles  # distance in miles
 
-#         # print(f"Distance: {distance} miles, Time: {time_diff} hours")
+#         # log.debug(f"Distance: {distance} miles, Time: {time_diff} hours")
 
 #         speed = (
 #             distance / time_diff

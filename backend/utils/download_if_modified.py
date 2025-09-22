@@ -3,6 +3,9 @@ import requests
 from pathlib import Path
 from backend.models import DataSource
 from backend.db.db import SessionLocal
+import logging
+
+log = logging.getLogger(__name__)
 
 
 def download_if_modified(datasource: DataSource, file: Path):
@@ -17,7 +20,7 @@ def download_if_modified(datasource: DataSource, file: Path):
     if response.status_code == 200:
         with open(file, "wb") as f:
             f.write(response.content)
-        print(f"Downloaded updated file: {file}")
+        log.debug(f"Downloaded updated file: {file}")
 
         with SessionLocal() as db:
             datasource.last_modified = datetime.strptime(  # type: ignore
@@ -27,5 +30,8 @@ def download_if_modified(datasource: DataSource, file: Path):
             db.commit()
 
         return file
+
+    else:
+        log.debug(f"data not modified: {datasource.url}")
 
     return None

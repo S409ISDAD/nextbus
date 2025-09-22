@@ -15,6 +15,9 @@ from backend.services.caching import (
 )
 from backend.utils.fetch_json import fetch_json
 from backend.utils.time import check_scheduled_time
+import logging
+
+log = logging.getLogger(__name__)
 
 
 async def get_vehicle_journey(journey_id, delay, r) -> Journey:

@@ -9,6 +9,9 @@ from backend.models import AdminArea, District, Locality, Region
 from backend.utils.download_to_static import download_to_static
 from backend.utils.location import generate_point
 from backend.utils.time import to_datetime
+import logging
+
+log = logging.getLogger(__name__)
 
 
 def handle_region(element: ET.Element):
@@ -81,7 +84,7 @@ def import_nptg_data():
             for _, element in iterator:
                 element.tag = element.tag.removeprefix("{http://www.naptan.org.uk/}")
                 if element.tag == "Regions":
-                    print("Importing regions")
+                    log.debug("Importing regions")
                     for item in handle_region(element):
                         if type(item) is Region:
                             if item.id not in regions.keys():
@@ -103,7 +106,7 @@ def import_nptg_data():
                     element.clear()
 
                 elif element.tag == "NptgLocalities":
-                    print("Importing localities")
+                    log.debug("Importing localities")
                     l_with_parents = []
                     for item in handle_locality(element):
                         if item.parent_id and item.parent_id not in localities.keys():
@@ -123,10 +126,10 @@ def import_nptg_data():
                     for locality in l_with_parents:
                         if locality.parent_id not in localities.keys():
                             db.add(locality)
-            print("Committing...")
+            log.debug("Committing...")
             db.commit()
-            print("Import complete")
-            print("Syncing search vectors")
+            log.debug("Import complete")
+            log.debug("Syncing search vectors")
             with engine.begin() as conn:
                 sync_trigger(
                     conn,
@@ -138,22 +141,22 @@ def import_nptg_data():
                     ],
                 )
         except Exception as e:
-            print(f"Error during import: {e}")
+            log.debug(f"Error during import: {e}")
             db.rollback()
 
 
 def main():
     url = "https://naptan.api.dft.gov.uk/v1/nptg"
 
-    print(f"Downloading NPTG data from {url}...")
+    log.debug(f"Downloading NPTG data from {url}...")
     nptg_path = download_to_static(url, "NPTG.xml")
     if not nptg_path:
-        print("Failed to download NPTG data.")
+        log.debug("Failed to download NPTG data.")
         sys.exit(1)
     try:
         import_nptg_data()
     except KeyboardInterrupt:
-        print("Stopped by user.")
+        log.debug("Stopped by user.")
     finally:
         nptg_path.unlink()
 

@@ -2,7 +2,9 @@ import asyncio
 from fastapi import WebSocket
 from typing import Callable, Dict, List
 import json
+import logging
 
+log = logging.getLogger(__name__)
 
 class MultiChannelManager:
     def __init__(self):

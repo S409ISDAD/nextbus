@@ -2,7 +2,9 @@ from fastapi import APIRouter, Depends, WebSocket
 
 from backend.deps import get_redis
 from backend.websockets.handlers import handle_departures
+import logging
 
+log = logging.getLogger(__name__)
 ws_router = APIRouter()
 
 

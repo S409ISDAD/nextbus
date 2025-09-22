@@ -28,7 +28,9 @@ from backend.services.services import fetch_active_buses, get_service_info
 from backend.services.tracking_confidence import calculate_confidence
 from backend.utils.fetch_json import fetch_json
 from backend.utils.match_bt import match_trip_journey
+import logging
 
+log = logging.getLogger(__name__)
 
 async def fetch_bus(bus_id, r: Redis):
     """Fetches specific bus"""
@@ -92,7 +94,7 @@ def best_bus(buses: list[dict]) -> dict | None:
     for bus in buses:
         progress = bus.get("progress")
         if progress and isinstance(progress.get("sequence"), int):
-            print("valid")
+            log.debug("valid")
             valid.append(bus)
 
     if not valid:
@@ -211,7 +213,7 @@ async def build_scheduled_db(
         )
 
         if not stop_time:
-            print("No stop time found")
+            log.warning("No stop time found")
             return await build_scheduled(time, r, include_started)
 
         if include_started:
@@ -227,7 +229,7 @@ async def build_scheduled_db(
         scheduled = today_midnight + stop_time.departure_time
 
         if (scheduled - datetime.now(tz=LONDON)).total_seconds() > 11 * 3600:
-            print("Scheduled too far in future")
+            log.debug("Scheduled too far in future")
             return None
 
         dest = stop_time.headsign
@@ -266,11 +268,11 @@ async def build_scheduled_db(
         potential_bus = await fetch_bus_trip(prev_service_id, prev_trip, r)
 
         if potential_bus:
-            print("Found bus from previous trip")
+            log.debug("Found bus from previous trip")
 
             bus = await build_bus(potential_bus["id"], r, get_journey=False)
             if not bus:
-                print("Failed to build bus")
+                log.warning("Failed to build bus")
             else:
                 delay = max(
                     bus.delay - int(layover_time.total_seconds()), 0
@@ -290,10 +292,10 @@ async def build_scheduled_db(
                 if (bus.expected - datetime.now(tz=LONDON)).total_seconds() < 4 * 3600:
                     return bus
                 if layover_time.total_seconds() > 30 * 60:  # bus is not necessarily going straight on the next trip, might have to drive there which affects delay
-                    print("Layover too long")
+                    log.debug("Layover too long")
                     bus.delay = 0
 
-                print("Bus expected too far in future")
+                log.debug("Bus expected too far in future")
 
         return ScheduledBus(
             destination=dest,
@@ -369,7 +371,7 @@ async def build_bus(
 
     # Ignore buses with a delay of over 2 hours, they are likely broken down or similar
     if delay > 2 * 60 * 60:
-        print(f"ignoring bus with delay of {round(delay / 60)} minutes")
+        log.debug(f"ignoring bus with delay of {round(delay / 60)} minutes")
         return None
 
     # Reset delay if earlier than 15 mins, it has probably logged on early
@@ -411,18 +413,18 @@ async def build_bus(
 
     delay += 10  # account for stopping and various other things that increase delay
     confidence = await calculate_confidence(delay, coords, journey_id, this_bus.get("trip_id"), r)
-    print(f"confidence: {confidence}")
+    log.debug(f"confidence: {confidence}")
 
     if confidence.broken_tracking_confidence > 0.65:
-        print("bus likely has broken tracking, ignoring delay")
+        log.debug("bus likely has broken tracking, ignoring delay")
         delay = 0
 
     if confidence.broken_down_confidence > 0.65:
-        print("bus likely has broken down, ignoring delay")
+        log.debug("bus likely has broken down, ignoring delay")
         delay = 0
 
     if confidence.log_off_confidence > 0.65:
-        print("bus likely has finished, ignoring delay")
+        log.debug("bus likely has finished, ignoring delay")
         delay = 0
 
     target_seq, times, journey = await calculate_expected(
@@ -433,7 +435,7 @@ async def build_bus(
     prog = progress.get("progress", None)
     if sequence and prog and target_seq and confidence.final_confidence < 0.75 and sequence > 5:  # bus may be logging on early
         if (sequence == target_seq and prog >= 0.1) or sequence > target_seq:
-            print("bus has likely passed the stop")
+            log.debug("bus has likely passed the stop")
             return None  # bus has likely passed the stop
 
     service_info = await get_service_info(journey.service_id, r)

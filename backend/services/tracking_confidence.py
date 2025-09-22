@@ -9,6 +9,9 @@ from backend.deps import LONDON
 from backend.schemas.confidence import Confidence
 from backend.schemas.journey import Trip, LiveJourney
 from backend.services.journeys import get_trip, get_live_journey
+import logging
+
+log = logging.getLogger(__name__)
 
 geod = Geod(ellps="WGS84")
 

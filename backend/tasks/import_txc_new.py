@@ -1,6 +1,5 @@
 import gc
 import json
-import logging
 import sys
 import time
 import zipfile
@@ -33,11 +32,13 @@ from backend.models import (
     TrackSection,
     LineStopUsage,
 )
-from backend.transxchange.transxchange_parser import txc
+from backend.transxchange import txc
 from backend.utils.bulk_upsert import bulk_upsert
 from backend.utils.download_if_modified import download_if_modified
+import logging
 
-logger = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
+
 
 
 async def import_datasource(id, folder: Path):
@@ -47,7 +48,7 @@ async def import_datasource(id, folder: Path):
         name = datasource.name if datasource else "Unknown"
 
         if not datasource:
-            print(f"No DataSource with id {id} found.")
+            log.debug(f"No DataSource with id {id} found.")
             logs[datetime.now(tz=LONDON)] = f"No DataSource with id {id} found."
             return
 
@@ -59,16 +60,16 @@ async def import_datasource(id, folder: Path):
 
     if path:
         logs[datetime.now(tz=LONDON)] = f"Importing data from {path}..."
-        print(f"Importing data from {path}")
+        log.debug(f"Importing data from {path}")
 
         await import_txc_zip(folder / f"txc_source_{id}.zip", id)
 
         logs[datetime.now(tz=LONDON)] = f"Import completed for data source {name}"
-        print(f"Import completed for data source {name}")
+        log.debug(f"Import completed for data source {name}")
 
     else:
         logs[datetime.now(tz=LONDON)] = f"No updates for data source {name}"
-        print(f"No updates for data source {name}")
+        log.debug(f"No updates for data source {name}")
 
     log_dir = folder / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
@@ -93,7 +94,7 @@ async def import_txc_zip(zip_path, ds_id=None):
 
             for filename in xml_files:
                 with zf.open(filename) as xml_file:
-                    print(
+                    log.debug(
                         f"Processing file: {filename} ({xml_files.index(filename) + 1}/{total})"
                     )
                     txc_importer = TXCImporter(xml_file, ds_id=ds_id)
@@ -114,13 +115,13 @@ async def import_txc_zip(zip_path, ds_id=None):
             duration = f"{minutes}m {seconds}s"
         else:
             duration = f"{int(time_taken)}s"
-        print(f"Total TXC Import completed in {duration}")
-        print(f"Removing data source file {zip_path}")
+        log.debug(f"Total TXC Import completed in {duration}")
+        log.debug(f"Removing data source file {zip_path}")
         try:
             zip_path.unlink()
         except Exception as e:
-            print(f"Error removing file: {e}")
-        print("Updating search vectors...")
+            log.debug(f"Error removing file: {e}")
+        log.debug("Updating search vectors...")
         with engine.begin() as conn:
             sync_trigger(
                 conn,
@@ -157,7 +158,7 @@ async def import_txc_zip(zip_path, ds_id=None):
 #         for filename in zf.namelist():
 #             if filename.endswith(".xml"):
 #                 with zf.open(filename) as xml_file:
-#                     print(f"Processing file: {filename}")
+#                     log.debug(f"Processing file: {filename}")
 #                     txc_importer = TXCImporter(xml_file)
 #                     txc_importer.handle_txc_file()
 
@@ -194,7 +195,7 @@ def get_service_data(path):
     txc_data = txc.TransXChange(path)
     operators = getOperators(txc_data.operators)
 
-    print(operators)
+    log.debug(operators)
 
     revision_num = txc_data.attributes.get("RevisionNumber")
     filename = txc_data.attributes.get("FileName")
@@ -215,13 +216,13 @@ def generate_txc_map(dataset: Path):
 
     files = dataset.glob("*.xml")
     for file in files:
-        print(file)
+        log.debug(file)
 
         services = get_service_data(file)
         for service in services:
             operator, service_id, revision_num = service
 
-            print(service)
+            log.debug(service)
             if service_id in txc_map:
                 if revision_num in txc_map[service_id]:
                     txc_map[service_id][revision_num].append(file.as_posix())
@@ -250,13 +251,13 @@ class TXCImporter:
         txc_map = {}
 
         for file in self.dataset.glob("*.xml"):
-            print(file)
+            log.debug(file)
 
             services = get_service_data(file)
             for service in services:
                 operator, service_id, revision_num = service
 
-                print(service)
+                log.debug(service)
                 if service_id in txc_map:
                     if revision_num in txc_map[service_id]:
                         txc_map[service_id][revision_num].append(file.as_posix())
@@ -274,7 +275,7 @@ class TXCImporter:
         return description.strip() if description else "No description available"
 
     def clear_data_for_import(self, service_code):
-        print("Clearing existing TXC data...")
+        log.debug("Clearing existing TXC data...")
 
         service = (
             self.db.query(Service)
@@ -282,7 +283,7 @@ class TXCImporter:
             .one_or_none()
         )
         if service:
-            print(f"Deleting existing service {service_code} and related data")
+            log.debug(f"Deleting existing service {service_code} and related data")
             self.db.delete(service)
             self.db.commit()
 
@@ -539,13 +540,13 @@ class TXCImporter:
         )
 
         if end_date and end_date < self.today.date():
-            print(
+            log.debug(
                 f"Skipping journeys for {txc_service.service_code} as it ended on {end_date}"
             )
             skip_journeys = True
 
         description = self.get_description(txc_service)
-        print(f"{txc_service.lines[0].line_name} {description}")
+        log.debug(f"{txc_service.lines[0].line_name} {description}")
 
         db_service = (
             self.db.query(Service)
@@ -570,10 +571,10 @@ class TXCImporter:
             operator_noc=operator.noc if operator else None,
         )
         if not db_service:
-            print(f"Adding service {txc_service.service_code}")
+            log.debug(f"Adding service {txc_service.service_code}")
             self.db.add(service)
         else:
-            print(f"Updating service {txc_service.service_code}")
+            log.debug(f"Updating service {txc_service.service_code}")
             self.db.merge(service)
         self.db.flush()
 
@@ -598,10 +599,10 @@ class TXCImporter:
                 service_code=txc_service.service_code,
             )
             if not db_line:
-                print(f"Adding line {txc_line.line_id}")
+                log.debug(f"Adding line {txc_line.line_id}")
                 self.db.add(line)
             else:
-                print(f"Updating line {txc_line.line_id}")
+                log.debug(f"Updating line {txc_line.line_id}")
                 self.db.merge(line)
             self.db.flush()
             self.line_to_routes.setdefault(txc_line.line_id, []).extend(routes)
@@ -612,7 +613,7 @@ class TXCImporter:
                     txc_line.line_id, txc_service.service_code
             ):
                 if not txc_journey.journey_code:
-                    print(
+                    log.debug(
                         f"Skipping journey for service {txc_service.service_code} on line {txc_line.line_id} due to missing journey code"
                     )
                     continue
@@ -656,7 +657,7 @@ class TXCImporter:
         self.db.bulk_save_objects(track_points_to_create)
 
     def update_geometry(self, line_id):
-        print(f"Updating route overview geometry for line {line_id}")
+        log.debug(f"Updating route overview geometry for line {line_id}")
 
         # Query to get the ordered stops for the line
         ordered_stops_query = (
@@ -681,9 +682,9 @@ class TXCImporter:
         self.db.commit()
 
         if result.rowcount == 0:
-            print(f"No line with id {line_id} found or no geometry to update.")
+            log.debug(f"No line with id {line_id} found or no geometry to update.")
         else:
-            print(f"Geometry updated for line {line_id}")
+            log.debug(f"Geometry updated for line {line_id}")
 
     def merge_line_routes(
             self, line_id: str, simplify_tolerance=0.0001, snap_tolerance=0.0001
@@ -742,7 +743,7 @@ class TXCImporter:
             self.db.commit()
             return merged_geom
         else:
-            print(
+            log.debug(
                 f"Merged geometry for line {line_id} is not a LineString or MultiLineString."
             )
             return None
@@ -772,7 +773,7 @@ class TXCImporter:
                         ref=txc_operator.id,
                         name=txc_operator.name
                     )
-                    print(
+                    log.debug(
                         f"Adding operator {txc_operator.name}"
                     )
                     self.db.add(operator)
@@ -796,7 +797,7 @@ class TXCImporter:
                     "calendar_id",
                 ],
             )
-            print(f"Added {len(self.journeys_to_add)} journeys")
+            log.debug(f"Added {len(self.journeys_to_add)} journeys")
             self.journeys_to_add.clear()
             self.db.flush()
 
@@ -816,7 +817,7 @@ class TXCImporter:
                     "wait_time",
                 ],
             )
-            print(f"Added {len(self.stop_times_to_add)} stop times")
+            log.debug(f"Added {len(self.stop_times_to_add)} stop times")
             self.stop_times_to_add.clear()
             self.db.flush()
 
@@ -839,10 +840,10 @@ class TXCImporter:
                     route_section_id=self.get_id(route_section_ref),
                 )
                 if not db_route:
-                    print(f"Adding route {route_id}")
+                    log.debug(f"Adding route {route_id}")
                     self.db.add(route)
                 else:
-                    print(f"Updating route {route_id}")
+                    log.debug(f"Updating route {route_id}")
                     self.db.merge(route)
             self.db.commit()
 
@@ -891,20 +892,20 @@ class TXCImporter:
             self.db.commit()
             # await update_dashboard()
         except Exception as e:
-            print("An error occurred during txc import:")
+            log.debug("An error occurred during txc import:")
             error_str = e.__str__()
-            print(error_str[:1000])
-            # print(error_str)
+            log.debug(error_str[:1000])
+            # log.debug(error_str)
             self.db.rollback()
         finally:
             self.db.close()
             end = time.time()
-            print(f"TXC Import completed in {end - start:.2f} seconds")
+            log.debug(f"TXC Import completed in {end - start:.2f} seconds")
 
 
 # if __name__ == "__main__":
 #     if len(sys.argv) != 2:
-#         print("Usage: python import_txc_new.py <path_to_zip_or_xml>")
+#         log.debug("Usage: python import_txc_new.py <path_to_zip_or_xml>")
 #         exit(1)
 #     input_path = sys.argv[1]
 #     if input_path.lower().endswith(".zip"):
@@ -914,12 +915,12 @@ class TXCImporter:
 #             txc_importer = TXCImporter(xml_file)
 #             asyncio.run(txc_importer.handle_txc_file())
 #     else:
-#         print("Error: Input must be a .zip or .xml file")
+#         log.debug("Error: Input must be a .zip or .xml file")
 #         exit(1)
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        print("Usage: python import_txc_new.py <path_to_zip_or_xml>")
+        log.debug("Usage: python import_txc_new.py <path_to_zip_or_xml>")
         exit(1)
     input_path = sys.argv[1]
     path = STATIC_DATA_DIR / input_path

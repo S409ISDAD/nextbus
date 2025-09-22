@@ -2,6 +2,9 @@ from backend.config import API_BASE
 from backend.schemas.livery import Livery
 from backend.services.caching import LIVERY_CACHE, get_cached
 from backend.utils.fetch_json import fetch_json
+import logging
+
+log = logging.getLogger(__name__)
 
 
 async def get_livery(id: int, r):

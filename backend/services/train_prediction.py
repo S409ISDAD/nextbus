@@ -3,6 +3,9 @@ from backend.deps import UTC
 from backend.schemas.prediction import Prediction
 from backend.schemas.trains import ServiceLocation, TrainService
 from datetime import datetime as dt
+import logging
+
+log = logging.getLogger(__name__)
 
 
 async def calculate_sequence(

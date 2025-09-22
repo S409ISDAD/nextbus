@@ -37,7 +37,7 @@ def get_redis_url() -> str:
 def get_redis_client() -> redis.Redis:
     redis_host = get_redis_url()
     if not redis_host:
-        print(
+        log.debug(
             "Warning: REDIS_HOST environment variable not set. Using default 'localhost:6379'."
         )
         return redis.Redis(host="localhost", port=6379, db=0, decode_responses=True)

@@ -3,6 +3,9 @@ from backend.db.db import SessionLocal
 from backend.models import Stop
 from datetime import datetime, timedelta
 from backend.deps import LONDON, UTC
+import logging
+
+log = logging.getLogger(__name__)
 
 
 async def get_departures(stop_id: str, redis):
@@ -24,17 +27,17 @@ async def get_departures(stop_id: str, redis):
         #         use_db_method = True
 
         if use_db_method:
-            print("Using DB method for departures")
+            log.debug("Using DB method for departures")
             db_times = stop.times_from_stop(db)
             if len(db_times) == 0 and datetime.now(tz=LONDON).hour > 20:
-                print("trying tomorrow")
+                log.debug("trying tomorrow")
                 is_tomorrow = True
                 tomorrow = datetime.now(tz=UTC) + timedelta(days=1)
                 tomorrow = tomorrow.replace(hour=0, minute=0, second=0, microsecond=0)
                 db_times = stop.times_from_stop(db, date=tomorrow)
 
                 if len(db_times) == 0:
-                    print("No times found in DB tomorrow, falling back to old method")
+                    log.debug("No times found in DB tomorrow, falling back to old method")
                     times = await stops.get_times(stop_id, redis)
                     use_db_method = False
 
@@ -46,7 +49,7 @@ async def get_departures(stop_id: str, redis):
                     if trip_id:
                         times.append({"trip_id": int(trip_id)})
     if not use_db_method or times is None or len(times) == 0:
-        print("Not all data in db, using old method")
+        log.warning("Not all data in db, using old method")
         times = await stops.get_times(stop_id, redis)
 
     buses = await bus.fetch_buses(

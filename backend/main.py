@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import time
+from logging.config import dictConfig
 from contextlib import asynccontextmanager
 from datetime import timedelta, timezone, datetime
 
@@ -28,7 +29,7 @@ from backend.api.routes import (
     trains,
     journey_planning,
 )
-from backend.config import config
+from backend.config import config, LOGGING_CONFIG
 from backend.db.db import SessionLocal, get_db
 from backend.deps import (
     floor_to_30s,
@@ -41,18 +42,11 @@ from backend.models import ActiveUsersSnapshot
 from backend.tasks.import_all_datasets import import_datasets, import_weekly_data
 from backend.websockets.routes import ws_router
 
+dictConfig(LOGGING_CONFIG)
 log = logging.getLogger(__name__)
 
-
-# logging.basicConfig(
-#     level=logging.INFO,
-#     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-#     datefmt="%H:%M:%S",
-# )
-
-
 async def clear_redis_stats(redis):
-    print("Clearing Redis stats...")
+    log.debug("Clearing Redis stats...")
     await redis.delete("total_buses")
     await redis.delete("total_stops")
     await redis.delete("total_users")
@@ -76,7 +70,7 @@ async def record_snapshot(redis):
                     db.query(ActiveUsersSnapshot).filter_by(timestamp=timestamp).first()
                 )
                 if not exists:
-                    print(f"Logging {unique} active users at {timestamp.isoformat()}")
+                    log.debug(f"Logging {unique} active users at {timestamp.isoformat()}")
                     db.add(
                         ActiveUsersSnapshot(
                             total_connections=total,
@@ -91,27 +85,27 @@ async def record_snapshot(redis):
                 ).delete()
                 db.commit()
     except Exception as e:
-        print("Error recording active users:", e)
+        log.error("Error recording active users:", e)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     redis = get_redis_client()
     if await redis.ping():
-        print("Redis Connected.")
+        log.info("Redis Connected.")
     else:
-        print("Redis did not respond.")
+        log.warning("Redis did not respond.")
     await redis.close()
     is_leader = await redis.set("app:leader", "1", nx=True, ex=60)
     if is_leader:
-        print("This instance is the leader.")
+        log.debug("This instance is the leader.")
         await redis.delete("total_clients")
         redis.sadd("total_clients", *[])
         await redis.delete("clients")
         redis.sadd("clients", *[])
         await redis.set("total_ws_connections", "0")
     else:
-        print("This instance is not the leader.")
+        log.debug("This instance is not the leader.")
 
     scheduler = AsyncIOScheduler()
     if is_leader:
@@ -142,11 +136,11 @@ async def lifespan(app: FastAPI):
             replace_existing=True,
         )
     scheduler.start()
-    print("App startup complete.")
+    log.info("App startup complete.")
 
-    # print("Starting full import...")
+    # log.debug("Starting full import...")
     # asyncio.create_task(asyncio.to_thread(do_import))
-    # print("Import started in background.")
+    # log.debug("Import started in background.")
     try:
         yield
     finally:
@@ -176,7 +170,7 @@ if config.env != "development":
         profile_lifecycle="trace",
     )
 
-print(f"running in {config.env} mode")
+log.info(f"running in {config.env} mode")
 app = FastAPI(lifespan=lifespan, redirect_slashes=False)
 
 Instrumentator().instrument(app).expose(app)
@@ -198,6 +192,7 @@ app.add_exception_handler(
 )
 
 
+
 @app.middleware("http")
 async def timing_middleware(request: Request, call_next):
     redis = await get_redis()
@@ -208,7 +203,7 @@ async def timing_middleware(request: Request, call_next):
         await redis.sadd("total_users", client_id)  # type: ignore
     response = await call_next(request)
     duration = time.time() - start
-    print(f"{request.method} {request.url} completed in {duration:.3f}s")
+    log.debug(f"{request.method} {request.url} completed in {duration:.3f}s")
     response.headers["X-Version"] = VERSION
     return response
 

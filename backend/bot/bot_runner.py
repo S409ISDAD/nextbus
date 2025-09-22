@@ -4,7 +4,7 @@ import signal
 import dotenv
 from backend.bot.bot import bot, send_message
 
-print("Starting discord bot...")
+log.debug("Starting discord bot...")
 dotenv.load_dotenv()
 token = os.getenv("BOT_TOKEN")
 env = os.getenv("ENV", "development")
@@ -15,7 +15,7 @@ async def run_bot(token):
     stop_event = asyncio.Event()
 
     def handle_sigterm():
-        print("Received SIGTERM, shutting down bot...")
+        log.debug("Received SIGTERM, shutting down bot...")
         stop_event.set()
 
     loop = asyncio.get_running_loop()
@@ -29,16 +29,16 @@ async def run_bot(token):
         await bot.close()
         bot_task.cancel()
     except Exception as e:
-        print(f"Bot error: {e}")
+        log.debug(f"Bot error: {e}")
         await bot.close()
 
 
 if env == "development":
-    print("Running in development mode, bot will not start.")
+    log.debug("Running in development mode, bot will not start.")
 else:
     if disabled:
-        print("Bot is disabled via BOT_DISABLED environment variable.")
+        log.debug("Bot is disabled via BOT_DISABLED environment variable.")
     elif token:
         asyncio.run(run_bot(token))
     else:
-        print("No BOT_TOKEN found in environment, bot will not start.")
+        log.debug("No BOT_TOKEN found in environment, bot will not start.")
