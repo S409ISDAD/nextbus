@@ -162,7 +162,7 @@ def check_broken_tracking(trip: Trip, live_journey: LiveJourney, delay) -> float
         log.debug("Not enough locations, skipping")
         return 0.0
 
-    loc_history = LineString(live_journey.generate_location_history())
+    loc_history = LineString(live_journey.generate_location_history(exclude_start=True))
     track = LineString(trip.generate_full_track())
     similarity = track_location_similarity(track, loc_history)
 
