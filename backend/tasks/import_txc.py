@@ -13,6 +13,7 @@ from shapely.geometry import LineString
 from sqlalchemy import func, select, update
 from sqlalchemy_searchable import sync_trigger
 
+from backend.config import get_logger, setup_logging
 from backend.db.db import SessionLocal, engine
 from backend.deps import LONDON
 from backend.models import (
@@ -37,9 +38,7 @@ from backend.txc import txc
 from backend.utils.bulk_upsert import bulk_upsert
 from backend.utils.download_if_modified import download_if_modified
 
-import logging
-
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 async def import_datasource(id, folder: Path):
@@ -430,7 +429,9 @@ class TXCImporter:
 
         first_stop = sorted_stops[0][0]
         final_stop = sorted_stops[-1][0]
-        headsign = next((stop[1]["headsign"] for stop in sorted_stops if stop[1]["headsign"]), "")
+        headsign = next(
+            (stop[1]["headsign"] for stop in sorted_stops if stop[1]["headsign"]), ""
+        )
 
         journey = {
             "id": journey_code,
@@ -675,10 +676,7 @@ class TXCImporter:
         start = time.time()
         try:
             for txc_operator in self.txc_data.operators:
-                noc = (
-                    txc_operator.national_operator_code
-                    or txc_operator.operator_code
-                )
+                noc = txc_operator.national_operator_code or txc_operator.operator_code
                 db_operator = self.db.query(Operator).filter_by(noc=noc).first()
                 operator = Operator(
                     noc=noc,
@@ -718,7 +716,6 @@ class TXCImporter:
             self.journeys_to_add.clear()
             self.db.flush()
 
-
             bulk_upsert(
                 session=self.db,
                 model=StopTime,
@@ -745,9 +742,7 @@ class TXCImporter:
                 route_section_ref = txc_route.route_section_ref
 
                 if route_section_ref:
-                    route_section = self.txc_data.route_sections.get(
-                        route_section_ref
-                    )
+                    route_section = self.txc_data.route_sections.get(route_section_ref)
                     if route_section:
                         self.handle_route_section(route_section)
 
@@ -772,9 +767,7 @@ class TXCImporter:
                 all_stop_codes.update(stop_codes)
             existing_usages = set(
                 (r.line_id, r.stop_id)
-                for r in self.db.query(
-                    LineStopUsage.line_id, LineStopUsage.stop_id
-                )
+                for r in self.db.query(LineStopUsage.line_id, LineStopUsage.stop_id)
                 .filter(LineStopUsage.line_id.in_(all_line_ids))
                 .filter(LineStopUsage.stop_id.in_(all_stop_codes))
                 .all()
@@ -783,9 +776,7 @@ class TXCImporter:
             for line_id, stop_codes in self.line_to_stops.items():
                 for stop_code in stop_codes:
                     if (line_id, stop_code) not in existing_usages:
-                        to_insert.append(
-                            {"line_id": line_id, "stop_id": stop_code}
-                        )
+                        to_insert.append({"line_id": line_id, "stop_id": stop_code})
             if to_insert:
                 objects = [LineStopUsage(**data) for data in to_insert]
                 self.db.bulk_save_objects(objects)
@@ -822,6 +813,7 @@ class TXCImporter:
 
 
 if __name__ == "__main__":
+    setup_logging()
     if len(sys.argv) != 2:
         log.debug("Usage: python import_txc.py <path_to_zip_or_xml>")
         exit(1)
