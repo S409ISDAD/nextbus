@@ -1,13 +1,14 @@
 import asyncio
 
+from backend.config import setup_logging, get_logger
 from backend.db.db import SessionLocal
 from backend.deps import STATIC_DATA_DIR
 from backend.models import DataSource
 from backend.tasks import import_nptg, import_naptan, import_holidays
 from backend.tasks.import_txc import import_datasource
-import logging
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
+
 
 async def import_weekly_data():
     log.debug("importing holidays")
@@ -18,6 +19,7 @@ async def import_weekly_data():
 
     log.debug("importing naptan")
     import_naptan.main()
+
 
 async def import_datasets():
     log.debug("running dataset import...")
@@ -30,5 +32,6 @@ async def import_datasets():
 
 
 if __name__ == "__main__":
+    setup_logging()
     # asyncio.run(import_weekly_data())
     asyncio.run(import_datasets())

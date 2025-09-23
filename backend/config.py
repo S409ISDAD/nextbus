@@ -1,4 +1,7 @@
+import logging
 from logging.config import dictConfig
+import pathlib
+import sys
 from pydantic_settings import BaseSettings
 
 BASE = "https://bustimes.org"
@@ -35,7 +38,12 @@ LOGGING_CONFIG = {
     },
     "root": {
         "handlers": ["console"],
-        "level": "WARNING",
+        "level": "DEBUG",
+    },
+    "__main__": {
+        "handlers": ["console", "file"],
+        "level": "DEBUG",
+        "propagate": False,
     },
     "loggers": {
         "backend": {
@@ -64,3 +72,25 @@ LOGGING_CONFIG = {
 
 def setup_logging():
     dictConfig(LOGGING_CONFIG)
+
+
+def get_logger(name: str | None = None) -> logging.Logger:
+    """
+    Return a logger that respects your package hierarchy,
+    even if the module is run as __main__.
+    """
+    if name == "__main__":
+        try:
+            file_path = pathlib.Path(sys.modules["__main__"].__file__).resolve()
+            pkg_root = "backend"
+            parts = file_path.parts
+            idx = parts.index(pkg_root)
+            module_parts = parts[idx:]
+            module_name = ".".join(module_parts).removesuffix(".py")
+            name = module_name
+        except Exception:
+            name = "backend"
+    elif not name:
+        name = "backend"
+
+    return logging.getLogger(name)
