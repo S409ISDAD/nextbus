@@ -11,8 +11,9 @@ from backend.db.db import SessionLocal
 from backend.deps import LONDON
 from backend.models import (
     Journey,
-    Line,
-    StopTime, Stop,
+    Service,
+    StopTime,
+    Stop,
 )
 from backend.schemas.bus import ScheduledBus, TrackedBus
 from backend.schemas.livery import Livery
@@ -31,6 +32,7 @@ from backend.utils.fetch_json import fetch_json
 from backend.utils.match_bt import match_trip_journey
 
 log = logging.getLogger(__name__)
+
 
 async def fetch_bus(bus_id, r: Redis):
     """Fetches specific bus"""
@@ -114,7 +116,6 @@ async def fetch_buses(
             trip_id = bus.get("trip_id")
             if trip_id:
                 active_by_trip.setdefault(trip_id, []).append(bus)
-
 
     tasks = []
 
@@ -202,12 +203,10 @@ async def build_scheduled_db(
             db.query(StopTime)
             .filter(StopTime.journey_id == journey_id, StopTime.stop_id == stop_id)
             .options(
+                joinedload(StopTime.journey).joinedload(Journey.service),
                 joinedload(StopTime.journey)
-                .joinedload(Journey.line)
-                .joinedload(Line.service), joinedload(StopTime.journey)
                 .joinedload(Journey.destination)
                 .joinedload(Stop.locality),
-
             )
             .first()
         )
@@ -236,7 +235,7 @@ async def build_scheduled_db(
 
         scheduled_bus = ScheduledBus(
             destination=dest,
-            line=stop_time.journey.line.line_name,
+            line=stop_time.journey.service.line_name,
             scheduled=scheduled,
             expected=scheduled,
             started=started,
@@ -257,8 +256,8 @@ async def build_scheduled_db(
 
         prev_trip = await prev_journey.get_bt_trip_id(db)
 
-        prev_service_id = await prev_journey.line.get_bt_service_id(db)
-        this_service_id = await stop_time.journey.line.get_bt_service_id(db)
+        prev_service_id = await prev_journey.service.get_bt_service_id(db)
+        this_service_id = await stop_time.journey.service.get_bt_service_id(db)
 
         if not prev_trip or not prev_service_id or not this_service_id:
             return scheduled_bus
@@ -291,7 +290,9 @@ async def build_scheduled_db(
                 # Don't show if expected is more than 2 hours away
                 if (bus.expected - datetime.now(tz=LONDON)).total_seconds() < 4 * 3600:
                     return bus
-                if layover_time.total_seconds() > 30 * 60:  # bus is not necessarily going straight on the next trip, might have to drive there which affects delay
+                if (
+                    layover_time.total_seconds() > 30 * 60
+                ):  # bus is not necessarily going straight on the next trip, might have to drive there which affects delay
                     log.debug("Layover too long")
                     bus.delay = 0
 
@@ -299,7 +300,7 @@ async def build_scheduled_db(
 
         return ScheduledBus(
             destination=dest,
-            line=stop_time.journey.line.line_name,
+            line=stop_time.journey.service.line_name,
             scheduled=scheduled,
             expected=scheduled,
             started=started,
@@ -309,10 +310,13 @@ async def build_scheduled_db(
 
 
 async def build_bus_candidates(
-        buses: list[dict], r: Redis, stop_id: str, journey_id: str | None = None
+    buses: list[dict], r: Redis, stop_id: str, journey_id: str | None = None
 ) -> TrackedBus | None:
     results = await asyncio.gather(
-        *[build_bus(bus["id"], r, stop_id, journey_id, get_journey=False) for bus in buses]
+        *[
+            build_bus(bus["id"], r, stop_id, journey_id, get_journey=False)
+            for bus in buses
+        ]
     )
 
     valid = [
@@ -334,7 +338,7 @@ async def build_bus(
     bus_id: int,
     r: Redis,
     stop_id: str = "",
-        journey_id: str | None = None,
+    journey_id: str | None = None,
     get_journey: bool = True,
 ) -> TrackedBus | None:
     this_bus = await fetch_bus(bus_id, r)
@@ -352,16 +356,13 @@ async def build_bus(
                 db.query(StopTime)
                 .filter(StopTime.journey_id == journey_id, StopTime.stop_id == stop_id)
                 .options(
+                    joinedload(StopTime.journey).joinedload(Journey.service),
                     joinedload(StopTime.journey)
-                    .joinedload(Journey.line)
-                    .joinedload(Line.service), joinedload(StopTime.journey)
                     .joinedload(Journey.destination)
                     .joinedload(Stop.locality),
-
                 )
                 .first()
             )
-
 
     tracking = True
 
@@ -371,7 +372,9 @@ async def build_bus(
 
     # Ignore buses with a delay of over 2 hours, they are likely broken down or similar
     if delay > 2 * 60 * 60:
-        log.warning(f"ignoring bus with delay of {round(delay / 60)} minutes. id: {bus_id}")
+        log.warning(
+            f"ignoring bus with delay of {round(delay / 60)} minutes. id: {bus_id}"
+        )
         return None
 
     # Reset delay if earlier than 15 mins, it has probably logged on early
@@ -412,20 +415,29 @@ async def build_bus(
     # journey = await get_vehicle_journey(bus_id, journey_id, r)
 
     delay += 10  # account for stopping and various other things that increase delay
-    confidence = await calculate_confidence(delay, coords, journey_id, this_bus.get("trip_id"), r)
+    confidence = await calculate_confidence(
+        delay, coords, journey_id, this_bus.get("trip_id"), r
+    )
     log.debug(
-        f"final={round(confidence.final_confidence, 5)}, brokendown={round(confidence.broken_down_confidence, 5)}, logoff={round(confidence.log_off_confidence, 5)}, diversion={round(confidence.diversion_confidence, 5)}, brokentracking={round(confidence.broken_tracking_confidence, 5)} id={bus_id}, reg={reg}")
+        f"final={round(confidence.final_confidence, 5)}, brokendown={round(confidence.broken_down_confidence, 5)}, logoff={round(confidence.log_off_confidence, 5)}, diversion={round(confidence.diversion_confidence, 5)}, brokentracking={round(confidence.broken_tracking_confidence, 5)} id={bus_id}, reg={reg}"
+    )
 
     if confidence.broken_tracking_confidence > 0.65:
-        log.warning(f"bus likely has broken tracking, ignoring delay. id: {bus_id}, reg: {reg}")
+        log.warning(
+            f"bus likely has broken tracking, ignoring delay. id: {bus_id}, reg: {reg}"
+        )
         delay = 0
 
     if confidence.broken_down_confidence > 0.65:
-        log.warning(f"bus likely has broken down, ignoring delay. id: {bus_id}, reg: {reg}")
+        log.warning(
+            f"bus likely has broken down, ignoring delay. id: {bus_id}, reg: {reg}"
+        )
         delay = 0
 
     if confidence.log_off_confidence > 0.65:
-        log.warning(f"bus likely has finished, ignoring delay. id: {bus_id}, reg: {reg}")
+        log.warning(
+            f"bus likely has finished, ignoring delay. id: {bus_id}, reg: {reg}"
+        )
         delay = 0
 
     target_seq, times, journey = await calculate_expected(
@@ -434,7 +446,13 @@ async def build_bus(
 
     sequence = progress.get("sequence", None)
     prog = progress.get("progress", None)
-    if sequence and prog and target_seq and confidence.final_confidence < 0.75 and sequence > 5:  # bus may be logging on early
+    if (
+        sequence
+        and prog
+        and target_seq
+        and confidence.final_confidence < 0.75
+        and sequence > 5
+    ):  # bus may be logging on early
         if (sequence == target_seq and prog >= 0.1) or sequence > target_seq:
             log.warning(f"bus has likely passed the stop. id: {bus_id}, reg: {reg}")
             return None  # bus has likely passed the stop

@@ -1,5 +1,6 @@
 import gc
 import json
+import re
 import sys
 import time
 import zipfile
@@ -9,9 +10,12 @@ from pathlib import Path
 from geoalchemy2.shape import from_shape, to_shape
 from shapely import MultiLineString, Point
 from shapely.geometry import LineString
-from sqlalchemy import func, select, update
+from sqlalchemy import and_, func, select, update
 from sqlalchemy_searchable import sync_trigger
 
+from titlecase import titlecase
+
+from backend.config import setup_logging
 from backend.db.db import SessionLocal, engine
 from backend.deps import LONDON, STATIC_DATA_DIR
 from backend.models import (
@@ -21,24 +25,25 @@ from backend.models import (
     CalendarToBankHoliday,
     DataSource,
     Journey,
-    Line,
-    LineToRoute,
+    Service,
     Operator,
     Route,
-    RouteSection,
-    Service,
     Stop,
     StopTime,
-    TrackSection,
-    LineStopUsage,
+    RouteLink,
+    ServiceStopUsage,
 )
 from backend.transxchange import txc
 from backend.utils.bulk_upsert import bulk_upsert
 from backend.utils.download_if_modified import download_if_modified
 import logging
 
-log = logging.getLogger(__name__)
+from backend.utils.time import to_datetime
+from backend.utils.time_taken import time_taken
+from sqlalchemy import or_, exists
+from sqlalchemy.orm import aliased
 
+log = logging.getLogger(__name__)
 
 
 async def import_datasource(id, folder: Path):
@@ -191,8 +196,53 @@ def getOperators(operatorsElement):
     return operators
 
 
+# a callback for titlecase
+def initialisms(word, **kwargs):
+    if word in ("YMCA", "PH"):
+        return word
+
+
+def get_description(txc_service: txc.Service):
+    """
+    Generate a valid description for a service.
+    from bustimes.org's import_transxchange.py
+    """
+    description = txc_service.description
+
+    if description and description.isupper():
+        description = titlecase(description, callback=initialisms)
+
+    origin = txc_service.origin
+    destination = txc_service.destination
+
+    if origin and destination:
+        if origin[:4].isdigit() and destination[:4].isdigit():
+            print(origin, destination)
+
+        if origin.isupper() and destination.isupper():
+            txc_service.origin = origin = titlecase(origin, callback=initialisms)
+            txc_service.destination = destination = titlecase(
+                destination, callback=initialisms
+            )
+
+        if not description:
+            description = f"{origin} - {destination}"
+            vias = txc_service.vias
+            if vias:
+                if all(via.isupper() for via in vias):
+                    vias = [titlecase(via, callback=initialisms) for via in vias]
+                if len(vias) == 1:
+                    via = vias[0]
+                    if "via " in via:
+                        return f"{description} {via}"
+                    elif "," in via or " and " in via or "&" in via:
+                        return f"{description} via {via}"
+                description = " - ".join([origin] + vias + [destination])
+    return description
+
+
 def get_service_data(path):
-    txc_data = txc.TransXChange(path)
+    txc_data = TransXChangeMeta(path)
     operators = getOperators(txc_data.operators)
 
     log.debug(operators)
@@ -233,6 +283,39 @@ def generate_txc_map(dataset: Path):
     return txc_map
 
 
+class ServiceMeta:
+    def __init__(self, element):
+        self.operator = element.findtext("RegisteredOperatorRef")
+        self.service_code = element.find("ServiceCode").text.strip()
+
+
+class TransXChangeMeta:
+    def __init__(self, open_file):
+        iterator = txc.ET.iterparse(open_file)
+
+        self.services = {}
+
+        last_elem = None
+
+        for _, element in iterator:
+            if element.tag[:33] == "{http://www.transxchange.org.uk/}":
+                element.tag = element.tag[33:]
+            tag = element.tag
+
+            if tag == "Operators":
+                self.operators = element
+            elif tag == "Services":
+                for service_element in element:
+                    service = ServiceMeta(
+                        service_element,
+                    )
+                    self.services[service.service_code] = service
+                # break
+            last_elem = element
+        if last_elem is not None:
+            self.attributes = last_elem.attrib
+
+
 class TXCImporter:
     def __init__(self, folder: Path, ds_id=None):
         self.txc_data = None
@@ -242,10 +325,11 @@ class TXCImporter:
         self.db = SessionLocal()
         self.journeys_to_add = []
         self.stop_times_to_add = []
-        self.line_to_routes = {}  # Maps line_id to a list of route IDs
+        self.service_to_routes = {}  # Maps line_id to a list of route IDs
         self.line_to_stops = {}  # Maps line_id to a list of stop IDs
         self.ds_id = ds_id
         self.map = {}
+        self.stops: dict[str, Stop] = {}
 
     def generate_txc_map(self):
         txc_map = {}
@@ -267,36 +351,38 @@ class TXCImporter:
                     txc_map[service_id] = {revision_num: [file.as_posix()]}
         self.map = txc_map
 
-    def get_description(self, txc_service: txc.Service):
-        description = txc_service.description
-        if not description:
-            description = f"{txc_service.origin} - {txc_service.destination}"
+    def clear_old_routes(self, service_code):
+        log.debug("Clearing old routes...")
 
-        return description.strip() if description else "No description available"
-
-    def clear_data_for_import(self, service_code):
-        log.debug("Clearing existing TXC data...")
-
-        service = (
-            self.db.query(Service)
-            .filter(Service.service_code == service_code)
-            .one_or_none()
+        routes_to_go = (
+            self.db.query(Route)
+            .filter(
+                Route.service_id == service_code,
+                Route.data_source_id == self.ds_id,
+                Route.end_date is not None,
+                Route.end_date
+                > self.today.date(),  # route is inactive if end_date is in the past (inclusive)
+            )
+            .all()
         )
-        if service:
-            log.debug(f"Deleting existing service {service_code} and related data")
-            self.db.delete(service)
+        if routes_to_go:
+            log.info(f"Deleting {len(routes_to_go)} stale routes...")
+            for route in routes_to_go:
+                self.db.delete(route)
             self.db.commit()
+        else:
+            log.debug("No old routes to clear.")
 
     def get_calendar_exception(
-            self,
-            date_range: txc.DateRange | None = None,
-            date=None,
-            operation=True,
-            description="",
+        self,
+        date_range: txc.DateRange | None = None,
+        date=None,
+        operation=True,
+        description="",
     ):
         if date_range:
-            start_date = date_range.start_date
-            end_date = date_range.end_date
+            start_date = date_range.start
+            end_date = date_range.end
             description = date_range.description
         else:
             start_date = date
@@ -310,17 +396,15 @@ class TXCImporter:
         )
 
     def handle_journey(
-            self,
-            txc_journey: txc.VehicleJourney,
-            txc_service: txc.Service,
-            service: Service,
-            line: Line,
+        self,
+        txc_journey: txc.VehicleJourney,
+        txc_service: txc.Service,
+        service: Service,
+        route: Route,
     ):
-        journey_code = self.get_id(line.line_name + ":" + txc_journey.journey_code)
-
         operating_profile = txc_journey.operating_profile
         regular_days_of_week = (
-            operating_profile.regular_day_type.days_of_week if operating_profile else []
+            operating_profile.regular_days if operating_profile else []
         )
 
         calendar_hash = f"{operating_profile.hash}{txc_service.operating_period}"
@@ -329,8 +413,8 @@ class TXCImporter:
             calendar = self.calendar_cache[calendar_hash]
         else:
             calendar = Calendar(
-                start_date=txc_service.operating_period.start_date,
-                end_date=txc_service.operating_period.end_date or None,
+                start_date=txc_service.operating_period.start,
+                end_date=txc_service.operating_period.end or None,
                 monday="monday" in regular_days_of_week,
                 tuesday="tuesday" in regular_days_of_week,
                 wednesday="wednesday" in regular_days_of_week,
@@ -342,7 +426,7 @@ class TXCImporter:
             self.db.add(calendar)
             self.db.flush()
 
-            for non_operation in operating_profile.non_operation_days:
+            for non_operation in operating_profile.nonoperation_days:
                 cal_exep = self.get_calendar_exception(
                     date_range=non_operation,
                     operation=False,
@@ -358,21 +442,16 @@ class TXCImporter:
                 cal_exep.calendar_id = calendar.id
                 self.db.add(cal_exep)
 
-            for serviced_organisation in self.txc_data.serviced_organisations:
-                for working_day in serviced_organisation.working_days:
-                    cal_exep = self.get_calendar_exception(
-                        date_range=working_day,
-                        operation=True,
-                    )
-                    cal_exep.calendar_id = calendar.id
-                    self.db.add(cal_exep)
+            for working_day in txc_journey.operating_profile.serviced_organisations:
+                cal_exep = self.get_calendar_exception(
+                    date_range=working_day,
+                    operation=True,
+                )
+                cal_exep.calendar_id = calendar.id
+                self.db.add(cal_exep)
 
-            bank_holidays_operation = (
-                operating_profile.bank_holiday_operation.days_of_operation
-            )
-            bank_holidays_non_operation = (
-                operating_profile.bank_holiday_operation.days_of_non_operation
-            )
+            bank_holidays_operation = operating_profile.operation_bank_holidays
+            bank_holidays_non_operation = operating_profile.nonoperation_bank_holidays
 
             for days, operating in [
                 (bank_holidays_operation, True),
@@ -393,9 +472,7 @@ class TXCImporter:
 
             self.calendar_cache[calendar_hash] = calendar
 
-        journey_pattern = txc_service.journey_patterns.get(
-            txc_journey.journey_pattern_ref
-        )
+        journey_pattern = txc_service.journey_patterns.get(txc_journey.journey_pattern)
         journey_pattern_section = self.txc_data.journey_pattern_sections[
             journey_pattern.journey_pattern_section_refs[0]
         ]
@@ -509,7 +586,9 @@ class TXCImporter:
 
         first_stop = sorted_stops[0][0]
         final_stop = sorted_stops[-1][0]
-        headsign = next((stop[1]["headsign"] for stop in sorted_stops if stop[1]["headsign"]), "")
+        headsign = next(
+            (stop[1]["headsign"] for stop in sorted_stops if stop[1]["headsign"]), ""
+        )
 
         journey = {
             "id": journey_code,
@@ -534,9 +613,7 @@ class TXCImporter:
         skip_journeys = False
 
         end_date = (
-            txc_service.operating_period.end
-            if txc_service.operating_period
-            else None
+            txc_service.operating_period.end if txc_service.operating_period else None
         )
 
         if end_date and end_date < self.today.date():
@@ -545,116 +622,187 @@ class TXCImporter:
             )
             skip_journeys = True
 
-        description = self.get_description(txc_service)
+        description = get_description(txc_service)
         log.debug(f"{txc_service.lines[0].line_name} {description}")
 
-        db_service = (
-            self.db.query(Service)
-            .filter_by(service_code=txc_service.service_code)
-            .first()
-        )
-        operator = (
-            self.db.query(Operator)
-            .filter_by(ref=txc_service.operator)
-            .first()
-        )
-        service = Service(
-            service_code=txc_service.service_code,
-            description=description,
-            origin=txc_service.origin,
-            destination=txc_service.destination,
-            vias=txc_service.vias,
-            data_source_id=self.ds_id,
-            line_names=", ".join(
-                line.line_name for line in txc_service.lines if line.line_name
-            ),
-            operator_noc=operator.noc if operator else None,
-        )
-        if not db_service:
-            log.debug(f"Adding service {txc_service.service_code}")
-            self.db.add(service)
+        if description == "Origin - Destination":
+            description = ""
+
+        # from bustimes.org's import_transxchange.py
+        if re.match(r"^P[BCDFGHKM]\d+:\d+.*$", txc_service.service_code) or re.match(
+            r"^UZ[a-zA-Z0-9]+:.*$", txc_service.service_code
+        ):
+            unique_service_code = txc_service.service_code
         else:
-            log.debug(f"Updating service {txc_service.service_code}")
-            self.db.merge(service)
-        self.db.flush()
+            unique_service_code = None
+        # end from
+
+        service = None
+
+        operator = self.db.query(Operator).filter_by(ref=txc_service.operator).first()
 
         routes = set()
 
-        for jp in txc_service.journey_patterns.values():
-            route_ref = jp.route_ref
-            if route_ref:
-                routes.add(self.get_id(route_ref))
-
         for txc_line in txc_service.lines:
-            db_line = self.db.query(Line).filter_by(id=txc_line.line_id).first()
-            line = Line(
-                id=txc_line.line_id,
-                line_name=txc_line.line_name,
-                inbound_description=txc_line.inbound_description.description
-                if txc_line.inbound_description
-                else None,
-                outbound_description=txc_line.outbound_description.description
-                if txc_line.outbound_description
-                else None,
-                service_code=txc_service.service_code,
+            txc_line.line_name = txc_line.line_name.replace("_", " ").strip()
+
+            existing_service = (
+                self.db.query(Service)
+                .filter(
+                    Service.line_name.ilike(txc_line.line_name),
+                    Service.service_code == txc_service.service_code,
+                )
+                .order_by(
+                    Service.current.desc(), Service.id.asc()
+                )  # speed up lookup by preferring current services
+                .first()
             )
-            if not db_line:
-                log.debug(f"Adding line {txc_line.line_id}")
-                self.db.add(line)
+
+            if existing_service:
+                service = existing_service
             else:
-                log.debug(f"Updating line {txc_line.line_id}")
-                self.db.merge(line)
-            self.db.flush()
-            self.line_to_routes.setdefault(txc_line.line_id, []).extend(routes)
+                service = Service(
+                    line_name=txc_line.line_name,
+                    service_code=txc_service.service_code,
+                    current=True,
+                    data_source_id=self.ds_id,
+                )
 
-            if skip_journeys:
-                continue
-            for txc_journey in self.txc_data.get_journeys(
-                    txc_line.line_id, txc_service.service_code
-            ):
-                if not txc_journey.journey_code:
-                    log.debug(
-                        f"Skipping journey for service {txc_service.service_code} on line {txc_line.line_id} due to missing journey code"
-                    )
-                    continue
-                self.handle_journey(txc_journey, txc_service, service, line)
-
-    def handle_route_section(self, txc_route_section: txc.RouteSection):
-        track_points: list[Point] = []
-        track_points_to_create = []
-        route_links = txc_route_section.route_links
-        rs_id = self.get_id(txc_route_section.section_id)
-        for link in route_links:
-            points = [location.point for location in link.locations if location.point]
-            track_points.extend(points)
-            trackpoint = TrackSection(
-                from_stop=link.from_stop,
-                to_stop=link.to_stop,
-                distance=link.distance,
-                geometry=from_shape(LineString([pt.coords[0] for pt in points])),
-                route_link_ref=self.get_id(link.route_link_id),
-                route_section_id=rs_id,
+            journeys = self.txc_data.get_journeys(
+                txc_service.service_code, line_id=txc_line.id
             )
-            track_points_to_create.append(trackpoint)
 
-        if track_points:
-            coords = [pt.coords[0] for pt in track_points]
-            geometry = from_shape(LineString(coords))
+            if not journeys:
+                log.warning(
+                    f"No journeys found for service {txc_service.service_code} on line {txc_line.id}"
+                )
+                continue
+
+            # from bustimes.org's import_transxchange.py
+            match txc_service.public_use:
+                case "0" | "false":
+                    service.public_use = False
+                case "1" | "true":
+                    service.public_use = True
+                case _:
+                    service.public_use = None
+            # end from
+
+            line_brand = txc_line.line_brand or txc_line.marketing_name
+
+            # from bustimes.org's import_transxchange.py (modified)
+            if line_brand:
+                if service.description:
+                    service.description = service.description.removesuffix(
+                        f" [{txc_line.line_brand}]"
+                    )
+            # end from
+
+            if line_brand:
+                service.line_brand = line_brand
+
+            service.operator_noc = operator.noc if operator else None
+
+            self.db.add(service)
+            self.db.flush()
+
+            route_defaults = {
+                "service_id": service.id,
+                "line_id": txc_line.id,
+                "data_source_id": self.ds_id,
+                "line_name": txc_line.line_name,
+                "line_brand": line_brand,
+                "outbound_description": txc_line.outbound_description or "",
+                "inbound_description": txc_line.inbound_description or "",
+                "start_date": txc_service.operating_period.start,
+                "end_date": txc_service.operating_period.end,
+                "revision_number": self.txc_data.attributes["RevisionNumber"],
+                "created_at": to_datetime(self.txc_data.attributes["CreationDateTime"]),
+                "modified_at": to_datetime(
+                    self.txc_data.attributes["ModificationDateTime"]
+                ),
+                "public_use": service.public_use,
+                "service_code": txc_service.service_code,
+            }
+
+            if description:
+                route_defaults["description"] = description
+
+            if self.txc_data.route_sections:
+                self.handle_route_links(journeys, service)
+
+            if txc_service.vias:
+                route_defaults["vias"] = ", ".join(txc_service.vias)
+
+            # TODO: finish this
+
+    def get_route_links(self, journeys: list[txc.VehicleJourney]):
+        """
+        Gets all route links associated with the given journeys.
+        From bustimes.org's import_transxchange.py, modified.
+        """
+        patterns = {
+            journey.journey_pattern.id: journey.journey_pattern for journey in journeys
+        }
+        route_refs = [
+            pattern.route_ref for pattern in patterns.values() if pattern.route_ref
+        ]
+        if route_refs:
+            routes = [
+                self.txc_data.routes[route_id]
+                for route_id in self.txc_data.routes
+                if route_id in route_refs
+            ]
+            for route in routes:
+                for section_ref in route.route_section_refs:
+                    route_section = self.txc_data.route_sections[section_ref]
+                    for route_link in route_section.links:
+                        if route_link.track:
+                            yield route_link
         else:
-            geometry = None
+            route_links = {}
+            for route_section in self.txc_data.route_sections.values():
+                for route_section_link in route_section.links:
+                    route_links[route_section_link.id] = route_section_link
+            for journey in journeys:
+                if journey.journey_pattern:
+                    for section in journey.journey_pattern.sections:
+                        for timing_link in section.timinglinks:
+                            try:
+                                route_link = route_links[timing_link.route_link_ref]
+                            except KeyError:
+                                continue
+                            if route_link.track:
+                                yield route_link
 
-        db_route_section = self.db.query(RouteSection).filter_by(id=rs_id).first()
-        route_section = RouteSection(
-            id=rs_id,
-            geometry=geometry,
-        )
-        if not db_route_section:
-            self.db.add(route_section)
-        else:
-            self.db.merge(route_section)
-        self.db.flush()
+    def handle_route_links(self, journeys, service: Service):
+        route_links = list(self.get_route_links(journeys))
 
-        self.db.bulk_save_objects(track_points_to_create)
+        if any(
+            len(link.track) > 2 for link in route_links
+        ):  # from bustimes.org's import_transxchange.py - ignore straight lines
+            links_to_add = {}
+
+            for link in route_links:
+                from_stop = self.stops.get(link.from_stop)
+                to_stop = self.stops.get(link.to_stop)
+
+                if type(from_stop) is Stop and type(to_stop) is Stop:
+                    key = (from_stop.atco_code, to_stop.atco_code)
+
+                    track = [
+                        Point([coord.latitude, coord.longitude]) for coord in link.track
+                    ]
+
+                    links_to_add[key] = RouteLink(
+                        from_stop_id=from_stop.atco_code,
+                        to_stop_id=to_stop.atco_code,
+                        geometry=from_shape(LineString(track), srid=27700),
+                        distance=link.distance,
+                        service_id=service.id,
+                    )
+
+            self.db.bulk_save_objects(links_to_add.values())
 
     def update_geometry(self, line_id):
         log.debug(f"Updating route overview geometry for line {line_id}")
@@ -687,7 +835,7 @@ class TXCImporter:
             log.debug(f"Geometry updated for line {line_id}")
 
     def merge_line_routes(
-            self, line_id: str, simplify_tolerance=0.0001, snap_tolerance=0.0001
+        self, line_id: str, simplify_tolerance=0.0001, snap_tolerance=0.0001
     ):
         """
         Given a line_id, merge the geometries of all its related routes into one LineString overview,
@@ -750,34 +898,46 @@ class TXCImporter:
 
     async def import_from_map(self):
         for service_id in self.map.keys():
-            self.clear_data_for_import(service_id)
+            self.clear_old_routes(service_id)
 
             for revision in self.map[service_id]:
                 for file in self.map[service_id][revision]:
                     await self.handle_txc_file(Path(file))
 
+    def get_stops(self, txc_stops: dict):
+        stops = list(txc_stops.keys())
+
+        stops = (
+            self.db.query(Stop)
+            .filter(func.upper(Stop.atco_code).in_([s.upper() for s in stops]))
+            .with_entities(Stop.atco_code, Stop.latlong)
+            .all()
+        )
+
+        # TODO: Handle missing stops
+
+        self.stops = {stop.atco_code: stop for stop in stops}
+
     async def handle_txc_file(self, file: Path):
+        if not self.txc_data:
+            log.warning("No TXC data loaded.")
+            return
         start = time.time()
         try:
             self.txc_data = txc.TransXChange(file)
             for op in self.txc_data.operators:
                 txc_operator = TXCOperator(op)
-                noc = (
-                        txc_operator.noc
-                        or txc_operator.operator_code
-                )
+                noc = txc_operator.noc or txc_operator.operator_code
                 db_operator = self.db.query(Operator).filter_by(noc=noc).first()
                 if not db_operator:
                     operator = Operator(
-                        noc=noc,
-                        ref=txc_operator.id,
-                        name=txc_operator.name
+                        noc=noc, ref=txc_operator.id, name=txc_operator.name
                     )
-                    log.debug(
-                        f"Adding operator {txc_operator.name}"
-                    )
+                    log.debug(f"Adding operator {txc_operator.name}")
                     self.db.add(operator)
             self.db.commit()
+
+            self.get_stops(self.txc_data.stops)
 
             for txc_service in self.txc_data.services:
                 self.handle_service(txc_service)
@@ -827,9 +987,7 @@ class TXCImporter:
                 route_section_ref = txc_route.route_section_ref
 
                 if route_section_ref:
-                    route_section = self.txc_data.route_sections.get(
-                        route_section_ref
-                    )
+                    route_section = self.txc_data.route_sections.get(route_section_ref)
                     if route_section:
                         self.handle_route_section(route_section)
 
@@ -854,9 +1012,7 @@ class TXCImporter:
                 all_stop_codes.update(stop_codes)
             existing_usages = set(
                 (r.line_id, r.stop_id)
-                for r in self.db.query(
-                    LineStopUsage.line_id, LineStopUsage.stop_id
-                )
+                for r in self.db.query(LineStopUsage.line_id, LineStopUsage.stop_id)
                 .filter(LineStopUsage.line_id.in_(all_line_ids))
                 .filter(LineStopUsage.stop_id.in_(all_stop_codes))
                 .all()
@@ -865,15 +1021,13 @@ class TXCImporter:
             for line_id, stop_codes in self.line_to_stops.items():
                 for stop_code in stop_codes:
                     if (line_id, stop_code) not in existing_usages:
-                        to_insert.append(
-                            {"line_id": line_id, "stop_id": stop_code}
-                        )
+                        to_insert.append({"line_id": line_id, "stop_id": stop_code})
             if to_insert:
                 objects = [LineStopUsage(**data) for data in to_insert]
                 self.db.bulk_save_objects(objects)
             self.db.flush()
 
-            for line_id, route_ids in self.line_to_routes.items():
+            for line_id, route_ids in self.service_to_routes.items():
                 for route_id in route_ids:
                     db_ltr = (
                         self.db.query(LineToRoute)
@@ -919,11 +1073,13 @@ class TXCImporter:
 #         exit(1)
 
 if __name__ == "__main__":
+    setup_logging()
     if len(sys.argv) != 2:
         log.debug("Usage: python import_txc_new.py <path_to_zip_or_xml>")
         exit(1)
     input_path = sys.argv[1]
     path = STATIC_DATA_DIR / input_path
-    map = generate_txc_map(Path(path))
+    with time_taken("Generating TXC map"):
+        map = generate_txc_map(Path(path))
     with open("txc_map.json", "w") as f:
         json.dump(map, f, indent=4)

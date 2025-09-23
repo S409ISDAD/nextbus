@@ -32,3 +32,4 @@ sentry-sdk[fastapi]
 pydantic_settings
 more_itertools
 python-slugify
+titlecase

@@ -182,7 +182,8 @@ class DataSource(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String, nullable=False, unique=True)
     description = Column(String, nullable=True)
-    url = Column(String, nullable=True)
+    url = Column(String, nullable=True, help="URL for non-BODS like stagecoach")
+    search = Column(String, nullable=True, help="Search term for BODS")
     last_modified = Column(DateTime(timezone=True), nullable=True)
 
     services = relationship(
@@ -277,10 +278,10 @@ class Locality(Base, AutoSlugMixin):
 
     def lines_served(self):
         with SessionLocal() as db:
-            lines: list["Line"] | list[None] = (
-                db.query(Line)
-                .join(LineStopUsage, Line.id == LineStopUsage.line_id)
-                .join(Stop, Stop.atco_code == LineStopUsage.stop_id)
+            lines: list["Service"] | list[None] = (
+                db.query(Service)
+                .join(ServiceStopUsage, Service.id == ServiceStopUsage.service_id)
+                .join(Stop, Stop.atco_code == ServiceStopUsage.stop_id)
                 .filter(Stop.locality_id == self.id)
                 .distinct()
                 .all()
@@ -329,7 +330,9 @@ class Stop(Base):
     locality = relationship("Locality", back_populates="stops")
     admin_area = relationship("AdminArea", back_populates="stops")
     stop_times = relationship("StopTime", back_populates="stop")
-    lines = relationship("Line", secondary="line_stop_usage", back_populates="stops")
+    services = relationship(
+        "Service", secondary="service_stop_usage", back_populates="stops"
+    )
 
     search_vector = deferred(
         Column(
@@ -363,14 +366,14 @@ class Stop(Base):
     def long_name(self):
         return f"{self.name} ({self.indicator or self.bearing})"
 
-    def lines_served(self, db: Session) -> list["Line"]:
+    def lines_served(self, db: Session) -> list["Service"]:
         """
-        Returns a list of lines that serve this stop.
+        Returns a list of services that serve this stop.
         """
-        lines: list["Line"] = (
-            db.query(Line)
-            .join(LineStopUsage, Line.id == LineStopUsage.line_id)
-            .filter(LineStopUsage.stop_id == self.atco_code)
+        lines: list["Service"] = (
+            db.query(Service)
+            .join(ServiceStopUsage, Service.id == ServiceStopUsage.service_id)
+            .filter(ServiceStopUsage.stop_id == self.atco_code)
             .distinct()
             .all()
         )
@@ -378,8 +381,8 @@ class Stop(Base):
 
     def localities_towards(self):
         with SessionLocal() as db:
-            line_ids = [line.id for line in self.lines_served(db)]
-            if not line_ids:
+            service_ids = [service.id for service in self.lines_served(db)]
+            if not service_ids:
                 return []
 
             ST_origin = aliased(StopTime)
@@ -390,7 +393,7 @@ class Stop(Base):
                 .join(Journey, Journey.destination_stop_id == Stop.atco_code)
                 .join(ST_origin, ST_origin.journey_id == Journey.id)
                 .filter(
-                    Journey.line_id.in_(line_ids),
+                    Journey.service_id.in_(service_ids),
                     ST_origin.stop_id == self.atco_code,
                     Stop.locality_id.isnot(None),
                 )
@@ -412,7 +415,7 @@ class Stop(Base):
         self, db: Session, date: datetime | None = None, limit: int = 10
     ) -> list["StopTime"]:
         """
-        Returns a list of upcoming StopTime objects for this stop, with joined journey, line, and service.
+        Returns a list of upcoming StopTime objects for this stop, with joined journey and service.
         """
 
         if date is None:
@@ -432,9 +435,7 @@ class Stop(Base):
             .join(Calendar)
             .options(
                 joinedload(StopTime.journey).joinedload(Journey.calendar),
-                joinedload(StopTime.journey)
-                .joinedload(Journey.line)
-                .joinedload(Line.service),
+                joinedload(StopTime.journey).joinedload(Journey.service),
             )
             .all()
         )
@@ -457,7 +458,7 @@ class Stop(Base):
 
 
 class StopArea(Base):
-    __tablename__ = "stoparea"
+    __tablename__ = "stop_area"
 
     id = Column(String, primary_key=True)
     name = Column(String, nullable=True)
@@ -672,110 +673,63 @@ class CalendarException(Base):
 
 class Service(Base):
     """
-    Represents a bus service, can have multiple lines e.g 67, 667, 67X
+    The top level representation of a bus service, containing all the generic information. can have multiple route objects, being timetable revisions
     """
 
     __tablename__ = "service"
-    service_code = Column(String, nullable=False, primary_key=True)
-    description = Column(String)
-    origin = Column(String, nullable=True)
-    destination = Column(String, nullable=True)
-
-    vias = Column(String, nullable=True)
-    operator_noc = Column(String, ForeignKey("operator.noc"), nullable=True)
-    line_names = Column(String, nullable=True)  # List of line names
-
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    service_code = Column(String, nullable=False, index=True)
+    bt_service_id = Column(Integer, nullable=True, index=True)
     data_source_id = Column(
         Integer, ForeignKey("data_source.id", ondelete="SET NULL"), nullable=True
     )
 
-    data_source = relationship("DataSource", back_populates="services")
-
-    operator = relationship("Operator", back_populates="services")
-    lines = relationship(
-        "Line",
-        back_populates="service",
-        cascade="all, delete-orphan",
-        passive_deletes=True,
-    )
-    journeys = relationship(
-        "Journey",
-        back_populates="service",
-        cascade="all, delete-orphan",
-        passive_deletes=True,
-    )
-    search_vector = deferred(
-        Column(
-            TSVectorType(
-                "description",
-                "origin",
-                "destination",
-                "vias",
-                "line_names",
-                weights={
-                    "line_names": "A",
-                    "description": "B",
-                    "origin": "C",
-                    "destination": "C",
-                    "vias": "C",
-                },
-            ),
-        )
-    )
-
-
-class Line(Base, AutoSlugMixin):
-    """
-    A line is a specific route of a service, e.g. 67, 667, 67X
-    """
-
-    __tablename__ = "line"
-    id = Column(String, primary_key=True, index=True)
-    bt_service_id = Column(Integer, nullable=True)
     line_name = Column(String, nullable=False)
-    inbound_description = Column(String)
-    outbound_description = Column(String)
-    slug = AutoSlug(source="get_full_name", max_length=100, unique=True, nullable=False)
+    line_brand = Column(String, nullable=True)
+    description = Column(String)
     geometry = Column(
         Geometry(geometry_type="MULTILINESTRING", srid=4326), nullable=True
-    )  # an overall geometry of the line, merged from all track sections
-    service_code = Column(
-        String, ForeignKey("service.service_code", ondelete="CASCADE"), nullable=False
     )
+    slug = AutoSlug(source="get_full_name", max_length=100, unique=True, nullable=False)
 
-    service = relationship("Service", back_populates="lines")
-    journeys = relationship("Journey", back_populates="line")
+    operator_noc = Column(String, ForeignKey("operator.noc"), nullable=True)
+    public_use = Column(Boolean, nullable=False, default=True)
+    current = Column(Boolean, nullable=False, default=True, index=True)
+    geometry = Column(
+        Geometry(geometry_type="MULTILINESTRING", srid=4326), nullable=True
+    )
+    data_wrong = Column(
+        Boolean, nullable=False, default=False
+    )  # flag to indicate that the timetable is incorrect
+    last_modified = Column(DateTime(timezone=True), server_default=func.now())
+
+    operator = relationship("Operator", back_populates="services")
+    data_source = relationship("DataSource", back_populates="services")
     routes = relationship(
         "Route",
-        back_populates="lines",
-        secondary="line_to_route",
-        cascade="all",
-        passive_deletes=True,
+        back_populates="service",
     )
-    stops = relationship("Stop", secondary="line_stop_usage", back_populates="lines")
-
-    __table_args__ = (
-        UniqueConstraint("line_name", "service_code", name="uq_line_per_service"),
+    stops = relationship(
+        "Stop", secondary="service_stop_usage", back_populates="services"
     )
-
     search_vector = deferred(
         Column(
             TSVectorType(
                 "line_name",
-                "inbound_description",
-                "outbound_description",
+                "line_brand",
+                "description",
                 weights={
                     "line_name": "A",
-                    "inbound_description": "B",
-                    "outbound_description": "B",
+                    "description": "A",
+                    "line_brand": "B",
                 },
-            ),
+            )
         )
     )
 
     @property
     def get_full_name(self):
-        return f"{self.line_name} {self.service.description}".strip()
+        return f"{self.line_name} {self.description}".strip()
 
     def get_dest_localities(self):
         with SessionLocal() as db:
@@ -783,7 +737,7 @@ class Line(Base, AutoSlugMixin):
                 db.query(Locality)
                 .join(Stop, Stop.locality_id == Locality.id)
                 .join(Journey, Journey.destination_stop_id == Stop.atco_code)
-                .filter(Journey.line_id == self.id)
+                .filter(Journey.service_id == self.id)
                 .filter(Stop.locality_id.isnot(None))
                 .distinct()
                 .all()
@@ -804,47 +758,100 @@ class Line(Base, AutoSlugMixin):
         """
         Returns the bustimes service ID if available, otherwise finds it.
         """
-        bt_service_id = getattr(self, "bt_service_id", None)
-        if bt_service_id is not None:
-            return bt_service_id
-        else:
-            noc = self.service.operator_noc or ""
-            line_name = self.line_name
-            origin = self.service.origin
-            destination = self.service.destination
+        if self.bt_service_id is not None:
+            return self.bt_service_id
 
-            results = await fetch_json(
-                f"{API_BASE}/services/?operator={noc}&search={' '.join([str(line_name), str(origin), str(destination)])}"
-            )
+        noc = self.operator_noc or ""
+        line_name = self.line_name
+        origin = self.origin
+        destination = self.destination
 
-            if not results or "results" not in results:
-                return None
+        results = await fetch_json(
+            f"{API_BASE}/services/?operator={noc}&search={' '.join([str(line_name), str(origin), str(destination)])}"
+        )
 
-            bt_service = results["results"]
+        if not results or "results" not in results or len(results["results"]) != 1:
+            return None
 
-            if len(bt_service) != 1:
-                return None
+        service_id = results["results"][0]["id"]
 
-            service_id = bt_service[0]["id"]
+        obj = db.merge(self)
+        obj.bt_service_id = service_id
+        db.commit()
+        db.refresh(obj)
 
-            obj = db.merge(self)
-            obj.bt_service_id = service_id
-            db.commit()
-            db.refresh(obj)
-
-            self.bt_service_id = service_id
-            return service_id
+        self.bt_service_id = service_id
+        return service_id
 
 
-class LineStopUsage(Base):
+class Route(Base):
     """
-    A collection of all the stops that a line serves across all journeys
+    The timetable level of a bus route, associated with one service. contains information about the bus route itself, being stuff that can change.
     """
 
-    __tablename__ = "line_stop_usage"
-    line_id = Column(
-        String,
-        ForeignKey("line.id", ondelete="CASCADE"),
+    __tablename__ = "route"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    service_id = Column(Integer, nullable=False, index=True)
+    line_id = Column(String, nullable=True)
+    data_source_id = Column(
+        Integer, ForeignKey("data_source.id", ondelete="SET NULL"), nullable=True
+    )
+    bt_service_id = Column(Integer, nullable=True, index=True)
+
+    service_code = Column(String, nullable=False)
+    line_name = Column(String, nullable=False)
+    line_brand = Column(String, nullable=True)
+    description = Column(String)
+    origin = Column(String, nullable=True)
+    destination = Column(String, nullable=True)
+    vias = Column(String, nullable=True)
+    inbound_description = Column(String, nullable=True)
+    outbound_description = Column(String, nullable=True)
+
+    revision_number = Column(Integer, nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=True)
+    modified_at = Column(DateTime(timezone=True), nullable=True)
+    start_date = Column(Date, nullable=True)
+    end_date = Column(Date, nullable=True)
+    geometry = Column(
+        Geometry(geometry_type="MULTILINESTRING", srid=4326), nullable=True
+    )
+
+    public_use = Column(Boolean, nullable=False, default=True)
+    operator_noc = Column(String, ForeignKey("operator.noc"), nullable=True)
+
+    service = relationship("Service", back_populates="routes")
+    operator = relationship("Operator", back_populates="services")
+    data_source = relationship("DataSource", back_populates="services")
+    journeys = relationship(
+        "Journey",
+        back_populates="service",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "service_id",
+            "revision_number",
+            "start_date",
+            "end_date",
+            "data_source_id",
+            name="uq_service_revision",
+        ),
+        Index("ix_route_service_line_name", "service_id", "line_name"),
+    )
+
+
+class ServiceStopUsage(Base):
+    """
+    A collection of all the stops that a service serves across all journeys
+    """
+
+    __tablename__ = "service_stop_usage"
+    service_id = Column(
+        Integer,
+        ForeignKey("service.id", ondelete="CASCADE"),
         primary_key=True,
         nullable=False,
         index=True,
@@ -858,89 +865,29 @@ class LineStopUsage(Base):
     )
 
     __table_args__ = (
-        UniqueConstraint("line_id", "stop_id", name="uq_line_stop_usage"),
+        UniqueConstraint("service_id", "stop_id", name="uq_service_stop_usage"),
     )
 
 
-class LineToRoute(Base):
+class RouteLink(Base):
     """
-    Many-to-many relationship between Line and Route
-    """
-
-    __tablename__ = "line_to_route"
-    line_id = Column(
-        String,
-        ForeignKey("line.id", ondelete="CASCADE"),
-        primary_key=True,
-        nullable=False,
-    )
-    route_id = Column(
-        String,
-        ForeignKey("route.id", ondelete="CASCADE"),
-        primary_key=True,
-        nullable=False,
-    )
-
-    __table_args__ = (UniqueConstraint("line_id", "route_id", name="uq_line_to_route"),)
-
-
-class TrackSection(Base):
-    """
-    A point in a track, used to build the geometry of a route. known as RouteLink in TXC.
+    A connection between 2 stops, used to build the geometry of a route
     """
 
-    __tablename__ = "track_section"
-    id = Column(Integer, primary_key=True, autoincrement=True)
+    __tablename__ = "route_link"
+    service_id = Column(Integer, ForeignKey("service.id"))
     from_stop = Column(String, nullable=True)  # if null, it is the first
     to_stop = Column(String, nullable=True)  # if null, it is the last
     distance = Column(Float, nullable=True)  # distance in meters
     geometry = Column(Geometry(geometry_type="LINESTRING", srid=4326), nullable=False)
-    route_link_ref = Column(String, nullable=True)  # Reference to the route link
-    route_section_id = Column(
-        String, ForeignKey("route_section.id", ondelete="CASCADE"), nullable=False
+
+    service = relationship("Service", back_populates="route")
+    link_from = relationship("Stop", foreign_keys=[from_stop])
+    link_to = relationship("Stop", foreign_keys=[to_stop])
+
+    __table_args__ = UniqueConstraint(
+        "service_id", "from_stop", "to_stop", name="uq_service_routelink"
     )
-
-    route_section = relationship("RouteSection", back_populates="track")
-
-
-class RouteSection(Base):
-    """
-    A section of a route, used to build the geometry of a route.
-    """
-
-    __tablename__ = "route_section"
-    id = Column(String, primary_key=True)
-    geometry = Column(Geometry(geometry_type="LINESTRING", srid=4326), nullable=True)
-
-    track = relationship(
-        "TrackSection",
-        back_populates="route_section",
-        cascade="all, delete-orphan",
-        passive_deletes=True,
-    )
-    route = relationship(
-        "Route",
-        back_populates="route_section",
-        cascade="all, delete-orphan",
-        passive_deletes=True,
-    )
-
-
-class Route(Base):
-    """
-    container for a route section
-    """
-
-    __tablename__ = "route"
-    id = Column(String, primary_key=True)
-    private_code = Column(String, nullable=True)
-    description = Column(String, nullable=True)
-    route_section_id = Column(
-        String, ForeignKey("route_section.id", ondelete="CASCADE"), nullable=True
-    )
-
-    lines = relationship("Line", back_populates="routes", secondary="line_to_route")
-    route_section = relationship("RouteSection", back_populates="route")
 
 
 class Journey(Base):
@@ -951,14 +898,11 @@ class Journey(Base):
     __tablename__ = "journey"
     id = Column(String, primary_key=True)
     bt_trip_id = Column(Integer, nullable=True)
-    service_code = Column(
-        String, ForeignKey("service.service_code", ondelete="CASCADE"), nullable=False
+    service_id = Column(
+        Integer, ForeignKey("service.id", ondelete="CASCADE"), nullable=False
     )
     vehicle_journey_code = Column(String, nullable=True)
     ticket_machine_code = Column(String, nullable=True)
-    line_id = Column(
-        String, ForeignKey("line.id", ondelete="CASCADE"), nullable=True, index=True
-    )
     block_id = Column(String, nullable=True)
     direction = Column(Enum(DirectionType))
     headsign = Column(String, nullable=True)
@@ -980,7 +924,6 @@ class Journey(Base):
     destination = relationship("Stop", foreign_keys=[destination_stop_id])
 
     service = relationship("Service", back_populates="journeys")
-    line = relationship("Line", back_populates="journeys")
     stop_times = relationship(
         "StopTime", back_populates="journey", cascade="all, delete-orphan"
     )
@@ -1019,7 +962,7 @@ class Journey(Base):
         )
 
         candidate_journeys = (
-            query.options(joinedload(Journey.line).joinedload(Line.service))
+            query.options(joinedload(Journey.service))
             .order_by(Journey.end_time.desc())
             .all()
         )
@@ -1094,7 +1037,6 @@ class StopTime(Base):
     timing_status = Column(String, nullable=True)
     pick_up = Column(Boolean, nullable=True)
     drop_off = Column(Boolean, nullable=True)
-    wait_time = Column(Interval, nullable=True)  # wait time in seconds
     distance_traveled = Column(Float, nullable=True)  # distance in meters
 
     journey = relationship("Journey", back_populates="stop_times")
@@ -1109,18 +1051,18 @@ class StopTime(Base):
         is_outbound = self.journey.direction == DirectionType.outbound
 
         main_dest = (
-            self.journey.line.service.destination
+            self.journey.service.destination
             if is_outbound
-            else self.journey.line.service.origin
+            else self.journey.service.origin
         )
 
         line_dest = (
-            self.journey.line.outbound_description
+            self.journey.service.outbound_description
             if is_outbound
-            else self.journey.line.inbound_description
+            else self.journey.service.inbound_description
         )
 
-        vias = self.journey.line.service.vias or ""
+        vias = self.journey.service.vias or ""
 
         raw_headsign = self.dest_display or self.journey.headsign
         fallback_headsign = main_dest

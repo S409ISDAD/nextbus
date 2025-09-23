@@ -1,3 +1,11 @@
+"""
+
+TransXChange XML parser by Joshua Goodwin (bustimes.org)
+
+Modified by Dylan Toner (nextbus) to fit the purpose of this project.
+
+"""
+
 import calendar
 import datetime
 import logging
@@ -84,12 +92,12 @@ class Point:
         self.srid = 27700
 
 
-
 class RouteLink:
     def __init__(self, element):
         self.id = element.get("id")
         self.from_stop = element.findtext("From/StopPointRef").upper()
         self.to_stop = element.findtext("To/StopPointRef").upper()
+        self.distance = element.findtext("Distance")
         locations = element.findall("Track/Mapping/Location/Translation")
         if not locations:
             locations = element.findall("Track/Mapping/Location")
