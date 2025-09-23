@@ -78,8 +78,8 @@ async def import_datasource(id, folder: Path):
     log_file.touch()
 
     with log_file.open("w") as f:
-        for ts, log in logs.items():
-            f.write(f"{ts.strftime('%d/%m/%Y, %H:%M:%S')} - {log}\n")
+        for ts, flog in logs.items():
+            f.write(f"{ts.strftime('%d/%m/%Y, %H:%M:%S')} - {flog}\n")
 
 
 async def import_txc_zip(zip_path, ds_id=None):
