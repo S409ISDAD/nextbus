@@ -875,6 +875,8 @@ class TXCImporter:
                     data_source_id=self.ds_id,
                 )
 
+            service.description = description
+
             journeys = self.txc_data.get_journeys(
                 txc_service.service_code, line_id=txc_line.id
             )
