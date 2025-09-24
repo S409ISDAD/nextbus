@@ -370,6 +370,18 @@ async def build_bus(
         delay = 0
         tracking = False
 
+    timestamp = this_bus.get("datetime")
+
+    coords = this_bus.get("coordinates", [0, 0])
+    vehicle = this_bus.get("vehicle", {})
+    journey_id = this_bus.get("journey_id")
+    destination = this_bus.get("destination")
+    progress = this_bus.get("progress", {})
+
+    vehicle_name = vehicle.get("name", "").split(" - ")
+    fleet_num = vehicle_name[0] if len(vehicle_name) > 1 else "Unknown"
+    reg = vehicle_name[-1]
+
     # Ignore buses with a delay of over 2 hours, they are likely broken down or similar
     if delay > 2 * 60 * 60:
         log.warning(
@@ -383,17 +395,6 @@ async def build_bus(
 
     await r.sadd("total_buses", bus_id)
 
-    timestamp = this_bus.get("datetime")
-
-    coords = this_bus.get("coordinates", [0, 0])
-    vehicle = this_bus.get("vehicle", {})
-    journey_id = this_bus.get("journey_id")
-    destination = this_bus.get("destination")
-    progress = this_bus.get("progress", {})
-
-    vehicle_name = vehicle.get("name", "").split(" - ")
-    fleet_num = vehicle_name[0] if len(vehicle_name) > 1 else "Unknown"
-    reg = vehicle_name[-1]
     bus_type = vehicle.get("features", "")
     if not bus_type:
         bus_type = "Single decker"
