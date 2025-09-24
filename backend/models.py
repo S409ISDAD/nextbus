@@ -259,7 +259,7 @@ class Locality(Base, AutoSlugMixin):
     id = Column(String, primary_key=True)
     name = Column(String, nullable=False)
     qualifier_name = Column(String, nullable=True)
-    slug = AutoSlug(source="get_full_name", max_length=100, unique=True, nullable=False)
+    # slug = AutoSlug(source="get_full_name", max_length=100, unique=True, nullable=False)
     created_at = Column(DateTime(timezone=True), nullable=True)
     modified_at = Column(DateTime(timezone=True), nullable=True)
     admin_area_id = Column(Integer, ForeignKey("admin_area.id"), nullable=True)

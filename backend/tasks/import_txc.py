@@ -13,6 +13,7 @@ from shapely.geometry import LineString
 from sqlalchemy import func, select, update
 from sqlalchemy_searchable import sync_trigger
 
+from backend.config import get_logger, setup_logging
 from backend.db.db import SessionLocal, engine
 from backend.deps import LONDON
 from backend.models import (
@@ -37,9 +38,7 @@ from backend.txc import txc
 from backend.utils.bulk_upsert import bulk_upsert
 from backend.utils.download_if_modified import download_if_modified
 
-import logging
-
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 async def import_datasource(id, folder: Path):
@@ -79,8 +78,8 @@ async def import_datasource(id, folder: Path):
     log_file.touch()
 
     with log_file.open("w") as f:
-        for ts, log in logs.items():
-            f.write(f"{ts.strftime('%d/%m/%Y, %H:%M:%S')} - {log}\n")
+        for ts, flog in logs.items():
+            f.write(f"{ts.strftime('%d/%m/%Y, %H:%M:%S')} - {flog}\n")
 
 
 async def import_txc_zip(zip_path, ds_id=None):
@@ -814,6 +813,7 @@ class TXCImporter:
 
 
 if __name__ == "__main__":
+    setup_logging()
     if len(sys.argv) != 2:
         log.debug("Usage: python import_txc.py <path_to_zip_or_xml>")
         exit(1)
