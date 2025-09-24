@@ -9,25 +9,26 @@ from shapely.geometry import Point
 from sqlalchemy.orm import Session
 from sqlalchemy_searchable import sync_trigger
 
+from backend.config import get_logger, setup_logging
 from backend.db.db import SessionLocal
 from backend.db.db import engine
 from backend.deps import LONDON
 from backend.models import (
     Stop,
     StopArea,
-    StopAreaTypeEnum, AdminArea, Locality,
+    StopAreaTypeEnum,
+    AdminArea,
+    Locality,
 )
 from backend.utils.bulk_upsert import bulk_upsert
 from backend.utils.download_to_static import download_to_static
-import logging
 
-log = logging.getLogger(__name__)
+log = get_logger()
 
 new_stops = []
 new_stop_areas = []
 admin_areas = set()
 localities = set()
-
 
 
 def get_datetime(string):
@@ -265,7 +266,14 @@ def create_or_update(db: Session, no_update: bool):
 def import_naptan_data(file_path: Path, no_update=False):
     log.debug("Importing NAPTAN data...")
 
-    global new_stops, existing_stop_ids, stop_area_ids, new_stop_areas, admin_areas, localities, localities_not_exist
+    global \
+        new_stops, \
+        existing_stop_ids, \
+        stop_area_ids, \
+        new_stop_areas, \
+        admin_areas, \
+        localities, \
+        localities_not_exist
     iterator = ET.iterparse(file_path, events=("start", "end"))
     with SessionLocal() as db:
         try:
@@ -344,4 +352,5 @@ def main():
 
 
 if __name__ == "__main__":
+    setup_logging()
     main()

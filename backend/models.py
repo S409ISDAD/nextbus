@@ -13,10 +13,12 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
     Interval,
+    PrimaryKeyConstraint,
     String,
     UniqueConstraint,
     func,
     Index,
+    text,
 )
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.ext.declarative import declarative_base
@@ -138,11 +140,10 @@ class StopAreaTypeEnum(str, enum.Enum):
     coach_service_coverage = "GCCH"
 
 
-class DirectionType(enum.Enum):
-    outbound = "outbound"
-    inbound = "inbound"
-    circular = "circular"
-    unknown = "unknown"
+class TimingStatusEnum(str, enum.Enum):
+    other = "OTH"
+    time_info_point = "TIP"
+    principal_timing_point = "PTP"
 
 
 class BotStatusEnum(enum.Enum):
@@ -521,8 +522,9 @@ class StopArea(Base):
 class Operator(Base):
     __tablename__ = "operator"
 
-    noc = Column(String, nullable=False, primary_key=True)
-    ref = Column(String, nullable=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    noc = Column(String, nullable=False)
     name = Column(String, nullable=False)
 
     services = relationship(
@@ -537,8 +539,9 @@ class Operator(Base):
 
 class BankHoliday(Base):
     __tablename__ = "bank_holiday"
+
     id = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(String, nullable=False, unique=True)
+    name = Column(String, unique=True)
 
     dates = relationship(
         "BankHolidayDate",
@@ -546,28 +549,25 @@ class BankHoliday(Base):
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
-    calendar_links = relationship(
-        "CalendarToBankHoliday",
-        back_populates="bank_holiday",
-        cascade="all, delete-orphan",
-        passive_deletes=True,
-    )
 
-    calendars = association_proxy("calendar_links", "calendar")
+    def __str__(self):
+        return str(self.name)
 
 
 class BankHolidayDate(Base):
     __tablename__ = "bank_holiday_date"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    bank_holiday_id = Column(Integer, ForeignKey("bank_holiday.id"), nullable=False)
+    bank_holiday_name = Column(
+        String, ForeignKey("bank_holiday.name"), nullable=False, index=True
+    )
     date = Column(Date, nullable=False)
 
     bank_holiday = relationship("BankHoliday", back_populates="dates")
 
     __table_args__ = (
         UniqueConstraint(
-            "bank_holiday_id",
+            "bank_holiday_name",
             "date",
             name="uq_bank_holiday_date_per_holiday",
         ),
@@ -581,18 +581,20 @@ class CalendarToBankHoliday(Base):
 
     __tablename__ = "calendar_bank_holiday"
     operating = Column(Boolean, nullable=False, default=True)
+    bank_holiday = Column(
+        String,
+        ForeignKey("bank_holiday.name"),
+        nullable=False,
+    )
     calendar_id = Column(
-        Integer, ForeignKey("calendar.id"), primary_key=True, nullable=False
+        Integer, ForeignKey("calendar.id", ondelete="CASCADE"), nullable=False
     )
-    bank_holiday_id = Column(
-        Integer, ForeignKey("bank_holiday.id"), primary_key=True, nullable=False
-    )
-
-    bank_holiday = relationship(
-        "BankHoliday", back_populates="calendar_links", overlaps="calendars"
-    )
-    calendar = relationship(
-        "Calendar", back_populates="calendar_bank_holiday", overlaps="calendars"
+    calendar = relationship("Calendar", back_populates="calendar_bank_holiday")
+    bh = relationship("BankHoliday")
+    __table_args__ = (
+        PrimaryKeyConstraint(
+            "bank_holiday", "calendar_id", name="pk_calendar_bank_holiday"
+        ),
     )
 
 
@@ -695,13 +697,25 @@ class CalendarException(Base):
     __tablename__ = "calendar_exception"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    calendar_id = Column(Integer, ForeignKey("calendar.id"), nullable=False)
+    calendar_id = Column(
+        Integer, ForeignKey("calendar.id", ondelete="CASCADE"), nullable=False
+    )
     start_date = Column(Date, nullable=False)
     end_date = Column(Date, nullable=False)
     operating = Column(Boolean, nullable=False, default=True)
     description = Column(String, nullable=True)
 
     calendar = relationship("Calendar", back_populates="calendar_exceptions")
+
+    __table_args__ = (
+        UniqueConstraint(
+            "calendar_id",
+            "start_date",
+            "end_date",
+            "operating",
+            name="uq_calendar_exception",
+        ),
+    )
 
 
 class Service(Base, AutoSlugMixin):
@@ -712,6 +726,7 @@ class Service(Base, AutoSlugMixin):
     __tablename__ = "service"
     id = Column(Integer, primary_key=True, autoincrement=True)
     service_code = Column(String, nullable=False, index=True)
+    operator_id = Column(Integer, ForeignKey("operator.id"), nullable=True)
     bt_service_id = Column(Integer, nullable=True, index=True)
     data_source_id = Column(
         Integer, ForeignKey("data_source.id", ondelete="SET NULL"), nullable=True
@@ -725,7 +740,6 @@ class Service(Base, AutoSlugMixin):
     )
     # slug = AutoSlug(source="get_full_name", max_length=100, unique=True, nullable=False)
 
-    operator_noc = Column(String, ForeignKey("operator.noc"), nullable=True)
     public_use = Column(Boolean, nullable=False, default=True)
     current = Column(Boolean, nullable=False, default=True, index=True)
     geometry = Column(
@@ -736,7 +750,10 @@ class Service(Base, AutoSlugMixin):
     )  # flag to indicate that the timetable is incorrect
     last_modified = Column(DateTime(timezone=True), server_default=func.now())
 
-    operator = relationship("Operator", back_populates="services")
+    operator = relationship(
+        "Operator",
+        back_populates="services",
+    )
     data_source = relationship("DataSource", back_populates="services")
     timetables = relationship(
         "Timetable",
@@ -832,6 +849,7 @@ class Timetable(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     service_id = Column(Integer, ForeignKey("service.id"), nullable=False, index=True)
     line_id = Column(String, nullable=True)
+    operator_id = Column(Integer, ForeignKey("operator.id"), nullable=True)
     data_source_id = Column(
         Integer,
         ForeignKey("data_source.id", ondelete="SET NULL"),
@@ -857,14 +875,15 @@ class Timetable(Base):
     revision_number = Column(Integer, nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=True)
     modified_at = Column(DateTime(timezone=True), nullable=True)
-    start_date = Column(Date, nullable=True)
-    end_date = Column(Date, nullable=True)
+    start_date = Column(Date)
+    end_date = Column(
+        Date, default=date(9999, 12, 31)
+    )  # no end date means it is valid indefinitely
     geometry = Column(
         Geometry(geometry_type="MULTILINESTRING", srid=4326), nullable=True
     )
 
     public_use = Column(Boolean, nullable=False, default=True)
-    operator_noc = Column(String, ForeignKey("operator.noc"), nullable=True)
 
     service = relationship("Service", back_populates="timetables")
     operator = relationship("Operator")
@@ -885,14 +904,21 @@ class Timetable(Base):
         passive_deletes=True,
     )
 
+    @property
+    def actual_end_date(self):
+        if self.end_date == date(9999, 12, 31):
+            return None
+        return self.end_date
+
     __table_args__ = (
-        UniqueConstraint(
+        Index(
+            "uq_service_revision_with_nulls",
             "service_id",
             "revision_number",
             "start_date",
             "end_date",
             "data_source_id",
-            name="uq_service_revision",
+            unique=True,
         ),
         Index("ix_timetable_service_line_name", "service_id", "line_name"),
     )
@@ -931,7 +957,9 @@ class RouteLink(Base):
 
     __tablename__ = "route_link"
     id = Column(Integer, primary_key=True, autoincrement=True)
-    timetable_id = Column(Integer, ForeignKey("timetable.id"))
+    timetable_id = Column(
+        Integer, ForeignKey("timetable.id", ondelete="CASCADE"), nullable=False
+    )
     from_stop = Column(
         String, ForeignKey("stop.atco_code"), nullable=True
     )  # if null, it is the first
@@ -958,7 +986,7 @@ class Journey(Base):
     """
 
     __tablename__ = "journey"
-    id = Column(String, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     bt_trip_id = Column(Integer, nullable=True)
     service_id = Column(
         Integer, ForeignKey("service.id", ondelete="CASCADE"), nullable=False
@@ -971,11 +999,12 @@ class Journey(Base):
     )
     vehicle_journey_code = Column(String, nullable=True)
     ticket_machine_code = Column(String, nullable=True)
+    sequence = Column(Integer, nullable=True)
     block_id = Column(String, nullable=True)
-    direction = Column(Enum(DirectionType))
+    inbound = Column(Boolean)
     headsign = Column(String, nullable=True)
-    start_time = Column(Interval, nullable=False)
-    end_time = Column(Interval)
+    start_time = Column(Interval, nullable=True)
+    end_time = Column(Interval, nullable=True)
     origin_stop_id = Column(
         String, ForeignKey("stop.atco_code"), nullable=True, index=True
     )
@@ -1091,7 +1120,10 @@ class StopTime(Base):
     __tablename__ = "stop_time"
     id = Column(Integer, primary_key=True, autoincrement=True)
     journey_id = Column(
-        String, ForeignKey("journey.id", ondelete="CASCADE"), nullable=False, index=True
+        Integer,
+        ForeignKey("journey.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     stop_id = Column(
         String,
@@ -1103,10 +1135,9 @@ class StopTime(Base):
     arrival_time = Column(Interval, nullable=True)
     departure_time = Column(Interval, nullable=True, index=True)
     dest_display = Column(String, nullable=True)
-    timing_status = Column(String, nullable=True)
+    timing_status = Column(Enum(TimingStatusEnum), nullable=True)
     pick_up = Column(Boolean, nullable=True)
     drop_off = Column(Boolean, nullable=True)
-    distance_traveled = Column(Float, nullable=True)  # distance in meters
 
     journey = relationship("Journey", back_populates="stop_times")
     stop = relationship("Stop", back_populates="stop_times")

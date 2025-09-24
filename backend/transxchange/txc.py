@@ -85,11 +85,12 @@ class Point:
             lat = element.findtext("Latitude")
             self.longitude = lon
             self.latitude = lat
-
-        # British National Grid
-        self.longitude = element.findtext("Easting")
-        self.latitude = element.findtext("Northing")
-        self.srid = 27700
+            self.srid = 4326
+        else:
+            # British National Grid
+            self.longitude = element.findtext("Easting")
+            self.latitude = element.findtext("Northing")
+            self.srid = 27700
 
 
 class RouteLink:
@@ -148,9 +149,9 @@ class JourneyPatternStopUsage:
         self.activity = element.findtext("Activity")
         self.dynamic_destination_display = element.findtext("DynamicDestinationDisplay")
 
-        self.sequencenumber = element.get("SequenceNumber")
-        if self.sequencenumber is not None:
-            self.sequencenumber = int(self.sequencenumber)
+        self.sequence_number = element.get("SequenceNumber")
+        if self.sequence_number is not None:
+            self.sequence_number = int(self.sequence_number)
 
         stop_ref = element.findtext("StopPointRef").upper()
         try:
@@ -158,7 +159,7 @@ class JourneyPatternStopUsage:
         except KeyError:
             self.stop = Stop(element)
 
-        self.timingstatus = element.findtext("TimingStatus")
+        self.timing_status = element.findtext("TimingStatus")
 
         self.wait_time = element.find("WaitTime")
         if self.wait_time is not None:

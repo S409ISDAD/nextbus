@@ -4,6 +4,8 @@ from backend.db.db import SessionLocal
 from backend.models import BankHoliday, BankHolidayDate
 import logging
 
+from backend.utils.bulk_upsert import bulk_upsert
+
 log = logging.getLogger(__name__)
 
 
@@ -48,19 +50,19 @@ def import_bank_holidays():
                 db.refresh(bh)
                 existing_bhs[title] = bh
 
-            existing_date = (
-                db.query(BankHolidayDate)
+            if (
+                not db.query(BankHolidayDate)
                 .filter(
-                    and_(
-                        BankHolidayDate.bank_holiday_id == bh.id,
-                        BankHolidayDate.date == bank_holiday["date"],
-                    )
+                    BankHolidayDate.bank_holiday_name == bh.name,
+                    BankHolidayDate.date == bank_holiday["date"],
                 )
                 .first()
-            )
-
-            if not existing_date:
-                db.add(BankHolidayDate(bank_holiday=bh, date=bank_holiday["date"]))
+            ):
+                db.add(
+                    BankHolidayDate(
+                        bank_holiday_name=bh.name, date=bank_holiday["date"]
+                    )
+                )
 
         db.commit()
 
