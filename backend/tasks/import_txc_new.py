@@ -733,10 +733,11 @@ class TXCImporter:
             self.db.add(service)
             self.db.flush()
 
-            route_defaults = {
+            timetable_defaults = {
                 "service_id": service.id,
                 "line_id": txc_line.id,
                 "data_source_id": self.ds_id,
+                "timetable_data_source_id": timetable_datasource.id,
                 "line_name": txc_line.line_name,
                 "line_brand": line_brand,
                 "outbound_description": txc_line.outbound_description or "",
@@ -753,15 +754,17 @@ class TXCImporter:
             }
 
             if description:
-                route_defaults["description"] = description
-
-            if self.txc_data.route_sections:
-                self.handle_route_links(journeys, service)
+                timetable_defaults["description"] = description
 
             if txc_service.vias:
-                route_defaults["vias"] = ", ".join(txc_service.vias)
+                timetable_defaults["vias"] = ", ".join(txc_service.vias)
 
             # TODO: finish this
+
+            timetable_id = 1  # replace with actual timetable id
+
+            if self.txc_data.route_sections:
+                self.handle_route_links(journeys, timetable_id)
 
     def get_route_links(self, journeys: list[txc.VehicleJourney]):
         """
@@ -802,34 +805,40 @@ class TXCImporter:
                             if route_link.track:
                                 yield route_link
 
-    def handle_route_links(self, journeys, service: Service):
+    def handle_route_links(self, journeys, timetable_id: int):
         route_links = list(self.get_route_links(journeys))
 
         if any(
             len(link.track) > 2 for link in route_links
         ):  # from bustimes.org's import_transxchange.py - ignore straight lines
-            links_to_add = {}
+            links_to_add = []
 
             for link in route_links:
                 from_stop = self.stops.get(link.from_stop)
                 to_stop = self.stops.get(link.to_stop)
 
                 if type(from_stop) is Stop and type(to_stop) is Stop:
-                    key = (from_stop.atco_code, to_stop.atco_code)
-
                     track = [
                         Point([coord.latitude, coord.longitude]) for coord in link.track
                     ]
 
-                    links_to_add[key] = RouteLink(
-                        from_stop_id=from_stop.atco_code,
-                        to_stop_id=to_stop.atco_code,
-                        geometry=from_shape(LineString(track), srid=27700),
-                        distance=link.distance,
-                        service_id=service.id,
+                    links_to_add.append(
+                        {
+                            "from_stop_id": from_stop.atco_code,
+                            "to_stop_id": to_stop.atco_code,
+                            "geometry": from_shape(LineString(track), srid=27700),
+                            "distance": link.distance,
+                            "timetable_id": timetable_id,
+                        }
                     )
 
-            self.db.bulk_save_objects(links_to_add.values())
+            bulk_upsert(
+                self.db,
+                RouteLink,
+                links_to_add,
+                ["from_stop_id", "to_stop_id", "timetable_id"],
+                ["geometry", "distance"],
+            )
 
     def update_geometry(self, line_id):
         log.debug(f"Updating route overview geometry for line {line_id}")

@@ -182,12 +182,16 @@ class DataSource(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String, nullable=False, unique=True)
     description = Column(String, nullable=True)
-    url = Column(String, nullable=True, help="URL for non-BODS like stagecoach")
-    search = Column(String, nullable=True, help="Search term for BODS")
+    url = Column(String, nullable=True, doc="URL for non-BODS like stagecoach")
+    search = Column(String, nullable=True, doc="Search term for BODS")
     last_modified = Column(DateTime(timezone=True), nullable=True)
 
     services = relationship(
         "Service",
+        back_populates="data_source",
+    )
+    timetables = relationship(
+        "Timetable",
         back_populates="data_source",
     )
 
@@ -318,7 +322,7 @@ class Stop(Base):
     lat = Column(Float, Computed("ST_Y(point::geometry)"), nullable=False)
     lon = Column(Float, Computed("ST_X(point::geometry)"), nullable=False)
     stop_area_id = Column(
-        String, ForeignKey("stoparea.id", ondelete="CASCADE"), nullable=True
+        String, ForeignKey("stop_area.id", ondelete="CASCADE"), nullable=True
     )
     locality_id = Column(String, ForeignKey("locality.id"), nullable=True, index=True)
     admin_area_id = Column(Integer, ForeignKey("admin_area.id"), nullable=True)
@@ -389,6 +393,24 @@ class Stop(Base):
             .all()
         )
         return lines
+
+    def headsigns(self):
+        with SessionLocal() as db:
+            service_ids = [service.id for service in self.lines_served(db)]
+            if not service_ids:
+                return []
+
+            headsigns = (
+                db.query(StopTime.headsign)
+                .join(StopTime, StopTime.journey_id == Journey.id)
+                .filter(
+                    Journey.service_id.in_(service_ids),
+                    StopTime.stop_id == self.atco_code,
+                )
+                .distinct()
+            ).all()
+
+            return headsigns
 
     def localities_towards(self):
         with SessionLocal() as db:
@@ -480,7 +502,7 @@ class StopArea(Base):
     lat = Column(Float, Computed("ST_Y(point::geometry)"), nullable=True)
     lon = Column(Float, Computed("ST_X(point::geometry)"), nullable=True)
     type = Column(Enum(StopAreaTypeEnum), nullable=True)
-    parent_id = Column(String, ForeignKey("stoparea.id"), nullable=True)
+    parent_id = Column(String, ForeignKey("stop_area.id"), nullable=True)
     admin_area_id = Column(Integer, ForeignKey("admin_area.id"))
     active = Column(Boolean, nullable=False)
     revision_number = Column(Integer, nullable=True)
@@ -723,6 +745,12 @@ class Service(Base):
     stops = relationship(
         "Stop", secondary="service_stop_usage", back_populates="services"
     )
+    journeys = relationship(
+        "Journey",
+        back_populates="service",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
     search_vector = deferred(
         Column(
             TSVectorType(
@@ -802,7 +830,7 @@ class Timetable(Base):
 
     __tablename__ = "timetable"
     id = Column(Integer, primary_key=True, autoincrement=True)
-    service_id = Column(Integer, nullable=False, index=True)
+    service_id = Column(Integer, ForeignKey("service.id"), nullable=False, index=True)
     line_id = Column(String, nullable=True)
     data_source_id = Column(
         Integer,
@@ -838,14 +866,20 @@ class Timetable(Base):
     public_use = Column(Boolean, nullable=False, default=True)
     operator_noc = Column(String, ForeignKey("operator.noc"), nullable=True)
 
-    service = relationship("Service", back_populates="timetable")
-    operator = relationship("Operator", back_populates="timetables")
+    service = relationship("Service", back_populates="timetables")
+    operator = relationship("Operator")
     data_source = relationship("DataSource", back_populates="timetables")
     timetable_data_source = relationship(
         "TimetableDataSource", back_populates="timetables"
     )
     journeys = relationship(
         "Journey",
+        back_populates="timetable",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    route_links = relationship(
+        "RouteLink",
         back_populates="timetable",
         cascade="all, delete-orphan",
         passive_deletes=True,
@@ -896,18 +930,25 @@ class RouteLink(Base):
     """
 
     __tablename__ = "route_link"
-    service_id = Column(Integer, ForeignKey("service.id"))
-    from_stop = Column(String, nullable=True)  # if null, it is the first
-    to_stop = Column(String, nullable=True)  # if null, it is the last
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    timetable_id = Column(Integer, ForeignKey("timetable.id"))
+    from_stop = Column(
+        String, ForeignKey("stop.atco_code"), nullable=True
+    )  # if null, it is the first
+    to_stop = Column(
+        String, ForeignKey("stop.atco_code"), nullable=True
+    )  # if null, it is the last
     distance = Column(Float, nullable=True)  # distance in meters
     geometry = Column(Geometry(geometry_type="LINESTRING", srid=4326), nullable=False)
 
-    service = relationship("Service", back_populates="route")
+    timetable = relationship("Timetable", back_populates="route_links")
     link_from = relationship("Stop", foreign_keys=[from_stop])
     link_to = relationship("Stop", foreign_keys=[to_stop])
 
-    __table_args__ = UniqueConstraint(
-        "service_id", "from_stop", "to_stop", name="uq_service_routelink"
+    __table_args__ = (
+        UniqueConstraint(
+            "timetable_id", "from_stop", "to_stop", name="uq_timetable_routelink"
+        ),
     )
 
 
@@ -921,6 +962,12 @@ class Journey(Base):
     bt_trip_id = Column(Integer, nullable=True)
     service_id = Column(
         Integer, ForeignKey("service.id", ondelete="CASCADE"), nullable=False
+    )
+    timetable_id = Column(
+        Integer,
+        ForeignKey("timetable.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     vehicle_journey_code = Column(String, nullable=True)
     ticket_machine_code = Column(String, nullable=True)
@@ -945,6 +992,7 @@ class Journey(Base):
     destination = relationship("Stop", foreign_keys=[destination_stop_id])
 
     service = relationship("Service", back_populates="journeys")
+    timetable = relationship("Timetable", back_populates="journeys")
     stop_times = relationship(
         "StopTime", back_populates="journey", cascade="all, delete-orphan"
     )

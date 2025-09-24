@@ -4,9 +4,8 @@ from backend.utils.time_taken import time_taken
 
 with SessionLocal() as db:
     stop: Stop = db.query(Stop).filter(Stop.atco_code == "1900HA110081").first()
-    print(f"Localities towards {stop.name}:")
+    print(f"headsigns from {stop.name}:")
     with time_taken():
-        localities = stop.localities_towards()
+        headsigns = stop.headsigns()
 
-    for locality in localities:
-        print(locality.name)
+    print(f"Buses towards: {', '.join(headsigns)}")
