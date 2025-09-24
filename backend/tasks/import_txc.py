@@ -25,7 +25,7 @@ from backend.models import (
     Line,
     LineToRoute,
     Operator,
-    Route,
+    Timetable,
     RouteSection,
     Service,
     Stop,
@@ -430,7 +430,9 @@ class TXCImporter:
 
         first_stop = sorted_stops[0][0]
         final_stop = sorted_stops[-1][0]
-        headsign = next((stop[1]["headsign"] for stop in sorted_stops if stop[1]["headsign"]), "")
+        headsign = next(
+            (stop[1]["headsign"] for stop in sorted_stops if stop[1]["headsign"]), ""
+        )
 
         journey = {
             "id": journey_code,
@@ -628,8 +630,8 @@ class TXCImporter:
         # Subquery to get all route_section geometries for routes linked to this line
         route_sections_subq = (
             select(RouteSection.geometry)
-            .join(Route, Route.route_section_id == RouteSection.id)
-            .join(LineToRoute, LineToRoute.route_id == Route.id)
+            .join(Timetable, Timetable.route_section_id == RouteSection.id)
+            .join(LineToRoute, LineToRoute.route_id == Timetable.id)
             .where(LineToRoute.line_id == line_id)
         ).subquery()
 
@@ -675,10 +677,7 @@ class TXCImporter:
         start = time.time()
         try:
             for txc_operator in self.txc_data.operators:
-                noc = (
-                    txc_operator.national_operator_code
-                    or txc_operator.operator_code
-                )
+                noc = txc_operator.national_operator_code or txc_operator.operator_code
                 db_operator = self.db.query(Operator).filter_by(noc=noc).first()
                 operator = Operator(
                     noc=noc,
@@ -718,7 +717,6 @@ class TXCImporter:
             self.journeys_to_add.clear()
             self.db.flush()
 
-
             bulk_upsert(
                 session=self.db,
                 model=StopTime,
@@ -741,17 +739,15 @@ class TXCImporter:
 
             for txc_route in self.txc_data.routes:
                 route_id = self.get_id(txc_route.route_id)
-                db_route = self.db.query(Route).filter_by(id=route_id).first()
+                db_route = self.db.query(Timetable).filter_by(id=route_id).first()
                 route_section_ref = txc_route.route_section_ref
 
                 if route_section_ref:
-                    route_section = self.txc_data.route_sections.get(
-                        route_section_ref
-                    )
+                    route_section = self.txc_data.route_sections.get(route_section_ref)
                     if route_section:
                         self.handle_route_section(route_section)
 
-                route = Route(
+                route = Timetable(
                     id=route_id,
                     private_code=txc_route.private_code,
                     description=txc_route.description,
@@ -772,9 +768,7 @@ class TXCImporter:
                 all_stop_codes.update(stop_codes)
             existing_usages = set(
                 (r.line_id, r.stop_id)
-                for r in self.db.query(
-                    LineStopUsage.line_id, LineStopUsage.stop_id
-                )
+                for r in self.db.query(LineStopUsage.line_id, LineStopUsage.stop_id)
                 .filter(LineStopUsage.line_id.in_(all_line_ids))
                 .filter(LineStopUsage.stop_id.in_(all_stop_codes))
                 .all()
@@ -783,9 +777,7 @@ class TXCImporter:
             for line_id, stop_codes in self.line_to_stops.items():
                 for stop_code in stop_codes:
                     if (line_id, stop_code) not in existing_usages:
-                        to_insert.append(
-                            {"line_id": line_id, "stop_id": stop_code}
-                        )
+                        to_insert.append({"line_id": line_id, "stop_id": stop_code})
             if to_insert:
                 objects = [LineStopUsage(**data) for data in to_insert]
                 self.db.bulk_save_objects(objects)

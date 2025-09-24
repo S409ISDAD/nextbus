@@ -1,4 +1,6 @@
 import gc
+from hashlib import sha256
+import hashlib
 import json
 import re
 import sys
@@ -27,11 +29,12 @@ from backend.models import (
     Journey,
     Service,
     Operator,
-    Route,
+    Timetable,
     Stop,
     StopTime,
     RouteLink,
     ServiceStopUsage,
+    TimetableDataSource,
 )
 from backend.transxchange import txc
 from backend.utils.bulk_upsert import bulk_upsert
@@ -83,8 +86,8 @@ async def import_datasource(id, folder: Path):
     log_file.touch()
 
     with log_file.open("w") as f:
-        for ts, log in logs.items():
-            f.write(f"{ts.strftime('%d/%m/%Y, %H:%M:%S')} - {log}\n")
+        for ts, txc_log in logs.items():
+            f.write(f"{ts.strftime('%d/%m/%Y, %H:%M:%S')} - {txc_log}\n")
 
 
 async def import_txc_zip(zip_path, ds_id=None):
@@ -320,6 +323,9 @@ class TXCImporter:
     def __init__(self, folder: Path, ds_id=None):
         self.txc_data = None
         self.dataset = folder
+        self.filename = None
+        self.file_hash = None
+        self.file_size_bytes = None
         self.today = datetime.now(tz=LONDON)
         self.calendar_cache = {}
         self.db = SessionLocal()
@@ -328,6 +334,7 @@ class TXCImporter:
         self.service_to_routes = {}  # Maps line_id to a list of route IDs
         self.line_to_stops = {}  # Maps line_id to a list of stop IDs
         self.ds_id = ds_id
+        self.tds_id = None
         self.map = {}
         self.stops: dict[str, Stop] = {}
 
@@ -355,12 +362,12 @@ class TXCImporter:
         log.debug("Clearing old routes...")
 
         routes_to_go = (
-            self.db.query(Route)
+            self.db.query(Timetable)
             .filter(
-                Route.service_id == service_code,
-                Route.data_source_id == self.ds_id,
-                Route.end_date is not None,
-                Route.end_date
+                Timetable.service_id == service_code,
+                Timetable.data_source_id == self.ds_id,
+                Timetable.end_date is not None,
+                Timetable.end_date
                 > self.today.date(),  # route is inactive if end_date is in the past (inclusive)
             )
             .all()
@@ -400,7 +407,7 @@ class TXCImporter:
         txc_journey: txc.VehicleJourney,
         txc_service: txc.Service,
         service: Service,
-        route: Route,
+        route: Timetable,
     ):
         operating_profile = txc_journey.operating_profile
         regular_days_of_week = (
@@ -641,6 +648,26 @@ class TXCImporter:
 
         operator = self.db.query(Operator).filter_by(ref=txc_service.operator).first()
 
+        timetable_datasource = (
+            self.db.query(TimetableDataSource)
+            .filter_by(file_hash=self.file_hash, data_source_id=self.ds_id)
+            .first()
+        )
+
+        if not timetable_datasource:
+            timetable_datasource = TimetableDataSource(
+                filename=self.filename,
+                file_hash=self.file_hash,
+                size_bytes=self.file_size_bytes,
+                data_source_id=self.ds_id,
+                processed_at=self.today,
+            )
+            self.db.add(timetable_datasource)
+            self.db.flush()
+        else:
+            log.info(f"No changes to timetable data source {self.filename}, skipping")
+            return
+
         routes = set()
 
         for txc_line in txc_service.lines:
@@ -853,8 +880,8 @@ class TXCImporter:
         # Subquery to get all route_section geometries for routes linked to this line
         route_sections_subq = (
             select(RouteSection.geometry)
-            .join(Route, Route.route_section_id == RouteSection.id)
-            .join(LineToRoute, LineToRoute.route_id == Route.id)
+            .join(Timetable, Timetable.route_section_id == RouteSection.id)
+            .join(LineToRoute, LineToRoute.route_id == Timetable.id)
             .where(LineToRoute.line_id == line_id)
         ).subquery()
 
@@ -925,6 +952,18 @@ class TXCImporter:
         start = time.time()
         try:
             self.txc_data = txc.TransXChange(file)
+            self.filename = self.txc_data.attributes.get("FileName", None)
+            self.file_size_bytes = file.stat().st_size
+
+            if not self.filename:
+                log.warning(
+                    "No FileName attribute found in TXC data. using actual file name"
+                )
+                self.filename = file.name
+
+            with open(file, "rb") as f:
+                self.file_hash = hashlib.file_digest(f, "sha256").hexdigest()
+
             for op in self.txc_data.operators:
                 txc_operator = TXCOperator(op)
                 noc = txc_operator.noc or txc_operator.operator_code
@@ -983,7 +1022,7 @@ class TXCImporter:
 
             for txc_route in self.txc_data.routes:
                 route_id = self.get_id(txc_route.route_id)
-                db_route = self.db.query(Route).filter_by(id=route_id).first()
+                db_route = self.db.query(Timetable).filter_by(id=route_id).first()
                 route_section_ref = txc_route.route_section_ref
 
                 if route_section_ref:
@@ -991,7 +1030,7 @@ class TXCImporter:
                     if route_section:
                         self.handle_route_section(route_section)
 
-                route = Route(
+                route = Timetable(
                     id=route_id,
                     private_code=txc_route.private_code,
                     description=txc_route.description,

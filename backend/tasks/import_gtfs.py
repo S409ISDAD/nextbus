@@ -8,7 +8,7 @@ from backend.models import (
     Agency,
     FeedInfo,
     Frequency,
-    Route,
+    Timetable,
     Calendar,
     CalendarDate,
     Service,
@@ -115,7 +115,9 @@ def upsert(
                 counter += 1
                 if len(batch) >= batch_size:
                     percent = (counter) / len(rows) * 100
-                    log.debug(f"Upserting batch {counter // batch_size} ({percent:.2f}%)")
+                    log.debug(
+                        f"Upserting batch {counter // batch_size} ({percent:.2f}%)"
+                    )
                     stmt = pg_insert(model).values(batch)
                     if update_columns:
                         stmt = stmt.on_conflict_do_update(
@@ -219,7 +221,7 @@ def import_routes(db: Session, routes: pd.DataFrame):
         "type": "route_type",
     }
 
-    upsert(db, Route, routes, ["id"], mapping)
+    upsert(db, Timetable, routes, ["id"], mapping)
     log.debug(f"Imported {len(routes)} routes.")
 
 

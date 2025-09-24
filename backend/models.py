@@ -191,8 +191,19 @@ class DataSource(Base):
         back_populates="data_source",
     )
 
-    def __repr__(self):
-        return f"<DataSource(name={self.name}, url={self.url})>"
+
+class TimetableDataSource(Base):
+    __tablename__ = "timetable_data_source"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    filename = Column(String)
+    file_hash = Column(String, nullable=False, unique=True, index=True)
+    size_bytes = Column(Integer, nullable=True)
+    processed_at = Column(DateTime(timezone=True), nullable=True)
+    data_source_id = Column(Integer, ForeignKey("data_source.id"), nullable=True)
+
+    data_source = relationship("DataSource")
+    timetables = relationship("Timetable", back_populates="timetable_data_source")
 
 
 class Region(Base):
@@ -705,8 +716,8 @@ class Service(Base):
 
     operator = relationship("Operator", back_populates="services")
     data_source = relationship("DataSource", back_populates="services")
-    routes = relationship(
-        "Route",
+    timetables = relationship(
+        "Timetable",
         back_populates="service",
     )
     stops = relationship(
@@ -784,17 +795,24 @@ class Service(Base):
         return service_id
 
 
-class Route(Base):
+class Timetable(Base):
     """
-    The timetable level of a bus route, associated with one service. contains information about the bus route itself, being stuff that can change.
+    The timetable level of a bus route, associated with one service. contains information about the bus timetable itself, being stuff that can change.
     """
 
-    __tablename__ = "route"
+    __tablename__ = "timetable"
     id = Column(Integer, primary_key=True, autoincrement=True)
     service_id = Column(Integer, nullable=False, index=True)
     line_id = Column(String, nullable=True)
     data_source_id = Column(
-        Integer, ForeignKey("data_source.id", ondelete="SET NULL"), nullable=True
+        Integer,
+        ForeignKey("data_source.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    timetable_data_source_id = Column(
+        Integer,
+        ForeignKey("timetable_data_source.id", ondelete="SET NULL"),
+        nullable=True,
     )
     bt_service_id = Column(Integer, nullable=True, index=True)
 
@@ -820,12 +838,15 @@ class Route(Base):
     public_use = Column(Boolean, nullable=False, default=True)
     operator_noc = Column(String, ForeignKey("operator.noc"), nullable=True)
 
-    service = relationship("Service", back_populates="routes")
-    operator = relationship("Operator", back_populates="services")
-    data_source = relationship("DataSource", back_populates="services")
+    service = relationship("Service", back_populates="timetable")
+    operator = relationship("Operator", back_populates="timetables")
+    data_source = relationship("DataSource", back_populates="timetables")
+    timetable_data_source = relationship(
+        "TimetableDataSource", back_populates="timetables"
+    )
     journeys = relationship(
         "Journey",
-        back_populates="service",
+        back_populates="timetable",
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
@@ -839,7 +860,7 @@ class Route(Base):
             "data_source_id",
             name="uq_service_revision",
         ),
-        Index("ix_route_service_line_name", "service_id", "line_name"),
+        Index("ix_timetable_service_line_name", "service_id", "line_name"),
     )
 
 
