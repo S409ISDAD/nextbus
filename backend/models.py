@@ -704,7 +704,7 @@ class CalendarException(Base):
     calendar = relationship("Calendar", back_populates="calendar_exceptions")
 
 
-class Service(Base):
+class Service(Base, AutoSlugMixin):
     """
     The top level representation of a bus service, containing all the generic information. can have multiple route objects, being timetable revisions
     """
@@ -723,7 +723,7 @@ class Service(Base):
     geometry = Column(
         Geometry(geometry_type="MULTILINESTRING", srid=4326), nullable=True
     )
-    slug = AutoSlug(source="get_full_name", max_length=100, unique=True, nullable=False)
+    # slug = AutoSlug(source="get_full_name", max_length=100, unique=True, nullable=False)
 
     operator_noc = Column(String, ForeignKey("operator.noc"), nullable=True)
     public_use = Column(Boolean, nullable=False, default=True)

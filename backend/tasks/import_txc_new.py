@@ -17,7 +17,7 @@ from sqlalchemy_searchable import sync_trigger
 
 from titlecase import titlecase
 
-from backend.config import setup_logging
+from backend.config import get_logger, setup_logging
 from backend.db.db import SessionLocal, engine
 from backend.deps import LONDON, STATIC_DATA_DIR
 from backend.models import (
@@ -39,14 +39,11 @@ from backend.models import (
 from backend.transxchange import txc
 from backend.utils.bulk_upsert import bulk_upsert
 from backend.utils.download_if_modified import download_if_modified
-import logging
 
 from backend.utils.time import to_datetime
 from backend.utils.time_taken import time_taken
-from sqlalchemy import or_, exists
-from sqlalchemy.orm import aliased
 
-log = logging.getLogger(__name__)
+log = get_logger()
 
 
 async def import_datasource(id, folder: Path):

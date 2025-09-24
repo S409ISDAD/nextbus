@@ -3,7 +3,7 @@ import xml.etree.ElementTree as ET
 
 from sqlalchemy_searchable import sync_trigger
 
-from backend.config import setup_logging
+from backend.config import get_logger, setup_logging
 from backend.db.db import SessionLocal, engine
 from backend.deps import STATIC_DATA_DIR
 from backend.models import AdminArea, District, Locality, Region
@@ -12,7 +12,7 @@ from backend.utils.location import generate_point
 from backend.utils.time import to_datetime
 import logging
 
-log = logging.getLogger(__name__)
+log = get_logger()
 
 
 def handle_region(element: ET.Element):
