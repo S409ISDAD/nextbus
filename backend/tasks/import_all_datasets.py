@@ -5,7 +5,7 @@ from backend.db.db import SessionLocal
 from backend.deps import STATIC_DATA_DIR
 from backend.models import DataSource
 from backend.tasks import import_nptg, import_naptan, import_holidays
-from backend.tasks.import_txc import import_datasource
+from backend.tasks.import_txc_new import import_datasource
 
 log = get_logger(__name__)
 

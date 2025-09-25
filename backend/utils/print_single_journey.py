@@ -21,21 +21,21 @@ def print_journey(journey_id: str, db: Session):
     for st in stop_times:
         stop = st.stop.long_name
         dest = st.headsign
-        dep_str = st.departure_time_str
+        dep_str = st.departure_time_str or st.arrival_time_str
         stops.append((stop, dest, dep_str))
 
     print(
         f"{journey.start_time} to {journey.headsign} ({journey.vehicle_journey_code}):"
     )
 
-    longest_stop_name = max(len(f"  {stop[0] + ' - ' + stop[2]}") for stop in stops)
+    longest_stop_name = max(len(stop[0]) for stop in stops)
 
     for stop in stops:
-        print(f"  {stop[0] + ' - ' + stop[2]:<{longest_stop_name}} ({stop[1]})")
+        print(f"  {stop[2]} - {stop[0]:<{longest_stop_name}}  ({stop[1]})")
 
 
 if __name__ == "__main__":
     setup_logging()
-    journey_id = "PH0005857:167:67:VJ98"
+    journey_id = "702"
     with SessionLocal() as db:
         print_journey(journey_id, db)

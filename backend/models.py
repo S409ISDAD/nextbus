@@ -27,13 +27,13 @@ from sqlalchemy_searchable import make_searchable
 from sqlalchemy_utils.types import TSVectorType
 
 from backend.autoslug import AutoSlug, AutoSlugMixin
-from backend.config import API_BASE
+from backend.config import API_BASE, get_logger
 from backend.db.db import SessionLocal
 from backend.deps import LONDON
 from backend.utils.fetch_json import fetch_json
 import logging
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 Base = declarative_base()
 make_searchable(Base.metadata)
@@ -292,7 +292,7 @@ class Locality(Base, AutoSlugMixin):
             return f"{self.name}, {self.qualifier_name}"
         return self.name
 
-    def lines_served(self):
+    def services_served(self):
         with SessionLocal() as db:
             lines: list["Service"] | list[None] = (
                 db.query(Service)
@@ -464,12 +464,12 @@ class Stop(Base):
         stop_times = (
             db.query(StopTime)
             .filter(StopTime.stop_id == self.atco_code)
-            .filter(StopTime.pick_up == True)
+            .filter(StopTime.pick_up)
             .join(Journey)
             .join(Calendar)
             .options(
                 joinedload(StopTime.journey).joinedload(Journey.calendar),
-                joinedload(StopTime.journey).joinedload(Journey.service),
+                joinedload(StopTime.journey).joinedload(Journey.timetable),
             )
             .all()
         )
@@ -680,7 +680,7 @@ class Calendar(Base):
 
         # check bank holidays
         for link in self.calendar_bank_holiday:
-            bh = link.bank_holiday
+            bh = link.bh
             for bh_date in bh.dates:
                 if bh_date.date == date:
                     log.debug(f"Bank holiday valid, and operating={link.operating}")
@@ -787,6 +787,25 @@ class Service(Base, AutoSlugMixin):
     def get_full_name(self):
         return f"{self.line_name} {self.description}".strip()
 
+    def with_timetable(self):
+        timetable = self.timetables[0] if self.timetables else None
+        if timetable:
+            return {
+                "service_id": self.id,
+                "line_name": timetable.line_name,
+                "inbound_description": timetable.inbound_description,
+                "outbound_description": timetable.outbound_description,
+                "geometry": None,
+                "bt_service_id": self.bt_service_id,
+                "service_code": self.service_code,
+                "description": self.description,
+                "origin": timetable.origin,
+                "destination": timetable.destination,
+                "vias": timetable.vias,
+                "operator_noc": self.operator.noc,
+                "operator": self.operator.name,
+            }
+
     def get_dest_localities(self):
         with SessionLocal() as db:
             localities = (
@@ -817,13 +836,10 @@ class Service(Base, AutoSlugMixin):
         if self.bt_service_id is not None:
             return self.bt_service_id
 
-        noc = self.operator_noc or ""
-        line_name = self.line_name
-        origin = self.origin
-        destination = self.destination
+        noc = self.operator.noc or ""
 
         results = await fetch_json(
-            f"{API_BASE}/services/?operator={noc}&search={' '.join([str(line_name), str(origin), str(destination)])}"
+            f"{API_BASE}/services/?operator={noc}&search={self.description.replace('-', ' ')}"
         )
 
         if not results or "results" not in results or len(results["results"]) != 1:
@@ -1146,55 +1162,64 @@ class StopTime(Base):
 
     @property
     def headsign(self):
-        # return self.journey.destination.locality.name#
+        try:
+            # return self.journey.destination.locality.name#
 
-        is_outbound = self.journey.direction == DirectionType.outbound
+            is_outbound = self.journey.inbound is False
 
-        main_dest = (
-            self.journey.service.destination
-            if is_outbound
-            else self.journey.service.origin
-        )
-
-        line_dest = (
-            self.journey.service.outbound_description
-            if is_outbound
-            else self.journey.service.inbound_description
-        )
-
-        vias = self.journey.service.vias or ""
-
-        raw_headsign = self.dest_display or self.journey.headsign
-        fallback_headsign = main_dest
-
-        do_makeshift = False
-
-        show_headsign = False
-        if raw_headsign:
-            short_enough = len(raw_headsign) < 25
-            overlaps = any(
-                word in raw_headsign.split()
-                for word in (main_dest.split() + line_dest.split() + vias.split(", "))
+            main_dest = (
+                self.journey.timetable.destination
+                if is_outbound
+                else self.journey.timetable.origin
             )
-            show_headsign = short_enough and overlaps
-        if do_makeshift:
-            if show_headsign:
-                final = raw_headsign
-            else:
-                makeshift = (
-                    f"{main_dest} {raw_headsign}" if raw_headsign else fallback_headsign
-                )
-                log.debug("using makeshift headsign", makeshift)
-                final = makeshift
-        else:
-            if show_headsign:
-                final = raw_headsign
-            else:
-                final = fallback_headsign
-        if self.journey.destination and self.journey.destination.locality:
-            return final or self.journey.destination.locality.name
 
-        return final or fallback_headsign
+            line_dest = (
+                self.journey.timetable.outbound_description
+                if is_outbound
+                else self.journey.timetable.inbound_description
+            )
+
+            vias = self.journey.timetable.vias or ""
+
+            raw_headsign = self.dest_display or self.journey.headsign
+            fallback_headsign = main_dest
+
+            do_makeshift = False
+
+            show_headsign = False
+            if raw_headsign:
+                short_enough = len(raw_headsign) < 25
+                overlaps = any(
+                    word in raw_headsign.split()
+                    for word in (
+                        main_dest.split() + line_dest.split() + vias.split(", ")
+                    )
+                )
+                show_headsign = short_enough and overlaps
+            if do_makeshift:
+                if show_headsign:
+                    final = raw_headsign
+                else:
+                    makeshift = (
+                        f"{main_dest} {raw_headsign}"
+                        if raw_headsign
+                        else fallback_headsign
+                    )
+                    log.debug("using makeshift headsign", makeshift)
+                    final = makeshift
+            else:
+                if show_headsign:
+                    final = raw_headsign
+                else:
+                    final = fallback_headsign
+
+            if self.journey.destination and self.journey.destination.locality:
+                return final or self.journey.destination.locality.name
+
+            return final or fallback_headsign
+        except Exception as e:
+            log.error(f"Error getting headsign for stoptime {self.id}: {e}")
+            return None
 
     @property
     def departure_time_str(self):

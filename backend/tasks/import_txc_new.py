@@ -616,6 +616,8 @@ class TXCImporter:
             journey_id=journey.id,
             stop_sequence=cell.stopusage.sequence_number,
             dest_display=cell.stopusage.dynamic_destination_display,
+            drop_off=True,
+            pick_up=True,
         )
 
         match cell.activity:

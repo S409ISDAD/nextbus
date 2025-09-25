@@ -19,7 +19,7 @@ async def localities(
         if not locality:
             raise HTTPException(404, detail="Locality not found")
 
-        lines = locality.lines_served()
+        lines = locality.services_served()
         stops = locality.stops
 
         for line in lines:

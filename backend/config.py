@@ -36,36 +36,37 @@ LOGGING_CONFIG = {
             "backupCount": 5,
         },
     },
-    "root": {
-        "handlers": ["console"],
-        "level": "DEBUG",
-    },
-    "__main__": {
-        "handlers": ["console", "file"],
-        "level": "DEBUG",
-        "propagate": False,
-    },
     "loggers": {
         "backend": {
             "handlers": ["console", "file"],
             "level": "DEBUG",  # adjust per env
             "propagate": False,
         },
-        "uvicorn": {
-            "handlers": ["console"],
-            "level": "INFO",
+        "apscheduler": {
+            "handlers": ["file"],
+            "level": "DEBUG",
             "propagate": False,
         },
-        "uvicorn.error": {
-            "handlers": ["console"],
-            "level": "INFO",
+        "watchfiles": {
+            "handlers": ["file"],
+            "level": "DEBUG",
             "propagate": False,
         },
-        "uvicorn.access": {
-            "handlers": ["console"],
-            "level": "INFO",
-            "propagate": False,
-        },
+        # "uvicorn": {
+        #     "handlers": ["console"],
+        #     "level": "INFO",
+        #     "propagate": False,
+        # },
+        # "uvicorn.error": {
+        #     "handlers": ["console"],
+        #     "level": "INFO",
+        #     "propagate": False,
+        # },
+        # "uvicorn.access": {
+        #     "handlers": ["console"],
+        #     "level": "INFO",
+        #     "propagate": False,
+        # },
     },
 }
 

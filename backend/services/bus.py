@@ -203,7 +203,10 @@ async def build_scheduled_db(
             db.query(StopTime)
             .filter(StopTime.journey_id == journey_id, StopTime.stop_id == stop_id)
             .options(
-                joinedload(StopTime.journey).joinedload(Journey.service),
+                joinedload(StopTime.journey).joinedload(Journey.timetable),
+                joinedload(StopTime.journey)
+                .joinedload(Journey.service)
+                .joinedload(Service.operator),
                 joinedload(StopTime.journey)
                 .joinedload(Journey.destination)
                 .joinedload(Stop.locality),
@@ -246,6 +249,7 @@ async def build_scheduled_db(
         prev_journey = stop_time.journey.get_previous_journey(db, today.date())
 
         if not prev_journey:
+            log.info("No previous journey")
             return scheduled_bus
 
         layover_time = (
@@ -310,7 +314,7 @@ async def build_scheduled_db(
 
 
 async def build_bus_candidates(
-    buses: list[dict], r: Redis, stop_id: str, journey_id: str | None = None
+    buses: list[dict], r: Redis, stop_id: str, journey_id: int | None = None
 ) -> TrackedBus | None:
     results = await asyncio.gather(
         *[
@@ -338,7 +342,7 @@ async def build_bus(
     bus_id: int,
     r: Redis,
     stop_id: str = "",
-    journey_id: str | None = None,
+    journey_id: int | None = None,
     get_journey: bool = True,
 ) -> TrackedBus | None:
     this_bus = await fetch_bus(bus_id, r)
@@ -356,7 +360,10 @@ async def build_bus(
                 db.query(StopTime)
                 .filter(StopTime.journey_id == journey_id, StopTime.stop_id == stop_id)
                 .options(
-                    joinedload(StopTime.journey).joinedload(Journey.service),
+                    joinedload(StopTime.journey).joinedload(Journey.timetable),
+                    joinedload(StopTime.journey)
+                    .joinedload(Journey.service)
+                    .joinedload(Service.operator),
                     joinedload(StopTime.journey)
                     .joinedload(Journey.destination)
                     .joinedload(Stop.locality),
