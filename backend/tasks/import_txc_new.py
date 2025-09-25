@@ -180,7 +180,7 @@ class TXCOperator:
 
     @property
     def name(self):
-        return self.name_on_licence or self.trading_name or self.operator_short_name
+        return self.trading_name or self.name_on_licence or self.operator_short_name
 
     def __str__(self):
         return self.noc if self.noc else self.operator_code
