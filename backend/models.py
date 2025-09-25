@@ -740,7 +740,7 @@ class Service(Base, AutoSlugMixin):
     )
     # slug = AutoSlug(source="get_full_name", max_length=100, unique=True, nullable=False)
 
-    public_use = Column(Boolean, nullable=False, default=True)
+    public_use = Column(Boolean)
     current = Column(Boolean, nullable=False, default=True, index=True)
     geometry = Column(
         Geometry(geometry_type="MULTILINESTRING", srid=4326), nullable=True

@@ -37,6 +37,7 @@ from backend.models import (
     ServiceStopUsage,
     TimetableDataSource,
 )
+from backend.tasks.import_naptan import get_stop
 from backend.transxchange import txc
 from backend.utils.bulk_upsert import bulk_upsert
 from backend.utils.download_if_modified import download_if_modified
@@ -181,6 +182,18 @@ class TXCOperator:
     @property
     def name(self):
         return self.trading_name or self.name_on_licence or self.operator_short_name
+
+    def get_noc(self):
+        """
+        override certain nocs to match the ones on bustimes.org, as some are incorrect
+        """
+        match self.noc or self.operator_code:
+            case "BH":
+                return "BHBC"
+            case "MB":
+                return "METR"
+            case _:
+                return self.noc or self.operator_code
 
     def __str__(self):
         return self.noc if self.noc else self.operator_code
@@ -804,7 +817,9 @@ class TXCImporter:
             skip_journeys = True
 
         description = get_description(txc_service)
-        log.debug(f"{txc_service.lines[0].line_name} | {description}")
+        log.debug(
+            f"{txc_service.lines[0].line_name} ({txc_service.lines[0].line_brand or txc_service.lines[0].marketing_name}) | {description}"
+        )
 
         if description == "Origin - Destination":
             description = ""
@@ -983,6 +998,9 @@ class TXCImporter:
                 service_code=txc_service.service_code,
             )
 
+            if line_brand:
+                timetable.line_brand = line_brand
+
             for desc in (timetable.outbound_description, timetable.inbound_description):
                 if len(desc) > 255:
                     log.warning(
@@ -1144,6 +1162,8 @@ class TXCImporter:
                 to_stop = self.stops.get(link.to_stop)
 
                 if type(from_stop) is Stop and type(to_stop) is Stop:
+                    start = Point([link.track[0].longitude, link.track[0].latitude])
+                    end = Point([link.track[-1].longitude, link.track[-1].latitude])
                     track = [
                         Point([coord.longitude, coord.latitude]) for coord in link.track
                     ]
@@ -1162,6 +1182,14 @@ class TXCImporter:
                         "distance": link.distance,
                         "timetable_id": timetable_id,
                     }
+
+                    if from_stop.point == None:
+                        from_stop.point = from_shape(start, srid=srid)
+                        self.db.merge(from_stop)
+                    if to_stop.point == None:
+                        to_stop.point = from_shape(end, srid=srid)
+                        self.db.merge(to_stop)
+                    self.db.flush()
 
                 else:
                     log.warning(
@@ -1186,9 +1214,46 @@ class TXCImporter:
             .all()
         )
 
-        # TODO: Handle missing stops
-
         self.stops = {stop.atco_code: stop for stop in stops}
+
+        stops_to_add = {}
+
+        for atco_code, stop in txc_stops.items():
+            atco_code_upper = atco_code.upper()
+            if atco_code_upper not in self.stops.keys():
+                stoppoint = get_stop(stop.element, atco_code_upper)
+                stoppoint["common_name"] = str(stop)
+                stoppoint["timing_status"] = ""
+                stoppoint["stop_type"] = ""
+                stoppoint["bus_stop_type"] = ""
+                stops_to_add[atco_code_upper] = stoppoint
+
+        if stops_to_add:
+            log.debug(f"Adding {len(stops_to_add)} new stops")
+            bulk_upsert(
+                self.db,
+                Stop,
+                list(stops_to_add.values()),
+                ["atco_code"],
+                [
+                    "common_name",
+                ],
+            )
+
+            self.db.flush()
+
+            new_stops = (
+                self.db.query(Stop)
+                .filter(
+                    func.upper(Stop.atco_code).in_(
+                        [s.upper() for s in stops_to_add.keys()]
+                    )
+                )
+                .all()
+            )
+
+            for stop in new_stops:
+                self.stops[stop.atco_code] = stop
 
     async def handle_txc_file(self, file: Path):
         start = time.time()
@@ -1213,7 +1278,7 @@ class TXCImporter:
 
             for op in self.txc_data.operators:
                 txc_operator = TXCOperator(op)
-                noc = txc_operator.noc or txc_operator.operator_code
+                noc = txc_operator.get_noc()
                 db_operator = self.db.query(Operator).filter_by(noc=noc).first()
                 if not db_operator:
                     operator = Operator(noc=noc, name=txc_operator.name)
