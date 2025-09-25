@@ -326,6 +326,7 @@ class TXCImporter:
         self.map = {}
         self.stops: dict[str, Stop] = {}
         self.file_count = 0
+        self.operator_updated = False
 
     async def import_folder(self):
         with time_taken("Generating TXC map"):
@@ -1220,6 +1221,11 @@ class TXCImporter:
                     db_operator = operator
 
                     self.db.add(operator)
+                else:
+                    if not self.operator_updated:
+                        db_operator.name = txc_operator.name
+
+                self.operator_updated = True
 
                 self.operators[txc_operator.id] = db_operator
 
