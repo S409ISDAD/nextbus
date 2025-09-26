@@ -21,7 +21,7 @@ from sqlalchemy import (
     text,
 )
 from sqlalchemy.ext.associationproxy import association_proxy
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import relationship, Session, joinedload, deferred, aliased
 from sqlalchemy_searchable import make_searchable
 from sqlalchemy_utils.types import TSVectorType
@@ -722,6 +722,7 @@ class Service(Base, AutoSlugMixin):
     line_name = Column(String, nullable=False)
     line_brand = Column(String, nullable=True)
     description = Column(String)
+    vias = Column(String, nullable=True)
     geometry = Column(
         Geometry(geometry_type="MULTILINESTRING", srid=4326), nullable=True
     )
@@ -761,10 +762,12 @@ class Service(Base, AutoSlugMixin):
                 "line_name",
                 "line_brand",
                 "description",
+                "vias",
                 weights={
                     "line_name": "A",
                     "description": "A",
                     "line_brand": "B",
+                    "vias": "B",
                 },
             )
         )

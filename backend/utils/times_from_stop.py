@@ -8,6 +8,7 @@ from backend.deps import LONDON
 from backend.models import (
     Stop,
 )
+import sys
 
 log = get_logger()
 
@@ -63,6 +64,9 @@ def times_from_stop(stop_id: str, db: Session, limit: int = 10):
 
 if __name__ == "__main__":
     setup_logging()
-    stop_id = "1900HA110364"
+    if len(sys.argv) != 2:
+        log.debug("Usage: python times_from_stop.py <stop_id>")
+        exit(1)
+    stop_id = sys.argv[1]
     with SessionLocal() as db:
         times_from_stop(stop_id, db)

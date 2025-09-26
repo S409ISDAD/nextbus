@@ -164,6 +164,7 @@ async def import_txc_zip(zip_path, ds_id=None, skip_checks=False):
                     "line_name",
                     "line_brand",
                     "description",
+                    "vias",
                 ],
             )
             sync_trigger(
@@ -237,6 +238,7 @@ def get_description(txc_service: txc.Service):
     """
     Generate a valid description for a service.
     from bustimes.org's import_transxchange.py
+    modified to remove the via text, as it is shown elsewhere in the ui
     """
     description = txc_service.description
 
@@ -265,9 +267,9 @@ def get_description(txc_service: txc.Service):
                 if len(vias) == 1:
                     via = vias[0]
                     if "via " in via:
-                        return f"{description} {via}"
+                        return description
                     elif "," in via or " and " in via or "&" in via:
-                        return f"{description} via {via}"
+                        return description
                 description = " - ".join([origin] + vias + [destination])
     return description
 
@@ -1118,6 +1120,8 @@ class TXCImporter:
 
             if txc_service.vias:
                 timetable.vias = ", ".join(txc_service.vias)
+
+            service.vias = timetable.vias or None
 
             if existing_timetable:
                 timetable.id = existing_timetable.id

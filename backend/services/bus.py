@@ -503,6 +503,9 @@ async def build_bus(
 
     if db_stoptime:
         destination = db_stoptime.headsign or destination
+        log.info(service_info.line_name)
+        service_info.line_name = db_stoptime.journey.service.line_name
+        log.info(db_stoptime.journey.service.line_name)
 
     return TrackedBus(
         type="tracked",

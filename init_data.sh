@@ -1,1 +1,7 @@
-docker exec -it nextbus-app-2 python -m backend.tasks.import_naptan --no_update && docker exec -it nextbus-app-2 python -m backend.tasks.full_import
+python -m backend.tasks.import_holidays 
+
+python -m backend.tasks.import_nptg
+
+python -m backend.tasks.import_naptan --no_update 
+
+python -m backend.commands.setup_datasources

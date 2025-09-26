@@ -50,11 +50,10 @@ def sync_search_vectors():
             "service",
             "search_vector",
             [
+                "line_name",
+                "line_brand",
                 "description",
-                "origin",
-                "destination",
                 "vias",
-                "line_names",
             ],
         )
         sync_trigger(
@@ -62,16 +61,6 @@ def sync_search_vectors():
             "operator",
             "search_vector",
             ["name", "noc"],
-        )
-        sync_trigger(
-            conn,
-            "line",
-            "search_vector",
-            [
-                "line_name",
-                "inbound_description",
-                "outbound_description",
-            ],
         )
         sync_trigger(
             conn,

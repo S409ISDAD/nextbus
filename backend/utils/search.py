@@ -8,6 +8,7 @@ from sqlalchemy_searchable import search
 from backend.config import get_logger, setup_logging
 from backend.db.db import SessionLocal
 from backend.models import Service, Stop, Operator, Locality
+import sys
 
 log = get_logger()
 
@@ -16,17 +17,12 @@ def search_services(query, db: Session, limit: int = 10):
     results = []
 
     if len(query) <= 3:
-        service_query = (
-            db.query(Service)
-            .filter(
-                Service.line_name.ilike(f"%{query}%"),
-            )
-            .add_columns(
-                func.ts_rank_cd(
-                    Service.search_vector, func.websearch_to_tsquery(query)
-                ).label("rank")
-            )
-        )
+        service_query = select(
+            Service,
+            func.ts_rank_cd(
+                Service.search_vector, func.websearch_to_tsquery(query)
+            ).label("rank"),
+        ).where(Service.line_name.ilike(f"%{query}%"))
     else:
         service_query = search(
             select(Service),
@@ -43,7 +39,6 @@ def search_services(query, db: Session, limit: int = 10):
         if not rank:
             rank = 1.0
         data = service.with_timetable()
-        log.debug(f"Found service {service.id} with {data}")
         data["rank"] = rank
         results.append(data)
 
@@ -73,8 +68,7 @@ async def search_db(query: str, db: Session, limit: int = 20):
         results["localities"] = []
 
     services = search_services(query, db, limit)
-    services.extend(services)
-    service_ids.update([s["service_id"] for s in services])
+    service_ids.update(set([s["service_id"] for s in services]))
 
     services_served = set()
 
@@ -108,7 +102,10 @@ async def search_db(query: str, db: Session, limit: int = 20):
 
 if __name__ == "__main__":
     setup_logging()
-    search_query = "hant"
+    if len(sys.argv) > 1:
+        search_query = sys.argv[1]
+    else:
+        search_query = ""
     with SessionLocal() as db:
         results = asyncio.run(search_db(search_query, db))
         print(f"Search results for query '{search_query}':")
