@@ -53,6 +53,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_HOST: db
       BOT_TOKEN: ${BOT_TOKEN}
+      BODS_API_KEY: ${BODS_API_KEY}
       PYTHONUNBUFFERED: 1
       TZ: Europe/London
       ENV: production
@@ -91,6 +92,7 @@ services:
       POSTGRES_HOST: db
       BOT_TOKEN: ${BOT_TOKEN}
       BOT_DISABLED: ${BOT_DISABLED}
+      BODS_API_KEY: ${BODS_API_KEY}
       PYTHONUNBUFFERED: 1
       TZ: Europe/London
       ENV: production

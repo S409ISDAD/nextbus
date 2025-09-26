@@ -3,15 +3,20 @@ from logging.config import dictConfig
 import pathlib
 import sys
 from pydantic_settings import BaseSettings
+import os
+import dotenv
 
 BASE = "https://bustimes.org"
 VEHICLES_BASE = BASE + "/vehicles.json"
 STOPS_BASE = BASE + "/stops.json"
 API_BASE = BASE + "/api"
 
+dotenv.load_dotenv()
+
 
 class Config(BaseSettings):
     env: str = "development"
+    bods_api_key: str | None = os.getenv("BODS_API_KEY", None)
 
 
 config = Config()

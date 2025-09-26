@@ -184,6 +184,7 @@ class DataSource(Base):
     name = Column(String, nullable=False, unique=True)
     description = Column(String, nullable=True)
     url = Column(String, nullable=True, doc="URL for non-BODS like stagecoach")
+    bods_id = Column(Integer, nullable=True, doc="BODS dataset ID")
     search = Column(String, nullable=True, doc="Search term for BODS")
     last_modified = Column(DateTime(timezone=True), nullable=True)
 
@@ -195,20 +196,6 @@ class DataSource(Base):
         "Timetable",
         back_populates="data_source",
     )
-
-
-class TimetableDataSource(Base):
-    __tablename__ = "timetable_data_source"
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    filename = Column(String)
-    file_hash = Column(String, nullable=False, unique=True, index=True)
-    size_bytes = Column(Integer, nullable=True)
-    processed_at = Column(DateTime(timezone=True), nullable=True)
-    data_source_id = Column(Integer, ForeignKey("data_source.id"), nullable=True)
-
-    data_source = relationship("DataSource")
-    timetables = relationship("Timetable", back_populates="timetable_data_source")
 
 
 class Region(Base):
@@ -788,7 +775,7 @@ class Service(Base, AutoSlugMixin):
         return f"{self.line_name} {self.description}".strip()
 
     def with_timetable(self):
-        timetable = self.timetables[0] if self.timetables else None
+        timetable = next((tt for tt in self.timetables if tt.is_valid()), None)
         if timetable:
             return {
                 "service_id": self.id,
@@ -856,6 +843,51 @@ class Service(Base, AutoSlugMixin):
         return service_id
 
 
+class TimetableDataSource(Base):
+    __tablename__ = "timetable_data_source"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    filename = Column(String)
+    file_hash = Column(String, nullable=False, unique=True, index=True)
+    size_bytes = Column(Integer, nullable=True)
+    processed_at = Column(DateTime(timezone=True), nullable=True)
+    data_source_id = Column(Integer, ForeignKey("data_source.id"), nullable=True)
+
+    data_source = relationship("DataSource")
+    timetables = relationship(
+        "Timetable",
+        back_populates="timetable_data_sources",
+        secondary="timetable_tt_data_source_link",
+        passive_deletes=True,
+    )
+
+
+class TimetableToTTDataSource(Base):
+    """
+    Many-to-many relationship between Timetable and TimetableDataSource
+    """
+
+    __tablename__ = "timetable_tt_data_source_link"
+    timetable_id = Column(
+        Integer,
+        ForeignKey("timetable.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    tt_data_source_id = Column(
+        Integer,
+        ForeignKey("timetable_data_source.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    __table_args__ = (
+        PrimaryKeyConstraint(
+            "timetable_id", "tt_data_source_id", name="pk_timetable_data_source_link"
+        ),
+    )
+
+
 class Timetable(Base):
     """
     The timetable level of a bus route, associated with one service. contains information about the bus timetable itself, being stuff that can change.
@@ -869,11 +901,6 @@ class Timetable(Base):
     data_source_id = Column(
         Integer,
         ForeignKey("data_source.id", ondelete="SET NULL"),
-        nullable=True,
-    )
-    timetable_data_source_id = Column(
-        Integer,
-        ForeignKey("timetable_data_source.id", ondelete="SET NULL"),
         nullable=True,
     )
     bt_service_id = Column(Integer, nullable=True, index=True)
@@ -899,13 +926,16 @@ class Timetable(Base):
         Geometry(geometry_type="MULTILINESTRING", srid=4326), nullable=True
     )
 
-    public_use = Column(Boolean, nullable=False, default=True)
+    public_use = Column(Boolean)
 
     service = relationship("Service", back_populates="timetables")
     operator = relationship("Operator")
     data_source = relationship("DataSource", back_populates="timetables")
-    timetable_data_source = relationship(
-        "TimetableDataSource", back_populates="timetables"
+    timetable_data_sources = relationship(
+        "TimetableDataSource",
+        back_populates="timetables",
+        secondary="timetable_tt_data_source_link",
+        passive_deletes=True,
     )
     journeys = relationship(
         "Journey",
@@ -925,6 +955,22 @@ class Timetable(Base):
         if self.end_date == date(9999, 12, 31):
             return None
         return self.end_date
+
+    def is_valid(self, date: date | None = None) -> bool:
+        """
+        checks if the timetable is valid on the given date / today.
+        """
+
+        if not date:
+            date = datetime.now(tz=LONDON).date()
+
+        if not (
+            self.start_date <= date
+            and (self.actual_end_date is None or self.actual_end_date >= date)
+        ):  # type: ignore
+            return False
+
+        return True
 
     __table_args__ = (
         Index(

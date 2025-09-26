@@ -37,7 +37,7 @@ async def stats(redis=Depends(get_redis)):
 @router.get("/db")
 async def db_stats(request: Request, db=Depends(get_db), redis=Depends(get_redis)):
     async def get_stats(db):
-        total_services = db.query(Service).count()
+        total_services = db.query(Service).filter(Service.current).count()
         total_stops = db.query(Stop).filter(Stop.active == True).count()
         total_operators = db.query(Operator).count()
         return {
@@ -51,7 +51,7 @@ async def db_stats(request: Request, db=Depends(get_db), redis=Depends(get_redis
             "db_stats",
             get_stats,
             (db,),
-            300,  # 5 minutes
+            1,  # 5 minutes
             redis,
         )
         return cached_stats

@@ -130,7 +130,7 @@ def get_stop_area(element: ET.Element):
         try:
             stop_area_type = StopAreaTypeEnum(element.findtext("StopAreaType"))
         except Exception as e:
-            log.debug(f"an error occurred parsing stop area type: {e}")
+            log.warning(f"an error occurred parsing stop area type: {e}")
             stop_area_type = None
 
         return {
@@ -313,9 +313,9 @@ def import_naptan_data(file_path: Path, no_update=False):
                 )
             log.debug("Import complete.")
         except Exception as e:
-            log.debug("An error occurred during NaPTAN import:")
+            log.error("An error occurred during NaPTAN import:")
             error_str = e.__str__()
-            log.debug(error_str[:1000])
+            log.error(error_str[:1000])
             # log.debug(error_str)
             db.rollback()
 

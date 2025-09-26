@@ -1,3 +1,4 @@
+import argparse
 import asyncio
 import gc
 from hashlib import sha256
@@ -36,6 +37,7 @@ from backend.models import (
     RouteLink,
     ServiceStopUsage,
     TimetableDataSource,
+    TimetableToTTDataSource,
 )
 from backend.tasks.import_naptan import get_stop
 from backend.transxchange import txc
@@ -62,7 +64,7 @@ async def import_datasource(id, folder: Path):
             return
 
         logs[datetime.now(tz=LONDON)] = (
-            f"Trying to import data source {name} from {datasource.url}"
+            f"Trying to import data source {name} from {datasource.url or datasource.bods_id}"
         )
 
         path = download_if_modified(datasource, folder / f"txc_source_{id}.zip")
@@ -71,10 +73,15 @@ async def import_datasource(id, folder: Path):
         logs[datetime.now(tz=LONDON)] = f"Importing data from {path}..."
         log.debug(f"Importing data from {path}")
 
-        await import_txc_zip(folder / f"txc_source_{id}.zip", id)
+        duration = await import_txc_zip(folder / f"txc_source_{id}.zip", id)
 
-        logs[datetime.now(tz=LONDON)] = f"Import completed for data source {name}"
-        log.debug(f"Import completed for data source {name}")
+        logs[datetime.now(tz=LONDON)] = f"Import completed for data source {name}" + (
+            f" in {duration}" if duration else ""
+        )
+        log.debug(
+            f"Import completed for data source {name}"
+            + (f" in {duration}" if duration else "")
+        )
 
     else:
         logs[datetime.now(tz=LONDON)] = f"No updates for data source {name}"
@@ -91,11 +98,12 @@ async def import_datasource(id, folder: Path):
             f.write(f"{ts.strftime('%d/%m/%Y, %H:%M:%S')} - {txc_log}\n")
 
 
-async def import_txc_zip(zip_path, ds_id=None):
+async def import_txc_zip(zip_path, ds_id=None, skip_checks=False):
     start = time.time()
     zip_path = Path(zip_path).resolve()
     extract_dir = zip_path.parent / f"txc_extract_{ds_id or 'zip'}"
     extract_dir.mkdir(parents=True, exist_ok=True)
+    txc_importer = None
     try:
         with zipfile.ZipFile(zip_path, "r") as zf:
             xml_files = [f for f in zf.namelist() if f.endswith(".xml")]
@@ -106,7 +114,9 @@ async def import_txc_zip(zip_path, ds_id=None):
                     f_out.write(xml_file.read())
 
             log.debug(f"Extracted {len(xml_files)} XML files to {extract_dir}")
-            txc_importer = TXCImporter(extract_dir, ds_id=ds_id)
+            txc_importer = TXCImporter(
+                extract_dir, ds_id=ds_id, skip_checks=skip_checks
+            )
             await txc_importer.import_folder()
     finally:
         end = time.time()
@@ -123,6 +133,14 @@ async def import_txc_zip(zip_path, ds_id=None):
         else:
             duration = f"{int(time_taken)}s"
         log.debug(f"Total TXC Import completed in {duration}")
+        if txc_importer:
+            stats = txc_importer.stats
+            del txc_importer
+            gc.collect()
+
+            for k, v in stats.__dict__.items():
+                log.debug(f"{k}: {v}")
+
         if extract_dir.exists():
             try:
                 for file in extract_dir.iterdir():
@@ -154,6 +172,8 @@ async def import_txc_zip(zip_path, ds_id=None):
                 "search_vector",
                 ["name", "noc"],
             )
+        return duration
+    return None
 
 
 # def import_txc_zip(zip_path):
@@ -323,13 +343,30 @@ class TransXChangeMeta:
             self.attributes = last_elem.attrib
 
 
+class Statistics:
+    def __init__(self):
+        self.services_created = 0
+        self.services_updated = 0
+        self.services_deactivated = 0
+        self.timetables_created = 0
+        self.timetables_updated = 0
+        self.timetables_skipped = 0
+        self.timetables_deleted = 0
+        self.files_skipped = 0
+        self.journeys_created = 0
+        self.stop_times_created = 0
+        self.stops_created = 0
+        self.stops_updated = 0
+
+
 class TXCImporter:
-    def __init__(self, folder: Path, ds_id=None):
+    def __init__(self, folder: Path, ds_id=None, skip_checks=False):
         self.txc_data = None
         self.folder = folder
         self.filename = None
         self.file_hash = None
         self.file_size_bytes = None
+        self.skip_checks = skip_checks
         self.db = SessionLocal()
         self.today = datetime.now(tz=LONDON)
         self.operators: dict[int, Operator] = {}
@@ -337,9 +374,16 @@ class TXCImporter:
         self.ds_id = ds_id
         self.tds_id = None
         self.map = {}
+        self.files_in_revision = 0
+        self.file_idx_in_revision = 0
         self.stops: dict[str, Stop] = {}
         self.file_count = 0
         self.operator_updated = False
+        self.stats = Statistics()
+
+    @property
+    def is_repeat_revision(self):
+        return self.files_in_revision > 1 and self.file_idx_in_revision != 0
 
     async def import_folder(self):
         with time_taken("Generating TXC map"):
@@ -373,15 +417,18 @@ class TXCImporter:
             self.clear_old_data(service_id)
 
             for revision in self.map[service_id]:
+                self.files_in_revision = len(self.map[service_id][revision])
+                self.file_idx_in_revision = 0
                 for file in self.map[service_id][revision]:
                     log.debug(
                         f"Importing {file} ({idx + 1}/{self.file_count}, {round(((idx + 1) / self.file_count) * 100, 2)}%)"
                     )
+                    self.file_idx_in_revision += 1
                     await self.handle_txc_file(Path(file))
                     idx += 1
 
     def clear_old_data(self, service_code):
-        routes_to_go = (
+        timetables_to_go = (
             self.db.query(Timetable)
             .filter(
                 Timetable.service_code == service_code,
@@ -392,10 +439,11 @@ class TXCImporter:
             )
             .all()
         )
-        if routes_to_go:
-            log.info(f"Deleting {len(routes_to_go)} stale routes...")
-            for route in routes_to_go:
-                self.db.delete(route)
+        if timetables_to_go:
+            log.info(f"Deleting {len(timetables_to_go)} stale timetables...")
+            self.stats.timetables_deleted += len(timetables_to_go)
+            for timetable in timetables_to_go:
+                self.db.delete(timetable)
             self.db.commit()
         else:
             log.debug("No old timetables to clear.")
@@ -414,6 +462,7 @@ class TXCImporter:
         )
         if services_to_go.count() > 0:
             log.info(f"deactivating {services_to_go.count()} services...")
+            self.stats.services_deactivated += services_to_go.count()
             for service in services_to_go:
                 service.current = False
                 self.db.add(service)
@@ -424,14 +473,9 @@ class TXCImporter:
         timetable_ds_to_go = (
             self.db.query(TimetableDataSource)
             .filter_by(data_source_id=self.ds_id)
-            .filter(
-                ~self.db.query(Timetable)  # ~ = not
-                .filter(
-                    Timetable.timetable_data_source_id == TimetableDataSource.id,
-                )
-                .exists()
-            )
+            .filter(~TimetableDataSource.timetables.any())
         )
+
         if timetable_ds_to_go.count() > 0:
             log.info(f"deleting {timetable_ds_to_go.count()} tds...")
             for tds in timetable_ds_to_go:
@@ -679,18 +723,20 @@ class TXCImporter:
         stop_times_to_add = []
         journeys_to_add = []
 
-        log.debug("Clearing existing journeys...")
+        if not self.is_repeat_revision:
+            # only clear journeys if this is the first file in a revision with multiple files OR if there's only one file
+            log.debug("Clearing existing journeys...")
 
-        delete_stmt = Journey.__table__.delete().where(
-            Journey.timetable_id == timetable.id,
-        )
-        self.db.execute(delete_stmt)
+            delete_stmt = Journey.__table__.delete().where(
+                Journey.timetable_id == timetable.id,
+            )
+            self.db.execute(delete_stmt)
 
-        subq = select(Journey.calendar_id).distinct()
+            subq = select(Journey.calendar_id).distinct()
 
-        delete_stmt = Calendar.__table__.delete().where(~Calendar.id.in_(subq))
-        self.db.execute(delete_stmt)
-        self.db.flush()
+            delete_stmt = Calendar.__table__.delete().where(~Calendar.id.in_(subq))
+            self.db.execute(delete_stmt)
+            self.db.flush()
 
         for i, txc_journey in enumerate(journeys):
             if txc_journey.operating_profile:
@@ -741,6 +787,7 @@ class TXCImporter:
             journeys_to_add.append(journey)
 
         if journeys_to_add:
+            self.stats.journeys_created += len(journeys_to_add)
             self.db.bulk_save_objects(journeys_to_add)
 
             # journeys_to_add = [
@@ -783,6 +830,8 @@ class TXCImporter:
             #     for s in stop_times_to_add
             # ]
 
+            self.stats.stop_times_created += len(stop_times_to_add)
+
             self.db.bulk_save_objects(stop_times_to_add)
             # bulk_upsert(
             #     session=self.db,
@@ -816,10 +865,24 @@ class TXCImporter:
             )
             skip_journeys = True
 
+        all_lines_ended = True
+
+        for txc_line in txc_service.lines:
+            if not (
+                txc_service.operating_period.end
+                and txc_service.operating_period.end < self.today.date()
+            ):
+                all_lines_ended = False
+                break
+
+        if all_lines_ended:
+            log.debug(
+                f"Skipping file for {txc_service.service_code} as all its lines have ended"
+            )
+            self.stats.files_skipped += 1
+            return
+
         description = get_description(txc_service)
-        log.debug(
-            f"{txc_service.lines[0].line_name} ({txc_service.lines[0].line_brand or txc_service.lines[0].marketing_name}) | {description}"
-        )
 
         if description == "Origin - Destination":
             description = ""
@@ -854,8 +917,12 @@ class TXCImporter:
             self.db.add(timetable_datasource)
             self.db.flush()
         else:
-            log.info(f"No changes to timetable data source {self.filename}, skipping")
-            return
+            if not self.skip_checks:
+                log.info(
+                    f"No changes to timetable data source {self.filename}, skipping"
+                )
+                self.stats.files_skipped += 1
+                return
 
         routes = set()
 
@@ -885,6 +952,7 @@ class TXCImporter:
 
             if existing_service:
                 service = existing_service
+
             else:
                 service = Service(
                     line_name=txc_line.line_name,
@@ -892,6 +960,7 @@ class TXCImporter:
                     current=True,
                     data_source_id=self.ds_id,
                 )
+                self.stats.services_created += 1
 
             service.description = description
 
@@ -916,6 +985,10 @@ class TXCImporter:
             # end from
 
             line_brand = txc_line.line_brand or txc_line.marketing_name
+
+            log.debug(
+                f"{txc_line.line_name} {f'({line_brand}) ' if line_brand else ''}| {description}"
+            )
 
             # from bustimes.org's import_transxchange.py (modified)
             if line_brand:
@@ -969,20 +1042,27 @@ class TXCImporter:
                 log.debug(
                     f"New timetable: {self.txc_data.attributes['RevisionNumber']}"
                 )
-                if existing_timetable.revision_number == int(
-                    self.txc_data.attributes["RevisionNumber"]
+                if (
+                    existing_timetable.revision_number
+                    == int(self.txc_data.attributes["RevisionNumber"])
+                    and not self.skip_checks
+                    and not self.is_repeat_revision
                 ):
                     log.info(
                         f"No changes to timetable for service {service.service_code} on line {txc_line.line_name}, skipping"
                     )
+                    self.stats.timetables_skipped += 1
                     continue
+                else:
+                    self.stats.timetables_updated += 1
+            else:
+                self.stats.timetables_created += 1
 
             timetable = Timetable(
                 service_id=service.id,
                 line_id=txc_line.id,
                 operator_id=operator.id if operator else None,
                 data_source_id=self.ds_id,
-                timetable_data_source_id=timetable_datasource.id,
                 line_name=txc_line.line_name,
                 line_brand=line_brand,
                 outbound_description=txc_line.outbound_description or "",
@@ -997,6 +1077,9 @@ class TXCImporter:
                 public_use=service.public_use,
                 service_code=txc_service.service_code,
             )
+
+            if existing_service:
+                self.stats.services_updated += 1
 
             if line_brand:
                 timetable.line_brand = line_brand
@@ -1051,7 +1134,6 @@ class TXCImporter:
                     "revision_number",
                     "created_at",
                     "modified_at",
-                    "timetable_data_source_id",
                     "operator_id",
                     "service_code",
                 ]:
@@ -1099,6 +1181,22 @@ class TXCImporter:
             self.db.flush()
 
             log.debug(f"Timetable ID: {timetable.id}")
+
+            tt_to_ds = (
+                self.db.query(TimetableToTTDataSource)
+                .filter_by(
+                    timetable_id=timetable.id,
+                    tt_data_source_id=timetable_datasource.id,
+                )
+                .first()
+            )
+            if not tt_to_ds:
+                tt_to_ds = TimetableToTTDataSource(
+                    timetable_id=timetable.id,
+                    tt_data_source_id=timetable_datasource.id,
+                )
+                self.db.add(tt_to_ds)
+                self.db.flush()
 
             if self.txc_data.route_sections:
                 self.handle_route_links(journeys, timetable.id)
@@ -1183,12 +1281,20 @@ class TXCImporter:
                         "timetable_id": timetable_id,
                     }
 
-                    if from_stop.point == None:
+                    null_point = from_shape(Point([0, 0]), srid=4326)
+
+                    bad_points = (null_point, None)
+
+                    if from_stop.point in bad_points or to_stop.point in bad_points:
+                        self.stats.stops_updated += 1
+
+                    if from_stop.point in bad_points:
                         from_stop.point = from_shape(start, srid=srid)
                         self.db.merge(from_stop)
-                    if to_stop.point == None:
+                    if to_stop.point in bad_points:
                         to_stop.point = from_shape(end, srid=srid)
                         self.db.merge(to_stop)
+
                     self.db.flush()
 
                 else:
@@ -1223,13 +1329,14 @@ class TXCImporter:
             if atco_code_upper not in self.stops.keys():
                 stoppoint = get_stop(stop.element, atco_code_upper)
                 stoppoint["common_name"] = str(stop)
-                stoppoint["timing_status"] = ""
-                stoppoint["stop_type"] = ""
-                stoppoint["bus_stop_type"] = ""
+                stoppoint["point"] = from_shape(
+                    Point([0, 0]), 4326
+                )  # default to a valid point
                 stops_to_add[atco_code_upper] = stoppoint
 
         if stops_to_add:
             log.debug(f"Adding {len(stops_to_add)} new stops")
+            self.stats.stops_created += len(stops_to_add)
             bulk_upsert(
                 self.db,
                 Stop,
@@ -1319,14 +1426,21 @@ class TXCImporter:
 
 if __name__ == "__main__":
     setup_logging()
-    if len(sys.argv) != 2:
-        log.debug("Usage: python import_txc_new.py <path_to_zip_or_xml>")
-        exit(1)
-    input_path = sys.argv[1]
+
+    parser = argparse.ArgumentParser(description="Import TXC data.")
+    parser.add_argument("file", nargs="?", help="Path to TXC XML file or ZIP archive")
+    parser.add_argument(
+        "--skip-checks",
+        action="store_true",
+        help="Do not exit on conflict, e.g. same file hash",
+    )
+    args = parser.parse_args()
+    input_path = args.file
+    skip_checks = args.skip_checks
     if input_path.lower().endswith(".zip"):
-        asyncio.run(import_txc_zip(input_path))
+        asyncio.run(import_txc_zip(input_path, skip_checks=skip_checks))
     elif input_path.lower().endswith(".xml"):
-        txc_importer = TXCImporter(Path(input_path), ds_id=1)
+        txc_importer = TXCImporter(Path(input_path), ds_id=1, skip_checks=skip_checks)
         asyncio.run(txc_importer.handle_txc_file(Path(input_path)))
     else:
         log.debug("Error: Input must be a .zip or .xml file")
