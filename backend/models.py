@@ -445,6 +445,7 @@ class Stop(Base):
             now = date
 
         today_date = now.date()
+
         seconds_since_midnight = now.hour * 3600 + now.minute * 60 + now.second
         current_time = timedelta(seconds=seconds_since_midnight)
 
@@ -648,12 +649,13 @@ class Calendar(Base):
         if not (
             self.start_date <= date and (self.end_date is None or self.end_date >= date)
         ):  # type: ignore
+            # log.debug("Date not in range of calendar")
             return False
 
         # check day
         weekday = date.strftime("%A").lower()
         if not getattr(self, weekday):
-            # log.debug("Not valid on this weekday, active days:", self.days_of_week)
+            # log.debug(f"Not valid on this weekday, active days: {self.days_of_week}")
             return False
 
         # check exceptions

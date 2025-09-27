@@ -47,6 +47,8 @@ async def service(
                 "operator_noc": operator.noc,
                 "operator": operator.name,
             }
+    except HTTPException as e:
+        raise e
     except Exception as e:
         log.error(f"Unexpected error: {e}")
         raise HTTPException(500, detail="An unexpected error occured")

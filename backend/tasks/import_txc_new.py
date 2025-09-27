@@ -52,39 +52,53 @@ log = get_logger()
 BAD_ORIGIN_DEST = {"Origin", "Destination", "Unknown"}
 
 
-async def import_datasource(id, folder: Path):
-    logs: dict[datetime, str] = {}
+async def import_datasource(id, folder: Path, skip_checks=False):
+    logs: list[tuple[datetime, str]] = []
     with SessionLocal() as db:
         datasource = db.query(DataSource).filter(DataSource.id == id).first()
         name = datasource.name if datasource else "Unknown"
 
         if not datasource:
             log.debug(f"No DataSource with id {id} found.")
-            logs[datetime.now(tz=LONDON)] = f"No DataSource with id {id} found."
+            logs.append((datetime.now(tz=LONDON), f"No DataSource with id {id} found."))
             return
 
-        logs[datetime.now(tz=LONDON)] = (
-            f"Trying to import data source {name} from {datasource.url or datasource.bods_id}"
+        logs.append(
+            (
+                datetime.now(tz=LONDON),
+                f"Trying to import data source {name} from {datasource.url or datasource.bods_id}",
+            )
         )
 
-        path = download_if_modified(datasource, folder / f"txc_source_{id}.zip")
+        path = download_if_modified(
+            datasource, folder / f"txc_source_{id}.zip", skip_checks
+        )
 
     if path:
-        logs[datetime.now(tz=LONDON)] = f"Importing data from {path}..."
+        logs.append((datetime.now(tz=LONDON), f"Importing data from {path}..."))
         log.debug(f"Importing data from {path}")
 
-        duration = await import_txc_zip(folder / f"txc_source_{id}.zip", id)
+        duration, stats = await import_txc_zip(
+            folder / f"txc_source_{id}.zip", id, skip_checks
+        )
 
-        logs[datetime.now(tz=LONDON)] = f"Import completed for data source {name}" + (
-            f" in {duration}" if duration else ""
+        logs.append(
+            (
+                datetime.now(tz=LONDON),
+                f"Import completed for data source {name}"
+                + (f" in {duration}" if duration else ""),
+            )
         )
         log.debug(
             f"Import completed for data source {name}"
             + (f" in {duration}" if duration else "")
         )
+        if stats:
+            for k, v in stats.__dict__.items():
+                logs.append((datetime.now(tz=LONDON), f"{k}: {v}"))
 
     else:
-        logs[datetime.now(tz=LONDON)] = f"No updates for data source {name}"
+        logs.append((datetime.now(tz=LONDON), f"No updates for data source {name}"))
         log.debug(f"No updates for data source {name}")
 
     log_dir = folder / "logs"
@@ -94,8 +108,8 @@ async def import_datasource(id, folder: Path):
     log_file.touch()
 
     with log_file.open("w") as f:
-        for ts, txc_log in logs.items():
-            f.write(f"{ts.strftime('%d/%m/%Y, %H:%M:%S')} - {txc_log}\n")
+        for txc_log in logs:
+            f.write(f"{txc_log[0].strftime('%d/%m/%Y, %H:%M:%S')} - {txc_log[1]}\n")
 
 
 async def import_txc_zip(zip_path, ds_id=None, skip_checks=False):
@@ -104,6 +118,7 @@ async def import_txc_zip(zip_path, ds_id=None, skip_checks=False):
     extract_dir = zip_path.parent / f"txc_extract_{ds_id or 'zip'}"
     extract_dir.mkdir(parents=True, exist_ok=True)
     txc_importer = None
+    stats = None
     try:
         with zipfile.ZipFile(zip_path, "r") as zf:
             xml_files = [f for f in zf.namelist() if f.endswith(".xml")]
@@ -173,7 +188,7 @@ async def import_txc_zip(zip_path, ds_id=None, skip_checks=False):
                 "search_vector",
                 ["name", "noc"],
             )
-        return duration
+        return duration, stats
     return None
 
 
@@ -238,7 +253,7 @@ def get_description(txc_service: txc.Service):
     """
     Generate a valid description for a service.
     from bustimes.org's import_transxchange.py
-    modified to remove the via text, as it is shown elsewhere in the ui
+    modified the via logic to improve descriptions
     """
     description = txc_service.description
 
@@ -258,19 +273,23 @@ def get_description(txc_service: txc.Service):
                 destination, callback=initialisms
             )
 
-        if not description:
+        if not description or len(description.split("-")) > 4:
             description = f"{origin} - {destination}"
             vias = txc_service.vias
+            vias_list = []
             if vias:
                 if all(via.isupper() for via in vias):
                     vias = [titlecase(via, callback=initialisms) for via in vias]
                 if len(vias) == 1:
                     via = vias[0]
                     if "via " in via:
-                        return description
-                    elif "," in via or " and " in via or "&" in via:
-                        return description
-                description = " - ".join([origin] + vias + [destination])
+                        via = via.replace("via ", "").strip()
+                    parts = re.split(r",| and |&", via)
+                    vias_list.extend([part.strip() for part in parts])
+
+                if len(vias_list) <= 2:
+                    description = " - ".join([origin] + vias_list + [destination])
+
     return description
 
 
@@ -863,23 +882,7 @@ class TXCImporter:
 
         if end_date and end_date < self.today.date():
             log.debug(
-                f"Skipping journeys for {txc_service.service_code} as it ended on {end_date}"
-            )
-            skip_journeys = True
-
-        all_lines_ended = True
-
-        for txc_line in txc_service.lines:
-            if not (
-                txc_service.operating_period.end
-                and txc_service.operating_period.end < self.today.date()
-            ):
-                all_lines_ended = False
-                break
-
-        if all_lines_ended:
-            log.debug(
-                f"Skipping file for {txc_service.service_code} as all its lines have ended"
+                f"Skipping file for {txc_service.service_code} as it ended on {end_date}"
             )
             self.stats.files_skipped += 1
             return
@@ -1018,10 +1021,12 @@ class TXCImporter:
                     in_desc = titlecase(in_desc, callback=initialisms)
 
                 if out_desc:
-                    if not service.description or len(txc_service.lines) > 1:
+                    if (not service.description or len(txc_service.lines) > 1) and len(
+                        out_desc.split("-")
+                    ) <= 4:
                         service.description = out_desc
                 if in_desc:
-                    if not service.description:
+                    if not service.description and len(in_desc.split("-")) <= 4:
                         service.description = in_desc
 
             # end from
@@ -1122,6 +1127,9 @@ class TXCImporter:
                 timetable.vias = ", ".join(txc_service.vias)
 
             service.vias = timetable.vias or None
+
+            self.db.merge(service)
+            self.db.flush()
 
             if existing_timetable:
                 timetable.id = existing_timetable.id

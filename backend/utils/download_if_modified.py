@@ -10,7 +10,9 @@ import logging
 log = logging.getLogger(__name__)
 
 
-def download_if_modified(datasource: DataSource, file: Path):
+def download_if_modified(
+    datasource: DataSource, file: Path, skip_checks=False
+) -> Path | None:
     if datasource.bods_id is not None:  # is a bods source, use the api
         log.debug(f"Checking BODS source {datasource.name}")
         if config.bods_api_key is None:
@@ -29,6 +31,7 @@ def download_if_modified(datasource: DataSource, file: Path):
         if (
             datasource.last_modified is not None
             and modified <= datasource.last_modified
+            and not skip_checks
         ):
             log.debug(f"data not modified: {datasource.url}")
             return None
@@ -48,7 +51,7 @@ def download_if_modified(datasource: DataSource, file: Path):
 
     else:
         headers = {}
-        if datasource.last_modified is not None:
+        if datasource.last_modified is not None and not skip_checks:
             headers["If-Modified-Since"] = datasource.last_modified.strftime(
                 "%a, %d %b %Y %H:%M:%S GMT"
             )

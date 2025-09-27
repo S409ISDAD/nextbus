@@ -19,14 +19,13 @@ def times_from_stop(stop_id: str, db: Session, limit: int = 10):
     seconds_since_midnight = now.hour * 3600 + now.minute * 60 + now.second
     current_time = timedelta(seconds=seconds_since_midnight)
 
-    stop = db.query(Stop).filter(Stop.atco_code == stop_id).first()
+    stop: Stop | None = db.query(Stop).filter(Stop.atco_code == stop_id).first()
     if not stop:
         log.warning(f"Stop with ID {stop_id} not found.")
         return
 
     stop_times = stop.times_from_stop(db, date=now)
 
-    # 5️⃣ Format results
     results = []
     for st in stop_times[:limit]:
         line_name = st.journey.timetable.line_name if st.journey.timetable else None
@@ -50,7 +49,6 @@ def times_from_stop(stop_id: str, db: Session, limit: int = 10):
 
     print(f"Departures from {stop.long_name}:")
 
-    # 6️⃣ Print nicely
     if results:
         longest_dest = max(len(dest or "") for _, dest, _, _ in results)
         longest_line = max(len(line or "") for line, _, _, _ in results)

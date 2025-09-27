@@ -1,10 +1,10 @@
 export interface Search {
     localities: LocalityResult[];
-    lines: LineResult[];
+    services: ServiceResult[];
 }
 
-export interface LineResult {
-    line_id: string;
+export interface ServiceResult {
+    service_id: number;
     line_name: string;
     inbound_description: string;
     outbound_description: string;
@@ -23,6 +23,7 @@ export interface LineResult {
 interface LocalityResult {
     id: string;
     name: string;
+    full_name: string;
     qualifier_name: string;
     admin_area_id: number;
     district_id: number;

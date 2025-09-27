@@ -1,3 +1,4 @@
+import argparse
 import asyncio
 import sys
 from backend.config import get_logger, setup_logging
@@ -8,8 +9,14 @@ log = get_logger(__name__)
 
 if __name__ == "__main__":
     setup_logging()
-    if len(sys.argv) != 2:
-        log.debug("Usage: python import_datasource_id.py <ds_id>")
-        exit(1)
-    id = sys.argv[1]
-    asyncio.run(import_datasource(id, STATIC_DATA_DIR))
+    parser = argparse.ArgumentParser(description="Import datasource by id.")
+    parser.add_argument("id", nargs="?", help="ID of the datasource to import")
+    parser.add_argument(
+        "--skip-checks",
+        action="store_true",
+        help="Do not exit on conflict, e.g. same file hash",
+    )
+    args = parser.parse_args()
+    id = args.id
+    skip_checks = args.skip_checks
+    asyncio.run(import_datasource(id, STATIC_DATA_DIR, skip_checks=skip_checks))

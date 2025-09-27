@@ -71,14 +71,11 @@ const linePage: React.FC = () => {
                 <div className="flex flex-col items-center justify-center gap-6">
                     <div className="flex flex-col items-center justify-center gap-3">
                         <span className="text-4xl font-bold md:text-4xl text-start">
-                            Service {line?.line_name}
-                        </span>
-                        <span className="text-xl font-semibold text-center text-neutral-300">
-                            {line?.description}
+                            {line?.line_name} · {line?.description}
                         </span>
                         <div className="flex flex-col items-center justify-center gap-1">
                             {line?.vias && (
-                                <span className="font-semibold text-center text-neutral-400">
+                                <span className="text-xl font-semibold text-center text-neutral-400">
                                     Via {line?.vias}
                                 </span>
                             )}

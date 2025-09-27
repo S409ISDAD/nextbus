@@ -36,15 +36,18 @@ def search_services(query, db: Session, limit: int = 10):
 
     services = db.execute(service_query).all()
     for service, rank in services:
-        if not rank:
-            rank = 1.0
         data = service.with_timetable()
+        if data == None:
+            log.warning(f"Service {service.id} returned None from with_timetable()")
+            continue
         data["rank"] = rank
+        data["service_id"] = service.id
         results.append(data)
 
     results.sort(key=lambda x: x["rank"], reverse=True)
 
-    return results[:limit]
+    # return results[:limit]
+    return results
 
 
 async def search_db(query: str, db: Session, limit: int = 20):
@@ -63,6 +66,7 @@ async def search_db(query: str, db: Session, limit: int = 20):
         for l in localities:
             if hasattr(l, "point"):
                 setattr(l, "point", None)
+            setattr(l, "full_name", l.get_full_name)
         results["localities"] = localities
     else:
         results["localities"] = []
@@ -86,9 +90,9 @@ async def search_db(query: str, db: Session, limit: int = 20):
             data["rank"] = 1.0
             services.append(data)
 
-    results["lines"] = services
+    results["services"] = services
 
-    results["lines"].sort(key=lambda x: x["rank"], reverse=True)
+    results["services"].sort(key=lambda x: x["rank"], reverse=True)
 
     # stops_query = search(select(Stop), query, sort=True).limit(limit)
     # stops = list(db.scalars(stops_query).all())
@@ -121,4 +125,4 @@ if __name__ == "__main__":
                 elif isinstance(item, Stop):
                     print(f"- {item.name} (ID: {item.atco_code})")
                 elif isinstance(item, Locality):
-                    print(f"- {item.name} ({item.qualifier_name or 'none'})")
+                    print(f"- {item.get_full_name}")

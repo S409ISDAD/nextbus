@@ -1,14 +1,15 @@
-import React, {useEffect} from "react";
+import React, { useEffect } from "react";
 import doSearch from "../utils/doSearch";
 import SearchBar from "../components/SearchBar";
-import type {Search} from "../models/Search";
-import {useNavigate, useParams} from "react-router";
+import type { Search } from "../models/Search";
+import { useNavigate, useParams } from "react-router";
 
 const SearchPage: React.FC = () => {
     const navigate = useNavigate();
     const [results, setResults] = React.useState<Search>();
     const [loading, setLoading] = React.useState(false);
-    const {query} = useParams();
+    const [tab, setTab] = React.useState<"services" | "places">("services");
+    const { query } = useParams();
 
     useEffect(() => {
         document.title = `"${query ?? "search"}" | nextbus`;
@@ -31,99 +32,112 @@ const SearchPage: React.FC = () => {
     }, [query]);
 
     return (
-        <div className="flex flex-col items-center justify-center w-full gap-6 p-8">
+        <div className="flex flex-col items-center justify-center w-full p-8 pb-0">
             <span className="text-4xl font-bold">Search nextbus</span>
-            <SearchBar query={query}/>
+            <SearchBar query={query} className="my-6" />
+            <div className="flex flex-row justify-center gap-4 mb-4">
+                <button
+                    className={`px-4 py-2 text-lg font-semibold rounded-xl transition-all duration-150 cursor-pointer ${
+                        tab === "services"
+                            ? " bg-neutral-800 text-blue-400 scale-105"
+                            : " bg-neutral-900 text-neutral-400 hover:text-blue-300"
+                    }`}
+                    onClick={() => setTab("services")}
+                    aria-selected={tab === "services"}>
+                    {results?.services.length} Services
+                </button>
+                <button
+                    className={`px-4 py-2 text-lg font-semibold rounded-xl transition-all duration-150 cursor-pointer ${
+                        tab === "places"
+                            ? " bg-neutral-800 text-blue-400 scale-105"
+                            : " bg-neutral-900 text-neutral-400 hover:text-blue-300"
+                    }`}
+                    onClick={() => setTab("places")}
+                    aria-selected={tab === "places"}>
+                    {results?.localities.length} Places
+                </button>
+            </div>
             {loading && (
-                <span className="text-xl font-medium text-center text-gray-400">
+                <span className="mb-5 text-xl font-medium text-center text-gray-400">
                     Loading...
                 </span>
             )}
             {query && !loading && (
-                <div className="flex flex-col w-full max-w-3xl gap-4 mt-4">
-                    {results?.lines.length === 0 &&
-                    results.localities.length === 0 ? (
-                        <span className="text-xl font-medium text-center text-gray-400">
-                            No results found
-                        </span>
-                    ) : (
-                        <>
-                            <div className="flex flex-col gap-2">
-                                <span className="text-2xl font-bold">
-                                    {results?.lines.length} Services
+                <div className="flex flex-col w-full max-w-3xl gap-4">
+                    {tab === "services" ? (
+                        <div className="flex flex-col gap-2">
+                            {results?.services.length === 0 ? (
+                                <span className="w-full mb-5 text-sm text-center text-gray-400">
+                                    No services found.
                                 </span>
-                                {results?.lines.length === 0 && (
-                                    <span className="text-sm text-gray-400">
-                                        No services found.
-                                    </span>
-                                )}
-
-                                {results?.lines.map((line, idx) => (
-                                    <>
-                                        <div className="flex items-center gap-2 mb-0.5">
-                                            <div className="flex-grow border-t border-dashed border-neutral-600"></div>
-                                            <span className="text-[10px] text-neutral-600">
-                                                nextbus
-                                            </span>
-                                            <div className="flex-grow border-t border-dashed border-neutral-600"></div>
-                                        </div>
-                                        <div
-                                            key={line.line_id}
-                                            className="flex flex-col cursor-pointer"
-                                            onClick={() => {
-                                                navigate(
-                                                    `/buses/lines/${line.line_id}`
-                                                );
-                                            }}>
-                                            <div className="flex flex-row items-stretch mb-1">
-                                                <div className="flex items-center px-3 py-1 bg-blue-700 rounded-l-2xl">
-                                                    <span
-                                                        className="flex items-center justify-center text-xl font-bold text-center">
-                                                        {line.line_name}
-                                                    </span>
-                                                </div>
-                                                <div
-                                                    className="flex flex-col justify-center px-3 bg-neutral-800/50 rounded-r-2xl">
-                                                    <span className="font-semibold text">
-                                                        {line.description}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            <span className="text-sm text-gray-400">
-                                                {line.operator}
-                                            </span>
-                                            {line.vias && (
-                                                <span className="text-sm text-gray-400">
-                                                via {line.vias}
-                                            </span>)}
-                                        </div>
-                                        {idx === results.lines.length - 1 && (
+                            ) : (
+                                <div className="mb-8">
+                                    {results?.services.map((service, idx) => (
+                                        <>
                                             <div className="flex items-center gap-2 mb-0.5">
-                                                <div
-                                                    className="flex-grow border-t border-dashed border-neutral-600"></div>
+                                                <div className="flex-grow border-t border-dashed border-neutral-600"></div>
                                                 <span className="text-[10px] text-neutral-600">
                                                     nextbus
                                                 </span>
-                                                <div
-                                                    className="flex-grow border-t border-dashed border-neutral-600"></div>
+                                                <div className="flex-grow border-t border-dashed border-neutral-600"></div>
                                             </div>
-                                        )}
-                                    </>
-                                ))}
-                            </div>
-                            <div className="flex flex-col">
-                                <span className="text-2xl font-bold">
-                                    {results?.localities.length} Places
+                                            <div
+                                                key={service.service_id}
+                                                className="flex flex-col cursor-pointer"
+                                                onClick={() => {
+                                                    navigate(
+                                                        `/buses/lines/${service.service_id}`
+                                                    );
+                                                }}>
+                                                <div className="flex flex-row items-stretch mb-1">
+                                                    <div className="flex items-center px-3 py-1 bg-blue-700 rounded-l-2xl">
+                                                        <span className="flex items-center justify-center text-xl font-bold text-center">
+                                                            {service.line_name}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex flex-col justify-center px-3 bg-neutral-800/50 rounded-r-2xl">
+                                                        <span className="font-semibold text">
+                                                            {
+                                                                service.description
+                                                            }
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <span className="text-sm text-gray-400">
+                                                    {service.operator}
+                                                </span>
+                                                {service.vias && (
+                                                    <span className="text-sm text-gray-400">
+                                                        via {service.vias}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            {idx ===
+                                                results.services.length - 1 && (
+                                                <div className="flex items-center gap-2 mb-0.5">
+                                                    <div className="flex-grow border-t border-dashed border-neutral-600"></div>
+                                                    <span className="text-[10px] text-neutral-600">
+                                                        nextbus
+                                                    </span>
+                                                    <div className="flex-grow border-t border-dashed border-neutral-600"></div>
+                                                </div>
+                                            )}
+                                        </>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="flex flex-col">
+                            <span className="w-full mb-5 text-sm text-center text-gray-400">
+                                (not clickable yet)
+                            </span>
+                            {results?.localities.length === 0 ? (
+                                <span className="w-full mb-5 text-sm text-center text-gray-400">
+                                    No places found.
                                 </span>
-                                <span className="text-sm text-gray-400 mb-5">
-                                    (not clickable yet)
-                                </span>
-                                {results?.localities.length === 0 && (
-                                    <span className="text-sm text-gray-400">
-                                        No places found.
-                                    </span>
-                                )}
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                            ) : (
+                                <div className="grid grid-cols-1 gap-2 mb-8 md:grid-cols-2 lg:grid-cols-3">
                                     {results?.localities.map((locality) => (
                                         <div
                                             key={locality.id}
@@ -134,14 +148,14 @@ const SearchPage: React.FC = () => {
                                             //     );
                                             // }}
                                         >
-                                        <span className="text-neutral-300">
-                                            {locality.name} {locality.qualifier_name ? `(${locality.qualifier_name})` : ""}
-                                        </span>
+                                            <span className="text-neutral-300">
+                                                {locality.full_name}
+                                            </span>
                                         </div>
                                     ))}
                                 </div>
-                            </div>
-                        </>
+                            )}
+                        </div>
                     )}
                 </div>
             )}
