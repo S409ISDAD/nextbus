@@ -3,6 +3,7 @@ from datetime import date, datetime, timedelta
 
 from geoalchemy2 import Geometry
 from sqlalchemy import (
+    BigInteger,
     Boolean,
     Column,
     Computed,
@@ -14,6 +15,7 @@ from sqlalchemy import (
     Integer,
     Interval,
     PrimaryKeyConstraint,
+    SmallInteger,
     String,
     UniqueConstraint,
     func,
@@ -1053,7 +1055,7 @@ class Journey(Base):
     """
 
     __tablename__ = "journey"
-    id = Column(Integer, primary_key=True, autoincrement=True)
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
     bt_trip_id = Column(Integer, nullable=True)
     service_id = Column(
         Integer, ForeignKey("service.id", ondelete="CASCADE"), nullable=False
@@ -1066,7 +1068,7 @@ class Journey(Base):
     )
     vehicle_journey_code = Column(String, nullable=True)
     ticket_machine_code = Column(String, nullable=True)
-    sequence = Column(Integer, nullable=True)
+    sequence = Column(SmallInteger, nullable=True)
     block_id = Column(String, nullable=True)
     inbound = Column(Boolean)
     headsign = Column(String, nullable=True)
@@ -1185,9 +1187,9 @@ class StopTime(Base):
     """
 
     __tablename__ = "stop_time"
-    id = Column(Integer, primary_key=True, autoincrement=True)
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
     journey_id = Column(
-        Integer,
+        BigInteger,
         ForeignKey("journey.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
@@ -1198,7 +1200,7 @@ class StopTime(Base):
         nullable=False,
         index=True,
     )
-    stop_sequence = Column(Integer, nullable=False)
+    stop_sequence = Column(SmallInteger, nullable=False)
     arrival_time = Column(Interval, nullable=True)
     departure_time = Column(Interval, nullable=True, index=True)
     dest_display = Column(String, nullable=True)
