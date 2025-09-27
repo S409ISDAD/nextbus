@@ -1,6 +1,5 @@
 from datetime import datetime as dt
 from datetime import timedelta
-from types import NoneType
 
 from dateutil.parser import isoparse
 from geopy.distance import geodesic

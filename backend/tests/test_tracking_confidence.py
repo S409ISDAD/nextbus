@@ -1,4 +1,3 @@
-from geopy import distance
 from shapely.geometry.linestring import LineString
 
 from backend.services.tracking_confidence import track_location_similarity

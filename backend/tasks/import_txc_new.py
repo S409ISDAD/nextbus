@@ -1,27 +1,24 @@
 import argparse
 import asyncio
 import gc
-from hashlib import sha256
 import hashlib
-import json
 import re
-import sys
 import time
 import zipfile
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 from pathlib import Path
 
-from geoalchemy2.shape import from_shape, to_shape
-from shapely import MultiLineString, Point
+from geoalchemy2.shape import from_shape
+from shapely import Point
 from shapely.geometry import LineString
-from sqlalchemy import and_, func, select, update
+from sqlalchemy import func, select
 from sqlalchemy_searchable import sync_trigger
 
 from titlecase import titlecase
 
 from backend.config import get_logger, setup_logging
 from backend.db.db import SessionLocal, engine
-from backend.deps import LONDON, STATIC_DATA_DIR
+from backend.deps import LONDON
 from backend.models import (
     BankHoliday,
     Calendar,
@@ -35,7 +32,6 @@ from backend.models import (
     Stop,
     StopTime,
     RouteLink,
-    ServiceStopUsage,
     TimetableDataSource,
     TimetableToTTDataSource,
 )

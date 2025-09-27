@@ -20,7 +20,6 @@ from sqlalchemy import (
     UniqueConstraint,
     func,
     Index,
-    text,
 )
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.orm import declarative_base
@@ -28,12 +27,11 @@ from sqlalchemy.orm import relationship, Session, joinedload, deferred, aliased
 from sqlalchemy_searchable import make_searchable
 from sqlalchemy_utils.types import TSVectorType
 
-from backend.autoslug import AutoSlug, AutoSlugMixin
+from backend.autoslug import AutoSlugMixin
 from backend.config import API_BASE, get_logger
 from backend.db.db import SessionLocal
 from backend.deps import LONDON
 from backend.utils.fetch_json import fetch_json
-import logging
 
 log = get_logger(__name__)
 
@@ -435,21 +433,16 @@ class Stop(Base):
             return result
 
     def times_from_stop(
-        self, db: Session, date: datetime | None = None, limit: int = 10
+        self, db: Session, date_time: datetime | None = None, limit: int = 10
     ) -> list["StopTime"]:
         """
         Returns a list of upcoming StopTime objects for this stop, with joined journey and service.
         """
 
-        if date is None:
+        if date_time is None:
             now = datetime.now(tz=LONDON)
         else:
-            now = date
-
-        today_date = now.date()
-
-        seconds_since_midnight = now.hour * 3600 + now.minute * 60 + now.second
-        current_time = timedelta(seconds=seconds_since_midnight)
+            now = date_time
 
         stop_times = (
             db.query(StopTime)
@@ -464,21 +457,17 @@ class Stop(Base):
             .all()
         )
 
-        active_stop_times = []
+        future_stop_times = []
         for st in stop_times:
-            if not st.journey.is_valid(today_date):
+            if not st.journey.is_valid(now) or st.departure_time is None:
                 continue
-            active_stop_times.append(st)
+            dep_dt = st.departure_datetime(now)
+            if dep_dt >= now:
+                future_stop_times.append((dep_dt, st))
 
-        future_stop_times = [
-            st
-            for st in active_stop_times
-            if st.departure_time and st.departure_time >= current_time
-        ]
+        future_stop_times.sort(key=lambda x: x[0])
 
-        future_stop_times.sort(key=lambda st: st.departure_time)
-
-        return future_stop_times[:limit]
+        return [st for _, st in future_stop_times[:limit]]
 
 
 class StopArea(Base):
@@ -640,13 +629,15 @@ class Calendar(Base):
             "sunday": self.sunday,
         }
 
-    def is_valid(self, date: date | None = None) -> bool:
+    def is_valid(self, date_time: datetime | None = None) -> bool:
         """
         Returns True if the calendar is valid on the given date (or today if no date is given).
         """
 
-        if not date:
-            date = datetime.now(tz=LONDON).date()
+        if not date_time:
+            date_time = datetime.now(tz=LONDON)
+
+        date = date_time.date()
 
         if not (
             self.start_date <= date and (self.end_date is None or self.end_date >= date)
@@ -1095,17 +1086,26 @@ class Journey(Base):
         "StopTime", back_populates="journey", cascade="all, delete-orphan"
     )
 
-    def is_valid(self, date: date | None = None) -> bool:
+    def is_valid(self, date_time: datetime | None = None) -> bool:
         """
         Returns True if the journey is valid on the given date (or today if no date is given).
         """
         if not self.calendar:
             return False
 
-        if not date:
-            date = datetime.now(tz=LONDON).date()
+        if not date_time:
+            date_time = datetime.now(tz=LONDON)
 
-        return self.calendar.is_valid(date)
+        if self.start_time is not None:
+            journey_start_today = datetime.combine(
+                date_time.date(),
+                (datetime.min + self.start_time).time(),
+            ).astimezone(LONDON)
+
+            if journey_start_today > date_time:
+                date_time -= timedelta(days=1)
+
+        return self.calendar.is_valid(date_time)
 
     def get_previous_journey(
         self, db: Session, date: date | None = None
@@ -1273,6 +1273,31 @@ class StopTime(Base):
         except Exception as e:
             log.error(f"Error getting headsign for stoptime {self.id}: {e}")
             return None
+
+    def departure_datetime(self, date_time: datetime) -> datetime | None:
+        if self.departure_time is None:
+            return None
+
+        dep_dt = datetime.combine(date_time.date(), datetime.min.time()).replace(
+            tzinfo=LONDON
+        ) + (
+            self.departure_time
+            if isinstance(self.departure_time, timedelta)
+            else timedelta()
+        )
+
+        if dep_dt < date_time - timedelta(hours=12):
+            dep_dt += timedelta(days=1)
+        elif dep_dt > date_time + timedelta(hours=12):
+            dep_dt -= timedelta(days=1)
+
+        return dep_dt
+
+    def time_to(self, date_time: datetime) -> timedelta | None:
+        dt = self.departure_datetime(date_time)
+        if dt is None:
+            return None
+        return dt - date_time
 
     @property
     def departure_time_str(self):

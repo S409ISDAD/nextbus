@@ -1,7 +1,6 @@
 import asyncio
 import logging
 import time
-from logging.config import dictConfig
 from contextlib import asynccontextmanager
 from datetime import timedelta, timezone, datetime
 
@@ -30,7 +29,7 @@ from backend.api.routes import (
     journey_planning,
     places,
 )
-from backend.config import config, LOGGING_CONFIG, setup_logging
+from backend.config import config, setup_logging
 from backend.db.db import SessionLocal, get_db
 from backend.deps import (
     floor_to_30s,

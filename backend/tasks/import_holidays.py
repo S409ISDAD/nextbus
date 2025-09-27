@@ -1,10 +1,8 @@
 from govuk_bank_holidays.bank_holidays import BankHolidays
-from sqlalchemy import and_
 from backend.db.db import SessionLocal
 from backend.models import BankHoliday, BankHolidayDate
 import logging
 
-from backend.utils.bulk_upsert import bulk_upsert
 
 log = logging.getLogger(__name__)
 

@@ -4,7 +4,7 @@ from discord import app_commands
 from discord.ext import commands
 from backend.db.db import SessionLocal
 from backend.deps import LONDON, UTC
-from backend.models import Line, BotConfig, BotStatusEnum, BotStatus
+from backend.models import Line, BotConfig, BotStatus
 from backend.utils.fetch_json import fetch_json
 from datetime import datetime, timedelta
 from sqlalchemy import event

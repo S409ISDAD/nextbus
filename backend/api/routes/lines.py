@@ -5,7 +5,6 @@ from backend.deps import get_redis, limiter
 from backend.models import Service
 from backend.db.db import get_db
 from sqlalchemy.orm import joinedload
-from backend.utils.match_bt import match_service
 
 router = APIRouter()
 

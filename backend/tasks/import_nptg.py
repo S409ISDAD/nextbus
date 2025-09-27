@@ -10,7 +10,6 @@ from backend.models import AdminArea, District, Locality, Region
 from backend.utils.download_to_static import download_to_static
 from backend.utils.location import generate_point
 from backend.utils.time import to_datetime
-import logging
 
 log = get_logger()
 

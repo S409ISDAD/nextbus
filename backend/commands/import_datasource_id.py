@@ -1,6 +1,5 @@
 import argparse
 import asyncio
-import sys
 from backend.config import get_logger, setup_logging
 from backend.tasks.import_txc_new import import_datasource
 from backend.deps import STATIC_DATA_DIR
