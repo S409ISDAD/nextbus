@@ -667,8 +667,6 @@ def upgrade() -> None:
         sa.Column("stop_id", sa.String(), nullable=False),
         sa.ForeignKeyConstraint(["service_id"], ["service.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["stop_id"], ["stop.atco_code"], ondelete="CASCADE"),
-        sa.PrimaryKeyConstraint("service_id", "stop_id"),
-        sa.UniqueConstraint("service_id", "stop_id", name="uq_service_stop_usage"),
     )
     op.create_index(
         op.f("ix_service_stop_usage_service_id"),

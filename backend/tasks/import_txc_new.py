@@ -430,6 +430,7 @@ class TXCImporter:
         self.map = txc_map
 
     async def import_from_map(self):
+        log.debug(f"Importing {len(self.map.keys())} services...")
         idx = 0
         for service_id in self.map.keys():
             self.clear_old_data(service_id)
@@ -437,7 +438,7 @@ class TXCImporter:
             for revision in self.map[service_id]:
                 self.files_in_revision = len(self.map[service_id][revision])
                 self.file_idx_in_revision = 0
-                self.services = set()
+                self.services.clear()
                 for file in self.map[service_id][revision]:
                     log.debug(
                         f"Importing {file} ({idx + 1}/{self.file_count}, {round(((idx + 1) / self.file_count) * 100, 2)}%)"
@@ -1385,8 +1386,8 @@ class TXCImporter:
             service = self.db.query(Service).filter_by(id=id).first()
             if not service:
                 continue
-            service.do_stopusages()
-            service.do_geometry()
+            service.do_stopusages(db=self.db)
+            service.do_geometry(db=self.db)
             self.db.add(service)
         self.db.commit()
 
@@ -1434,7 +1435,6 @@ class TXCImporter:
             self.get_stops(self.txc_data.stops)
 
             for service_code, txc_service in self.txc_data.services.items():
-                self.clear_old_data(service_code)
                 self.handle_service(txc_service)
 
             self.db.commit()
@@ -1458,6 +1458,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Import TXC data.")
     parser.add_argument("file", nargs="?", help="Path to TXC XML file or ZIP archive")
     parser.add_argument(
+        "--ds-id",
+        type=int,
+        default=1,
+        help="Datasource ID to reference (default: 1)",
+    )
+    parser.add_argument(
         "--skip-checks",
         action="store_true",
         help="Do not exit on conflict, e.g. same file hash",
@@ -1465,10 +1471,13 @@ if __name__ == "__main__":
     args = parser.parse_args()
     input_path = args.file
     skip_checks = args.skip_checks
+    ds_id = int(args.ds_id) if args.ds_id else None
     if input_path.lower().endswith(".zip"):
-        asyncio.run(import_txc_zip(input_path, skip_checks=skip_checks))
+        asyncio.run(import_txc_zip(input_path, ds_id=ds_id, skip_checks=skip_checks))
     elif input_path.lower().endswith(".xml"):
-        txc_importer = TXCImporter(Path(input_path), ds_id=1, skip_checks=skip_checks)
+        txc_importer = TXCImporter(
+            Path(input_path), ds_id=ds_id, skip_checks=skip_checks
+        )
         asyncio.run(txc_importer.handle_txc_file(Path(input_path)))
         txc_importer.finish_services()
     else:

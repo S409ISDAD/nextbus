@@ -1,7 +1,8 @@
 import enum
 from datetime import date, datetime, timedelta
 
-from geoalchemy2 import Geometry
+from geoalchemy2 import Geometry, WKTElement
+from shapely import LineString
 from sqlalchemy import (
     BigInteger,
     Boolean,
@@ -20,6 +21,8 @@ from sqlalchemy import (
     UniqueConstraint,
     func,
     Index,
+    inspect,
+    text,
 )
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.orm import declarative_base
@@ -41,6 +44,14 @@ log = get_logger(__name__)
 
 Base = declarative_base()
 make_searchable(Base.metadata)
+
+
+def to_dict(obj, exclude: list = []):
+    return {
+        c.key: getattr(obj, c.key)
+        for c in inspect(obj).mapper.column_attrs
+        if c.key not in exclude
+    }
 
 
 class RouteType(enum.Enum):
@@ -722,9 +733,6 @@ class Service(Base, AutoSlugMixin):
     line_brand = Column(String, nullable=True)
     description = Column(String)
     vias = Column(String, nullable=True)
-    geometry = Column(
-        Geometry(geometry_type="MULTILINESTRING", srid=4326), nullable=True
-    )
     # slug = AutoSlug(source="get_full_name", max_length=100, unique=True, nullable=False)
 
     public_use = Column(Boolean)
@@ -844,59 +852,205 @@ class Service(Base, AutoSlugMixin):
         self.bt_service_id = service_id
         return service_id
 
-    def do_stopusages(self):
+    def do_stopusages(self, db: Session):
         """
         builds the service_stop_usage table for this service
         """
 
-        with SessionLocal() as db:
-            service_stop_pairs = (
-                select(Journey.service_id, StopTime.stop_id)
-                .join(Journey, StopTime.journey_id == Journey.id)
-                .group_by(Journey.service_id, StopTime.stop_id)
+        existing = (
+            db.query(ServiceStopUsage)
+            .filter(ServiceStopUsage.service_id == self.id)
+            .order_by(ServiceStopUsage.inbound, ServiceStopUsage.order)
+            .all()
+        )
+
+        stop_times_subq = (
+            select(
+                Journey.inbound,
+                Timetable.line_name,
+                StopTime.stop_sequence.label("sequence"),
+                StopTime.id.label("st_id"),
+                StopTime.stop_id,
+                StopTime.timing_status,
             )
+            .join(Journey, StopTime.journey_id == Journey.id)
+            .join(Timetable, Journey.timetable_id == Timetable.id)
+            .where(Journey.service_id == self.id, StopTime.stop_id != None)
+            .distinct(Journey.inbound, Timetable.line_name, StopTime.stop_id)
+            .subquery()
+        )
 
-            rows = db.execute(service_stop_pairs).all()
+        rows = db.execute(select(stop_times_subq)).all()
 
-            upsert_data = [
-                {"service_id": service_id, "stop_id": stop_id}
-                for service_id, stop_id in rows
-            ]
+        stop_usages = [
+            (
+                row.line_name,
+                row.inbound,
+                row.sequence or 0,
+                row.st_id,
+                row.stop_id,
+                row.timing_status,
+            )
+            for row in rows
+        ]
 
-            if upsert_data:
+        stop_usages.sort()
+
+        new = [
+            ServiceStopUsage(
+                service_id=self.id,
+                stop_id=stop_id,
+                timing_point=(timing_status == "PTP"),
+                inbound=inbound,
+                order=i,
+                line_name=line_name,
+            )
+            for i, (line_name, inbound, _, _, stop_id, timing_status) in enumerate(
+                stop_usages
+            )
+        ]
+
+        existing_hash = [
+            (su.stop_id, su.timing_point, su.inbound, su.order, su.line_name)
+            for su in existing
+        ]
+        new_hash = [
+            (su.stop_id, su.timing_point, su.inbound, su.order, su.line_name)
+            for su in new
+        ]
+
+        if existing_hash != new_hash:
+            log.info(
+                f"ServiceStopUsage for service {self.id} is out of date, updating..."
+            )
+            if len(existing_hash) >= len(new_hash):
+                for new_su, exist_su in zip(new, existing):
+                    new_su.id = exist_su.id
+
+                upsert_data = [to_dict(n) for n in new if n.id is not None]
                 bulk_upsert(
                     db,
                     ServiceStopUsage,
                     upsert_data,
-                    ["service_id", "stop_id"],
-                    ["service_id", "stop_id"],
+                    ["id"],
+                    [
+                        "service_id",
+                        "stop_id",
+                        "timing_point",
+                        "inbound",
+                        "order",
+                        "line_name",
+                    ],
                 )
-                db.commit()
+                if len(existing_hash) > len(new_hash):
+                    existing_ids = [su.id for su in existing[len(new) :]]
+                    db.query(ServiceStopUsage).filter(
+                        ServiceStopUsage.id.in_(existing_ids)
+                    ).delete(synchronize_session=False)
+            else:
+                if existing_hash:
+                    existing_ids = [su.id for su in existing]
+                    db.query(ServiceStopUsage).filter(
+                        ServiceStopUsage.id.in_(existing_ids)
+                    ).delete(synchronize_session=False)
 
-    def do_geometry(self):
+                db.add_all(new)
+
+            db.commit()
+
+    def do_geometry(self, db: Session):
         """
         builds the geometry for this service from its stops
         """
 
-        with SessionLocal() as db:
-            extent = (
-                db.query(func.ST_Extent(Stop.point))
-                .join(ServiceStopUsage, ServiceStopUsage.stop_id == Stop.atco_code)
+        simplify_tolerance = 0.0002  # 20 meters
+
+        route_link_count = (
+            db.query(RouteLink)
+            .join(Journey, Journey.timetable_id == RouteLink.timetable_id)
+            .filter(Journey.service_id == self.id)
+            .count()
+        )
+
+        if route_link_count == 0:
+            log.warning(
+                f"Service {self.id} has no route links, building geometry from stops"
+            )
+            subq = (
+                db.query(
+                    ServiceStopUsage.line_name,
+                    ServiceStopUsage.inbound,
+                    func.ST_Transform(Stop.point, 4326).label("pt"),
+                )
+                .join(Stop, Stop.atco_code == ServiceStopUsage.stop_id)
                 .filter(ServiceStopUsage.service_id == self.id)
-                .scalar()
+                .order_by(
+                    ServiceStopUsage.inbound,
+                    ServiceStopUsage.line_name,
+                    ServiceStopUsage.order,
+                )
+                .subquery()
             )
 
-            if extent:
-                extent = extent.replace("BOX(", "").replace(")", "")
-                (xmin, ymin), (xmax, ymax) = [
-                    tuple(map(float, pair.split())) for pair in extent.split(",")
-                ]
+            lines = (
+                db.query(func.ST_MakeLine(subq.c.pt))
+                .group_by(subq.c.line_name, subq.c.inbound)
+                .all()
+            )
 
-                bbox_poly = box(xmin, ymin, xmax, ymax)
-                self.geometry = from_shape(bbox_poly, srid=4326)
-
+            if lines:
+                multiline = db.query(
+                    func.ST_Collect(*[line[0] for line in lines])
+                ).scalar()
+                self.geometry = multiline
                 db.add(self)
                 db.commit()
+            return
+
+        subq = (
+            db.query(RouteLink.geometry.label("geom"))
+            .join(Journey, Journey.timetable_id == RouteLink.timetable_id)
+            .filter(Journey.service_id == self.id)
+            .subquery()
+        )
+        collected = db.query(func.ST_Collect(subq.c.geom).label("geom")).scalar()
+
+        if collected:
+            merged = db.query(func.ST_LineMerge(collected)).scalar()
+            simplified = db.query(func.ST_Simplify(merged, simplify_tolerance)).scalar()
+            multiline = db.query(func.ST_Multi(simplified)).scalar()
+
+            self.geometry = multiline
+            db.add(self)
+            db.commit()
+
+
+class ServiceStopUsage(Base):
+    """
+    A collection of all the stops that a service serves across all journeys
+    """
+
+    __tablename__ = "service_stop_usage"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    service_id = Column(
+        Integer,
+        ForeignKey("service.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    stop_id = Column(
+        String,
+        ForeignKey("stop.atco_code", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    order = Column(SmallInteger)
+    inbound = Column(Boolean, default=False)
+    line_name = Column(String, nullable=True)
+    timing_point = Column(Boolean, default=True)
+
+    __table_args__ = (Index("ix_stopusage_inbound_order", "inbound", "order"),)
 
 
 class TimetableDataSource(Base):
@@ -1039,32 +1193,6 @@ class Timetable(Base):
             unique=True,
         ),
         Index("ix_timetable_service_line_name", "service_id", "line_name"),
-    )
-
-
-class ServiceStopUsage(Base):
-    """
-    A collection of all the stops that a service serves across all journeys
-    """
-
-    __tablename__ = "service_stop_usage"
-    service_id = Column(
-        Integer,
-        ForeignKey("service.id", ondelete="CASCADE"),
-        primary_key=True,
-        nullable=False,
-        index=True,
-    )
-    stop_id = Column(
-        String,
-        ForeignKey("stop.atco_code", ondelete="CASCADE"),
-        primary_key=True,
-        nullable=False,
-        index=True,
-    )
-
-    __table_args__ = (
-        UniqueConstraint("service_id", "stop_id", name="uq_service_stop_usage"),
     )
 
 
@@ -1359,6 +1487,14 @@ class StopTime(Base):
         if dt is None:
             return None
         return dt - date_time
+
+    @property
+    def dep_or_arr(self):
+        return self.departure_time or self.arrival_time
+
+    @property
+    def dep_or_arr_str(self):
+        return self.departure_time_str or self.arrival_time_str
 
     @property
     def departure_time_str(self):
