@@ -1,34 +1,44 @@
-import DeparturePage from "../pages/DeparturePage";
-import DepartureScreen from "../pages/DepartureScreen";
+import DeparturePage from "../pages/bus/DeparturePage.tsx";
+import DepartureScreen from "../pages/bus/DepartureScreen.tsx";
 import Home from "../pages/Home";
-import JourneyPage from "../pages/JourneyPage";
+import JourneyPage from "../pages/bus/JourneyPage.tsx";
 import PrivacyPolicy from "../pages/Privacy";
 import Terms from "../pages/Terms";
 import Data from "../pages/Data";
-import BusPage from "../pages/BusPage";
+import BusPage from "../pages/bus/BusPage.tsx";
 import ServicePage from "../pages/ServicePage";
 import LinePage from "../pages/LinePage";
 import Layout from "../components/Layout";
-import StationPage from "../pages/StationPage";
-import TrainPage from "../pages/TrainPage";
+import StationPage from "../pages/train/StationPage.tsx";
+import TrainPage from "../pages/train/TrainPage.tsx";
 import NotFound from "../pages/NotFound";
 import StatsPage from "../pages/Stats";
-import TrainSearchPage from "../pages/TrainSearchPage";
-import TrainsDashboard from "../pages/Trains";
-import {BrowserRouter, Route, Routes, useLocation} from "react-router";
-import toast, {Toaster} from "react-hot-toast";
-import {faXmark} from "@fortawesome/free-solid-svg-icons";
-import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
+import TrainSearchPage from "../pages/train/TrainSearchPage.tsx";
+import TrainsDashboard from "../pages/train/Trains.tsx";
+import { BrowserRouter, Route, Routes, useLocation } from "react-router";
+import toast, { Toaster } from "react-hot-toast";
+import { faXmark } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import useReloadPrompt from "../components/ReloadPrompt";
 import InstallToast from "../components/InstallPrompt";
 import useLocalStorageState from "use-local-storage-state";
 import version from "../utils/version";
-import {useShowAppNav} from "../utils/AppNav";
-import {MotionConfig} from "framer-motion";
+import { useShowAppNav } from "../utils/AppNav";
+import { MotionConfig } from "framer-motion";
 import SearchPage from "../pages/Search";
+import RegionsPage from "../pages/places/Regions.tsx";
+import RegionPage from "../pages/places/Region.tsx";
+import AdminAreaPage from "../pages/places/AdminArea.tsx";
+import DistrictPage from "../pages/places/District.tsx";
+import LocalityPage from "../pages/places/Locality.tsx";
 
-import {useEffect, useState} from "react";
-import {Dialog, DialogBackdrop, DialogPanel, DialogTitle,} from "@headlessui/react";
+import { useEffect, useState } from "react";
+import {
+    Dialog,
+    DialogBackdrop,
+    DialogPanel,
+    DialogTitle,
+} from "@headlessui/react";
 import Map from "../components/Map";
 import PossibleJourneysPage from "../pages/PossibleJourneysPage.tsx";
 
@@ -190,10 +200,27 @@ function App() {
                                 element={<SearchPage />}
                             />
                             <Route path="/map" element={<Map />} />
+                            <Route path="/regions" element={<RegionsPage />} />
+                            <Route
+                                path="/region/:region_id"
+                                element={<RegionPage />}
+                            />
+                            <Route
+                                path="/adminarea/:admin_area_id"
+                                element={<AdminAreaPage />}
+                            />
+                            <Route
+                                path="/district/:district_id"
+                                element={<DistrictPage />}
+                            />
+                            <Route
+                                path="/locality/:locality_id"
+                                element={<LocalityPage />}
+                            />
                             <Route path="/buses" element={<BusPage />} />
                             <Route
                                 path="/buses/journeysearch/:locality/:datetime?"
-                                element={<PossibleJourneysPage/>}
+                                element={<PossibleJourneysPage />}
                             />
                             <Route
                                 path="/buses/stops/:stop_id"

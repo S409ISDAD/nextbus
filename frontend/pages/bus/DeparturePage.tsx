@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from "react";
-import { isTrackedBus, type Departure } from "../models/Bus";
-import type { Stop } from "../models/Stop";
-import fetchDepartures, { parseDepartures } from "../utils/getDepartures";
-import getStopData from "../utils/getStopData";
+import { isTrackedBus, type Departure } from "../../models/Bus";
+import type { BTStop } from "../../models/Stop";
+import fetchDepartures, { parseDepartures } from "../../utils/getDepartures";
+import getStopData from "../../utils/getStopData";
 import { useNavigate, useParams } from "react-router";
 import { Skeleton } from "@radix-ui/themes";
-import { Card } from "../components/ui/Card";
-import timeTo, { lateness, toTime } from "../utils/timeUtils";
-import { getClosestStop } from "../utils/closestStop";
+import { Card } from "../../components/ui/Card";
+import timeTo, { lateness, toTime } from "../../utils/timeUtils";
+import { getClosestStop } from "../../utils/closestStop";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -20,9 +20,9 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { faStar as faStarRegular } from "@fortawesome/free-regular-svg-icons";
 import clsx from "clsx";
-import { WebSocketManager } from "../websockets/ws_manager";
-import getBus from "../utils/getBus";
-import type { Bus } from "../models/Bus";
+import { WebSocketManager } from "../../websockets/ws_manager";
+import getBus from "../../utils/getBus";
+import type { Bus } from "../../models/Bus";
 import useLocalStorageState from "use-local-storage-state";
 
 const getBusDetail = async (bus: Departure) => {
@@ -49,8 +49,6 @@ function BusCard({
     const [brokenDown, setBrokenDown] = useState(false);
     const [isOnDiversion, setIsOnDiversion] = useState(false);
     const navigate = useNavigate();
-
-
 
     useEffect(() => {
         let interval: ReturnType<typeof setInterval> | null = null;
@@ -81,10 +79,16 @@ function BusCard({
         setBrokenDown(false);
         setNotLoggedOff(false);
         setIsOnDiversion(false);
-        if (isTrackedBus(bus) && bus.confidence.broken_tracking_confidence >= 0.65) {
+        if (
+            isTrackedBus(bus) &&
+            bus.confidence.broken_tracking_confidence >= 0.65
+        ) {
             setTrackingBroken(true);
         }
-        if (isTrackedBus(bus) && bus.confidence.broken_down_confidence >= 0.65) {
+        if (
+            isTrackedBus(bus) &&
+            bus.confidence.broken_down_confidence >= 0.65
+        ) {
             setBrokenDown(true);
         }
         if (isTrackedBus(bus) && bus.confidence.log_off_confidence >= 0.65) {
@@ -125,7 +129,12 @@ function BusCard({
             onClick={onClick}
             className={clsx(
                 "cursor-pointer",
-                isTrackedBus(bus) && (bus.delay >= 2700 || trackingBroken || brokenDown || notLoggedOff) && "opacity-75"
+                isTrackedBus(bus) &&
+                    (bus.delay >= 2700 ||
+                        trackingBroken ||
+                        brokenDown ||
+                        notLoggedOff) &&
+                    "opacity-75"
             )}>
             <div className="flex flex-row items-center justify-between gap-x-2">
                 <div className="flex flex-col justify-around gap-1">
@@ -223,17 +232,21 @@ function BusCard({
                                   })()
                                 : "-"}
                         </div>
-                        {isTrackedBus(bus) && (<>
-                            {trackingBroken ? (
-                            <span
-                                className="text-sm font-medium opacity-70">
-                                no data
-                            </span>) : (<span
-                                className={`text-${
-                                    bus.delay >= 60 ? "red" : "green"
-                                }-400`}>
-                                {lateness(bus ? bus.delay : 0)}
-                            </span>)}</>
+                        {isTrackedBus(bus) && (
+                            <>
+                                {trackingBroken ? (
+                                    <span className="text-sm font-medium opacity-70">
+                                        no data
+                                    </span>
+                                ) : (
+                                    <span
+                                        className={`text-${
+                                            bus.delay >= 60 ? "red" : "green"
+                                        }-400`}>
+                                        {lateness(bus ? bus.delay : 0)}
+                                    </span>
+                                )}
+                            </>
                         )}
                         {!bus.started && (
                             <span
@@ -428,7 +441,7 @@ const DeparturePage: React.FC = () => {
     const firstFetch = useRef(true);
 
     const [buses, setBuses] = useState<Departure[]>([]);
-    const [stop, setStop] = useState<Stop>();
+    const [stop, setStop] = useState<BTStop>();
     const [closestStop, setClosest] = useState<string>();
     const [loading, setLoading] = useState(true);
     const [gettingLiveData, setGettingLiveData] = useState(true);

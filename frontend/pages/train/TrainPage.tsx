@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { fetchTrain } from "../utils/getTrain";
+import { fetchTrain } from "../../utils/getTrain";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { lateness, toTime } from "../utils/timeUtils";
-import { Pulse } from "../components/ui/Pulse";
+import { lateness, toTime } from "../../utils/timeUtils";
+import { Pulse } from "../../components/ui/Pulse";
 import {
     faCalendarCheck,
     faCalendarXmark,
@@ -12,10 +12,10 @@ import {
     faTrainSubway,
     faWarning,
 } from "@fortawesome/free-solid-svg-icons";
-import type { Prediction } from "../models/Bus";
-import type { TrainService } from "../models/Trains";
+import type { Prediction } from "../../models/Bus";
+import type { TrainService } from "../../models/Trains";
 import React from "react";
-import { useShowAppNav } from "../utils/AppNav";
+import { useShowAppNav } from "../../utils/AppNav";
 
 export const TrainProgress: React.FC<{
     sequence: number;

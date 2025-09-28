@@ -246,10 +246,9 @@ async def build_scheduled_db(
             status="not_tracking",
         )
 
-        prev_journey = stop_time.journey.get_previous_journey(db, today.date())
+        prev_journey = stop_time.journey.get_previous_journey(db, today)
 
         if not prev_journey:
-            log.info("No previous journey")
             return scheduled_bus
 
         layover_time = (

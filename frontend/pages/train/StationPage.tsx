@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
-import { fetchDepartures, fetchArrivals } from "../utils/getStationDepartures";
+import {
+    fetchDepartures,
+    fetchArrivals,
+} from "../../utils/getStationDepartures";
 import { useNavigate, useParams } from "react-router";
 import { Skeleton } from "@radix-ui/themes";
-import { Card } from "../components/ui/Card";
-import type { Location, Train } from "../models/Trains";
-import { generateTimeTo, lateness, toTime } from "../utils/timeUtils";
+import { Card } from "../../components/ui/Card";
+import type { Location, Train } from "../../models/Trains";
+import { generateTimeTo, lateness, toTime } from "../../utils/timeUtils";
 
 function TrainCard({
     train,

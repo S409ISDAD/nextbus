@@ -7,7 +7,7 @@ import { Card } from "./ui/Card";
 import { getClosestStop } from "../utils/closestStop";
 import { getCurrentPosition } from "../utils/locations";
 import getStopData from "../utils/getStopData";
-import type { Stop } from "../models/Stop";
+import type { BTStop } from "../models/Stop";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -33,7 +33,7 @@ function BusCard({
     onClick: () => void;
     gettingLiveData: boolean;
 }) {
-        const [trackingBroken, setTrackingBroken] = useState(false);
+    const [trackingBroken, setTrackingBroken] = useState(false);
     const [notLoggedOff, setNotLoggedOff] = useState(false);
     const [brokenDown, setBrokenDown] = useState(false);
     const [isOnDiversion, setIsOnDiversion] = useState(false);
@@ -43,10 +43,16 @@ function BusCard({
         setBrokenDown(false);
         setNotLoggedOff(false);
         setIsOnDiversion(false);
-        if (isTrackedBus(bus) && bus.confidence.broken_tracking_confidence >= 0.65) {
+        if (
+            isTrackedBus(bus) &&
+            bus.confidence.broken_tracking_confidence >= 0.65
+        ) {
             setTrackingBroken(true);
         }
-        if (isTrackedBus(bus) && bus.confidence.broken_down_confidence >= 0.65) {
+        if (
+            isTrackedBus(bus) &&
+            bus.confidence.broken_down_confidence >= 0.65
+        ) {
             setBrokenDown(true);
         }
         if (isTrackedBus(bus) && bus.confidence.log_off_confidence >= 0.65) {
@@ -54,12 +60,18 @@ function BusCard({
         }
         if (isTrackedBus(bus) && bus.confidence.diversion_confidence >= 0.65) {
             setIsOnDiversion(true);
-        }}, [bus]);
+        }
+    }, [bus]);
     return (
         <div
             className={clsx(
                 "cursor-pointer",
-                isTrackedBus(bus) && (bus.delay >= 2700 || trackingBroken || brokenDown || notLoggedOff) && "opacity-75"
+                isTrackedBus(bus) &&
+                    (bus.delay >= 2700 ||
+                        trackingBroken ||
+                        brokenDown ||
+                        notLoggedOff) &&
+                    "opacity-75"
             )}
             key={bus.trip}
             onClick={onClick}>
@@ -215,7 +227,7 @@ function BusCard({
 
 function DepartureBoard({ stop_id, closest, filter }: Props) {
     const [buses, setBuses] = useState<Departure[]>([]);
-    const [stop, setStop] = useState<Stop>();
+    const [stop, setStop] = useState<BTStop>();
     const [stopID, setStopID] = useState<string>("");
     const [loading, setLoading] = useState(true);
     const [gettingLiveData, setGettingLiveData] = useState(true);

@@ -294,18 +294,23 @@ class Locality(Base, AutoSlugMixin):
             return f"{self.name}, {self.qualifier_name}"
         return self.name
 
+    @property
+    def has_stops(self):
+        return len(self.stops) > 0
+
     def services_served(self):
         with SessionLocal() as db:
-            lines: list["Service"] | list[None] = (
+            services: list["Service"] | list[None] = (
                 db.query(Service)
                 .join(ServiceStopUsage, Service.id == ServiceStopUsage.service_id)
                 .join(Stop, Stop.atco_code == ServiceStopUsage.stop_id)
+                .options(joinedload(Service.operator))
                 .filter(Stop.locality_id == self.id)
                 .distinct()
                 .all()
             )
 
-            return lines if lines else []
+            return services if services else []
 
 
 class Stop(Base):
@@ -1297,7 +1302,7 @@ class Journey(Base):
         return self.calendar.is_valid(date_time)
 
     def get_previous_journey(
-        self, db: Session, date: date | None = None
+        self, db: Session, date: datetime | None = None
     ) -> "Journey | None":
         """
         Returns the previous journey in the same block, active on the same date, ordered by end_time.
@@ -1309,7 +1314,7 @@ class Journey(Base):
             return None
 
         if not date:
-            date = datetime.now(tz=LONDON).date()
+            date = datetime.now(tz=LONDON)
 
         query = db.query(Journey).filter(
             Journey.block_id == self.block_id,

@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { isTrackedBus, type Departure } from "../models/Bus";
-import fetchDepartures from "../utils/getDepartures";
+import { isTrackedBus, type Departure } from "../../models/Bus";
+import fetchDepartures from "../../utils/getDepartures";
 
 import { useParams } from "react-router";
 
-import timeTo, { toTime } from "../utils/timeUtils";
+import timeTo, { toTime } from "../../utils/timeUtils";
 
 const DepartureScreen: React.FC = () => {
     const { stop_id } = useParams();

@@ -1,17 +1,17 @@
 import { useEffect, useRef, useState } from "react";
-import type { Journey } from "../models/Journey";
-import getBus from "../utils/getBus";
+import type { Journey } from "../../models/Journey";
+import getBus from "../../utils/getBus";
 import { useNavigate, useParams } from "react-router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { lateness, toTime } from "../utils/timeUtils";
-import { generateWholeTrack, type LatLng } from "../utils/locations";
+import { lateness, toTime } from "../../utils/timeUtils";
+import { generateWholeTrack, type LatLng } from "../../utils/locations";
 import {
     faBus,
     faCalendarCheck,
     faCalendarXmark,
     faWarning,
 } from "@fortawesome/free-solid-svg-icons";
-import type { Bus, Prediction } from "../models/Bus";
+import type { Bus, Prediction } from "../../models/Bus";
 import {
     Map as MapGL,
     Marker,
@@ -22,7 +22,7 @@ import {
     type MapRef,
 } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { useShowAppNav } from "../utils/AppNav";
+import { useShowAppNav } from "../../utils/AppNav";
 
 type MapInfoProps = {
     text: string;
@@ -47,7 +47,7 @@ type MapViewProps = {
     track: LatLng[];
 };
 import React from "react";
-import { Pulse } from "../components/ui/Pulse";
+import { Pulse } from "../../components/ui/Pulse";
 
 const MapView: React.FC<MapViewProps> = ({
     lat,

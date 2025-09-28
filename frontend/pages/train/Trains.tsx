@@ -2,12 +2,12 @@ import React, { useEffect } from "react";
 // import DepartureBoard from "../components/DepartureBoard";
 // import { faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
 // import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import TrainSearchCard from "../components/TrainSearch";
-import { Card } from "../components/ui/Card";
+import TrainSearchCard from "../../components/TrainSearch";
+import { Card } from "../../components/ui/Card";
 import type { StationData } from "uk-railway-stations";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTrainSubway } from "@fortawesome/free-solid-svg-icons";
-import { StationCombobox } from "../components/StationCombobox";
+import { StationCombobox } from "../../components/StationCombobox";
 
 const TrainsDashboard: React.FC = () => {
     // const navigate = useNavigate();

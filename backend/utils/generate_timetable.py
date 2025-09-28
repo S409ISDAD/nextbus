@@ -92,6 +92,6 @@ def generate_timetable(service_id: int, db: Session, inbound: bool = True):
 
 
 if __name__ == "__main__":
-    service_id = 7
+    service_id = 428
     with SessionLocal() as db:
         generate_timetable(service_id, db, inbound=False)

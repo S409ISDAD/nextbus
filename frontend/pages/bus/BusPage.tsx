@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from "react";
-import DepartureBoard from "../components/DepartureBoard";
+import DepartureBoard from "../../components/DepartureBoard";
 import useLocalStorageState from "use-local-storage-state";
 import haversine from "haversine-distance";
-import { getCurrentPosition } from "../utils/locations";
+import { getCurrentPosition } from "../../utils/locations";
 // import {
 //     LocationPrompt,
 //     useIsLocationGranted,
 // } from "../components/LocationPrompt";
-import { Card } from "../components/ui/Card";
+import { Card } from "../../components/ui/Card";
 
 const BusPage: React.FC = () => {
     useEffect(() => {
