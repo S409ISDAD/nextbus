@@ -32,6 +32,10 @@ from backend.config import API_BASE, get_logger
 from backend.db.db import SessionLocal
 from backend.deps import LONDON
 from backend.utils.fetch_json import fetch_json
+from sqlalchemy import select
+from backend.utils.bulk_upsert import bulk_upsert
+from shapely.geometry import box
+from geoalchemy2.shape import from_shape
 
 log = get_logger(__name__)
 
@@ -840,6 +844,60 @@ class Service(Base, AutoSlugMixin):
         self.bt_service_id = service_id
         return service_id
 
+    def do_stopusages(self):
+        """
+        builds the service_stop_usage table for this service
+        """
+
+        with SessionLocal() as db:
+            service_stop_pairs = (
+                select(Journey.service_id, StopTime.stop_id)
+                .join(Journey, StopTime.journey_id == Journey.id)
+                .group_by(Journey.service_id, StopTime.stop_id)
+            )
+
+            rows = db.execute(service_stop_pairs).all()
+
+            upsert_data = [
+                {"service_id": service_id, "stop_id": stop_id}
+                for service_id, stop_id in rows
+            ]
+
+            if upsert_data:
+                bulk_upsert(
+                    db,
+                    ServiceStopUsage,
+                    upsert_data,
+                    ["service_id", "stop_id"],
+                    ["service_id", "stop_id"],
+                )
+                db.commit()
+
+    def do_geometry(self):
+        """
+        builds the geometry for this service from its stops
+        """
+
+        with SessionLocal() as db:
+            extent = (
+                db.query(func.ST_Extent(Stop.point))
+                .join(ServiceStopUsage, ServiceStopUsage.stop_id == Stop.atco_code)
+                .filter(ServiceStopUsage.service_id == self.id)
+                .scalar()
+            )
+
+            if extent:
+                extent = extent.replace("BOX(", "").replace(")", "")
+                (xmin, ymin), (xmax, ymax) = [
+                    tuple(map(float, pair.split())) for pair in extent.split(",")
+                ]
+
+                bbox_poly = box(xmin, ymin, xmax, ymax)
+                self.geometry = from_shape(bbox_poly, srid=4326)
+
+                db.add(self)
+                db.commit()
+
 
 class TimetableDataSource(Base):
     __tablename__ = "timetable_data_source"
@@ -1049,7 +1107,10 @@ class Journey(Base):
     id = Column(BigInteger, primary_key=True, autoincrement=True)
     bt_trip_id = Column(Integer, nullable=True)
     service_id = Column(
-        Integer, ForeignKey("service.id", ondelete="CASCADE"), nullable=False
+        Integer,
+        ForeignKey("service.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     timetable_id = Column(
         Integer,

@@ -13,7 +13,7 @@ datasources = [
     {
         "name": "Stagecoach South East",
         "url": "https://opendata.stagecoachbus.com/stagecoach-scek-route-schedule-data-transxchange_2_4.zip",
-    }
+    },
     {
         "name": "Cresta Coaches",
         "bods_id": 18347,

@@ -15,9 +15,9 @@ log = get_logger()
 
 def times_from_stop(stop_id: str, db: Session, limit: int = 10):
     now = datetime.now(tz=LONDON)
-    now = datetime(
-        year=2025, month=9, day=27, hour=0, minute=59, second=0, tzinfo=LONDON
-    )
+    # now = datetime(
+    #     year=2025, month=9, day=27, hour=0, minute=59, second=0, tzinfo=LONDON
+    # )
 
     stop: Stop | None = db.query(Stop).filter(Stop.atco_code == stop_id).first()
     if not stop:

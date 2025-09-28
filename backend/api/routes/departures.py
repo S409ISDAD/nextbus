@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 
 from backend.deps import UTC, get_redis, limiter
 from backend.services import bus, stops
+from backend.tasks.get_departures import get_scheduled
 
 router = APIRouter()
 
@@ -19,11 +20,23 @@ async def departures_scheduled(
 ):
     try:
         await redis.sadd("total_stops", stop_id)
-        times = await stops.get_times(stop_id, redis)
+        times, use_db = await get_scheduled(stop_id, redis)
 
         tasks = []
         for _time in times:
-            tasks.append(bus.build_scheduled(_time, redis))
+            if use_db:
+                tasks.append(
+                    bus.build_scheduled_db(
+                        _time,
+                        stop_id,
+                        _time["trip_id"],
+                        _time["st"].journey.id,
+                        False,
+                        redis,
+                    )
+                )
+            else:
+                tasks.append(bus.build_scheduled(_time, redis))
 
         buses = await asyncio.gather(*tasks)
         buses = [bus for bus in buses if bus is not None]

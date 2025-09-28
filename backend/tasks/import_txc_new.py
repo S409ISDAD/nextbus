@@ -384,6 +384,7 @@ class TXCImporter:
         self.file_hash = None
         self.file_size_bytes = None
         self.skip_checks = skip_checks
+        self.services: set[int] = set()
         self.db = SessionLocal()
         self.today = datetime.now(tz=LONDON)
         self.operators: dict[int, Operator] = {}
@@ -436,6 +437,7 @@ class TXCImporter:
             for revision in self.map[service_id]:
                 self.files_in_revision = len(self.map[service_id][revision])
                 self.file_idx_in_revision = 0
+                self.services = set()
                 for file in self.map[service_id][revision]:
                     log.debug(
                         f"Importing {file} ({idx + 1}/{self.file_count}, {round(((idx + 1) / self.file_count) * 100, 2)}%)"
@@ -443,6 +445,8 @@ class TXCImporter:
                     self.file_idx_in_revision += 1
                     await self.handle_txc_file(Path(file))
                     idx += 1
+                log.debug("Finalising services...")
+                self.finish_services()
 
     def clear_old_data(self, service_code):
         timetables_to_go = (
@@ -749,7 +753,11 @@ class TXCImporter:
             )
             self.db.execute(delete_stmt)
 
-            subq = select(Journey.calendar_id).distinct()
+            subq = (
+                select(Journey.calendar_id)
+                .join(Calendar, Calendar.id == Journey.calendar_id)
+                .distinct()
+            )
 
             delete_stmt = Calendar.__table__.delete().where(~Calendar.id.in_(subq))
             self.db.execute(delete_stmt)
@@ -1216,6 +1224,8 @@ class TXCImporter:
 
                 self.handle_journeys(journeys, txc_service, service, timetable)
 
+            self.services.add(int(service.id))
+
     def get_route_links(self, journeys: list[txc.VehicleJourney]):
         """
         Gets all route links associated with the given journeys.
@@ -1370,6 +1380,16 @@ class TXCImporter:
             for stop in new_stops:
                 self.stops[stop.atco_code] = stop
 
+    def finish_services(self):
+        for id in self.services:
+            service = self.db.query(Service).filter_by(id=id).first()
+            if not service:
+                continue
+            service.do_stopusages()
+            service.do_geometry()
+            self.db.add(service)
+        self.db.commit()
+
     async def handle_txc_file(self, file: Path):
         start = time.time()
         try:
@@ -1450,6 +1470,7 @@ if __name__ == "__main__":
     elif input_path.lower().endswith(".xml"):
         txc_importer = TXCImporter(Path(input_path), ds_id=1, skip_checks=skip_checks)
         asyncio.run(txc_importer.handle_txc_file(Path(input_path)))
+        txc_importer.finish_services()
     else:
         log.debug("Error: Input must be a .zip or .xml file")
         exit(1)
