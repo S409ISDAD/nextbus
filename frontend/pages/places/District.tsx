@@ -52,7 +52,7 @@ const DistrictPage: React.FC = () => {
                                 </span>
                             ) : (
                                 <div className="gap-4 mb-8 columns-2 sm:columns-3 md:columns-4 lg:columns-5">
-                                    {district.localities.map((locality) => (
+                                    {district.localities?.map((locality) => (
                                         <div
                                             key={locality.id}
                                             className="flex flex-col mb-2 cursor-pointer break-inside-avoid"

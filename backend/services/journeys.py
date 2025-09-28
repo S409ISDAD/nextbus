@@ -152,6 +152,7 @@ async def get_vehicle_journey(journey_id, delay, r) -> Journey:
         stops=stops,
     )
 
+
 async def get_live_journey(journey_id, r) -> LiveJourney:
     async def fetch(journey_id):
         data = await fetch_json(
@@ -180,9 +181,8 @@ async def get_live_journey(journey_id, r) -> LiveJourney:
 
         for i, location in enumerate(locations):
             coords = location["coordinates"]
-            location["coords"] = [coords[1], coords[0]] # geojson is backwards
+            location["coords"] = [coords[1], coords[0]]  # geojson is backwards
             location["timestamp"] = isoparse(location["datetime"])
-
 
         return data
 
@@ -210,7 +210,7 @@ async def get_live_journey(journey_id, r) -> LiveJourney:
                 expt_time=stop.get("expt_time"),
                 departed=departed,
                 track=None,
-                coords=[0,0],
+                coords=[0, 0],
                 set_down=False,
                 timing_status="OTH",
             )

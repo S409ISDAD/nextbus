@@ -2,18 +2,18 @@ import React, { useEffect, useState } from "react";
 // import DepartureBoard from "../components/DepartureBoard";
 // import { faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
 // import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import DepartureBoard from "../components/DepartureBoard";
-import { getClosestStopForService } from "../utils/closestStop";
+import DepartureBoard from "../../components/DepartureBoard";
+import { getClosestStopForService } from "../../utils/closestStop";
 import { useParams } from "react-router";
-import { getCurrentPosition } from "../utils/locations";
+import { getCurrentPosition } from "../../utils/locations";
 
-import { getDBService } from "../utils/getService";
-import type { LineResult } from "../models/Search";
+import { getDBService } from "../../utils/getService";
+import type { ServiceResult } from "../../models/Search";
 
-const linePage: React.FC = () => {
-    const { line_id } = useParams();
+const ServicePage: React.FC = () => {
+    const { service_id } = useParams();
 
-    const [line, setline] = useState<LineResult>();
+    const [service, setservice] = useState<ServiceResult>();
     const [loading, setLoading] = useState(true);
     const [stopID, setStopID] = useState<string>("");
 
@@ -24,16 +24,16 @@ const linePage: React.FC = () => {
 
         const getData = async (id: string) => {
             try {
-                const line = await getDBService(id);
+                const service = await getDBService(id);
 
-                if (line) {
-                    console.log(line);
-                    setline(line);
-                    document.title = `Service ${line.line_name} | nextbus`;
+                if (service) {
+                    console.log(service);
+                    setservice(service);
+                    document.title = `Service ${service.service_name} | nextbus`;
                     const pos = await getCurrentPosition();
                     const closest_stop = await getClosestStopForService(
                         [pos.coords.latitude, pos.coords.longitude],
-                        line.bt_service_id ? line.bt_service_id : ""
+                        service.bt_service_id ? service.bt_service_id : ""
                     );
                     console.log("closest_stop", closest_stop);
                     setStopID(closest_stop);
@@ -46,24 +46,24 @@ const linePage: React.FC = () => {
                 setLoading(false);
             }
         };
-        const init = async (line_id: string) => {
+        const init = async (service_id: string) => {
             try {
-                await getData(line_id);
+                await getData(service_id);
             } catch (error) {
                 console.error("Init error:", error);
-                setMsg("Unable to get line data.");
+                setMsg("Unable to get service data.");
                 setLoading(false);
             }
         };
 
-        if (line_id) {
-            init(line_id);
+        if (service_id) {
+            init(service_id);
         }
 
         return () => {
             clearInterval(interval);
         };
-    }, [line_id]);
+    }, [service_id]);
 
     return (
         <div className="p-5 md:mx-20">
@@ -71,23 +71,23 @@ const linePage: React.FC = () => {
                 <div className="flex flex-col items-center justify-center gap-6">
                     <div className="flex flex-col items-center justify-center gap-3">
                         <span className="text-4xl font-bold md:text-4xl text-start">
-                            {line?.line_name} · {line?.description}
+                            {service?.line_name} · {service?.description}
                         </span>
                         <div className="flex flex-col items-center justify-center gap-1">
-                            {line?.vias && (
+                            {service?.vias && (
                                 <span className="text-xl font-semibold text-center text-neutral-400">
-                                    Via {line?.vias}
+                                    Via {service?.vias}
                                 </span>
                             )}
                             <span className="text-sm font-semibold text-center text-neutral-400">
                                 Operated by{" "}
-                                {line?.operator ? line?.operator : "N/A"}
+                                {service?.operator ? service?.operator : "N/A"}
                             </span>
-                            {line?.bt_service_id && (
+                            {service?.bt_service_id && (
                                 <div className="flex flex-wrap items-center justify-center gap-4 gap-y-1">
                                     <a
-                                        className="underline text-sky-500"
-                                        href={`https://bustimes.org/services/${line?.bt_service_id}`}
+                                        className="underservice text-sky-500"
+                                        href={`https://bustimes.org/services/${service?.bt_service_id}`}
                                         target="_blank">
                                         View on bustimes.org
                                     </a>
@@ -97,29 +97,39 @@ const linePage: React.FC = () => {
                     </div>
                 </div>
                 {msg && <span className="text-red-500 ">{msg}</span>}
-                {line?.outbound_description && (
-                    <div className="flex flex-col items-center justify-center gap-1">
-                        <span className="text-lg font-semibold">
-                            Outbound: {line.outbound_description}
-                        </span>
-                        {line.inbound_description && (
+                <div className="flex flex-col items-start w-full gap-3">
+                    {service?.outbound_description && (
+                        <div className="flex flex-col">
                             <span className="text-lg font-semibold">
-                                Inbound: {line.inbound_description}
+                                {service.outbound_description}
                             </span>
-                        )}
-                    </div>
-                )}
+                            <span className="text text-neutral-400">
+                                timetable soon
+                            </span>
+                        </div>
+                    )}
+                    {service?.inbound_description && (
+                        <div className="flex flex-col">
+                            <span className="text-lg font-semibold">
+                                {service.inbound_description}
+                            </span>
+                            <span className="text text-neutral-400">
+                                timetable soon
+                            </span>
+                        </div>
+                    )}
+                </div>
                 {loading && (
                     <span className="text-neutral-300">Loading...</span>
                 )}
                 {stopID && (
                     <DepartureBoard
                         stop_id={stopID}
-                        filter={line?.line_name}></DepartureBoard>
+                        filter={service?.line_name}></DepartureBoard>
                 )}
             </div>
         </div>
     );
 };
 
-export default linePage;
+export default ServicePage;

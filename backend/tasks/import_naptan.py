@@ -281,8 +281,8 @@ def import_naptan_data(file_path: Path, no_update=False):
                 atco_code[0] for atco_code in db.query(Stop.atco_code).all()
             }
             stop_area_ids = {code[0] for code in db.query(StopArea.id).all()}
-            admin_areas = {a[0] for a in db.query(AdminArea.id).all()}
-            localities = {l[0] for l in db.query(Locality.id).all()}
+            admin_areas = {adm[0] for adm in db.query(AdminArea.id).all()}
+            localities = {loc[0] for loc in db.query(Locality.id).all()}
             localities_not_exist = set()
             log.debug("Loaded existing data")
             for event, element in iterator:

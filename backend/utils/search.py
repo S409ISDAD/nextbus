@@ -37,7 +37,7 @@ def search_services(query, db: Session, limit: int = 10):
     services = db.execute(service_query).all()
     for service, rank in services:
         data = service.with_timetable()
-        if data == None:
+        if data is None:
             log.warning(f"Service {service.id} returned None from with_timetable()")
             continue
         data["rank"] = rank
@@ -64,10 +64,10 @@ async def search_db(query: str, db: Session, limit: int = 20):
         localities_query = search(select(Locality), query, sort=True).limit(500)
         localities = list(db.scalars(localities_query).all())
         localities = [loc for loc in localities if loc.has_stops]
-        for l in localities:
-            del l.point
-            del l.stops
-            setattr(l, "full_name", l.get_full_name)
+        for loc in localities:
+            del loc.point
+            del loc.stops
+            setattr(loc, "full_name", loc.get_full_name)
         results["localities"] = localities
     else:
         results["localities"] = []

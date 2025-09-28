@@ -70,7 +70,7 @@ async def districts(
             locality.point = None
             del locality.stops
 
-        valid_localities.sort(key=lambda l: l.name)
+        valid_localities.sort(key=lambda loc: loc.name)
 
         return {
             "id": district.id,

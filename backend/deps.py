@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta, timezone
 import json
+from backend.config import get_logger
 import pathlib
 import redis.asyncio as redis
 import os
@@ -10,6 +11,8 @@ from pathlib import Path
 
 UTC = timezone.utc
 LONDON = ZoneInfo("Europe/London")
+
+log = get_logger()
 
 
 script_dir = pathlib.Path(__file__).resolve().parent

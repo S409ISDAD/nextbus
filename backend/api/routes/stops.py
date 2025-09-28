@@ -47,7 +47,7 @@ async def stop_details(request: Request, stop_id: str, redis=Depends(get_redis))
             indicator=stop_details.get("indicator", ""),
             bearing=bearing,
             services=services,
-            dist=0
+            dist=0,
         )
 
     except Exception as e:

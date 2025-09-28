@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import { useNavigate } from "react-router";
-import { Region } from "../../models/Places";
+import type { Region } from "../../models/Places";
 import { getRegions } from "../../utils/getPlaces";
 
 const RegionsPage: React.FC = () => {

@@ -14,7 +14,6 @@ async def get_scheduled(stop_id: str, redis):
     use_db_method = False
     with SessionLocal() as db:
         stop = db.query(Stop).filter(Stop.atco_code == stop_id).first()
-        is_tomorrow = False
 
         # if stop:
         #     db_lines = Stop.lines_served(stop, db)
@@ -27,7 +26,6 @@ async def get_scheduled(stop_id: str, redis):
             db_times = stop.times_from_stop(db)
             if len(db_times) == 0 and datetime.now(tz=LONDON).hour > 20:
                 log.debug("trying tomorrow")
-                is_tomorrow = True
                 tomorrow = datetime.now(tz=UTC) + timedelta(days=1)
                 tomorrow = tomorrow.replace(hour=0, minute=0, second=0, microsecond=0)
                 db_times = stop.times_from_stop(db, date=tomorrow)

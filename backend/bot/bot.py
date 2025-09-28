@@ -2,13 +2,15 @@ import asyncio
 import discord
 from discord import app_commands
 from discord.ext import commands
+from backend.config import get_logger
 from backend.db.db import SessionLocal
 from backend.deps import LONDON, UTC
-from backend.models import Line, BotConfig, BotStatus
+from backend.models import BotConfig, BotStatus
 from backend.utils.fetch_json import fetch_json
 from datetime import datetime, timedelta
-from sqlalchemy import event
 from sqlalchemy.orm import joinedload
+
+log = get_logger()
 
 intents = discord.Intents.default()
 intents.messages = True
@@ -19,20 +21,6 @@ DASHBOARD_CHANNEL_ID = 1411756379542392953
 STATUS_CHANNEL_ID = 1404456642090897669
 
 update_queue = asyncio.Queue()
-
-
-@event.listens_for(Line, "after_insert")
-@event.listens_for(Line, "after_update")
-@event.listens_for(Line, "after_delete")
-def route_changed(mapper, connection, target):
-    try:
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            loop.create_task(update_queue.put(True))
-        else:
-            log.debug("No running event loop; dashboard update not queued.")
-    except RuntimeError:
-        log.debug("No running event loop; dashboard update not queued.")
 
 
 async def update_dashboard_worker():

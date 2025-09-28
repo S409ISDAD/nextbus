@@ -6,6 +6,7 @@ import logging
 
 log = logging.getLogger(__name__)
 
+
 class MultiChannelManager:
     def __init__(self):
         self.connections: Dict[str, Dict[str, List[WebSocket]]] = {

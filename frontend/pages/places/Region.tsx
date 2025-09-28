@@ -52,7 +52,7 @@ const RegionsPage: React.FC = () => {
                                 </span>
                             ) : (
                                 <div className="gap-4 mb-8 columns-2 md:columns-3 lg:columns-4">
-                                    {region.admin_areas.map((admin_area) => (
+                                    {region.admin_areas?.map((admin_area) => (
                                         <div
                                             key={admin_area.id}
                                             className="mb-2 cursor-pointer break-inside-avoid"

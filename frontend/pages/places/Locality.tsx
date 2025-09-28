@@ -69,7 +69,7 @@ const LocalityPage: React.FC = () => {
                                                 className="flex flex-col cursor-pointer"
                                                 onClick={() => {
                                                     navigate(
-                                                        `/buses/lines/${service.id}`
+                                                        `/buses/services/${service.id}`
                                                     );
                                                 }}>
                                                 <div className="flex flex-row items-stretch mb-1">

@@ -6,8 +6,7 @@ import PrivacyPolicy from "../pages/Privacy";
 import Terms from "../pages/Terms";
 import Data from "../pages/Data";
 import BusPage from "../pages/bus/BusPage.tsx";
-import ServicePage from "../pages/ServicePage";
-import LinePage from "../pages/LinePage";
+import ServicePage from "../pages/bus/ServicePage.tsx";
 import Layout from "../components/Layout";
 import StationPage from "../pages/train/StationPage.tsx";
 import TrainPage from "../pages/train/TrainPage.tsx";
@@ -233,10 +232,6 @@ function App() {
                             <Route
                                 path="buses/services/:service_id"
                                 element={<ServicePage />}
-                            />
-                            <Route
-                                path="buses/lines/:line_id"
-                                element={<LinePage />}
                             />
                             <Route
                                 path="/trains"

@@ -219,8 +219,8 @@ async def possible_destinations(lat: float, lon: float, time: dt = None):
     with SessionLocal() as db:
         for stop in stops:
             services_at_stop = {
-                l[0]
-                for l in db.query(ServiceStopUsage.line_id)
+                line[0]
+                for line in db.query(ServiceStopUsage.line_id)
                 .filter(ServiceStopUsage.stop_id == stop.stop_id)
                 .all()
             }

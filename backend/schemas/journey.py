@@ -10,6 +10,7 @@ class Journey(BaseModel):
     service_id: int
     stops: list[StopTime]
 
+
 class LiveJourney(BaseModel):
     vehicle_id: int
     service_id: int
@@ -31,6 +32,7 @@ class LiveJourney(BaseModel):
             else:
                 full_track.append(location.coords)
         return full_track
+
 
 class Location(BaseModel):
     coords: list[float]

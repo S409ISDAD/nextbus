@@ -6,7 +6,10 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from backend.db.db import SessionLocal
 from backend.deps import get_redis, limiter
 from backend.models import Locality
-from backend.services.journey_planner import possible_destinations, get_possible_journeys
+from backend.services.journey_planner import (
+    possible_destinations,
+    get_possible_journeys,
+)
 
 router = APIRouter()
 
@@ -15,7 +18,13 @@ log = logging.getLogger(__name__)
 
 @router.get("/destinations")
 @limiter.limit("20/minute")
-async def destinations(request: Request, lat: float, lon: float, datetime: dt | None = None, redis=Depends(get_redis)):
+async def destinations(
+    request: Request,
+    lat: float,
+    lon: float,
+    datetime: dt | None = None,
+    redis=Depends(get_redis),
+):
     try:
         localities = await possible_destinations(lat, lon, datetime)
 
@@ -27,8 +36,14 @@ async def destinations(request: Request, lat: float, lon: float, datetime: dt | 
 
 @router.get("/journeys")
 @limiter.limit("10/minute")
-async def journeys(request: Request, lat: float, lon: float, locality: str, datetime: dt | None = None,
-                   redis=Depends(get_redis)):
+async def journeys(
+    request: Request,
+    lat: float,
+    lon: float,
+    locality: str,
+    datetime: dt | None = None,
+    redis=Depends(get_redis),
+):
     try:
         journeys = await get_possible_journeys(lat, lon, locality, redis, datetime)
         return journeys

@@ -86,7 +86,7 @@ const SearchPage: React.FC = () => {
                                                 className="flex flex-col cursor-pointer"
                                                 onClick={() => {
                                                     navigate(
-                                                        `/buses/lines/${service.service_id}`
+                                                        `/buses/services/${service.service_id}`
                                                     );
                                                 }}>
                                                 <div className="flex flex-row items-stretch mb-1">

@@ -11,7 +11,6 @@ log = logging.getLogger(__name__)
 WEEKDAYS = {day: i for i, day in enumerate(calendar.day_name)}
 
 
-
 def parse_time(string: str) -> timedelta:
     hours, minutes, seconds = string.split(":")
     return timedelta(hours=int(hours), minutes=int(minutes), seconds=int(seconds))

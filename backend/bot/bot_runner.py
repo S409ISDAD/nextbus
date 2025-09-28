@@ -3,6 +3,9 @@ import os
 import signal
 import dotenv
 from backend.bot.bot import bot, send_message
+from backend.config import get_logger
+
+log = get_logger()
 
 log.debug("Starting discord bot...")
 dotenv.load_dotenv()

@@ -1,8 +1,7 @@
 import enum
 from datetime import date, datetime, timedelta
 
-from geoalchemy2 import Geometry, WKTElement
-from shapely import LineString
+from geoalchemy2 import Geometry
 from sqlalchemy import (
     BigInteger,
     Boolean,
@@ -22,7 +21,6 @@ from sqlalchemy import (
     func,
     Index,
     inspect,
-    text,
 )
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.orm import declarative_base
@@ -37,8 +35,6 @@ from backend.deps import LONDON
 from backend.utils.fetch_json import fetch_json
 from sqlalchemy import select
 from backend.utils.bulk_upsert import bulk_upsert
-from shapely.geometry import box
-from geoalchemy2.shape import from_shape
 
 log = get_logger(__name__)
 
@@ -880,7 +876,7 @@ class Service(Base, AutoSlugMixin):
             )
             .join(Journey, StopTime.journey_id == Journey.id)
             .join(Timetable, Journey.timetable_id == Timetable.id)
-            .where(Journey.service_id == self.id, StopTime.stop_id != None)
+            .where(Journey.service_id == self.id, StopTime.stop_id is not None)
             .distinct(Journey.inbound, Timetable.line_name, StopTime.stop_id)
             .subquery()
         )

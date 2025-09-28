@@ -772,7 +772,8 @@ class TXCImporter:
 
             elif txc_journey.journey_pattern.operating_profile:
                 calendar = self.get_calendar(
-                    txc_journey.journey_pattern.operating_profile, operating_period
+                    txc_journey.journey_pattern.operating_profile,
+                    txc_service.operating_period,
                 )
             elif txc_service.operating_profile:
                 if not default_calendar:
@@ -901,9 +902,9 @@ class TXCImporter:
         if re.match(r"^P[BCDFGHKM]\d+:\d+.*$", txc_service.service_code) or re.match(
             r"^UZ[a-zA-Z0-9]+:.*$", txc_service.service_code
         ):
-            unique_service_code = txc_service.service_code
+            pass
         else:
-            unique_service_code = None
+            pass
         # end from
 
         service = None
@@ -933,8 +934,6 @@ class TXCImporter:
                 )
                 self.stats.files_skipped += 1
                 return
-
-        routes = set()
 
         for txc_line in txc_service.lines:
             if (

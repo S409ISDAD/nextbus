@@ -83,13 +83,13 @@ def import_nptg_data():
         try:
             file = STATIC_DATA_DIR / "NPTG.xml"
 
-            regions: dict[str, Region] = {r.id: r for r in db.query(Region).all()}
+            regions: dict[str, Region] = {reg.id: reg for reg in db.query(Region).all()}
             admin_areas: dict[int, AdminArea] = {
-                a.id: a for a in db.query(AdminArea).all()
+                adm.id: adm for adm in db.query(AdminArea).all()
             }
             districts: dict[int, District] = {d.id: d for d in db.query(District).all()}
             localities: dict[str, Locality] = {
-                l.id: l for l in db.query(Locality).all()
+                loc.id: loc for loc in db.query(Locality).all()
             }
 
             iterator = ET.iterparse(file)
