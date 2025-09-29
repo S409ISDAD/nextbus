@@ -1,23 +1,29 @@
-import React, {useEffect, useState} from "react";
+import React, { useEffect, useState } from "react";
 // import DepartureBoard from "../components/DepartureBoard";
 // import { faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
 // import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {Card} from "../components/ui/Card";
-import {getCurrentPosition} from "../utils/locations";
-import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
-import {faBus, faMap, faRotateRight, faTrainSubway, faWarning} from "@fortawesome/free-solid-svg-icons";
-import {getClosestStop} from "../utils/closestStop";
-import {useNavigate} from "react-router";
+import { Card } from "../components/ui/Card";
+import { getCurrentPosition } from "../utils/locations";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+    faBus,
+    faMap,
+    faRotateRight,
+    faTrainSubway,
+    faWarning,
+} from "@fortawesome/free-solid-svg-icons";
+import { getClosestStops } from "../utils/closestStop";
+import { useNavigate } from "react-router";
 import SearchBar from "../components/SearchBar";
 // import {
 //     LocationPrompt,
 //     useIsLocationGranted,
 // } from "../components/LocationPrompt";
-import {useGeolocated} from "react-geolocated";
-import type {DBStats} from "../models/Stats.ts";
-import {getDBStats} from "../utils/getStats.ts";
-import type {Locality} from "../models/Locality.ts";
-import {getDestinations} from "../utils/JourneyPlanning.ts";
+import { useGeolocated } from "react-geolocated";
+import type { DBStats } from "../models/Stats.ts";
+import { getDBStats } from "../utils/getStats.ts";
+import type { Locality } from "../models/Locality.ts";
+import { getDestinations } from "../utils/JourneyPlanning.ts";
 
 const Home: React.FC = () => {
     // const navigate = useNavigate();
@@ -54,12 +60,12 @@ const Home: React.FC = () => {
 
             const pos = await getCurrentPosition();
 
-            const destinations = await getDestinations([pos.coords.latitude, pos.coords.longitude], undefined)
+            const destinations = await getDestinations(
+                [pos.coords.latitude, pos.coords.longitude],
+                undefined
+            );
             if (destinations) {
-                console.log(
-                    "destinations",
-                    destinations
-                );
+                console.log("destinations", destinations);
                 setDestinations(destinations);
             }
         } catch (error) {
@@ -67,7 +73,7 @@ const Home: React.FC = () => {
         } finally {
             setLoadingDestinations(false);
         }
-    }
+    };
 
     useEffect(() => {
         const getClosest = async () => {
@@ -77,7 +83,7 @@ const Home: React.FC = () => {
 
                 const pos = await getCurrentPosition();
 
-                const closestStop = await getClosestStop([
+                const closestStop = await getClosestStops([
                     pos.coords.latitude,
                     pos.coords.longitude,
                 ]);
@@ -110,7 +116,6 @@ const Home: React.FC = () => {
                 console.log("uh oh");
             }
         };
-
 
         getClosest();
         fetchLocalities();
@@ -154,7 +159,7 @@ const Home: React.FC = () => {
                         <div className="flex flex-col items-center gap-2 p-3 bg-neutral-800 rounded-[24px]">
                             <span className="px-5 font-semibold text-center text-neutral-300 text">
                                 It looks like you're at a bus stop!
-                                <br/> Would you like to see the departures?
+                                <br /> Would you like to see the departures?
                             </span>
                             <div className="flex flex-row w-full gap-2">
                                 <button
@@ -177,33 +182,32 @@ const Home: React.FC = () => {
                     )}
                     <div className="flex flex-wrap items-center justify-center w-full gap-4 mb-4">
                         <div className="flex flex-col items-center p-2 px-6 shadow bg-neutral-800/50 rounded-xl">
-                        <span className="text-xl font-bold text-sky-400">
-                            {stats?.lines?.toLocaleString() ?? "--"}
-                        </span>
+                            <span className="text-xl font-bold text-sky-400">
+                                {stats?.lines?.toLocaleString() ?? "--"}
+                            </span>
                             <span className="mt-1 text-sm text-neutral-400">
-                            Services
-                        </span>
+                                Services
+                            </span>
                         </div>
                         <div className="flex flex-col items-center p-2 px-6 shadow bg-neutral-800/50 rounded-xl">
-                        <span className="text-xl font-bold text-purple-400">
-                            {stats?.stops?.toLocaleString() ?? "--"}
-                        </span>
+                            <span className="text-xl font-bold text-purple-400">
+                                {stats?.stops?.toLocaleString() ?? "--"}
+                            </span>
                             <span className="mt-1 text-sm text-neutral-400">
-                           Stops
-                        </span>
+                                Stops
+                            </span>
                         </div>
                         <div className="flex flex-col items-center p-2 px-6 shadow bg-neutral-800/50 rounded-xl">
-                        <span className="text-xl font-bold text-emerald-400">
-                            {stats?.operators?.toLocaleString() ?? "--"}
-                        </span>
+                            <span className="text-xl font-bold text-emerald-400">
+                                {stats?.operators?.toLocaleString() ?? "--"}
+                            </span>
                             <span className="mt-1 text-sm text-neutral-400">
-                            Operators
-                        </span>
+                                Operators
+                            </span>
                         </div>
-
                     </div>
 
-                    <SearchBar/>
+                    <SearchBar />
 
                     <div className="flex flex-row flex-wrap items-start justify-center w-full gap-5 p-5">
                         <Card className="max-w-[90vw] flex flex-col items-center gap-2">
@@ -218,46 +222,51 @@ const Home: React.FC = () => {
                                     onClick={() => {
                                         navigate("/buses");
                                     }}>
-                                    Bus Dashboard <FontAwesomeIcon icon={faBus}/>
+                                    Bus Dashboard{" "}
+                                    <FontAwesomeIcon icon={faBus} />
                                 </button>
                                 <button
                                     className="button max-w-fit"
                                     onClick={() => {
                                         navigate("/map");
                                     }}>
-                                    Map <FontAwesomeIcon icon={faMap}/>
+                                    Map <FontAwesomeIcon icon={faMap} />
                                 </button>
                                 <button
                                     className="button max-w-fit"
                                     onClick={() => {
                                         navigate("/trains");
                                     }}>
-                                    Trains <FontAwesomeIcon icon={faTrainSubway}/>
+                                    Trains{" "}
+                                    <FontAwesomeIcon icon={faTrainSubway} />
                                 </button>
                             </div>
-
                         </Card>
 
                         <Card className="max-w-[90vw] flex flex-col items-center gap-2">
                             <div className="flex flex-row items-center justify-center gap-3">
                                 <div className="flex flex-col items-center justify-center gap-1">
                                     <div className="flex flex-row items-center justify-center gap-1">
-                                    <span className="text-xl font-bold text-center text-nowrap">
-                                        Where to?
-                                    </span>
+                                        <span className="text-xl font-bold text-center text-nowrap">
+                                            Where to?
+                                        </span>
                                         <button
                                             className="p-1 rounded-2xl bg-blue-600 w-8 h-8"
                                             onClick={async () => {
                                                 await fetchLocalities();
                                             }}>
-                                            <FontAwesomeIcon icon={faRotateRight} className="text-xs"/>
+                                            <FontAwesomeIcon
+                                                icon={faRotateRight}
+                                                className="text-xs"
+                                            />
                                         </button>
                                     </div>
                                     <span className="text-sm font-semibold text-center text-neutral-500">
-                                        finds possible destinations based on buses you could take right now (work in progress)
+                                        finds possible destinations based on
+                                        buses you could take right now (work in
+                                        progress)
                                     </span>
                                 </div>
-
                             </div>
                             <div className="w-full max-w-[400px]">
                                 {/* <LocationPrompt
@@ -281,18 +290,18 @@ const Home: React.FC = () => {
                                         ))}
                                     </div>
                                 </LocationPrompt> */}
-                                <div
-                                    className="flex flex-row items-center justify-center gap-2 flex-wrap whitespace-nowrap">
+                                <div className="flex flex-row items-center justify-center gap-2 flex-wrap whitespace-nowrap">
                                     {loadingDestinations && (
                                         <span className="text-sm text-neutral-400">
                                             loading...
                                         </span>
                                     )}
-                                    {destinations.length === 0 && !loadingDestinations && (
-                                        <span className="text-sm text-neutral-400">
-                                            No possible destinations found.
-                                        </span>
-                                    )}
+                                    {destinations.length === 0 &&
+                                        !loadingDestinations && (
+                                            <span className="text-sm text-neutral-400">
+                                                No possible destinations found.
+                                            </span>
+                                        )}
                                     {destinations.map((dest) => (
                                         <a
                                             key={dest.id}
@@ -302,7 +311,6 @@ const Home: React.FC = () => {
                                         </a>
                                     ))}
                                 </div>
-
                             </div>
                         </Card>
                     </div>

@@ -12,7 +12,6 @@ websockets
 pubsub
 slowapi
 sqlalchemy
-asyncpg
 psycopg2-binary
 geoalchemy2
 alembic

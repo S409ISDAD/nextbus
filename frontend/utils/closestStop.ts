@@ -6,15 +6,16 @@ interface closestStop {
     dist: number;
     lat: number;
     lng: number;
+    active_now: boolean;
 }
 
 
 
-export const getClosestStop = async (position: number[], ignore?: string) => {
+export const getClosestStops = async (position: number[], ignore?: string, limit: number = 1) => {
     const lat = position[0]
     const lng = position[1]
 
-    const response = await api.get<closestStop>(`/location/closest?lat=${lat}&lng=${lng}&dist=0.01&ignore=${ignore}`)
+    const response = await api.get<closestStop[]>(`/location/closest?lat=${lat}&lng=${lng}&dist=0.01&ignore=${ignore}&limit=${limit}`)
 
     return response.data
 

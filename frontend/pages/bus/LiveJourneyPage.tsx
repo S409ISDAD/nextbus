@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { DBJourney } from "../../models/Journey";
+import type { LiveJourney } from "../../models/Journey";
 import getBus from "../../utils/getBus";
 import { useNavigate, useParams } from "react-router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -218,6 +218,7 @@ export const BusProgress: React.FC<{
 }> = React.memo(({ sequence, progress, busRef }) => {
     const sectionLength = 72;
     const translateY = (sequence + progress) * sectionLength;
+    const showAppNav = useShowAppNav();
 
     return (
         <div className="absolute top-0 left-0 h-full mt-[15px] z-11 w-9">
@@ -231,7 +232,7 @@ export const BusProgress: React.FC<{
                         <div
                             style={{
                                 position: "absolute",
-                                top: "-100px",
+                                top: showAppNav ? "0px" : "100px",
                                 left: 0,
                                 width: "100%",
                                 height: 0,
@@ -245,7 +246,7 @@ export const BusProgress: React.FC<{
     );
 });
 
-const JourneyPage: React.FC = () => {
+const LiveJourneyPage: React.FC = () => {
     const { bus_id } = useParams();
 
     const navigate = useNavigate();
@@ -258,7 +259,7 @@ const JourneyPage: React.FC = () => {
     const [accuracy, setAccuracy] = useState<
         "high" | "med" | "low" | "unknown"
     >("unknown");
-    const [journey, setJourney] = useState<DBJourney>();
+    const [liveJourney, setLiveJourney] = useState<LiveJourney>();
     const [loading, setLoading] = useState(true);
     const [fetching, setFetching] = useState(false);
     const [lastRefreshed, setRefreshed] = useState(new Date());
@@ -374,7 +375,7 @@ const JourneyPage: React.FC = () => {
     const busRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        if (journey && busRef.current) {
+        if (liveJourney && busRef.current) {
             requestAnimationFrame(() => {
                 busRef.current?.scrollIntoView({
                     behavior: "smooth",
@@ -382,7 +383,7 @@ const JourneyPage: React.FC = () => {
                 });
             });
         }
-    }, [sequence, journey]);
+    }, [sequence, liveJourney]);
 
     useEffect(() => {
         let interval: any;
@@ -399,7 +400,7 @@ const JourneyPage: React.FC = () => {
                 if (bus_response) {
                     setBus(bus_response);
                     setPredictions(bus_response.predictions);
-                    setJourney(bus_response.journey);
+                    setLiveJourney(bus_response.journey);
                     document.title = `${bus_response.journey.route_name} to ${bus_response.journey.destination} - ${bus_response.reg}`;
                     setMsg("");
                     setRefreshed(now);
@@ -488,7 +489,7 @@ const JourneyPage: React.FC = () => {
                                 View on bustimes.org
                             </a>
                             <span className="text-center">
-                                {journey?.stops.length} stops
+                                {liveJourney?.stops.length} stops
                             </span>
                         </div>
                         <div className="flex items-center gap-3">
@@ -578,7 +579,7 @@ const JourneyPage: React.FC = () => {
                                     sequence={sequence}
                                     progress={progress}
                                     busRef={busRef}></BusProgress>
-                                {journey?.stops.map((stop, idx) => (
+                                {liveJourney?.stops.map((stop, idx) => (
                                     <div
                                         key={stop.stop_id}
                                         className="relative flex flex-col items-center">
@@ -587,21 +588,22 @@ const JourneyPage: React.FC = () => {
                                                 idx == 0
                                                     ? "rounded-tl-full"
                                                     : idx ==
-                                                      journey.stops.length - 1
+                                                      liveJourney.stops.length -
+                                                          1
                                                     ? "rounded-bl-full"
                                                     : ""
                                             }`}></div>
                                         {/* {stop.timing_status === "PTP" && (
                                             <div className="absolute z-10 w-3 h-3 translate-y-[-30%] rounded-full bg-neutral-700 flex items-center justify-center"></div>
                                         )} */}
-                                        {idx < journey.stops.length - 1 && (
+                                        {idx < liveJourney.stops.length - 1 && (
                                             <div className="w-[4px] bg-neutral-700 flex-1 min-h-[68px]"></div>
                                         )}
                                     </div>
                                 ))}
                             </div>
                             <div className="flex flex-col gap-1">
-                                {journey?.stops.map((stop) => (
+                                {liveJourney?.stops.map((stop) => (
                                     <div
                                         key={stop.stop_id}
                                         className="flex flex-row items-center">
@@ -754,4 +756,4 @@ const JourneyPage: React.FC = () => {
     );
 };
 
-export default JourneyPage;
+export default LiveJourneyPage;

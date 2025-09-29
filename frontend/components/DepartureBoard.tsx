@@ -4,7 +4,7 @@ import fetchDepartures, { parseDepartures } from "../utils/getDepartures";
 import { useNavigate } from "react-router";
 import timeTo, { lateness, toTime } from "../utils/timeUtils";
 import { Card } from "./ui/Card";
-import { getClosestStop } from "../utils/closestStop";
+import { getClosestStops } from "../utils/closestStop";
 import { getCurrentPosition } from "../utils/locations";
 import getStopData from "../utils/getStopData";
 import type { BTStop } from "../models/Stop";
@@ -315,11 +315,11 @@ function DepartureBoard({ stop_id, closest, filter }: Props) {
                 let stop_id = id;
                 if (closest) {
                     const pos = await getCurrentPosition();
-                    const closestStop = await getClosestStop([
+                    const closestStop = await getClosestStops([
                         pos.coords.latitude,
                         pos.coords.longitude,
                     ]);
-                    stop_id = closestStop.stop_id;
+                    stop_id = closestStop[0].stop_id;
                     if (!stop_id) {
                         setMsg("No stop found nearby");
                         setLoading(false);

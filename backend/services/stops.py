@@ -2,6 +2,7 @@ from geopy.distance import geodesic
 from redis.asyncio import Redis
 
 from backend.config import API_BASE, BASE, STOPS_BASE
+from backend.deps import get_redis
 from backend.schemas.service import Service
 from backend.schemas.stop import Stop
 from backend.services.caching import (
@@ -10,6 +11,7 @@ from backend.services.caching import (
     TRIPS_CACHE,
     get_cached,
 )
+from backend.tasks.get_departures import get_scheduled
 from backend.utils.fetch_json import fetch_json
 import logging
 
@@ -148,10 +150,10 @@ async def get_nearby_stops(lat, lng, dist=0.005):
     return nearby_stops
 
 
-async def get_closest_stop(lat, lng, ignore, dist=0.005):
+async def get_closest_stop(lat, lng, ignore, dist=0.005, limit=1):
     stops = await get_nearby_stops(lat, lng, dist)
 
-    closest_stop = None
+    closest_stops = []
     min_dist = float("inf")
 
     for stop in stops:
@@ -160,22 +162,30 @@ async def get_closest_stop(lat, lng, ignore, dist=0.005):
 
         dist = geodesic((lat, lng), (stop_lat, stop_lng)).meters
 
-        if dist < min_dist and ignore != stop.stop_id:
-            min_dist = dist
-            closest_stop = stop
+        if ignore != stop.stop_id:
+            closest_stops.append(
+                {
+                    "stop_id": stop.stop_id,
+                    "dist": stop.dist,
+                    "lat": stop_lat,
+                    "lng": stop_lng,
+                    "active_now": True,
+                }
+            )
 
-    if closest_stop is None:
+    if closest_stops is None:
         return {"stop_id": "", "dist": 0, "lat": 0, "lng": 0}
 
-    stop_id = closest_stop.stop_id
-    log.debug(stop_id)
+    r = await get_redis()
 
-    return {
-        "stop_id": stop_id,
-        "dist": min_dist,
-        "lat": closest_stop.coords[1],
-        "lng": closest_stop.coords[0],
-    }
+    closest_stops.sort(key=lambda x: x["dist"])
+    closest_stops = closest_stops[:limit]
+
+    # for stop in closest_stops:
+    #     times, _ = await get_scheduled(stop["stop_id"], r)
+    #     if not times or len(times) == 0:
+    #         stop["active_now"] = False  # no upcoming departures
+    return closest_stops
 
 
 async def get_nearby_services(lat, lng, r, dist=0.005):

@@ -10,28 +10,31 @@ from backend.models import (
 )
 import sys
 
+from backend.utils.time_taken import time_taken
+
 log = get_logger()
 
 
 def times_from_stop(stop_id: str, db: Session, limit: int = 10):
-    now = datetime.now(tz=LONDON)
-    # now = datetime(
-    #     year=2025, month=9, day=27, hour=0, minute=59, second=0, tzinfo=LONDON
-    # )
+    # now = datetime.now(tz=LONDON)
+    now = datetime(
+        year=2025, month=9, day=29, hour=23, minute=2, second=0, tzinfo=LONDON
+    )
 
     stop: Stop | None = db.query(Stop).filter(Stop.atco_code == stop_id).first()
     if not stop:
         log.warning(f"Stop with ID {stop_id} not found.")
         return
 
-    stop_times = stop.times_from_stop(db, date_time=now)
+    with time_taken("fetching stop times"):
+        stop_times = stop.times_from_stop(db, date_time=now)
 
     results = []
-    for st in stop_times[:limit]:
+    for st, dep in stop_times[:limit]:
         line_name = st.journey.timetable.line_name if st.journey.timetable else None
         dest = st.headsign
         dep_str = st.departure_time_str
-        time_to = st.time_to(now)
+        time_to = dep - now
         mins = int(time_to.total_seconds() // 60)
         if mins < 1:
             time_to_str = "due"
@@ -47,7 +50,7 @@ def times_from_stop(stop_id: str, db: Session, limit: int = 10):
         print(f"Stop with ID {stop_id} not found.")
         return
 
-    print(f"Departures from {stop.long_name} at {now}:")
+    print(f"Departures from {stop.long_name} at {now.strftime('%H:%M:%S')}:")
 
     if results:
         longest_dest = max(len(dest or "") for _, dest, _, _ in results)

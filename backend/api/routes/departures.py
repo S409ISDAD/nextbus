@@ -33,6 +33,7 @@ async def departures_scheduled(
                         _time["st"].journey.id,
                         False,
                         redis,
+                        get_prev=False,
                     )
                 )
             else:

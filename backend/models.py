@@ -35,11 +35,15 @@ from backend.deps import LONDON
 from backend.utils.fetch_json import fetch_json
 from sqlalchemy import select
 from backend.utils.bulk_upsert import bulk_upsert
+from collections import namedtuple
 
 log = get_logger(__name__)
 
 Base = declarative_base()
 make_searchable(Base.metadata)
+
+
+ServiceLite = namedtuple("ServiceLite", ["id", "line_name"])
 
 
 def to_dict(obj, exclude: list = []):
@@ -389,17 +393,26 @@ class Stop(Base):
     def does_serve_buses(self) -> bool:
         return any(s for s in self.services if s.public_use)
 
-    def lines_served(self, db: Session) -> list["Service"]:
+    def lines_served(self, db: Session) -> list["ServiceLite"]:
         """
         Returns a list of services that serve this stop.
         """
-        lines: list["Service"] = (
-            db.query(Service)
-            .join(ServiceStopUsage, Service.id == ServiceStopUsage.service_id)
-            .filter(ServiceStopUsage.stop_id == self.atco_code)
-            .distinct()
-            .all()
-        )
+
+        lines = [
+            ServiceLite(id=row[0], line_name=row[1])
+            for row in (
+                db.query(Service.id, Service.line_name)
+                .filter(
+                    db.query(ServiceStopUsage)
+                    .filter(
+                        ServiceStopUsage.service_id == Service.id,
+                        ServiceStopUsage.stop_id == self.atco_code,
+                    )
+                    .exists()
+                )
+                .all()
+            )
+        ]
         return lines
 
     def headsigns(self):
@@ -454,40 +467,42 @@ class Stop(Base):
 
     def times_from_stop(
         self, db: Session, date_time: datetime | None = None, limit: int = 10
-    ) -> list["StopTime"]:
+    ) -> list[tuple["StopTime", datetime]]:
         """
         Returns a list of upcoming StopTime objects for this stop, with joined journey and service.
         """
 
-        if date_time is None:
-            now = datetime.now(tz=LONDON)
-        else:
-            now = date_time
+        now = date_time or datetime.now(tz=LONDON)
 
-        stop_times = (
-            db.query(StopTime)
-            .filter(StopTime.stop_id == self.atco_code)
-            .filter(StopTime.pick_up)
-            .join(Journey)
-            .join(Calendar)
-            .options(
-                joinedload(StopTime.journey).joinedload(Journey.calendar),
-                joinedload(StopTime.journey).joinedload(Journey.timetable),
+        results = []
+
+        for day_offset in [-1, 0, 1]:
+            service_day = (now + timedelta(days=day_offset)).date()
+            stop_times = (
+                db.query(StopTime)
+                .filter(StopTime.stop_id == self.atco_code)
+                .filter(StopTime.pick_up)
+                .join(Journey)
+                .join(Calendar)
+                .options(
+                    joinedload(StopTime.journey).joinedload(Journey.calendar),
+                    joinedload(StopTime.journey).joinedload(Journey.timetable),
+                )
+                .all()
             )
-            .all()
-        )
 
-        future_stop_times = []
-        for st in stop_times:
-            if not st.journey.is_valid(now) or st.departure_time is None:
-                continue
-            dep_dt = st.departure_datetime(now)
-            if dep_dt >= now:
-                future_stop_times.append((dep_dt, st))
+            for st in stop_times:
+                if not st.journey.is_valid(service_day):
+                    continue
+                dep_dt = st.departure_datetime(service_day)
+                if dep_dt >= now:
+                    results.append((st, dep_dt))
 
-        future_stop_times.sort(key=lambda x: x[0])
+            if len(results) >= limit:
+                break  # got enough, stop fetching
 
-        return [st for _, st in future_stop_times[:limit]]
+        results.sort(key=lambda x: x[1])
+        return [(st, dep_dt) for st, dep_dt in results[:limit]]
 
 
 class StopArea(Base):
@@ -649,15 +664,12 @@ class Calendar(Base):
             "sunday": self.sunday,
         }
 
-    def is_valid(self, date_time: datetime | None = None) -> bool:
+    def is_valid(self, service_day: date | None = None) -> bool:
         """
         Returns True if the calendar is valid on the given date (or today if no date is given).
         """
 
-        if not date_time:
-            date_time = datetime.now(tz=LONDON)
-
-        date = date_time.date()
+        date = service_day or datetime.now(tz=LONDON).date()
 
         if not (
             self.start_date <= date and (self.end_date is None or self.end_date >= date)
@@ -1280,26 +1292,40 @@ class Journey(Base):
         "StopTime", back_populates="journey", cascade="all, delete-orphan"
     )
 
-    def is_valid(self, date_time: datetime | None = None) -> bool:
+    # def is_valid(self, date_time: datetime | None = None) -> bool:
+    #     """
+    #     Returns True if the journey is valid on the given date (or today if no date is given).
+    #     """
+    #     if not self.calendar:
+    #         log.warning(f"No calendar for journey {self.id}")
+    #         return True
+
+    #     date_time = date_time or datetime.now(tz=LONDON)
+
+    #     if self.start_time is not None:
+    #         journey_start_today = datetime.combine(
+    #             date_time.date(),
+    #             (datetime.min + self.start_time).time(),
+    #         ).astimezone(LONDON)
+
+    #         time_diff = date_time - journey_start_today
+
+    #         if time_diff > timedelta(hours=12):
+    #             date_time -= timedelta(days=1)
+
+    #     return self.calendar.is_valid(date_time)
+
+    def is_valid(self, service_day: date | None = None) -> bool:
         """
         Returns True if the journey is valid on the given date (or today if no date is given).
         """
         if not self.calendar:
-            return False
+            log.warning(f"No calendar for journey {self.id}")
+            return True
 
-        if not date_time:
-            date_time = datetime.now(tz=LONDON)
+        date = service_day or datetime.now(tz=LONDON).date()
 
-        if self.start_time is not None:
-            journey_start_today = datetime.combine(
-                date_time.date(),
-                (datetime.min + self.start_time).time(),
-            ).astimezone(LONDON)
-
-            if journey_start_today > date_time:
-                date_time -= timedelta(days=1)
-
-        return self.calendar.is_valid(date_time)
+        return self.calendar.is_valid(date)
 
     def get_previous_journey(
         self, db: Session, date: datetime | None = None
@@ -1411,6 +1437,9 @@ class StopTime(Base):
 
     __table_args__ = (Index("ix_stoptime_journey_seq", "journey_id", "stop_sequence"),)
 
+    def __repr__(self):
+        return f"id={self.id}, journey_id={self.journey_id}, stop_id={self.stop_id}, stop_sequence={self.stop_sequence}, arrival_time={self.arrival_time}, departure_time={self.departure_time}"
+
     @property
     def headsign(self):
         try:
@@ -1475,30 +1504,12 @@ class StopTime(Base):
             log.error(f"Error getting headsign for stoptime {self.id}: {e}")
             return None
 
-    def departure_datetime(self, date_time: datetime) -> datetime | None:
+    def departure_datetime(self, service_day: date) -> datetime:
         if self.departure_time is None:
             return None
-
-        dep_dt = datetime.combine(date_time.date(), datetime.min.time()).replace(
-            tzinfo=LONDON
-        ) + (
-            self.departure_time
-            if isinstance(self.departure_time, timedelta)
-            else timedelta()
+        return datetime.combine(
+            service_day, (datetime.min + self.departure_time).time(), tzinfo=LONDON
         )
-
-        if dep_dt < date_time - timedelta(hours=12):
-            dep_dt += timedelta(days=1)
-        elif dep_dt > date_time + timedelta(hours=12):
-            dep_dt -= timedelta(days=1)
-
-        return dep_dt
-
-    def time_to(self, date_time: datetime) -> timedelta | None:
-        dt = self.departure_datetime(date_time)
-        if dt is None:
-            return None
-        return dt - date_time
 
     @property
     def dep_or_arr(self):

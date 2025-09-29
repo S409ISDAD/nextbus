@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 
 from dateutil import parser
 from redis.asyncio import Redis
+import sentry_sdk
 from sqlalchemy.orm import joinedload
 
 from backend.config import VEHICLES_BASE
@@ -121,10 +122,12 @@ async def fetch_buses(
 
     for time in times:
         trip_id = time.get("trip_id")
-        with SessionLocal() as db:
-            journey = await match_trip_journey(db, trip_id, r)
-            journey_id = journey.id if journey else None
-            use_db = journey_id is not None
+        journey_id = time.get("journey_id", None)
+        if use_db and trip_id and not journey_id:
+            with SessionLocal() as db:
+                journey = await match_trip_journey(db, trip_id, r)
+                journey_id = journey.id if journey else None
+        use_db = journey_id is not None
         matched_buses = active_by_trip.get(trip_id, [])
         if matched_buses:
             tasks.append(build_bus_candidates(matched_buses, r, stop_id, journey_id))
@@ -138,7 +141,12 @@ async def fetch_buses(
             else:
                 tasks.append(build_scheduled(time, r))
 
-    buses = await asyncio.gather(*tasks)
+    with sentry_sdk.start_span(op="fetching_buses", description="fetching buses"):
+        try:
+            buses = await asyncio.wait_for(asyncio.gather(*tasks), timeout=30.0)
+        except asyncio.TimeoutError:
+            log.warning("Timeout fetching buses")
+            buses = []
     final_buses = [bus for bus in buses if bus is not None]
     return final_buses
 
@@ -196,7 +204,14 @@ async def build_scheduled(time, r, include_started=True):
 
 
 async def build_scheduled_db(
-    time, stop_id, trip_id, journey_id, is_tomorrow, r, include_started=True
+    time,
+    stop_id,
+    trip_id,
+    journey_id,
+    is_tomorrow,
+    r,
+    include_started=True,
+    get_prev=True,
 ):
     with SessionLocal() as db:
         stop_time: StopTime = (
@@ -215,10 +230,14 @@ async def build_scheduled_db(
         )
 
         if not stop_time:
-            log.warning("No stop time found")
+            log.warning(f"No stop time found, {journey_id}, {stop_id}")
             return await build_scheduled(time, r, include_started)
 
-        if include_started:
+        departure_time = stop_time.departure_time
+        headsign = stop_time.headsign
+        line_name = stop_time.journey.service.line_name
+
+        if include_started and trip_id:
             started, finished = await get_started_finished(trip_id, r)
         else:
             started = False
@@ -228,88 +247,83 @@ async def build_scheduled_db(
             today += timedelta(days=1)
 
         today_midnight = datetime.combine(today, datetime.min.time()).astimezone(LONDON)
-        scheduled = today_midnight + stop_time.departure_time
+        scheduled = today_midnight + departure_time
 
         if (scheduled - datetime.now(tz=LONDON)).total_seconds() > 11 * 3600:
             log.debug("Scheduled too far in future")
             return None
 
-        dest = stop_time.headsign
+        dest = headsign
 
         scheduled_bus = ScheduledBus(
             destination=dest,
-            line=stop_time.journey.service.line_name,
+            line=line_name,
             scheduled=scheduled,
             expected=scheduled,
             started=started,
-            trip=trip_id,
+            trip=trip_id or 0,
             status="not_tracking",
         )
 
-        prev_journey = stop_time.journey.get_previous_journey(db, today)
+        if get_prev:
+            prev_journey = stop_time.journey.get_previous_journey(db, today)
 
-        if not prev_journey:
-            return scheduled_bus
+            if not prev_journey:
+                return scheduled_bus
 
-        layover_time = (
-            stop_time.journey.start_time - prev_journey.end_time
-            if prev_journey
-            else timedelta(0)
-        )
+            layover_time = (
+                stop_time.journey.start_time - prev_journey.end_time
+                if prev_journey
+                else timedelta(0)
+            )
 
-        prev_trip = await prev_journey.get_bt_trip_id(db)
+            prev_trip = await prev_journey.get_bt_trip_id(db)
 
-        prev_service_id = await prev_journey.service.get_bt_service_id(db)
-        this_service_id = await stop_time.journey.service.get_bt_service_id(db)
+            prev_service_id = await prev_journey.service.get_bt_service_id(db)
+            this_service_id = await stop_time.journey.service.get_bt_service_id(db)
 
-        if not prev_trip or not prev_service_id or not this_service_id:
-            return scheduled_bus
+            if not prev_trip or not prev_service_id or not this_service_id:
+                return scheduled_bus
 
-        service_info = await get_service_info(this_service_id, r)
+            service_info = await get_service_info(this_service_id, r)
 
-        potential_bus = await fetch_bus_trip(prev_service_id, prev_trip, r)
+            potential_bus = await fetch_bus_trip(prev_service_id, prev_trip, r)
 
-        if potential_bus:
-            log.debug("Found bus from previous trip")
+            if potential_bus:
+                log.debug("Found bus from previous trip")
 
-            bus = await build_bus(potential_bus["id"], r, get_journey=False)
-            if not bus:
-                log.warning("Failed to build bus")
-            else:
-                delay = max(
-                    bus.delay - int(layover_time.total_seconds()), 0
-                )  # account for layover
-                bus.destination = dest
-                bus.scheduled = scheduled
-                bus.expected = scheduled + timedelta(seconds=delay)
-                bus.delay = delay
-                bus.trip = trip_id
-                bus.started = False
-                bus.status = "on_prev_trip"
-                service = service_info if service_info else bus.service
-                bus.service = service
-                bus.confidence.log_off_confidence = 0.0
+                bus = await build_bus(potential_bus["id"], r, get_journey=False)
+                if not bus:
+                    log.warning("Failed to build bus")
+                else:
+                    delay = max(
+                        bus.delay - int(layover_time.total_seconds()), 0
+                    )  # account for layover
+                    bus.destination = dest
+                    bus.scheduled = scheduled
+                    bus.expected = scheduled + timedelta(seconds=delay)
+                    bus.delay = delay
+                    bus.trip = trip_id
+                    bus.started = False
+                    bus.status = "on_prev_trip"
+                    service = service_info if service_info else bus.service
+                    bus.service = service
+                    bus.confidence.log_off_confidence = 0.0
 
-                # Don't show if expected is more than 2 hours away
-                if (bus.expected - datetime.now(tz=LONDON)).total_seconds() < 4 * 3600:
-                    return bus
-                if (
-                    layover_time.total_seconds() > 30 * 60
-                ):  # bus is not necessarily going straight on the next trip, might have to drive there which affects delay
-                    log.debug("Layover too long")
-                    bus.delay = 0
+                    # Don't show if expected is more than 2 hours away
+                    if (
+                        bus.expected - datetime.now(tz=LONDON)
+                    ).total_seconds() < 4 * 3600:
+                        return bus
+                    if (
+                        layover_time.total_seconds() > 30 * 60
+                    ):  # bus is not necessarily going straight on the next trip, might have to drive there which affects delay
+                        log.debug("Layover too long")
+                        bus.delay = 0
 
-                log.debug("Bus expected too far in future")
+                    log.debug("Bus expected too far in future")
 
-        return ScheduledBus(
-            destination=dest,
-            line=stop_time.journey.service.line_name,
-            scheduled=scheduled,
-            expected=scheduled,
-            started=started,
-            trip=trip_id,
-            status="not_tracking",
-        )
+        return scheduled_bus
 
 
 async def build_bus_candidates(

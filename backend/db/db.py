@@ -18,7 +18,7 @@ DATABASE_URL = f"postgresql+psycopg2://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POST
 engine = create_engine(DATABASE_URL)
 
 SessionLocal = scoped_session(
-    sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    sessionmaker(autocommit=False, autoflush=False, bind=engine, expire_on_commit=False)
 )
 
 

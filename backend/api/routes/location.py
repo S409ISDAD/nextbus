@@ -12,12 +12,13 @@ log = logging.getLogger(__name__)
 
 @router.get("/closest")
 @limiter.limit("30/minute")
-async def closest_stops(
+async def closest_stop(
     request: Request,
     lat: float,
     lng: float,
     dist: float,
     ignore: str,
+    limit: int = 1,
     redis=Depends(get_redis),
 ):
     try:
@@ -29,7 +30,7 @@ async def closest_stops(
         #     redis,
         # )
 
-        return await stops.get_closest_stop(lat, lng, ignore, dist)
+        return await stops.get_closest_stop(lat, lng, ignore, dist, limit)
     except Exception as e:
         log.error(f"Unexpected error: {e}")
         raise HTTPException(500, detail="An unexpected error occurred")

@@ -7,7 +7,7 @@ import { useNavigate, useParams } from "react-router";
 import { Skeleton } from "@radix-ui/themes";
 import { Card } from "../../components/ui/Card";
 import timeTo, { lateness, toTime } from "../../utils/timeUtils";
-import { getClosestStop } from "../../utils/closestStop";
+import { getClosestStops } from "../../utils/closestStop";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -506,11 +506,11 @@ const DeparturePage: React.FC = () => {
                     if (stopData) {
                         setStop(stopData);
                         document.title = stopData.name;
-                        const closestStop = await getClosestStop(
+                        const closestStop = await getClosestStops(
                             stopData.coords,
                             stop_id
                         );
-                        setClosest(closestStop.stop_id);
+                        setClosest(closestStop[0].stop_id);
                     }
                     const departures = await schedDeparturesPromise;
 
