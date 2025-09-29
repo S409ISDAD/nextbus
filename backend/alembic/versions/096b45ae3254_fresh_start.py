@@ -1,21 +1,22 @@
 """fresh start
 
-Revision ID: d3cae92f15f4
+Revision ID: 096b45ae3254
 Revises:
-Create Date: 2025-09-25 00:45:53.651764
+Create Date: 2025-09-29 10:35:14.011533
 
 """
 
 from typing import Sequence, Union
 
 from alembic import op
+from sqlalchemy_searchable import sql_expressions
 import geoalchemy2
 import sqlalchemy as sa
 import sqlalchemy_utils
 
 
 # revision identifiers, used by Alembic.
-revision: str = "d3cae92f15f4"
+revision: str = "096b45ae3254"
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -92,6 +93,7 @@ def upgrade() -> None:
         sa.Column("name", sa.String(), nullable=False),
         sa.Column("description", sa.String(), nullable=True),
         sa.Column("url", sa.String(), nullable=True),
+        sa.Column("bods_id", sa.Integer(), nullable=True),
         sa.Column("search", sa.String(), nullable=True),
         sa.Column("last_modified", sa.DateTime(timezone=True), nullable=True),
         sa.PrimaryKeyConstraint("id"),
@@ -202,6 +204,9 @@ def upgrade() -> None:
         sa.Column("line_name", sa.String(), nullable=False),
         sa.Column("line_brand", sa.String(), nullable=True),
         sa.Column("description", sa.String(), nullable=True),
+        sa.Column("vias", sa.String(), nullable=True),
+        sa.Column("public_use", sa.Boolean(), nullable=True),
+        sa.Column("current", sa.Boolean(), nullable=False),
         sa.Column(
             "geometry",
             geoalchemy2.types.Geometry(
@@ -213,8 +218,6 @@ def upgrade() -> None:
             ),
             nullable=True,
         ),
-        sa.Column("public_use", sa.Boolean(), nullable=False),
-        sa.Column("current", sa.Boolean(), nullable=False),
         sa.Column("data_wrong", sa.Boolean(), nullable=False),
         sa.Column(
             "last_modified",
@@ -349,7 +352,6 @@ def upgrade() -> None:
         sa.Column("line_id", sa.String(), nullable=True),
         sa.Column("operator_id", sa.Integer(), nullable=True),
         sa.Column("data_source_id", sa.Integer(), nullable=True),
-        sa.Column("timetable_data_source_id", sa.Integer(), nullable=True),
         sa.Column("bt_service_id", sa.Integer(), nullable=True),
         sa.Column("service_code", sa.String(), nullable=False),
         sa.Column("line_name", sa.String(), nullable=False),
@@ -376,7 +378,7 @@ def upgrade() -> None:
             ),
             nullable=True,
         ),
-        sa.Column("public_use", sa.Boolean(), nullable=False),
+        sa.Column("public_use", sa.Boolean(), nullable=True),
         sa.ForeignKeyConstraint(
             ["data_source_id"], ["data_source.id"], ondelete="SET NULL"
         ),
@@ -387,11 +389,6 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(
             ["service_id"],
             ["service.id"],
-        ),
-        sa.ForeignKeyConstraint(
-            ["timetable_data_source_id"],
-            ["timetable_data_source.id"],
-            ondelete="SET NULL",
         ),
         sa.PrimaryKeyConstraint("id"),
     )
@@ -475,6 +472,30 @@ def upgrade() -> None:
         ["search_vector"],
         unique=False,
         postgresql_using="gin",
+    )
+    op.create_table(
+        "timetable_tt_data_source_link",
+        sa.Column("timetable_id", sa.Integer(), nullable=False),
+        sa.Column("tt_data_source_id", sa.Integer(), nullable=False),
+        sa.ForeignKeyConstraint(["timetable_id"], ["timetable.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["tt_data_source_id"], ["timetable_data_source.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint(
+            "timetable_id", "tt_data_source_id", name="pk_timetable_data_source_link"
+        ),
+    )
+    op.create_index(
+        op.f("ix_timetable_tt_data_source_link_timetable_id"),
+        "timetable_tt_data_source_link",
+        ["timetable_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_timetable_tt_data_source_link_tt_data_source_id"),
+        "timetable_tt_data_source_link",
+        ["tt_data_source_id"],
+        unique=False,
     )
     op.create_table(
         "stop",
@@ -588,13 +609,13 @@ def upgrade() -> None:
     )
     op.create_table(
         "journey",
-        sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
+        sa.Column("id", sa.BigInteger(), autoincrement=True, nullable=False),
         sa.Column("bt_trip_id", sa.Integer(), nullable=True),
         sa.Column("service_id", sa.Integer(), nullable=False),
         sa.Column("timetable_id", sa.Integer(), nullable=False),
         sa.Column("vehicle_journey_code", sa.String(), nullable=True),
         sa.Column("ticket_machine_code", sa.String(), nullable=True),
-        sa.Column("sequence", sa.Integer(), nullable=True),
+        sa.Column("sequence", sa.SmallInteger(), nullable=True),
         sa.Column("block_id", sa.String(), nullable=True),
         sa.Column("inbound", sa.Boolean(), nullable=True),
         sa.Column("headsign", sa.String(), nullable=True),
@@ -624,6 +645,9 @@ def upgrade() -> None:
     )
     op.create_index(
         op.f("ix_journey_origin_stop_id"), "journey", ["origin_stop_id"], unique=False
+    )
+    op.create_index(
+        op.f("ix_journey_service_id"), "journey", ["service_id"], unique=False
     )
     op.create_index(
         op.f("ix_journey_timetable_id"), "journey", ["timetable_id"], unique=False
@@ -663,10 +687,16 @@ def upgrade() -> None:
     )
     op.create_table(
         "service_stop_usage",
+        sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
         sa.Column("service_id", sa.Integer(), nullable=False),
         sa.Column("stop_id", sa.String(), nullable=False),
+        sa.Column("order", sa.SmallInteger(), nullable=True),
+        sa.Column("inbound", sa.Boolean(), nullable=True),
+        sa.Column("line_name", sa.String(), nullable=True),
+        sa.Column("timing_point", sa.Boolean(), nullable=True),
         sa.ForeignKeyConstraint(["service_id"], ["service.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["stop_id"], ["stop.atco_code"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(
         op.f("ix_service_stop_usage_service_id"),
@@ -680,12 +710,18 @@ def upgrade() -> None:
         ["stop_id"],
         unique=False,
     )
+    op.create_index(
+        "ix_stopusage_inbound_order",
+        "service_stop_usage",
+        ["inbound", "order"],
+        unique=False,
+    )
     op.create_table(
         "stop_time",
-        sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
-        sa.Column("journey_id", sa.Integer(), nullable=False),
+        sa.Column("id", sa.BigInteger(), autoincrement=True, nullable=False),
+        sa.Column("journey_id", sa.BigInteger(), nullable=False),
         sa.Column("stop_id", sa.String(), nullable=False),
-        sa.Column("stop_sequence", sa.Integer(), nullable=False),
+        sa.Column("stop_sequence", sa.SmallInteger(), nullable=False),
         sa.Column("arrival_time", sa.Interval(), nullable=True),
         sa.Column("departure_time", sa.Interval(), nullable=True),
         sa.Column("dest_display", sa.String(), nullable=True),
@@ -720,16 +756,20 @@ def upgrade() -> None:
     op.create_index(
         op.f("ix_stop_time_stop_id"), "stop_time", ["stop_id"], unique=False
     )
+    op.execute(sql_expressions.statement)
     # ### end Alembic commands ###
 
 
 def downgrade() -> None:
     """Downgrade schema."""
     # ### commands auto generated by Alembic - please adjust! ###
+    op.execute("DROP FUNCTION parse_websearch(regconfig, text);")
+    op.execute("DROP FUNCTION parse_websearch(text);")
     op.drop_index(op.f("ix_stop_time_stop_id"), table_name="stop_time")
     op.drop_index(op.f("ix_stop_time_journey_id"), table_name="stop_time")
     op.drop_index(op.f("ix_stop_time_departure_time"), table_name="stop_time")
     op.drop_table("stop_time")
+    op.drop_index("ix_stopusage_inbound_order", table_name="service_stop_usage")
     op.drop_index(
         op.f("ix_service_stop_usage_stop_id"), table_name="service_stop_usage"
     )
@@ -742,6 +782,7 @@ def downgrade() -> None:
     )
     op.drop_table("route_link")
     op.drop_index(op.f("ix_journey_timetable_id"), table_name="journey")
+    op.drop_index(op.f("ix_journey_service_id"), table_name="journey")
     op.drop_index(op.f("ix_journey_origin_stop_id"), table_name="journey")
     op.drop_index(op.f("ix_journey_destination_stop_id"), table_name="journey")
     op.drop_table("journey")
@@ -750,6 +791,15 @@ def downgrade() -> None:
     op.drop_index(op.f("ix_stop_atco_code"), table_name="stop")
     op.drop_index("idx_stop_point", table_name="stop", postgresql_using="gist")
     op.drop_table("stop")
+    op.drop_index(
+        op.f("ix_timetable_tt_data_source_link_tt_data_source_id"),
+        table_name="timetable_tt_data_source_link",
+    )
+    op.drop_index(
+        op.f("ix_timetable_tt_data_source_link_timetable_id"),
+        table_name="timetable_tt_data_source_link",
+    )
+    op.drop_table("timetable_tt_data_source_link")
     op.drop_index(
         "ix_locality_search_vector", table_name="locality", postgresql_using="gin"
     )
