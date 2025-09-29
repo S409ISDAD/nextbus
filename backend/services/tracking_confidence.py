@@ -135,7 +135,12 @@ def check_diversion(trip: Trip, live_journey: LiveJourney, delay) -> float:
     if ended_ago.total_seconds() > 60 * 15:  # trip has ended, no need to check
         return 0.0
 
-    loc_history = LineString(live_journey.generate_location_history(exclude_start=True))
+    hist = live_journey.generate_location_history(exclude_start=True)
+
+    if len(hist) < 5:
+        return 0.0
+
+    loc_history = LineString(hist)
     track = LineString(trip.generate_full_track())
     similarity = track_location_similarity(track, loc_history)
 

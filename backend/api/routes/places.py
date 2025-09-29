@@ -25,10 +25,13 @@ async def localities(
 
         for service in services:
             service.operator = service.operator
-            service.geometry = None
+            del service.geometry
+
+        stops = [stop for stop in stops if stop.does_serve_buses]
 
         for stop in stops:
-            stop.point = None
+            del stop.point
+            del stop.services
 
         stops.sort(key=lambda s: s.common_name)
         services.sort(key=lambda s: s.line_name)

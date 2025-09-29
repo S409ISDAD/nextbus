@@ -385,6 +385,10 @@ class Stop(Base):
     def long_name(self):
         return f"{self.name} ({self.indicator or self.bearing})"
 
+    @property
+    def does_serve_buses(self) -> bool:
+        return any(s for s in self.services if s.public_use)
+
     def lines_served(self, db: Session) -> list["Service"]:
         """
         Returns a list of services that serve this stop.
@@ -1312,10 +1316,14 @@ class Journey(Base):
         if not date:
             date = datetime.now(tz=LONDON)
 
-        query = db.query(Journey).filter(
-            Journey.block_id == self.block_id,
-            Journey.id != self.id,
-            Journey.end_time < self.start_time,
+        query = (
+            db.query(Journey)
+            .filter(
+                Journey.block_id == self.block_id,
+                Journey.id != self.id,
+                Journey.end_time < self.start_time,
+            )
+            .options(joinedload(Journey.service).joinedload(Service.operator))
         )
 
         candidate_journeys = (
@@ -1435,7 +1443,10 @@ class StopTime(Base):
                 overlaps = any(
                     word in raw_headsign.split()
                     for word in (
-                        main_dest.split() + line_dest.split() + vias.split(", ")
+                        main_dest.split()
+                        + line_dest.split()
+                        + vias.split(", ")
+                        + self.journey.service.description.split()
                     )
                 )
                 show_headsign = short_enough and overlaps

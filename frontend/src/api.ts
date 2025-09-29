@@ -11,7 +11,7 @@ if (!storedClientId) {
 
 const api = axios.create({
     baseURL: '/api/v1',
-    timeout: 10000,
+    timeout: 20000,
 });
 
 api.interceptors.request.use((config) => {

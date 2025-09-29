@@ -18,4 +18,5 @@ async def search(query: str, limit: int = 10, db=Depends(get_db)):
         return results
 
     except Exception as e:
+        log.error(f"Error during search: {e}")
         raise HTTPException(status_code=500, detail=str(e))
