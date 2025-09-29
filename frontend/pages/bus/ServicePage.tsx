@@ -29,7 +29,7 @@ const ServicePage: React.FC = () => {
                 if (service) {
                     console.log(service);
                     setservice(service);
-                    document.title = `Service ${service.service_name} | nextbus`;
+                    document.title = `Service ${service.line_name} | nextbus`;
                     const pos = await getCurrentPosition();
                     const closest_stop = await getClosestStopForService(
                         [pos.coords.latitude, pos.coords.longitude],
