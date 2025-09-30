@@ -30,11 +30,11 @@ def times_from_stop(stop_id: str, db: Session, limit: int = 10):
         stop_times = stop.times_from_stop(db, date_time=now)
 
     results = []
-    for st, dep in stop_times[:limit]:
+    for st in stop_times[:limit]:
         line_name = st.journey.timetable.line_name if st.journey.timetable else None
         dest = st.headsign
         dep_str = st.departure_time_str
-        time_to = dep - now
+        time_to = st._dep_dt - now
         mins = int(time_to.total_seconds() // 60)
         if mins < 1:
             time_to_str = "due"

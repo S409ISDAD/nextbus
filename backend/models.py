@@ -467,7 +467,7 @@ class Stop(Base):
 
     def times_from_stop(
         self, db: Session, date_time: datetime | None = None, limit: int = 10
-    ) -> list[tuple["StopTime", datetime]]:
+    ) -> list["StopTime"]:
         """
         Returns a list of upcoming StopTime objects for this stop, with joined journey and service.
         """
@@ -494,15 +494,15 @@ class Stop(Base):
             for st in stop_times:
                 if not st.journey.is_valid(service_day):
                     continue
-                dep_dt = st.departure_datetime(service_day)
-                if dep_dt >= now:
-                    results.append((st, dep_dt))
+                st.departure_datetime(service_day)
+                if st._dep_dt >= now:
+                    results.append(st)
 
             if len(results) >= limit:
                 break  # got enough, stop fetching
 
-        results.sort(key=lambda x: x[1])
-        return [(st, dep_dt) for st, dep_dt in results[:limit]]
+        results.sort(key=lambda x: x._dep_dt)
+        return [st for st in results[:limit]]
 
 
 class StopArea(Base):
@@ -1507,9 +1507,11 @@ class StopTime(Base):
     def departure_datetime(self, service_day: date) -> datetime:
         if self.departure_time is None:
             return None
-        return datetime.combine(
+
+        self._dep_dt = datetime.combine(
             service_day, (datetime.min + self.departure_time).time(), tzinfo=LONDON
         )
+        return self._dep_dt
 
     @property
     def dep_or_arr(self):

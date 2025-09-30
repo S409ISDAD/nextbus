@@ -44,7 +44,7 @@ async def get_scheduled(stop_id: str, redis, services=None):
 
             if use_db_method:
                 times = []
-                for st, _ in db_times:
+                for st in db_times:
                     journey = st.journey
                     trip_id = await journey.get_bt_trip_id(db)
                     if not trip_id:
