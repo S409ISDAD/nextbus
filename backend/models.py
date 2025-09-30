@@ -1342,6 +1342,8 @@ class Journey(Base):
         if not date:
             date = datetime.now(tz=LONDON)
 
+        date = date.date()
+
         query = (
             db.query(Journey)
             .filter(
