@@ -69,7 +69,8 @@ export default function Timetable({
                                             : "bg-neutral-800"
                                     }>
                                     <td
-                                        className="sticky left-0 z-10 p-2 py-1 overflow-hidden font-medium text-blue-400 underline cursor-poiner bg-inherit text-nowrap max-w-40 text-ellipsis"
+                                        className="sticky left-0 z-10 p-2 py-1 overflow-hidden font-medium text-blue-400 underline cursor-pointer cursor-poiner bg-inherit text-nowrap max-w-40 md:max-w-70 text-ellipsis"
+                                        title={stop.name}
                                         style={{
                                             paddingLeft:
                                                 stop.timing_status !== "PTP"
