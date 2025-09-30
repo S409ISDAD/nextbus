@@ -40,7 +40,7 @@ def search_services(query, db: Session, limit: int = 10):
         if data is None:
             log.warning(f"Service {service.id} returned None from with_timetable()")
             continue
-        data["rank"] = rank or 1.0
+        data["rank"] = rank or 0.0
         data["service_id"] = service.id
         results.append(data)
 

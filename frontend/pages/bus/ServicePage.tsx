@@ -101,7 +101,7 @@ const ServicePage: React.FC = () => {
                 <div className="flex flex-col items-start w-full gap-3">
                     {service?.outbound_description && (
                         <div className="flex flex-col max-w-full">
-                            <span className="text-lg font-semibold">
+                            <span className="mb-2 text-lg font-semibold">
                                 {service.outbound_description}
                             </span>
                             <Timetable
@@ -112,7 +112,7 @@ const ServicePage: React.FC = () => {
                     )}
                     {service?.inbound_description && (
                         <div className="flex flex-col max-w-full">
-                            <span className="text-lg font-semibold">
+                            <span className="mb-2 text-lg font-semibold">
                                 {service.inbound_description}
                             </span>
                             <Timetable

@@ -35,10 +35,18 @@ export default function Timetable({
         fetchTimetable();
     }, [service_id, inbound]);
 
+    if (!timetable) {
+        return <Card className="w-fit">Loading timetable...</Card>;
+    }
+
+    if (timetable.stops.length === 0) {
+        return <Card className="w-fit">No timetable on this date.</Card>;
+    }
+
     return (
         <>
             {hasAnyTimingPoints && (
-                <div className="flex items-center p-2">
+                <div className="flex items-center mb-2">
                     <input
                         type="checkbox"
                         id="showAll"
@@ -49,8 +57,8 @@ export default function Timetable({
                     <span className="text-sm">Show all stops</span>
                 </div>
             )}
-            <div className="overflow-auto border shadow rounded-xl border-neutral-600">
-                <table className="w-full text-sm border-collapse table-auto">
+            <div className="max-w-full overflow-auto border shadow rounded-xl border-neutral-600 w-fit">
+                <table className="text-sm border-collapse table-auto w-fit">
                     <thead className="sticky top-0 z-10 text-white bg-neutral-800">
                         <tr>
                             {/* <th className="sticky left-0 z-20 p-2 text-left bg-neutral-800">
