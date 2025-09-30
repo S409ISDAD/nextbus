@@ -9,6 +9,7 @@ import { getCurrentPosition } from "../../utils/locations";
 
 import { getDBService } from "../../utils/getService";
 import type { ServiceResult } from "../../models/Search";
+import Timetable from "../../components/Timetable";
 
 const ServicePage: React.FC = () => {
     const { service_id } = useParams();
@@ -66,11 +67,11 @@ const ServicePage: React.FC = () => {
     }, [service_id]);
 
     return (
-        <div className="p-5 md:mx-20">
+        <div className="p-2 py-5 sm:p-5 md:mx-20">
             <div className="flex flex-col items-center gap-4">
-                <div className="flex flex-col items-center justify-center gap-6">
+                <div className="flex flex-col items-center justify-center gap-6 p-3 sm:p-0">
                     <div className="flex flex-col items-center justify-center gap-3">
-                        <span className="text-4xl font-bold md:text-4xl text-start">
+                        <span className="text-4xl font-bold text-center md:text-4xl">
                             {service?.line_name} · {service?.description}
                         </span>
                         <div className="flex flex-col items-center justify-center gap-1">
@@ -99,23 +100,25 @@ const ServicePage: React.FC = () => {
                 {msg && <span className="text-red-500 ">{msg}</span>}
                 <div className="flex flex-col items-start w-full gap-3">
                     {service?.outbound_description && (
-                        <div className="flex flex-col">
+                        <div className="flex flex-col max-w-full">
                             <span className="text-lg font-semibold">
                                 {service.outbound_description}
                             </span>
-                            <span className="text text-neutral-400">
-                                timetable soon
-                            </span>
+                            <Timetable
+                                service_id={service.service_id}
+                                inbound={false}
+                            />
                         </div>
                     )}
                     {service?.inbound_description && (
-                        <div className="flex flex-col">
+                        <div className="flex flex-col max-w-full">
                             <span className="text-lg font-semibold">
                                 {service.inbound_description}
                             </span>
-                            <span className="text text-neutral-400">
-                                timetable soon
-                            </span>
+                            <Timetable
+                                service_id={service.service_id}
+                                inbound={true}
+                            />
                         </div>
                     )}
                 </div>

@@ -9,64 +9,71 @@ log = logging.getLogger(__name__)
 
 
 async def get_scheduled(stop_id: str, redis, services=None):
-    times = []
+    # if not services:
+    #     services = await stops.get_services_from_stop(stop_id, redis)
 
-    if not services:
-        services = await stops.get_services_from_stop(stop_id, redis)
+    # line_names = {service.get("line_name") for service in services}
 
-    line_names = {service.get("line_name") for service in services}
+    times = await stops.get_times(stop_id, redis)
 
-    use_db_method = False
+    line_names = {time.get("service", {}).get("line_name") for time in times}
+
+    scheduled_times = []
+
     with SessionLocal() as db:
         stop = db.query(Stop).filter(Stop.atco_code == stop_id).first()
 
         if stop:
             db_lines = Stop.lines_served(stop, db)
             db_line_names = [line.line_name for line in db_lines]
-            if set(line_names).issubset(set(db_line_names)):
-                use_db_method = True
-
-        if use_db_method:
-            log.debug("Using DB method for departures")
             db_times = stop.times_from_stop(db)
-            # if len(db_times) == 0 and datetime.now(tz=LONDON).hour > 20:
-            #     log.debug("trying tomorrow")
-            #     tomorrow = datetime.now(tz=UTC) + timedelta(days=1)
-            #     tomorrow = tomorrow.replace(hour=0, minute=0, second=0, microsecond=0)
-            #     db_times = stop.times_from_stop(db, date_time=tomorrow)
 
-            #     if len(db_times) == 0:
-            #         log.debug(
-            #             "No times found in DB tomorrow, falling back to old method"
-            #         )
-            #         times = await stops.get_times(stop_id, redis)
-            #         use_db_method = False
+        for line_name in line_names:
+            if line_name in db_line_names:
+                log.debug(f"Using DB method for {line_name}")
 
-            if use_db_method:
-                times = []
-                for st in db_times:
+                filtered_st = [
+                    st
+                    for st in db_times
+                    if st.journey
+                    and st.journey.timetable
+                    and st.journey.timetable.line_name == line_name
+                ]
+
+                for st in filtered_st:
                     journey = st.journey
                     trip_id = await journey.get_bt_trip_id(db)
                     if not trip_id:
                         log.warning(
                             f"No trip ID for journey {journey.id}, stop {stop_id}"
                         )
-                        use_db_method = False
-                        break
-                    times.append(
+
+                    dayshift = 0
+                    if st._dep_dt.date() > datetime.now(tz=LONDON).date():
+                        dayshift = 1
+                    scheduled_times.append(
                         {
-                            "trip_id": int(trip_id),
+                            "trip_id": trip_id,
                             "journey_id": journey.id,
+                            "dayshift": dayshift,
+                            "source": "db",
                             "st": st,
                         }
                     )
-    if not use_db_method or times is None or len(times) == 0:
-        log.warning("Not all data in db, using old method")
-        times = await stops.get_times(stop_id, redis)
 
-    log.debug(f"got {len(times)} scheduled times")
+            else:
+                log.debug(f"Not using DB method for {line_name}")
+                filtered_times = [
+                    t
+                    for t in times
+                    if t.get("service", {}).get("line_name") == line_name
+                ]
+                for t in filtered_times:
+                    scheduled_times.append({**t, "source": "api"})
 
-    return times, use_db_method
+    log.debug(f"got {len(scheduled_times)} scheduled times")
+
+    return scheduled_times
 
 
 async def get_departures(stop_id: str, redis):
@@ -74,15 +81,13 @@ async def get_departures(stop_id: str, redis):
 
     service_ids = [service.get("id") for service in services]
 
-    times, use_db_method = await get_scheduled(stop_id, redis, services=services)
+    times = await get_scheduled(stop_id, redis, services=services)
 
     buses = await bus.fetch_buses(
         service_ids,
         stop_id,
         times,
         redis,
-        use_db=use_db_method,
-        is_tomorrow=False,
     )
     log.debug(f"got {len(buses)} buses")
 

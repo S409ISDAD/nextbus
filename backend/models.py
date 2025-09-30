@@ -1,6 +1,6 @@
 import enum
 from datetime import date, datetime, timedelta
-
+import copy
 from geoalchemy2 import Geometry
 from sqlalchemy import (
     BigInteger,
@@ -18,16 +18,18 @@ from sqlalchemy import (
     SmallInteger,
     String,
     UniqueConstraint,
+    and_,
     func,
     Index,
     inspect,
+    or_,
 )
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import relationship, Session, joinedload, deferred, aliased
 from sqlalchemy_searchable import make_searchable
 from sqlalchemy_utils.types import TSVectorType
-
+from functools import lru_cache
 from backend.autoslug import AutoSlugMixin
 from backend.config import API_BASE, get_logger
 from backend.db.db import SessionLocal
@@ -466,7 +468,11 @@ class Stop(Base):
             return result
 
     def times_from_stop(
-        self, db: Session, date_time: datetime | None = None, limit: int = 10
+        self,
+        db: Session,
+        date_time: datetime | None = None,
+        limit: int = 10,
+        line_names: list[str] | None = None,
     ) -> list["StopTime"]:
         """
         Returns a list of upcoming StopTime objects for this stop, with joined journey and service.
@@ -475,39 +481,48 @@ class Stop(Base):
         now = date_time or datetime.now(tz=LONDON)
 
         results = []
+        stop_times_q = (
+            db.query(StopTime)
+            .join(StopTime.journey)
+            .join(Journey.calendar)
+            .filter(StopTime.stop_id == self.atco_code)
+            .filter(StopTime.pick_up)
+            .filter(journey_is_valid_filter(now.date()))
+            .options(
+                joinedload(StopTime.journey).joinedload(Journey.calendar),
+                joinedload(StopTime.journey).joinedload(Journey.timetable),
+            )
+        )
+
+        if line_names:
+            stop_times_q = (
+                stop_times_q.join(StopTime.journey)
+                .join(Journey.service)
+                .filter(Service.line_name.in_(line_names))
+            )
+
+        stop_times = stop_times_q.all()
+        stop_times = [st for st in stop_times if st.journey.is_valid_exp(now.date())]
 
         for day_offset in [-1, 0, 1]:
             service_day = (now + timedelta(days=day_offset)).date()
-            stop_times = (
-                db.query(StopTime)
-                .filter(StopTime.stop_id == self.atco_code)
-                .filter(StopTime.pick_up)
-                .join(Journey)
-                .join(Calendar)
-                .options(
-                    joinedload(StopTime.journey).joinedload(Journey.calendar),
-                    joinedload(StopTime.journey).joinedload(Journey.timetable),
-                )
-                .all()
-            )
 
             for st in stop_times:
-                if not st.journey.is_valid(service_day):
-                    continue
                 depdt = st.departure_datetime(service_day)
+
                 if not depdt:
                     log.warning(
                         f"StopTime {st.id} has no departure datetime for service day {service_day}"
                     )
                     continue
-                if st._dep_dt >= now:
-                    results.append(st)
-
-            if len(results) >= limit:
-                break  # got enough, stop fetching
+                if depdt >= now:
+                    # make a new copy to avoid overwriting _dep_dt, as a stoptime object can be reused for multiple service days
+                    st_copy = copy.copy(st)
+                    st_copy._dep_dt = depdt
+                    results.append(st_copy)
 
         results.sort(key=lambda x: x._dep_dt)
-        return [st for st in results[:limit]]
+        return results[:limit]
 
 
 class StopArea(Base):
@@ -687,6 +702,32 @@ class Calendar(Base):
         if not getattr(self, weekday):
             # log.debug(f"Not valid on this weekday, active days: {self.days_of_week}")
             return False
+
+        # check exceptions
+        for exc in self.calendar_exceptions:
+            if date < exc.start_date and exc.operating is True:
+                return False
+            if exc.start_date <= date <= exc.end_date:
+                return exc.operating
+            if date > exc.end_date and exc.operating is True:
+                return False
+
+        # check bank holidays
+        for link in self.calendar_bank_holiday:
+            bh = link.bh
+            for bh_date in bh.dates:
+                if bh_date.date == date:
+                    log.debug(f"Bank holiday valid, and operating={link.operating}")
+                    return link.operating
+
+        return True
+
+    def is_valid_exp(self, service_day: date | None = None) -> bool:
+        """
+        Checks only exceptions (and bank holidays for now)
+        """
+
+        date = service_day or datetime.now(tz=LONDON).date()
 
         # check exceptions
         for exc in self.calendar_exceptions:
@@ -1332,8 +1373,21 @@ class Journey(Base):
 
         return self.calendar.is_valid(date)
 
+    def is_valid_exp(self, service_day: date | None = None) -> bool:
+        """
+        Checks only exceptions
+        """
+        if not self.calendar:
+            log.warning(f"No calendar for journey {self.id}")
+            return True
+
+        date = service_day or datetime.now(tz=LONDON).date()
+
+        return self.calendar.is_valid_exp(date)
+
+    @lru_cache(maxsize=128)
     def get_previous_journey(
-        self, db: Session, date: datetime | None = None
+        self, db: Session, date: date | None = None
     ) -> "Journey | None":
         """
         Returns the previous journey in the same block, active on the same date, ordered by end_time.
@@ -1344,37 +1398,27 @@ class Journey(Base):
             log.debug(f"No block_id for journey {self.id}")
             return None
 
-        if not date:
-            date = datetime.now(tz=LONDON)
-
-        date = date.date()
+        date = date or datetime.now(tz=LONDON).date()
 
         query = (
             db.query(Journey)
+            .join(Journey.calendar)
             .filter(
                 Journey.block_id == self.block_id,
-                Journey.id != self.id,
+                Journey.sequence < self.sequence,
                 Journey.end_time < self.start_time,
+                journey_is_valid_filter(date),
             )
             .options(joinedload(Journey.service).joinedload(Service.operator))
         )
 
         candidate_journeys = (
             query.options(joinedload(Journey.service))
-            .order_by(Journey.end_time.desc())
+            .order_by(Journey.sequence.desc())
             .all()
         )
 
-        valid_candidates = [j for j in candidate_journeys if j.is_valid(date)]
-        # log.debug(
-        #     f"Candidate journeys for {self.ticket_machine_code} block {self.block_id} on {date} starting {self.start_time}:"
-        # )
-        # for j in valid_candidates:
-        #     log.debug(
-        #         f"  tmc: {j.ticket_machine_code}, End Time: {j.end_time}, Valid: {j.is_valid(date)}"
-        #     )
-
-        prev_journey = valid_candidates[0] if valid_candidates else None
+        prev_journey = candidate_journeys[0] if candidate_journeys else None
         return prev_journey
 
     async def get_bt_trip_id(self, db: Session) -> int | None:
@@ -1396,12 +1440,20 @@ class Journey(Base):
             if not results or "results" not in results:
                 return None
 
-            bt_trip = results["results"]
+            bt_trips = results["results"]
 
-            if len(bt_trip) != 1:
-                return None
+            if len(bt_trips) == 1:
+                trip_id = bt_trips[0]["id"]
 
-            trip_id = bt_trip[0]["id"]
+            elif len(bt_trips) > 1:
+                trip_id = next(
+                    (
+                        trip["id"]
+                        for trip in bt_trips
+                        if trip.get("service") and trip["service"].get("id")
+                    ),
+                    None,
+                )
 
             obj = db.merge(self)
             obj.bt_trip_id = trip_id
@@ -1410,6 +1462,32 @@ class Journey(Base):
 
             self.bt_trip_id = trip_id
             return trip_id
+
+
+def journey_is_valid_filter(date: date | None = None):
+    date = date or datetime.now(tz=LONDON).date()
+    weekday = date.strftime("%A").lower()
+
+    base_filter = and_(
+        Calendar.start_date <= date,
+        or_(Calendar.end_date == None, Calendar.end_date >= date),
+        getattr(Calendar, weekday) == True,
+    )
+
+    # bh_filter = or_(
+    #     ~Calendar.calendar_bank_holiday.any(),  # no bank holiday links
+    #     Calendar.calendar_bank_holiday.any(
+    #         and_(
+    #             CalendarToBankHoliday.operating == True,
+    #             CalendarToBankHoliday.bh.has(
+    #                 BankHoliday.dates.any(BankHolidayDate.date == date)
+    #             ),
+    #         )
+    #     ),
+    # )
+
+    # return and_(base_filter, bh_filter)
+    return base_filter
 
 
 class StopTime(Base):
@@ -1515,10 +1593,9 @@ class StopTime(Base):
         if self.departure_time is None:
             return None
 
-        self._dep_dt = datetime.combine(
+        return datetime.combine(
             service_day, (datetime.min + self.departure_time).time(), tzinfo=LONDON
         )
-        return self._dep_dt
 
     @property
     def dep_or_arr(self):

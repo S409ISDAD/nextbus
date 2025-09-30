@@ -699,6 +699,7 @@ class TXCImporter:
             dest_display=cell.stopusage.dynamic_destination_display,
             drop_off=True,
             pick_up=True,
+            timing_status=timing_status,
         )
 
         match cell.activity:

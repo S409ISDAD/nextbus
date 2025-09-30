@@ -28,6 +28,7 @@ from backend.api.routes import (
     trains,
     journey_planning,
     places,
+    timetable,
 )
 from backend.config import config, setup_logging
 from backend.db.db import SessionLocal, get_db
@@ -238,3 +239,4 @@ app.include_router(stats.router, prefix="/api/v1/stats")
 app.include_router(search.router, prefix="/api/v1/search")
 app.include_router(journey_planning.router, prefix="/api/v1/planning")
 app.include_router(places.router, prefix="/api/v1/places")
+app.include_router(timetable.router, prefix="/api/v1/timetable")

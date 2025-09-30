@@ -30,7 +30,7 @@ def times_from_stop(stop_id: str, db: Session, limit: int = 10):
         stop_times = stop.times_from_stop(db, date_time=now)
 
     results = []
-    for st in stop_times[:limit]:
+    for st in stop_times:
         line_name = st.journey.timetable.line_name if st.journey.timetable else None
         dest = st.headsign
         dep_str = st.departure_time_str
@@ -41,7 +41,9 @@ def times_from_stop(stop_id: str, db: Session, limit: int = 10):
         elif mins < 60:
             time_to_str = f"{mins} min"
         else:
-            time_to_str = dep_str
+            time_to_str = dep_str + (
+                " (tomorrow)" if st._dep_dt.date() > now.date() else ""
+            )
         results.append((line_name, dest, time_to_str, st.journey.id))
 
     stop = db.query(Stop).filter(Stop.atco_code == stop_id).first()
@@ -56,9 +58,7 @@ def times_from_stop(stop_id: str, db: Session, limit: int = 10):
         longest_dest = max(len(dest or "") for _, dest, _, _ in results)
         longest_line = max(len(line or "") for line, _, _, _ in results)
         for line_name, dest, dep, id in results:
-            print(
-                f"{line_name:<{longest_line + 1}}to {dest:<{longest_dest + 2}} {dep} ({id})"
-            )
+            print(f"{line_name:<{longest_line + 1}}to {dest:<{longest_dest + 2}} {dep}")
     else:
         print("No departures found.")
 

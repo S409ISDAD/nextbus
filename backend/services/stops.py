@@ -1,8 +1,9 @@
+from datetime import datetime
 from geopy.distance import geodesic
 from redis.asyncio import Redis
 
 from backend.config import API_BASE, BASE, STOPS_BASE
-from backend.deps import get_redis
+from backend.deps import LONDON, get_redis
 from backend.schemas.service import Service
 from backend.schemas.stop import Stop
 from backend.services.caching import (
@@ -11,6 +12,7 @@ from backend.services.caching import (
     TRIPS_CACHE,
     get_cached,
 )
+from dateutil.parser import isoparse
 from backend.tasks.get_departures import get_scheduled
 from backend.utils.fetch_json import fetch_json
 import logging
@@ -97,7 +99,21 @@ async def get_times(stop_id, r: Redis):
         if not data:
             return
 
-        return data.get("times")
+        times = data.get("times", [])
+
+        now = datetime.now(tz=LONDON).date()
+
+        for time in times:
+            dep = time.get("expected_departure_time")
+            time["dayshift"] = 0
+
+            if dep:
+                dep = isoparse(dep)
+                if dep.date() > now:
+                    log.debug(f"Departure is tomorrow: {dep}")
+                    time["dayshift"] = 1
+
+        return times
 
     times = await get_cached(
         key=f"times:{stop_id}",
