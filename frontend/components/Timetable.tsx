@@ -15,12 +15,19 @@ export default function Timetable({
 }: TimetableProps) {
     const [timetable, setTimetable] = useState<Timetable>();
     const [showAll, setShowAll] = useState(false);
+    const [hasAnyTimingPoints, setHasAnyTimingPoints] = useState(false);
     const navigate = useNavigate();
 
     useEffect(() => {
         const fetchTimetable = async () => {
             const data = await getTimetable(service_id, inbound);
             if (data) {
+                if (data.stops.some((stop) => stop.timing_status === "PTP")) {
+                    setHasAnyTimingPoints(true);
+                } else {
+                    setHasAnyTimingPoints(false);
+                    setShowAll(true);
+                }
                 setTimetable(data);
             }
         };
@@ -30,16 +37,18 @@ export default function Timetable({
 
     return (
         <>
-            <div className="flex items-center p-2">
-                <input
-                    type="checkbox"
-                    id="showAll"
-                    checked={showAll}
-                    onChange={() => setShowAll((prev) => !prev)}
-                    className="mr-2 rounded-lg cursor-pointer accent-blue-600"
-                />
-                <span className="text-sm">Show all stops</span>
-            </div>
+            {hasAnyTimingPoints && (
+                <div className="flex items-center p-2">
+                    <input
+                        type="checkbox"
+                        id="showAll"
+                        checked={showAll}
+                        onChange={() => setShowAll((prev) => !prev)}
+                        className="mr-2 rounded-lg cursor-pointer accent-blue-600"
+                    />
+                    <span className="text-sm">Show all stops</span>
+                </div>
+            )}
             <div className="overflow-auto border shadow rounded-xl border-neutral-600">
                 <table className="w-full text-sm border-collapse table-auto">
                     <thead className="sticky top-0 z-10 text-white bg-neutral-800">
@@ -58,7 +67,9 @@ export default function Timetable({
                         {timetable?.stops
                             .filter(
                                 (stop) =>
-                                    showAll || stop.timing_status === "PTP"
+                                    showAll ||
+                                    stop.timing_status === "PTP" ||
+                                    !hasAnyTimingPoints
                             )
                             .map((stop, i) => (
                                 <tr
@@ -73,7 +84,8 @@ export default function Timetable({
                                         title={stop.name}
                                         style={{
                                             paddingLeft:
-                                                stop.timing_status !== "PTP"
+                                                stop.timing_status !== "PTP" &&
+                                                hasAnyTimingPoints
                                                     ? "20px"
                                                     : "",
                                         }}
