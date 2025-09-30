@@ -189,6 +189,10 @@ def check_broken_tracking(trip: Trip, live_journey: LiveJourney, delay) -> float
 
     total_dist = geod.geometry_length(track)
 
+    if total_dist == 0:
+        log.debug("Total distance of track is zero, skipping")
+        return 0.0
+
     dist_moved = geod.geometry_length(loc_history)
 
     completion = dist_moved / total_dist
@@ -202,6 +206,8 @@ def track_location_similarity(track: LineString, locations: LineString) -> float
     for lon, lat in locations.coords:
         p = Point(lon, lat)
         nearest_point = track.interpolate(track.project(p))  # closest point on route
+        if nearest_point is None or nearest_point.is_empty:
+            continue
         d = geodesic(
             (lat, lon), (nearest_point.y, nearest_point.x)
         ).meters  # distance to the closest point

@@ -494,7 +494,12 @@ class Stop(Base):
             for st in stop_times:
                 if not st.journey.is_valid(service_day):
                     continue
-                st.departure_datetime(service_day)
+                depdt = st.departure_datetime(service_day)
+                if not depdt:
+                    log.warning(
+                        f"StopTime {st.id} has no departure datetime for service day {service_day}"
+                    )
+                    continue
                 if st._dep_dt >= now:
                     results.append(st)
 
