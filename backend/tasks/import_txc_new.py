@@ -383,6 +383,7 @@ class TXCImporter:
         self.filename = None
         self.file_hash = None
         self.file_size_bytes = None
+        self.timetable_datasource = None
         self.skip_checks = skip_checks
         self.services: set[int] = set()
         self.db = SessionLocal()
@@ -911,29 +912,7 @@ class TXCImporter:
 
         operator = self.operators.get(txc_service.operator)
 
-        timetable_datasource = (
-            self.db.query(TimetableDataSource)
-            .filter_by(file_hash=self.file_hash, data_source_id=self.ds_id)
-            .first()
-        )
-
-        if not timetable_datasource:
-            timetable_datasource = TimetableDataSource(
-                filename=self.filename,
-                file_hash=self.file_hash,
-                size_bytes=self.file_size_bytes,
-                data_source_id=self.ds_id,
-                processed_at=datetime.now(tz=LONDON),
-            )
-            self.db.add(timetable_datasource)
-            self.db.flush()
-        else:
-            if not self.skip_checks:
-                log.info(
-                    f"No changes to timetable data source {self.filename}, skipping"
-                )
-                self.stats.files_skipped += 1
-                return
+        timetable_datasource = self.timetable_datasource
 
         for txc_line in txc_service.lines:
             if (
@@ -1393,23 +1372,50 @@ class TXCImporter:
     async def handle_txc_file(self, file: Path):
         start = time.time()
         try:
+            self.filename = file.name
+            self.file_size_bytes = file.stat().st_size
+            with open(file, "rb") as f:
+                self.file_hash = hashlib.file_digest(f, "sha256").hexdigest()
+
+            timetable_datasource = (
+                self.db.query(TimetableDataSource)
+                .filter_by(file_hash=self.file_hash, data_source_id=self.ds_id)
+                .first()
+            )
+
+            if not timetable_datasource:
+                timetable_datasource = TimetableDataSource(
+                    filename=self.filename,
+                    file_hash=self.file_hash,
+                    size_bytes=self.file_size_bytes,
+                    data_source_id=self.ds_id,
+                    processed_at=datetime.now(tz=LONDON),
+                )
+                self.db.add(timetable_datasource)
+                self.db.flush()
+            else:
+                if not self.skip_checks:
+                    log.info(
+                        f"No changes to timetable data source {self.filename}, skipping"
+                    )
+                    self.stats.files_skipped += 1
+                    return
+
+            self.timetable_datasource = timetable_datasource
+
             self.txc_data = txc.TransXChange(file)
             if not self.txc_data:
                 log.warning("No TXC data loaded.")
                 return
-            self.filename = self.txc_data.attributes.get("FileName", None)
-            self.file_size_bytes = file.stat().st_size
+            # self.filename = self.txc_data.attributes.get("FileName", None)
 
             self.calendar_cache = {}
 
-            if not self.filename:
-                log.warning(
-                    "No FileName attribute found in TXC data. using actual file name"
-                )
-                self.filename = file.name
-
-            with open(file, "rb") as f:
-                self.file_hash = hashlib.file_digest(f, "sha256").hexdigest()
+            # if not self.filename:
+            #     log.warning(
+            #         "No FileName attribute found in TXC data. using actual file name"
+            #     )
+            #     self.filename = file.name
 
             for op in self.txc_data.operators:
                 txc_operator = TXCOperator(op)
