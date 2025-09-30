@@ -112,10 +112,16 @@ async def fetch_buses(
     active = await fetch_active_buses(services, r)
 
     active_by_trip: dict[int, list[dict]] = {}
+    trip_to_id: dict[int, int] = {}
     if active:
         for bus in active:
             trip_id = bus.get("trip_id")
+            if trip_to_id.get(trip_id) == bus.get(
+                "id"
+            ):  # same bus is already on this trip
+                continue
             if trip_id:
+                trip_to_id[trip_id] = bus.get("id", 0)
                 active_by_trip.setdefault(trip_id, []).append(bus)
 
     tasks = []
