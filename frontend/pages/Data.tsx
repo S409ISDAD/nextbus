@@ -20,7 +20,7 @@ const Data: React.FC = () => {
                         <strong>
                             <a
                                 href="https://bustimes.org"
-                                className="underline text-sky-500"
+                                className="underline text-link"
                                 target="_blank"
                                 rel="noopener noreferrer">
                                 bustimes.org
@@ -32,7 +32,7 @@ const Data: React.FC = () => {
                         <strong>
                             <a
                                 href="https://beta-naptan.dft.gov.uk/download"
-                                className="underline text-sky-500"
+                                className="underline text-link"
                                 target="_blank"
                                 rel="noopener noreferrer">
                                 NaPTAN (National Public Transport Access Nodes)
@@ -44,7 +44,7 @@ const Data: React.FC = () => {
                         <strong>
                             <a
                                 href="https://data.bus-data.dft.gov.uk/"
-                                className="underline text-sky-500"
+                                className="underline text-link"
                                 target="_blank"
                                 rel="noopener noreferrer">
                                 BODS (Bus Open Data Service)
@@ -62,7 +62,7 @@ const Data: React.FC = () => {
                         <strong>
                             <a
                                 href="https://www.realtimetrains.co.uk/"
-                                className="underline text-sky-500"
+                                className="underline text-link"
                                 target="_blank"
                                 rel="noopener noreferrer">
                                 realtimetrains.co.uk

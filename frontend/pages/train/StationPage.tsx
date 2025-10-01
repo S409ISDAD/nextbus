@@ -62,7 +62,7 @@ function TrainCard({
                                 )}
                             </span>
                         </div>
-                        <div className="flex gap-0.5 items-center text-sky-400">
+                        <div className="flex gap-0.5 items-center text-link-400">
                             <span className="text-xs">Expt:</span>
                             <span>
                                 {toTime(
@@ -83,7 +83,7 @@ function TrainCard({
                 </div>
 
                 <div className="flex flex-row flex-wrap items-center justify-end gap-2 text-sm md:gap-4 w-min md:w-auto sm:text-base">
-                    <div className="flex justify-center px-2 py-1 bg-blue-600 rounded-lg">
+                    <div className="flex justify-center px-2 py-1 bg-primary rounded-lg">
                         <span className="text-xs font-bold align-middle text-neutral-950 text-nowrap">
                             Platform{" "}
                             {train.locationDetail.platform
@@ -225,7 +225,7 @@ const StationPage: React.FC = () => {
                     {/* <div className="flex flex-wrap items-center justify-center gap-4 gap-y-1">
 
                         <a
-                            className="underline text-sky-500"
+                            className="underline text-link"
                             href={`https://bustimes.org/stops/${stop?.stop_id}`}
                             target="_blank">
                             View on bustimes.org
@@ -264,7 +264,7 @@ const StationPage: React.FC = () => {
                     <button
                         className={`px-4 py-1 rounded-lg font-semibold cursor-pointer ${
                             type === "departures"
-                                ? "bg-blue-600 text-white"
+                                ? "bg-primary text-white"
                                 : "bg-neutral-800/50 text-neutral-200"
                         }`}
                         onClick={() => {
@@ -278,7 +278,7 @@ const StationPage: React.FC = () => {
                     <button
                         className={`px-4 py-1 rounded-lg font-semibold cursor-pointer ${
                             type === "arrivals"
-                                ? "bg-blue-600 text-white"
+                                ? "bg-primary text-white"
                                 : "bg-neutral-800/50 text-neutral-200"
                         }`}
                         onClick={() => {

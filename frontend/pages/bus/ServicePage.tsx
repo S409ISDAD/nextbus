@@ -87,7 +87,7 @@ const ServicePage: React.FC = () => {
                             {service?.bt_service_id && (
                                 <div className="flex flex-wrap items-center justify-center gap-4 gap-y-1">
                                     <a
-                                        className="underservice text-sky-500"
+                                        className="underservice text-link"
                                         href={`https://bustimes.org/services/${service?.bt_service_id}`}
                                         target="_blank">
                                         View on bustimes.org

@@ -310,7 +310,7 @@ const TrainPage: React.FC = () => {
                         </div>
                         <div className="flex gap-3">
                             <a
-                                className="underline text-sky-500"
+                                className="underline text-link"
                                 href={`https://www.realtimetrains.co.uk/service/gb-nr:${train.serviceUid}/${train.runDate}`}
                                 target="_blank"
                                 rel="noopener noreferrer">
@@ -544,7 +544,7 @@ const TrainPage: React.FC = () => {
                                                             )}
                                                             {stop.serviceLocation ===
                                                                 "AT_PLAT" && (
-                                                                <span className="px-2 py-1 text-xs font-bold text-blue-400 rounded-full bg-blue-600/20">
+                                                                <span className="px-2 py-1 text-xs font-bold text-primary-400 rounded-full bg-primary/20">
                                                                     At platform
                                                                 </span>
                                                             )}

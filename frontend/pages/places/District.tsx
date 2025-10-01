@@ -61,7 +61,7 @@ const DistrictPage: React.FC = () => {
                                                     `/locality/${locality.id}`
                                                 )
                                             }>
-                                            <span className="underline text-sky-500">
+                                            <span className="underline text-link">
                                                 {locality.name}
                                             </span>
                                         </div>

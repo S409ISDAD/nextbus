@@ -39,8 +39,8 @@ const SearchPage: React.FC = () => {
                 <button
                     className={`px-4 py-2 text-lg font-semibold rounded-xl transition-all duration-150 cursor-pointer ${
                         tab === "services"
-                            ? " bg-neutral-800 text-blue-400 scale-105"
-                            : " bg-neutral-900 text-neutral-400 hover:text-blue-300"
+                            ? " bg-neutral-800 text-primary-400 scale-105"
+                            : " bg-neutral-900 text-neutral-400 hover:text-primary-300"
                     }`}
                     onClick={() => setTab("services")}
                     aria-selected={tab === "services"}>
@@ -49,8 +49,8 @@ const SearchPage: React.FC = () => {
                 <button
                     className={`px-4 py-2 text-lg font-semibold rounded-xl transition-all duration-150 cursor-pointer ${
                         tab === "places"
-                            ? " bg-neutral-800 text-blue-400 scale-105"
-                            : " bg-neutral-900 text-neutral-400 hover:text-blue-300"
+                            ? " bg-neutral-800 text-primary-400 scale-105"
+                            : " bg-neutral-900 text-neutral-400 hover:text-primary-300"
                     }`}
                     onClick={() => setTab("places")}
                     aria-selected={tab === "places"}>
@@ -90,7 +90,7 @@ const SearchPage: React.FC = () => {
                                                     );
                                                 }}>
                                                 <div className="flex flex-row items-stretch mb-1">
-                                                    <div className="flex items-center px-3 py-1 bg-blue-700 rounded-l-2xl">
+                                                    <div className="flex items-center px-3 py-1 bg-primary-700 rounded-l-2xl">
                                                         <span className="flex items-center justify-center text-xl font-bold text-center">
                                                             {service.line_name}
                                                         </span>
@@ -144,7 +144,7 @@ const SearchPage: React.FC = () => {
                                                     `/locality/${locality.id}`
                                                 )
                                             }>
-                                            <span className="underline text-sky-500">
+                                            <span className="underline text-link">
                                                 {locality.name}
                                             </span>
                                         </div>

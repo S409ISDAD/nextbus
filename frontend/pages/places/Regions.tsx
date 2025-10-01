@@ -51,7 +51,7 @@ const RegionsPage: React.FC = () => {
                                         onClick={() => {
                                             navigate(`/region/${region.id}`);
                                         }}>
-                                        <span className="underline text-sky-500">
+                                        <span className="underline text-link">
                                             {region.name}
                                         </span>
                                     </div>

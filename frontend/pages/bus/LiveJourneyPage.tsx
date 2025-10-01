@@ -164,7 +164,7 @@ const MapView: React.FC<MapViewProps> = ({
                                 ),
                             });
                         }}>
-                        <div className="text-blue-500">
+                        <div className="text-primary-500">
                             <i className="fas fa-circle text-[12px]" />
                         </div>
                     </Marker>
@@ -458,7 +458,7 @@ const LiveJourneyPage: React.FC = () => {
                             className={`fixed flex flex-row items-stretch p-2 px-3 my-1 mb-1 z-10000000 ${
                                 !showAppNav ? "top-15" : "top-0"
                             }`}>
-                            <div className="flex items-center px-3 py-1 bg-blue-700 rounded-l-2xl">
+                            <div className="flex items-center px-3 py-1 bg-primary-700 rounded-l-2xl">
                                 <span className="flex items-center justify-center text-xl font-bold text-center">
                                     {bus.service.line_name}
                                 </span>
@@ -483,7 +483,7 @@ const LiveJourneyPage: React.FC = () => {
                             )}></MapView>
                         <div className="flex gap-3">
                             <a
-                                className="underline text-sky-500"
+                                className="underline text-link"
                                 href={`https://bustimes.org/vehicles/${bus?.id}#journeys/${bus?.journey_id}`}
                                 target="_blank">
                                 View on bustimes.org
@@ -544,7 +544,7 @@ const LiveJourneyPage: React.FC = () => {
                     <></>
                 )}
                 <div className="flex items-center justify-center gap-2 text-sm text-neutral-500">
-                    <div className="w-2 h-2 rounded-full bg-sky-500"></div> =
+                    <div className="w-2 h-2 rounded-full bg-link"></div> =
                     timing point (bus waits here if early)
                 </div>
                 <div className="flex justify-center gap-2">
@@ -631,7 +631,7 @@ const LiveJourneyPage: React.FC = () => {
                                                 <div className="flex flex-row items-center gap-2 font-bold">
                                                     {stop.timing_status ===
                                                         "PTP" && (
-                                                        <div className="w-2 h-2 rounded-full bg-sky-500"></div>
+                                                        <div className="w-2 h-2 rounded-full bg-link"></div>
                                                     )}{" "}
                                                     {stop.name}
                                                 </div>
@@ -658,7 +658,7 @@ const LiveJourneyPage: React.FC = () => {
                                                           stop.expt_time.getTime() -
                                                               stop.aimed_time.getTime()
                                                       ) > 60000 ? (
-                                                        <span className="font-bold text-blue-400">
+                                                        <span className="font-bold text-primary-400">
                                                             Expt:{" "}
                                                             {stop.expt_time.toLocaleTimeString(
                                                                 [],

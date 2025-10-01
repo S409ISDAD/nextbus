@@ -52,7 +52,7 @@ export default function Timetable({
                         id="showAll"
                         checked={showAll}
                         onChange={() => setShowAll((prev) => !prev)}
-                        className="mr-2 rounded-lg cursor-pointer accent-blue-600"
+                        className="mr-2 rounded-lg cursor-pointer accent-primary"
                     />
                     <span className="text-sm">Show all stops</span>
                 </div>
@@ -88,7 +88,7 @@ export default function Timetable({
                                             : "bg-neutral-800"
                                     }>
                                     <td
-                                        className="sticky left-0 z-10 p-2 py-1 overflow-hidden font-medium text-blue-400 underline cursor-pointer cursor-poiner bg-inherit text-nowrap max-w-40 md:max-w-70 text-ellipsis"
+                                        className="sticky left-0 z-10 p-2 py-1 overflow-hidden font-medium underline cursor-pointer text-link-400 cursor-poiner bg-inherit text-nowrap max-w-40 md:max-w-70 text-ellipsis"
                                         title={stop.name}
                                         style={{
                                             paddingLeft:

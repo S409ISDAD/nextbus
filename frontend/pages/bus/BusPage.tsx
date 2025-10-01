@@ -56,8 +56,8 @@ const BusPage: React.FC = () => {
                 <button
                     className={`px-4 py-2 text-lg font-semibold rounded-xl transition-all duration-150 cursor-pointer ${
                         tab === "nearby"
-                            ? " bg-neutral-800 text-blue-400 scale-105"
-                            : " bg-neutral-900 text-neutral-400 hover:text-blue-300"
+                            ? " bg-neutral-800 text-primary-400 scale-105"
+                            : " bg-neutral-900 text-neutral-400 hover:text-primary-300"
                     }`}
                     onClick={() => setTab("nearby")}
                     aria-selected={tab === "nearby"}>
@@ -66,8 +66,8 @@ const BusPage: React.FC = () => {
                 <button
                     className={`px-4 py-2 text-lg font-semibold rounded-xl transition-all duration-150 cursor-pointer ${
                         tab === "fav"
-                            ? " bg-neutral-800 text-blue-400 scale-105"
-                            : " bg-neutral-900 text-neutral-400 hover:text-blue-300"
+                            ? " bg-neutral-800 text-primary-400 scale-105"
+                            : " bg-neutral-900 text-neutral-400 hover:text-primary-300"
                     }`}
                     onClick={() => setTab("fav")}
                     aria-selected={tab === "fav"}>
@@ -125,7 +125,7 @@ const BusPage: React.FC = () => {
                         )}
                     </div>
                     <button
-                        className="p-1.5 px-4 text-sm font-semibold text-white transition-all bg-blue-600 cursor-pointer rounded-xl hover:bg-blue-700"
+                        className="p-1.5 px-4 text-sm font-semibold text-white transition-all bg-primary cursor-pointer rounded-xl hover:bg-primary-700"
                         onClick={() => setFavStops({})}>
                         Clear Favorites
                     </button>

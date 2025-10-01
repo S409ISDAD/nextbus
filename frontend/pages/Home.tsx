@@ -127,7 +127,7 @@ const Home: React.FC = () => {
             <div className="flex flex-col items-center justify-center gap-6">
                 <div className="flex flex-col items-center justify-center gap-5 pt-0 py-7">
                     <div className="flex flex-col items-center justify-center p-2">
-                        <div className="flex flex-row gap-1 p-2 px-4 rounded-2xl bg-amber-500">
+                        {/* <div className="flex flex-row gap-1 p-2 px-4 rounded-2xl bg-amber-500">
                             <span className="text-center text text-neutral-950">
                                 <FontAwesomeIcon
                                     icon={faWarning}></FontAwesomeIcon>
@@ -144,12 +144,12 @@ const Home: React.FC = () => {
                                 </a>{" "}
                                 if you would like to suggest or report anything.
                             </span>
-                        </div>
-                        <div className="flex flex-row items-center gap-1">
+                        </div> */}
+                        <div className="flex flex-row items-center gap-1 spooky-font">
                             <span className="text-5xl font-black text-center pt-7">
                                 nextbus
                             </span>
-                            <span className="text-xl font-bold h-fit text-sky-500">
+                            <span className="text-xl font-bold h-fit text-link">
                                 beta
                             </span>
                         </div>
@@ -170,7 +170,7 @@ const Home: React.FC = () => {
                                     No, thanks.
                                 </button>
                                 <button
-                                    className="w-full p-2 mt-2 font-semibold text-white transition-all bg-blue-600 cursor-pointer text-nowrap rounded-xl hover:bg-blue-700"
+                                    className="w-full p-2 mt-2 font-semibold text-white transition-all cursor-pointer bg-primary text-nowrap rounded-xl hover:bg-primary-700"
                                     onClick={() => {
                                         setShowStop(false);
                                         navigate("/buses/stops/${closestStop}");
@@ -182,7 +182,7 @@ const Home: React.FC = () => {
                     )}
                     <div className="flex flex-wrap items-center justify-center w-full gap-4 mb-4">
                         <div className="flex flex-col items-center p-2 px-6 shadow bg-neutral-800/50 rounded-xl">
-                            <span className="text-xl font-bold text-sky-400">
+                            <span className="text-xl font-bold text-link-400">
                                 {stats?.lines?.toLocaleString() ?? "--"}
                             </span>
                             <span className="mt-1 text-sm text-neutral-400">
@@ -216,7 +216,7 @@ const Home: React.FC = () => {
                                     Quick Links
                                 </span>
                             </div>
-                            <div className="flex flex-row gap-2 items-center justify-center flex-wrap">
+                            <div className="flex flex-row flex-wrap items-center justify-center gap-2">
                                 <button
                                     className="button max-w-fit"
                                     onClick={() => {
@@ -251,7 +251,7 @@ const Home: React.FC = () => {
                                             Where to?
                                         </span>
                                         <button
-                                            className="p-1 rounded-2xl bg-blue-600 w-8 h-8"
+                                            className="w-8 h-8 p-1 rounded-2xl bg-primary"
                                             onClick={async () => {
                                                 await fetchLocalities();
                                             }}>
@@ -290,7 +290,7 @@ const Home: React.FC = () => {
                                         ))}
                                     </div>
                                 </LocationPrompt> */}
-                                <div className="flex flex-row items-center justify-center gap-2 flex-wrap whitespace-nowrap">
+                                <div className="flex flex-row flex-wrap items-center justify-center gap-2 whitespace-nowrap">
                                     {loadingDestinations && (
                                         <span className="text-sm text-neutral-400">
                                             loading...

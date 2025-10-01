@@ -1,11 +1,17 @@
-import {Link, Outlet, useNavigate} from "react-router";
-import {isIOS, useShowAppNav, whereAmI} from "../utils/AppNav";
-import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
-import {faBus, faHome, faMagnifyingGlass, faMap, faTrainSubway,} from "@fortawesome/free-solid-svg-icons";
-import {faDiscord} from "@fortawesome/free-brands-svg-icons";
+import { Link, Outlet, useNavigate } from "react-router";
+import { isIOS, useShowAppNav, whereAmI } from "../utils/AppNav";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+    faBus,
+    faHome,
+    faMagnifyingGlass,
+    faMap,
+    faTrainSubway,
+} from "@fortawesome/free-solid-svg-icons";
+import { faDiscord } from "@fortawesome/free-brands-svg-icons";
 import version from "../utils/version";
-import {motion} from "framer-motion";
-import {useState} from "react";
+import { motion } from "framer-motion";
+import { useState } from "react";
 
 function NavSearchBar(queryProp?: { query?: string }) {
     const [searchQuery, setSearchQuery] = useState(queryProp?.query || "");
@@ -15,7 +21,7 @@ function NavSearchBar(queryProp?: { query?: string }) {
             layout
             key={"search-bar-nav"}
             layoutId="search-bar-nav"
-            className="flex items-center w-fit rounded-full shadow-2xl border-1 border-neutral-800 bg-neutral-900">
+            className="flex items-center rounded-full shadow-2xl w-fit border-1 border-neutral-800 bg-neutral-900">
             <div className="ml-3 mr-2 text-gray-500">
                 <FontAwesomeIcon
                     icon={faMagnifyingGlass}
@@ -27,7 +33,7 @@ function NavSearchBar(queryProp?: { query?: string }) {
             <input
                 type="text"
                 placeholder="Search for a route or place"
-                className="flex-grow font-medium text-sm placeholder-gray-400 bg-transparent focus:outline-none"
+                className="flex-grow text-sm font-medium placeholder-gray-400 bg-transparent focus:outline-none"
                 onChange={(e) => setSearchQuery(e.target.value)}
                 value={searchQuery}
                 onKeyDown={(e) => {
@@ -37,7 +43,7 @@ function NavSearchBar(queryProp?: { query?: string }) {
                 }}
             />
             <button
-                className="mr-2 px-3 py-1 font-bold text-sm text-white rounded-full bg-blue-500  transition cursor-pointer shadow-[0_0_5px_1px_rgba(43,127,255,0.5)] hover:shadow-[0_0_10px_2px_rgba(43,127,255,0.6)]"
+                className="mr-2 px-3 py-1 font-bold text-sm text-white rounded-full bg-primary-500  transition cursor-pointer shadow-[0_0_5px_1px_var(--shadow-primary)] hover:shadow-[0_0_10px_2px_var(--shadow-primary-hover)]"
                 onClick={() => {
                     navigate(`/search/${searchQuery}`);
                 }}>
@@ -47,23 +53,22 @@ function NavSearchBar(queryProp?: { query?: string }) {
     );
 }
 
-
 const footer = (currentYear: number) => (
     <footer className="flex flex-row flex-wrap items-start justify-center w-full gap-2 p-3 text-sm text-gray-200 border-t-2 max-h-fit border-neutral-800">
         <span>© {currentYear} nextbus</span> ·
-        <a href="/data" className="underline text-sky-400 max-h-fit">
+        <a href="/data" className="underline text-link-400 max-h-fit">
             Data Sources
         </a>
         ·
-        <a href="/privacy" className="underline text-sky-400 max-h-fit">
+        <a href="/privacy" className="underline text-link-400 max-h-fit">
             Privacy
         </a>
         ·
-        <a href="/terms" className="underline text-sky-400 max-h-fit">
+        <a href="/terms" className="underline text-link-400 max-h-fit">
             Terms
         </a>
         ·
-        <a href="/stats" className="underline text-sky-400 max-h-fit">
+        <a href="/stats" className="underline text-link-400 max-h-fit">
             Stats
         </a>
         ·
@@ -94,34 +99,33 @@ export default function Layout() {
                 <div className="top-0 flex justify-between p-[8px] z-[99] border-b-1 border-neutral-800 rounded-b-[24px] fixed w-full bg-[#131313] shadow-2xl md:shadow-xl">
                     <div className="flex gap-2">
                         <Link to="/">
-                            <div className="flex flex-col items-center h-full mx-4">
+                            <div className="flex flex-col items-center h-full mx-4 spooky-font">
                                 <span className="font-bold text-xl/6 ">
                                     nextbus
                                 </span>
-                                <span className="font-semibold text-sm/2 text-sky-500 ">
+                                <span className="font-semibold text-sm/2 text-link ">
                                     beta
                                 </span>
                             </div>
                         </Link>
 
                         <Link to="/map">
-                            <button className="p-2 px-3 transition-all cursor-pointer border-neutral-800 h-max rounded-2xl border-1 hover:border-blue-700 ">
+                            <button className="p-2 px-3 transition-all cursor-pointer border-neutral-800 h-max rounded-2xl border-1 hover:border-primary-700 ">
                                 map
                             </button>
                         </Link>
                         <Link to="/buses">
-                            <button className="p-2 px-3 transition-all cursor-pointer border-neutral-800 h-max rounded-2xl border-1 hover:border-blue-700 ">
+                            <button className="p-2 px-3 transition-all cursor-pointer border-neutral-800 h-max rounded-2xl border-1 hover:border-primary-700 ">
                                 buses
                             </button>
                         </Link>
                         {/* <Link to="/trains">
-                            <button className="p-2 px-3 transition-all cursor-pointer border-neutral-800 h-max rounded-2xl border-1 hover:border-blue-700 ">
+                            <button className="p-2 px-3 transition-all cursor-pointer border-neutral-800 h-max rounded-2xl border-1 hover:border-primary-700 ">
                                 trains
                             </button>
                         </Link> */}
                     </div>
-                    <NavSearchBar/>
-
+                    <NavSearchBar />
                 </div>
                 <main>
                     <div className="h-15"></div>
@@ -144,7 +148,7 @@ export default function Layout() {
                     onClick={() => {
                         navigate("/search");
                     }}
-                    className="fixed z-[100] bottom-22 right-4 bg-sky-500/30 text-white rounded-full shadow-lg w-12 h-12 flex items-center justify-center transition-all"
+                    className="fixed z-[100] bottom-22 right-4 bg-link/30 text-white rounded-full shadow-lg w-12 h-12 flex items-center justify-center transition-all"
                     aria-label="Search">
                     <span className="text-lg font-bold">
                         <FontAwesomeIcon icon={faMagnifyingGlass} />
@@ -162,14 +166,14 @@ export default function Layout() {
                                 size="lg"
                                 className={`${
                                     whereAmI() == item.name
-                                        ? "px-4 rounded-full bg-sky-500/30"
+                                        ? "px-4 rounded-full bg-link/30"
                                         : ""
                                 } transition-all p-1`}
                             />
                             <span
                                 className={`${
                                     whereAmI() == item.name
-                                        ? "text-blue-300 font-bold"
+                                        ? "text-primary-300 font-bold"
                                         : ""
                                 } px-2 text-xs font-semibold`}>
                                 {item.name}

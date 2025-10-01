@@ -139,7 +139,7 @@ function BusCard({
             <div className="flex flex-row items-center justify-between gap-x-2">
                 <div className="flex flex-col justify-around gap-1">
                     <div className="flex flex-row items-stretch mb-1">
-                        <div className="flex items-center px-3 py-1 bg-blue-700 rounded-l-2xl">
+                        <div className="flex items-center px-3 py-1 bg-primary-700 rounded-l-2xl">
                             <span className="flex items-center justify-center text-xl font-bold text-center">
                                 {isTrackedBus(bus)
                                     ? bus.service.line_name
@@ -224,7 +224,7 @@ function BusCard({
                                                       {toTime(bus.scheduled)}
                                                   </span>
                                               )}
-                                              <span className={"text-sky-400"}>
+                                              <span className={"text-link-400"}>
                                                   {toTime(bus.expected)}
                                               </span>
                                           </div>
@@ -275,10 +275,10 @@ function BusCard({
                                         gettingLiveData
                                             ? "text-neutral-500"
                                             : {
-                                                  "text-blue-400 opacity-40":
+                                                  "text-primary-400 opacity-40":
                                                       bus.status ===
                                                       "not_tracking",
-                                                  "text-sky-500":
+                                                  "text-link":
                                                       bus.status === "tracking",
                                                   "text-emerald-500":
                                                       bus.status ===
@@ -414,7 +414,7 @@ function BusCard({
                                                         "w-2 h-2 rounded-full",
                                                         actualIndex ===
                                                             bus.target_seq
-                                                            ? "bg-sky-500"
+                                                            ? "bg-link"
                                                             : "bg-neutral-600"
                                                     )}></div>
                                                 {index <
@@ -633,7 +633,7 @@ const DeparturePage: React.FC = () => {
                             />
                         </div>
                         <a
-                            className="underline text-sky-500"
+                            className="underline text-link"
                             href={`https://bustimes.org/stops/${stop?.stop_id}`}
                             target="_blank">
                             View on bustimes.org

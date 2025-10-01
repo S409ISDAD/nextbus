@@ -1,11 +1,14 @@
-import {faMagnifyingGlass} from "@fortawesome/free-solid-svg-icons";
-import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
-import {useState} from "react";
-import {useNavigate} from "react-router";
-import {motion} from "framer-motion";
-import {cn} from "../utils/cn"
+import { faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { useState } from "react";
+import { useNavigate } from "react-router";
+import { motion } from "framer-motion";
+import { cn } from "../utils/cn";
 
-export default function SearchBar(queryProp?: { query?: string, className?: string }) {
+export default function SearchBar(queryProp?: {
+    query?: string;
+    className?: string;
+}) {
     const [searchQuery, setSearchQuery] = useState(queryProp?.query || "");
     const className = queryProp?.className || "";
     const navigate = useNavigate();
@@ -14,7 +17,10 @@ export default function SearchBar(queryProp?: { query?: string, className?: stri
             layout
             key={"search-bar"}
             layoutId="search-bar"
-            className={cn("flex items-center w-[90vw] lg:w-[50%] py-2 rounded-full shadow-2xl border-1 border-neutral-800 bg-neutral-900", className)}>
+            className={cn(
+                "flex items-center w-[90vw] lg:w-[50%] py-2 rounded-full shadow-2xl border-1 border-neutral-800 bg-neutral-900",
+                className
+            )}>
             <div className="ml-4 mr-2 text-gray-500">
                 <FontAwesomeIcon
                     icon={faMagnifyingGlass}
@@ -36,7 +42,7 @@ export default function SearchBar(queryProp?: { query?: string, className?: stri
                 }}
             />
             <button
-                className="mr-2 px-4 py-1.5 font-bold text-white rounded-full bg-blue-500  transition cursor-pointer shadow-[0_0_5px_1px_rgba(43,127,255,0.5)] hover:shadow-[0_0_10px_2px_rgba(43,127,255,0.6)]"
+                className="mr-2 px-4 py-1.5 font-bold text-white rounded-full bg-primary-500  transition cursor-pointer shadow-[0_0_5px_1px_var(--shadow-primary)] hover:shadow-[0_0_10px_2px_var(--shadow-primary-hover)]"
                 onClick={() => {
                     navigate(`/search/${searchQuery}`);
                 }}>

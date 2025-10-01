@@ -73,7 +73,7 @@ const LocalityPage: React.FC = () => {
                                                     );
                                                 }}>
                                                 <div className="flex flex-row items-stretch mb-1">
-                                                    <div className="flex items-center px-3 py-1 bg-blue-700 rounded-l-2xl">
+                                                    <div className="flex items-center px-3 py-1 bg-primary-700 rounded-l-2xl">
                                                         <span className="flex items-center justify-center text-xl font-bold text-center ">
                                                             {service.line_name}
                                                         </span>
@@ -130,7 +130,7 @@ const LocalityPage: React.FC = () => {
                                                     `/buses/stops/${stop.atco_code}`
                                                 );
                                             }}>
-                                            <span className="underline text-sky-500">
+                                            <span className="underline text-link">
                                                 {stop.common_name}{" "}
                                                 {stop.indicator &&
                                                     `(${stop.indicator})`}

@@ -32,7 +32,7 @@ const Privacy: React.FC = () => {
                     <strong>
                         <a
                             href="https://bustimes.org/privacy"
-                            className="underline text-sky-500"
+                            className="underline text-link"
                             target="_blank"
                             rel="noopener noreferrer">
                             bustimes.org
@@ -43,7 +43,7 @@ const Privacy: React.FC = () => {
                     <strong>
                         <a
                             href="https://bustimes.org/privacy"
-                            className="underline text-sky-500"
+                            className="underline text-link"
                             target="_blank"
                             rel="noopener noreferrer">
                             bustimes.org
@@ -81,7 +81,7 @@ const Privacy: React.FC = () => {
                     . This ID is used to identify your WebSocket connection or
                     API request and is not linked to any personal information.
                     This data is used to generate the statistics on the{" "}
-                    <a href="/stats" className="underline text-sky-500">
+                    <a href="/stats" className="underline text-link">
                         Stats Page.
                     </a>{" "}
                     You can delete the ID at any time by clearing your browser's
@@ -89,7 +89,7 @@ const Privacy: React.FC = () => {
                     next use the site.
                 </span>
                 <button
-                    className="p-1.5 px-4 w-fit text-sm font-semibold text-white transition-all bg-blue-600 cursor-pointer rounded-xl hover:bg-blue-700"
+                    className="p-1.5 px-4 w-fit text-sm font-semibold text-white transition-all bg-primary cursor-pointer rounded-xl hover:bg-primary-700"
                     onClick={() => setFavStops({})}>
                     Clear Favorites
                 </button>
@@ -100,7 +100,7 @@ const Privacy: React.FC = () => {
                     If you have any questions, please contact:{" "}
                     <a
                         href="mailto:contact@orbitix.dev"
-                        className="underline text-sky-500">
+                        className="underline text-link">
                         contact@orbitix.dev
                     </a>
                 </p>

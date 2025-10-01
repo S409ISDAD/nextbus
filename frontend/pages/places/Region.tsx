@@ -61,7 +61,7 @@ const RegionsPage: React.FC = () => {
                                                     `/adminarea/${admin_area.id}`
                                                 );
                                             }}>
-                                            <span className="underline text-sky-500">
+                                            <span className="underline text-link">
                                                 {admin_area.name}
                                             </span>
                                         </div>
