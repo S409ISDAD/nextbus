@@ -794,13 +794,19 @@ class TXCImporter:
                 vehicle_journey_code=txc_journey.code or "",
                 ticket_machine_code=txc_journey.ticket_machine_journey_code or "",
                 sequence=txc_journey.sequencenumber,
-                inbound=txc_journey.journey_pattern.direction == "inbound",
+                inbound=txc_journey.journey_pattern.is_inbound(),
             )
             self.db.add(journey)
             self.db.flush()
 
             if txc_journey.block and txc_journey.block.code:
                 journey.block_id = txc_journey.block.code
+            elif (
+                txc_journey.journey_pattern
+                and txc_journey.journey_pattern.block
+                and txc_journey.journey_pattern.block.code
+            ):
+                journey.block_id = txc_journey.journey_pattern.block.code
 
             for cell in txc_journey.get_times():
                 stop_time = self.get_stop_time(journey, cell)
