@@ -1,9 +1,11 @@
 from backend.services import bus, stops
 from backend.db.db import SessionLocal
-from backend.models import Stop
+from backend.models import Stop, to_dict
 from datetime import datetime, timedelta
+from backend.services.caching import get_cached
 from backend.deps import LONDON, UTC
 import logging
+from backend.models import StopTime
 
 log = logging.getLogger(__name__)
 
@@ -14,62 +16,78 @@ async def get_scheduled(stop_id: str, redis, services=None):
 
     # line_names = {service.get("line_name") for service in services}
 
-    times = await stops.get_times(stop_id, redis)
+    async def fetch_times(stop_id, redis):
+        times = await stops.get_times(stop_id, redis)
 
-    line_names = {time.get("service", {}).get("line_name") for time in times}
+        line_names = {time.get("service", {}).get("line_name") for time in times}
 
-    scheduled_times = []
+        scheduled_times = []
 
-    with SessionLocal() as db:
-        stop = db.query(Stop).filter(Stop.atco_code == stop_id).first()
+        with SessionLocal() as db:
+            stop = db.query(Stop).filter(Stop.atco_code == stop_id).first()
 
-        if stop:
-            db_lines = Stop.lines_served(stop, db)
-            db_line_names = [line.line_name for line in db_lines]
-            db_times = stop.times_from_stop(db)
+            if stop:
+                db_lines = Stop.lines_served(stop, db)
+                db_line_names = [line.line_name for line in db_lines]
+                db_times = stop.times_from_stop(db)
 
-        for line_name in line_names:
-            if line_name in db_line_names:
-                log.debug(f"Using DB method for {line_name}")
+            for line_name in line_names:
+                if line_name in db_line_names:
+                    log.debug(f"Using DB method for {line_name}")
 
-                filtered_st = [
-                    st
-                    for st in db_times
-                    if st.journey
-                    and st.journey.timetable
-                    and st.journey.timetable.line_name == line_name
-                ]
+                    filtered_st = [
+                        st
+                        for st in db_times
+                        if st.journey
+                        and st.journey.timetable
+                        and st.journey.timetable.line_name == line_name
+                    ]
 
-                for st in filtered_st:
-                    journey = st.journey
-                    trip_id = await journey.get_bt_trip_id(db)
-                    if not trip_id:
-                        log.warning(
-                            f"No trip ID for journey {journey.id}, stop {stop_id}"
+                    for st in filtered_st:
+                        journey = st.journey
+                        trip_id = await journey.get_bt_trip_id(db)
+                        if not trip_id:
+                            log.warning(
+                                f"No trip ID for journey {journey.id}, stop {stop_id}"
+                            )
+
+                        dayshift = 0
+                        if st._dep_dt.date() > datetime.now(tz=LONDON).date():
+                            dayshift = 1
+                        scheduled_times.append(
+                            {
+                                "trip_id": trip_id,
+                                "journey_id": journey.id,
+                                "dayshift": dayshift,
+                                "source": "db",
+                                "st": to_dict(st),
+                                "dep_dt": st._dep_dt,
+                            }
                         )
 
-                    dayshift = 0
-                    if st._dep_dt.date() > datetime.now(tz=LONDON).date():
-                        dayshift = 1
-                    scheduled_times.append(
-                        {
-                            "trip_id": trip_id,
-                            "journey_id": journey.id,
-                            "dayshift": dayshift,
-                            "source": "db",
-                            "st": st,
-                        }
-                    )
+                else:
+                    log.debug(f"Not using DB method for {line_name}")
+                    filtered_times = [
+                        t
+                        for t in times
+                        if t.get("service", {}).get("line_name") == line_name
+                    ]
+                    for t in filtered_times:
+                        scheduled_times.append({**t, "source": "api"})
+        return scheduled_times
 
-            else:
-                log.debug(f"Not using DB method for {line_name}")
-                filtered_times = [
-                    t
-                    for t in times
-                    if t.get("service", {}).get("line_name") == line_name
-                ]
-                for t in filtered_times:
-                    scheduled_times.append({**t, "source": "api"})
+    scheduled_times = await get_cached(
+        key=f"scheduled_times:{stop_id}",
+        func=fetch_times,
+        args=(stop_id, redis),
+        exp=10,
+        r=redis,
+    )
+
+    for item in scheduled_times:
+        if item.get("source") == "db" and isinstance(item.get("st"), dict):
+            item["st"] = StopTime(**item["st"])
+            setattr(item["st"], "_dep_dt", item.get("dep_dt"))
 
     log.debug(f"got {len(scheduled_times)} scheduled times")
 

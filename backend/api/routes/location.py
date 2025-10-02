@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 import logging
 from backend.deps import get_redis, limiter
 from backend.schemas.service import Service
-from backend.services import stops
+from backend.services import location, stops
 import traceback
 
 router = APIRouter()
@@ -65,25 +65,21 @@ async def closest_stop_for_service(
         raise HTTPException(500, detail=f"An unexpected error occurred: {e}")
 
 
-@router.get("/nearby", response_model=list[Service] | None)
+@router.get("/nearby")
 @limiter.limit("20/minute")
 async def nearby_services(
     request: Request,
     lat: float,
     lng: float,
-    dist: float,
-    redis=Depends(get_redis),
+    dist: int = 200,
 ):
     try:
-        # stop = await get_cached(
-        #     f"closest_stop:{round(lat * 1000)}:{round(lng * 1000)}",
-        #     lambda *args: bustimes.get_closest_stop(*args),
-        #     (lat, lng),
-        #     STOPS_CACHE,
-        #     redis,
-        # )
+        services = location.get_nearby_services(lat, lng, dist)
 
-        return await stops.get_nearby_services(lat, lng, redis, dist)
+        for service in services:
+            del service.geometry
+
+        return services
 
     except Exception as e:
         log.error(f"Unexpected error: {e}")

@@ -1454,6 +1454,8 @@ class Journey(Base):
                     ),
                     None,
                 )
+            else:
+                trip_id = None
 
             obj = db.merge(self)
             obj.bt_trip_id = trip_id

@@ -239,6 +239,10 @@ async def build_scheduled_db(
             )  # shouldn't happen
             return None
 
+        if not st._dep_dt:
+            log.warning(f"StopTime with ID {st.id} has no _dep_dt.")  # shouldn't happen
+            return None
+
         departure_time = st._dep_dt
         today = datetime.now(tz=LONDON).date()
         dayshift = time.get("dayshift", 0)

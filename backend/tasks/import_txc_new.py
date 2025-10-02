@@ -1285,7 +1285,7 @@ class TXCImporter:
                         "timetable_id": timetable_id,
                     }
 
-                    null_point = from_shape(Point([0, 0]), srid=4326)
+                    null_point = from_shape(Point([0, 0]), 4326)
 
                     bad_points = (null_point, None)
 

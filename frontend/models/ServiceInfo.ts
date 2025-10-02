@@ -14,4 +14,5 @@ export interface Service {
     line_name: string;
     line_brand?: string;
     operator?: Operator;
+    _user_distance?: number; // in meters, optional
 }

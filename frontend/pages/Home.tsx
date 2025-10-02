@@ -125,7 +125,7 @@ const Home: React.FC = () => {
     return (
         <div>
             <div className="flex flex-col items-center justify-center gap-6">
-                <div className="flex flex-col items-center justify-center gap-5 pt-0 py-7">
+                <div className="flex flex-col items-center justify-center w-full gap-5 pt-0 py-7">
                     <div className="flex flex-col items-center justify-center p-2">
                         {/* <div className="flex flex-row gap-1 p-2 px-4 rounded-2xl bg-amber-500">
                             <span className="text-center text text-neutral-950">
@@ -244,7 +244,7 @@ const Home: React.FC = () => {
                             </div>
                         </Card>
 
-                        <Card className="max-w-[90vw] flex flex-col items-center gap-2">
+                        {/* <Card className="max-w-[90vw] flex flex-col items-center gap-2">
                             <div className="flex flex-row items-center justify-center gap-3">
                                 <div className="flex flex-col items-center justify-center gap-1">
                                     <div className="flex flex-row items-center justify-center gap-1">
@@ -270,27 +270,6 @@ const Home: React.FC = () => {
                                 </div>
                             </div>
                             <div className="w-full max-w-[400px]">
-                                {/* <LocationPrompt
-                                    isGeolocationAvailable={
-                                        isGeolocationAvailable
-                                    }
-                                    isGeolocationEnabled={isGeolocationEnabled}>
-                                    <div className="flex flex-row items-center gap-2 overflow-x-auto whitespace-nowrap">
-                                        {services.length === 0 && (
-                                            <span className="text-sm text-neutral-400">
-                                                No nearby services found.
-                                            </span>
-                                        )}
-                                        {services.map((service) => (
-                                            <a
-                                                key={service.id}
-                                                className="flex items-center justify-center px-3 py-1 text-lg font-bold text-center cursor-pointer rounded-xl bg-neutral-800/50"
-                                                href={`/buses/services/${service.id}`}>
-                                                {service.line_name}
-                                            </a>
-                                        ))}
-                                    </div>
-                                </LocationPrompt> */}
                                 <div className="flex flex-row flex-wrap items-center justify-center gap-2 whitespace-nowrap">
                                     {loadingDestinations && (
                                         <span className="text-sm text-neutral-400">
@@ -313,15 +292,9 @@ const Home: React.FC = () => {
                                     ))}
                                 </div>
                             </div>
-                        </Card>
+                        </Card> */}
                     </div>
                 </div>
-                {/* <div className="flex flex-row flex-wrap items-center justify-center gap-5 p-5 md:gap-15">
-                    <span className="text-3xl font-bold text-center md:text-4xl md:w-80">
-                        Departure Boards for Every Operator
-                    </span>
-                    <DepartureBoard stop_id="1990PH130449"></DepartureBoard>
-                </div> */}
             </div>
         </div>
     );

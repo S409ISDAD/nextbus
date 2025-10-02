@@ -168,8 +168,8 @@ const StatsPage: React.FC = () => {
 
     return (
         <div className="flex items-center justify-center w-full h-full">
-            <div className="flex flex-col items-center justify-center w-full md:w-[80vw] gap-4 pt-0 p-3 h-fit">
-                <div className="flex flex-row items-center gap-1">
+            <div className="flex flex-col  items-center justify-center w-full md:w-[80vw] gap-4 pt-0 p-3 h-fit">
+                <div className="flex flex-row items-center gap-1 spooky-font">
                     <span className="text-5xl font-black text-center pt-7">
                         nextbus
                     </span>

@@ -7,8 +7,11 @@ import { getCurrentPosition } from "../../utils/locations";
 //     LocationPrompt,
 //     useIsLocationGranted,
 // } from "../components/LocationPrompt";
+import getNearby from "../../utils/getNearby";
 import { Card } from "../../components/ui/Card";
 import { getClosestStops } from "../../utils/closestStop";
+import type { Service } from "../../models/ServiceInfo";
+import { useNavigate } from "react-router";
 
 const BusPage: React.FC = () => {
     useEffect(() => {
@@ -17,6 +20,7 @@ const BusPage: React.FC = () => {
 
     const [tab, setTab] = useState<"nearby" | "fav">("nearby");
     const [closestStops, setClosestStops] = useState<string[]>([]);
+    const [nearbyServices, setNearbyServices] = useState<Service[]>([]);
     const [status, setStatus] = useState<string>("Getting location...");
 
     const [favStops, setFavStops] = useLocalStorageState<
@@ -25,6 +29,8 @@ const BusPage: React.FC = () => {
         defaultValue: {},
     });
     const [userCoords, setUserCoords] = useState<[number, number] | null>(null);
+
+    const navigate = useNavigate();
     // const isGranted = useIsLocationGranted();
 
     useEffect(() => {
@@ -46,6 +52,14 @@ const BusPage: React.FC = () => {
                 .filter((stop) => stop.active_now)
                 .map((stop) => stop.stop_id);
             setClosestStops(stopIDs);
+
+            const services = await getNearby([
+                userCoords.coords.latitude,
+                userCoords.coords.longitude,
+            ]);
+            if (services) {
+                setNearbyServices(services);
+            }
         };
         getUserCoords();
     }, []);
@@ -74,8 +88,46 @@ const BusPage: React.FC = () => {
                     Favourites
                 </button>
             </div>
-            <div style={{ display: tab === "nearby" ? "flex" : "none" }}>
-                <Card className="flex flex-col items-center justify-center gap-2 p-2 rounded-[32px] bg-neutral-900">
+            <div
+                style={{ display: tab === "nearby" ? "flex" : "none" }}
+                className="flex flex-col items-center justify-center gap-10 md:flex-row">
+                <div className="flex flex-col items-center justify-center gap-2">
+                    <span className="text-2xl font-bold">Nearby Services</span>
+                    <div className="flex flex-col items-center gap-2 overflow-x-auto whitespace-nowrap">
+                        {nearbyServices.length === 0 && (
+                            <span className="text-sm text-neutral-400">
+                                {status != "" ? (
+                                    status
+                                ) : (
+                                    <>
+                                        No services found nearby. <br></br>Make
+                                        sure location services are enabled.
+                                    </>
+                                )}
+                            </span>
+                        )}
+                        {nearbyServices.map((service) => (
+                            <div
+                                className="flex flex-row items-stretch mb-1 cursor-pointer"
+                                key={service.id}
+                                onClick={() => {
+                                    navigate(`/buses/services/${service.id}`);
+                                }}>
+                                <div className="flex items-center px-3 py-1 bg-primary-700 rounded-l-2xl">
+                                    <span className="flex items-center justify-center text-lg font-bold text-center">
+                                        {service.line_name}
+                                    </span>
+                                </div>
+                                <div className="flex flex-col justify-center px-3 bg-neutral-800/50 rounded-r-2xl">
+                                    <span className="font-semibold text">
+                                        {service.description}
+                                    </span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+                <div className="flex flex-col items-center justify-center gap-2">
                     <span className="text-2xl font-bold">Closest Stop</span>
                     <div className="flex flex-row flex-wrap items-center justify-center gap-3">
                         {closestStops.length > 0 ? (
@@ -97,7 +149,7 @@ const BusPage: React.FC = () => {
                             </span>
                         )}
                     </div>
-                </Card>
+                </div>
             </div>
             <div style={{ display: tab === "fav" ? "flex" : "none" }}>
                 <Card className="flex flex-col items-center justify-center gap-2 p-2 rounded-[32px] bg-neutral-900">
