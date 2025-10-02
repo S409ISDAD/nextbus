@@ -1289,13 +1289,25 @@ class TXCImporter:
 
                     bad_points = (null_point, None)
 
-                    if from_stop.point in bad_points or to_stop.point in bad_points:
+                    from_stop_bad = bool(
+                        from_stop.point in bad_points
+                        or from_stop.lat == 0
+                        or from_stop.lon == 0
+                    )
+
+                    to_stop_bad = bool(
+                        to_stop.point in bad_points
+                        or to_stop.lat == 0
+                        or to_stop.lon == 0
+                    )
+
+                    if from_stop_bad or to_stop_bad:
                         self.stats.stops_updated += 1
 
-                    if from_stop.point in bad_points:
+                    if from_stop_bad:
                         from_stop.point = from_shape(start, srid=srid)
                         self.db.merge(from_stop)
-                    if to_stop.point in bad_points:
+                    if to_stop_bad:
                         to_stop.point = from_shape(end, srid=srid)
                         self.db.merge(to_stop)
 

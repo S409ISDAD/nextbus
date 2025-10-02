@@ -1565,7 +1565,9 @@ class StopTime(Base):
                         + self.journey.service.description.split()
                     )
                 )
-                show_headsign = short_enough and overlaps
+                bad_chars = any(c in raw_headsign for c in ("/",))
+                show_headsign = short_enough and overlaps and not bad_chars
+
             if do_makeshift:
                 if show_headsign:
                     final = raw_headsign
@@ -1582,6 +1584,14 @@ class StopTime(Base):
                     final = raw_headsign
                 else:
                     final = fallback_headsign
+
+            bad_chars = any(c in final for c in ("/",))
+            if (
+                bad_chars
+                and self.journey.destination
+                and self.journey.destination.locality
+            ):
+                return self.journey.destination.locality.name
 
             if self.journey.destination and self.journey.destination.locality:
                 return final or self.journey.destination.locality.name
