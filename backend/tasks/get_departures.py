@@ -87,7 +87,14 @@ async def get_scheduled(stop_id: str, redis, services=None):
     for item in scheduled_times:
         if item.get("source") == "db" and isinstance(item.get("st"), dict):
             item["st"] = StopTime(**item["st"])
-            setattr(item["st"], "_dep_dt", item.get("dep_dt"))
+            dep_dt = item.get("dep_dt")
+            if type(dep_dt) is str:
+                try:
+                    dep_dt = datetime.fromisoformat(dep_dt)
+                except ValueError:
+                    log.error(f"Invalid dep_dt format: {dep_dt}")
+                    dep_dt = None
+            setattr(item["st"], "_dep_dt", dep_dt)
 
     log.debug(f"got {len(scheduled_times)} scheduled times")
 
