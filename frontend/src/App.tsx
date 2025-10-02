@@ -14,10 +14,8 @@ import NotFound from "../pages/NotFound";
 import StatsPage from "../pages/Stats";
 import TrainSearchPage from "../pages/train/TrainSearchPage.tsx";
 import TrainsDashboard from "../pages/train/Trains.tsx";
-import { BrowserRouter, Route, Routes, useLocation } from "react-router";
+import { BrowserRouter, Route, Routes } from "react-router";
 import toast, { Toaster } from "react-hot-toast";
-import { faXmark } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import useReloadPrompt from "../components/ReloadPrompt";
 import InstallToast from "../components/InstallPrompt";
 import useLocalStorageState from "use-local-storage-state";
@@ -41,40 +39,40 @@ import {
 import Map from "../components/Map";
 import PossibleJourneysPage from "../pages/PossibleJourneysPage.tsx";
 
-function UsefulBanner() {
-    const location = useLocation();
-    const [visible, setVisible] = useState(true);
-    const showAppNav = useShowAppNav();
+// function UsefulBanner() {
+//     const location = useLocation();
+//     const [visible, setVisible] = useState(true);
+//     const showAppNav = useShowAppNav();
 
-    useEffect(() => {
-        setVisible(true);
-    }, []);
+//     useEffect(() => {
+//         setVisible(true);
+//     }, []);
 
-    if (location.pathname === "/" || !visible) return null;
-    return (
-        <div
-            className={`fixed flex gap-2 items-center justify-center p-3 transform -translate-x-1/2 bg-neutral-800 shadow-lg z-[99999] ${
-                showAppNav ? "bottom-19" : "bottom-4"
-            } left-1/2 rounded-2xl`}>
-            <span className="text-center text-gray-200 text-nowrap">
-                Finding this useful?{" "}
-                <a
-                    href="https://forms.gle/SxrFyLQ1HedQcLLC7"
-                    className="underline text-link"
-                    target="_blank"
-                    rel="noopener noreferrer">
-                    Help improve it!
-                </a>
-            </span>
-            <button
-                className="flex items-center justify-center px-2 cursor-pointer aspect-square bg-neutral-900/50 rounded-2xl hover:bg-neutral-900"
-                onClick={() => setVisible(false)}>
-                {" "}
-                <FontAwesomeIcon icon={faXmark} size="sm" />
-            </button>
-        </div>
-    );
-}
+//     if (location.pathname === "/" || !visible) return null;
+//     return (
+//         <div
+//             className={`fixed flex gap-2 items-center justify-center p-3 transform -translate-x-1/2 bg-neutral-800 shadow-lg z-[99999] ${
+//                 showAppNav ? "bottom-19" : "bottom-4"
+//             } left-1/2 rounded-2xl`}>
+//             <span className="text-center text-gray-200 text-nowrap">
+//                 Finding this useful?{" "}
+//                 <a
+//                     href="https://forms.gle/SxrFyLQ1HedQcLLC7"
+//                     className="underline text-link"
+//                     target="_blank"
+//                     rel="noopener noreferrer">
+//                     Help improve it!
+//                 </a>
+//             </span>
+//             <button
+//                 className="flex items-center justify-center px-2 cursor-pointer aspect-square bg-neutral-900/50 rounded-2xl hover:bg-neutral-900"
+//                 onClick={() => setVisible(false)}>
+//                 {" "}
+//                 <FontAwesomeIcon icon={faXmark} size="sm" />
+//             </button>
+//         </div>
+//     );
+// }
 
 function App() {
     const [isOpen, setIsOpen] = useState(false);

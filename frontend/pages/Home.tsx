@@ -6,11 +6,10 @@ import { Card } from "../components/ui/Card";
 import { getCurrentPosition } from "../utils/locations";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-    faArrowRight,
     faBus,
     faCaretRight,
     faMap,
-    faRotateRight,
+    // faRotateRight,
     faTrainSubway,
     faWarning,
 } from "@fortawesome/free-solid-svg-icons";
@@ -24,8 +23,8 @@ import SearchBar from "../components/SearchBar";
 import { useGeolocated } from "react-geolocated";
 import type { DBStats } from "../models/Stats.ts";
 import { getDBStats } from "../utils/getStats.ts";
-import type { Locality } from "../models/Locality.ts";
-import { getDestinations } from "../utils/JourneyPlanning.ts";
+// import type { Locality } from "../models/Locality.ts";
+// import { getDestinations } from "../utils/JourneyPlanning.ts";
 
 const Home: React.FC = () => {
     // const navigate = useNavigate();
@@ -33,8 +32,8 @@ const Home: React.FC = () => {
     const [closestStop, setClosestStop] = React.useState<string | null>(null);
     const [showStop, setShowStop] = React.useState(false);
     const [stats, setStats] = useState<DBStats>();
-    const [destinations, setDestinations] = useState<Locality[]>([]);
-    const [loadingDestinations, setLoadingDestinations] = useState(false);
+    // const [destinations, setDestinations] = useState<Locality[]>([]);
+    // const [loadingDestinations, setLoadingDestinations] = useState(false);
     const {
         coords,
         // isGeolocationAvailable,
@@ -56,28 +55,28 @@ const Home: React.FC = () => {
         document.title = "nextbus";
     }, []);
 
-    const fetchLocalities = async () => {
-        try {
-            // console.log(isGeolocationAvailable, isGeolocationEnabled);
-            // if (!isGeolocationAvailable || !isGeolocationEnabled) return;
-            setLoadingDestinations(true);
+    // const fetchLocalities = async () => {
+    //     try {
+    //         // console.log(isGeolocationAvailable, isGeolocationEnabled);
+    //         // if (!isGeolocationAvailable || !isGeolocationEnabled) return;
+    //         setLoadingDestinations(true);
 
-            const pos = await getCurrentPosition();
+    //         const pos = await getCurrentPosition();
 
-            const destinations = await getDestinations(
-                [pos.coords.latitude, pos.coords.longitude],
-                undefined
-            );
-            if (destinations) {
-                console.log("destinations", destinations);
-                setDestinations(destinations);
-            }
-        } catch (error) {
-            console.log("uh oh", error);
-        } finally {
-            setLoadingDestinations(false);
-        }
-    };
+    //         const destinations = await getDestinations(
+    //             [pos.coords.latitude, pos.coords.longitude],
+    //             undefined
+    //         );
+    //         if (destinations) {
+    //             console.log("destinations", destinations);
+    //             setDestinations(destinations);
+    //         }
+    //     } catch (error) {
+    //         console.log("uh oh", error);
+    //     } finally {
+    //         setLoadingDestinations(false);
+    //     }
+    // };
 
     useEffect(() => {
         const getClosest = async () => {
@@ -87,12 +86,13 @@ const Home: React.FC = () => {
 
                 const pos = await getCurrentPosition();
 
-                const closestStop = await getClosestStops([
+                const closestStops = await getClosestStops([
                     pos.coords.latitude,
                     pos.coords.longitude,
                 ]);
                 // const closestStop = await getClosestStop(fakeCoords);
-                if (closestStop) {
+                if (closestStops) {
+                    const closestStop = closestStops[0];
                     console.log(
                         "closest stop",
                         closestStop,
