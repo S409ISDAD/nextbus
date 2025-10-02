@@ -242,7 +242,7 @@ async def build_scheduled_db(
             log.warning(f"StopTime with ID {st.id} has no _dep_dt.")  # shouldn't happen
             return None
 
-        departure_time = st._dep_dt
+        departure_time: datetime = st._dep_dt
         today = datetime.now(tz=LONDON).date()
         dayshift = time.get("dayshift", 0)
         if dayshift:
@@ -258,6 +258,11 @@ async def build_scheduled_db(
             started = False
 
         scheduled = departure_time
+
+        time_to = (scheduled - datetime.now(tz=LONDON)).total_seconds()
+
+        if time_to > 2 * 3600:
+            get_prev = False  # save processing time
 
         # if (scheduled - datetime.now(tz=LONDON)).total_seconds() > 11 * 3600:
         #     log.debug("Scheduled too far in future")
@@ -277,7 +282,7 @@ async def build_scheduled_db(
         )
 
         if get_prev:
-            with time_taken("getting previous journey"):
+            with time_taken("getting previous journey", threshold=1):
                 prev_journey = stop_time.journey.get_previous_journey(db, today)
 
             if not prev_journey:
@@ -297,7 +302,7 @@ async def build_scheduled_db(
             if not prev_trip or not prev_service_id or not this_service_id:
                 return scheduled_bus
 
-            with time_taken("getting service info"):
+            with time_taken("getting service info", threshold=5):
                 service_info = await get_service_info(this_service_id, r)
 
             potential_bus = await fetch_bus_trip(prev_service_id, prev_trip, r)

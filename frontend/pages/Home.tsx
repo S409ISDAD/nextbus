@@ -6,7 +6,9 @@ import { Card } from "../components/ui/Card";
 import { getCurrentPosition } from "../utils/locations";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
+    faArrowRight,
     faBus,
+    faCaretRight,
     faMap,
     faRotateRight,
     faTrainSubway,
@@ -118,7 +120,7 @@ const Home: React.FC = () => {
         };
 
         getClosest();
-        fetchLocalities();
+        // fetchLocalities();
         fetchStats();
     }, [coords]);
 
@@ -181,7 +183,7 @@ const Home: React.FC = () => {
                             </div>
                         </div>
                     )}
-                    <div className="flex flex-wrap items-center justify-center w-full gap-4 mb-4">
+                    <div className="flex flex-wrap items-center justify-center w-full gap-4">
                         <div className="flex flex-col items-center p-2 px-6 shadow bg-neutral-800/50 rounded-xl">
                             <span className="text-xl font-bold text-link-400">
                                 {stats?.lines?.toLocaleString() ?? "--"}
@@ -207,6 +209,11 @@ const Home: React.FC = () => {
                             </span>
                         </div>
                     </div>
+                    <a
+                        href="/stats"
+                        className="text-sm underline text-link-400">
+                        See more stats <FontAwesomeIcon icon={faCaretRight} />
+                    </a>
 
                     <SearchBar />
 

@@ -215,7 +215,7 @@ function BusCard({
                     </div>
                 </div>
 
-                <div className="flex items-center justify-center gap-1 p-1 ml-5 rounded-lg bg-neutral-800/50 w-15 h-fit">
+                <div className="flex items-center justify-center gap-1 p-1 ml-5 rounded-lg bg-neutral-800/50 w-15 min-w-fit h-fit">
                     <span className="text-sm font-bold text-nowrap">
                         {bus.timeTo}
                     </span>
@@ -378,7 +378,7 @@ function DepartureBoard({ stop_id, closest, filter }: Props) {
                         className="flex flex-col justify-center gap-1 cursor-pointer"
                         onClick={() => navigate(`/buses/stops/${stopID}`)}>
                         {closest && (
-                            <div className="flex items-center justify-center gap-1 p-1 bg-indigo-800 rounded-lg w-fit h-fit">
+                            <div className="flex items-center justify-center gap-1 px-1 bg-indigo-800 rounded-lg w-fit h-fit">
                                 <span className="text-xs font-bold ">
                                     Closest Stop
                                 </span>
@@ -401,7 +401,7 @@ function DepartureBoard({ stop_id, closest, filter }: Props) {
                         </div>
                     ) : (
                         <>
-                            <div className="px-2">
+                            <div className="">
                                 <div className="flex flex-col overflow-y-auto max-h-[200px]">
                                     {msg ? (
                                         <div className="flex justify-center">

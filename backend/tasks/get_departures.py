@@ -33,8 +33,6 @@ async def get_scheduled(stop_id: str, redis, services=None):
 
             for line_name in line_names:
                 if line_name in db_line_names:
-                    log.debug(f"Using DB method for {line_name}")
-
                     filtered_st = [
                         st
                         for st in db_times
@@ -66,7 +64,6 @@ async def get_scheduled(stop_id: str, redis, services=None):
                         )
 
                 else:
-                    log.debug(f"Not using DB method for {line_name}")
                     filtered_times = [
                         t
                         for t in times

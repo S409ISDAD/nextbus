@@ -1591,13 +1591,12 @@ class StopTime(Base):
             log.error(f"Error getting headsign for stoptime {self.id}: {e}")
             return None
 
-    def departure_datetime(self, service_day: date) -> datetime:
-        if self.departure_time is None:
+    def departure_datetime(self, service_day: date) -> datetime | None:
+        dep = self.departure_time or self.arrival_time
+        if dep is None:
             return None
 
-        return datetime.combine(
-            service_day, (datetime.min + self.departure_time).time(), tzinfo=LONDON
-        )
+        return datetime.combine(service_day, (datetime.min + dep).time(), tzinfo=LONDON)
 
     @property
     def dep_or_arr(self):

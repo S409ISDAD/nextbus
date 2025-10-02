@@ -85,7 +85,7 @@ const footer = (currentYear: number) => (
             rel="noopener noreferrer">
             <FontAwesomeIcon icon={faGithub} />
         </a> */}
-        ·<span>{version}</span>
+        ·<span>version {version}</span>
     </footer>
 );
 
