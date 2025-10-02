@@ -22,6 +22,8 @@ async def get_scheduled(stop_id: str, redis, services=None):
         line_names = {time.get("service", {}).get("line_name") for time in times}
 
         scheduled_times = []
+        db_line_names = []
+        db_times = []
 
         with SessionLocal() as db:
             stop = db.query(Stop).filter(Stop.atco_code == stop_id).first()
