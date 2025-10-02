@@ -27,7 +27,7 @@ services:
       - "8081"
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.nginx.rule=(Host(`localhost`) || Host(`*nextbus.orbitix.dev`) || HostRegexp(`{ip:192\\.168\\..*}`)"
+      - "traefik.http.routers.nginx.rule=(Host(`localhost`) || Host(`*.orbitix.dev`) || HostRegexp(`{ip:192\\.168\\..*}`))"
       - "traefik.http.routers.nginx.entrypoints=web"
       - "traefik.http.services.nginx.loadbalancer.server.port=8081"
       - "traefik.http.routers.nginx.priority=1"
@@ -59,7 +59,7 @@ services:
       ENV: production
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.app.rule=(Host(`localhost`) || Host(`*nextbus.orbitix.dev`) || HostRegexp(`{ip:192\\.168\\..*}`) && PathRegexp(`^/api(/.*)?$|^/ws(/.*)?$`)"
+      - "traefik.http.routers.app.rule=(Host(`localhost`) || Host(`*.orbitix.dev`) || HostRegexp(`{ip:192\\.168\\..*}`)) && PathRegexp(`^/api(/.*)?$|^/ws(/.*)?$`)"
       - "traefik.http.routers.app.entrypoints=web"
       - "traefik.http.services.app.loadbalancer.server.port=8000"
       - "traefik.http.services.app.loadbalancer.sticky.cookie=true"
