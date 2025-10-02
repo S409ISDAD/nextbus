@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback, type JSX } from "react";
+import { useRef, useState, useCallback, type JSX, useEffect } from "react";
 import {
     Map as MapGL,
     Marker,
@@ -40,6 +40,7 @@ const MapView: React.FC<MapViewProps> = ({
     onBoundsChange,
 }) => {
     const [zoom, setZoom] = useState(9);
+    const geoLocateRef = useRef<any>(null);
 
     const showAppNav = useShowAppNav();
 
@@ -113,10 +114,16 @@ const MapView: React.FC<MapViewProps> = ({
                 //         },
                 //     ],
                 // }}
-                onMoveEnd={handleMove}>
+                onMoveEnd={handleMove}
+                onLoad={() => {
+                    if (geoLocateRef.current) {
+                        geoLocateRef.current.trigger();
+                    }
+                }}>
                 <NavigationControl position="top-right" />
 
                 <GeolocateControl
+                    ref={geoLocateRef}
                     position="top-right"
                     trackUserLocation={true}
                     showAccuracyCircle={true}
@@ -175,7 +182,7 @@ const MapView: React.FC<MapViewProps> = ({
                                 content: (
                                     <div className="flex flex-col font-bold text-white bg-[#222]">
                                         <span
-                                            className="text-link underline cursor-pointer"
+                                            className="underline cursor-pointer text-link"
                                             onClick={() =>
                                                 navigate(`/buses/${bus.id}`)
                                             }>
@@ -254,12 +261,16 @@ const Map: React.FC = () => {
     // useEffect(() => {
     //     if (navigator.geolocation) {
     //         navigator.geolocation.getCurrentPosition(
-    //             (pos) => setCenter([pos.coords.latitude, pos.coords.longitude]),
+    //             (pos) =>
+    //                 mapRef.current?.setCenter([
+    //                     pos.coords.latitude,
+    //                     pos.coords.longitude,
+    //                 ]),
     //             () => {},
-    //             { enableHighAccuracy: true, timeout: 10000 }
+    //             { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
     //         );
     //     }
-    // }, []);
+    // }, [mapRef]);
 
     const fetchStops = useCallback(async (bounds: maplibregl.LngLatBounds) => {
         setLoading(true);

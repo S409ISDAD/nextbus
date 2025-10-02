@@ -230,8 +230,7 @@ const Home: React.FC = () => {
                                     onClick={() => {
                                         navigate("/buses");
                                     }}>
-                                    Bus Dashboard{" "}
-                                    <FontAwesomeIcon icon={faBus} />
+                                    Buses <FontAwesomeIcon icon={faBus} />
                                 </button>
                                 <button
                                     className="button max-w-fit"
