@@ -1473,7 +1473,7 @@ def journey_is_valid_filter(date: date | None = None):
     base_filter = and_(
         Calendar.start_date <= date,
         or_(Calendar.end_date == None, Calendar.end_date >= date),
-        getattr(Calendar, weekday) == True,
+        getattr(Calendar, weekday),
     )
 
     # bh_filter = or_(

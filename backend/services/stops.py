@@ -3,7 +3,7 @@ from geopy.distance import geodesic
 from redis.asyncio import Redis
 
 from backend.config import API_BASE, BASE, STOPS_BASE
-from backend.deps import LONDON, get_redis
+from backend.deps import LONDON
 from backend.schemas.service import Service
 from backend.schemas.stop import Stop
 from backend.services.caching import (
@@ -13,7 +13,6 @@ from backend.services.caching import (
     get_cached,
 )
 from dateutil.parser import isoparse
-from backend.tasks.get_departures import get_scheduled
 from backend.utils.fetch_json import fetch_json
 import logging
 
@@ -170,7 +169,6 @@ async def get_closest_stop(lat, lng, ignore, dist=0.005, limit=1):
     stops = await get_nearby_stops(lat, lng, dist)
 
     closest_stops = []
-    min_dist = float("inf")
 
     for stop in stops:
         stop_lat = stop.coords[1]
@@ -192,7 +190,7 @@ async def get_closest_stop(lat, lng, ignore, dist=0.005, limit=1):
     if closest_stops is None:
         return {"stop_id": "", "dist": 0, "lat": 0, "lng": 0}
 
-    r = await get_redis()
+    # r = await get_redis()
 
     closest_stops.sort(key=lambda x: x["dist"])
     closest_stops = closest_stops[:limit]

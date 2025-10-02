@@ -1,6 +1,5 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 
-import pandas as pd
 from sqlalchemy.orm import Session
 
 from backend.db.db import SessionLocal

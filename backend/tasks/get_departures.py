@@ -1,9 +1,9 @@
 from backend.services import bus, stops
 from backend.db.db import SessionLocal
 from backend.models import Stop, to_dict
-from datetime import datetime, timedelta
+from datetime import datetime
 from backend.services.caching import get_cached
-from backend.deps import LONDON, UTC
+from backend.deps import LONDON
 import logging
 from backend.models import StopTime
 

@@ -30,7 +30,6 @@ from backend.services.prediction import (
 from backend.services.services import fetch_active_buses, get_service_info
 from backend.services.tracking_confidence import calculate_confidence
 from backend.utils.fetch_json import fetch_json
-from backend.utils.match_bt import match_trip_journey
 from backend.utils.time_taken import time_taken
 
 log = logging.getLogger(__name__)
