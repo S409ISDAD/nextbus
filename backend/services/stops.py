@@ -109,7 +109,6 @@ async def get_times(stop_id, r: Redis):
             if dep:
                 dep = isoparse(dep)
                 if dep.date() > now:
-                    log.debug(f"Departure is tomorrow: {dep}")
                     time["dayshift"] = 1
 
         return times
