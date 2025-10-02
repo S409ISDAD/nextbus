@@ -246,7 +246,6 @@ async def build_scheduled_db(
         today = datetime.now(tz=LONDON).date()
         dayshift = time.get("dayshift", 0)
         if dayshift:
-            departure_time += timedelta(days=dayshift)
             today += timedelta(days=dayshift)
 
         headsign = stop_time.headsign
