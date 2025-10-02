@@ -48,6 +48,8 @@ const Home: React.FC = () => {
         userDecisionTimeout: 5000,
     });
 
+    const [showCaution, setShowCaution] = useState(false);
+
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -129,24 +131,37 @@ const Home: React.FC = () => {
             <div className="flex flex-col items-center justify-center gap-6">
                 <div className="flex flex-col items-center justify-center w-full gap-5 pt-0 py-7">
                     <div className="flex flex-col items-center justify-center p-2">
-                        {/* <div className="flex flex-row gap-1 p-2 px-4 rounded-2xl bg-amber-500">
-                            <span className="text-center text text-neutral-950">
-                                <FontAwesomeIcon
-                                    icon={faWarning}></FontAwesomeIcon>
-                                <strong>CAUTION!</strong> This is a work in
-                                progress. There may be some bugs and issues, and
-                                the information given is not guaranteed to be
-                                true.{" "}
-                                <a
-                                    href="https://discord.gg/dyEmZSkwge"
-                                    className="text-red-800 underline h-fit"
-                                    target="_blank"
-                                    rel="noopener noreferrer">
-                                    Join the Discord
-                                </a>{" "}
-                                if you would like to suggest or report anything.
-                            </span>
-                        </div> */}
+                        <div className="flex flex-col items-center w-full">
+                            <button
+                                className="flex flex-row items-center justify-center gap-1 p-2 px-4 transition cursor-pointer border-1 rounded-2xl bg-neutral-800 border-amber-500 hover:border-amber-400"
+                                onClick={() => setShowCaution((prev) => !prev)}>
+                                <FontAwesomeIcon icon={faWarning} />
+                                <span className="ml-2 text-sm">
+                                    {showCaution
+                                        ? "Hide notice"
+                                        : "Show notice"}
+                                </span>
+                            </button>
+                            {showCaution && (
+                                <div className="w-full max-w-xl px-4 py-2 mt-2 rounded-2xl bg-amber-500">
+                                    <span className="text-center text text-neutral-950">
+                                        This is a work in progress. There may be
+                                        some bugs and issues, and the
+                                        information given is not guaranteed to
+                                        be true.{" "}
+                                        <a
+                                            href="https://discord.gg/dyEmZSkwge"
+                                            className="text-red-800 underline h-fit"
+                                            target="_blank"
+                                            rel="noopener noreferrer">
+                                            Join the Discord
+                                        </a>{" "}
+                                        if you would like to suggest or report
+                                        anything.
+                                    </span>
+                                </div>
+                            )}
+                        </div>
                         <div className="flex flex-row items-center gap-1 spooky-font">
                             {/* TODO: remember to go down a size when changing back to normal font */}
                             <span className="text-6xl font-black text-center pt-7">
