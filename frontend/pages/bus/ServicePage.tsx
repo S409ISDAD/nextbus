@@ -122,6 +122,12 @@ const ServicePage: React.FC = () => {
                         </div>
                     )}
                 </div>
+                {service?.last_modified && (
+                    <span className="w-full text-sm text-neutral-400 text-start">
+                        timetable data from{" "}
+                        {new Date(service?.last_modified).toLocaleString()}
+                    </span>
+                )}
                 {loading && (
                     <span className="text-neutral-300">Loading...</span>
                 )}

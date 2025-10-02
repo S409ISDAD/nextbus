@@ -18,6 +18,7 @@ export interface ServiceResult {
     operator_noc: string | null;
     operator: string | null;
     line_names: string;
+    last_modified?: string;
 }
 
 interface LocalityResult {
