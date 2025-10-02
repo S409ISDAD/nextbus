@@ -3,6 +3,7 @@ services:
     image: traefik:v3.5
     command:
       - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
       - "--api.insecure=true"
