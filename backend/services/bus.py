@@ -412,6 +412,7 @@ async def build_bus(
     tracking = True
 
     if not delay:
+        log.warning(f"No delay for bus id: {bus_id}")
         delay = 0
         tracking = False
 
@@ -435,7 +436,8 @@ async def build_bus(
         return None
 
     # Reset delay if earlier than 15 mins, it has probably logged on early
-    if delay < 15 * 60:
+    if delay < -15 * 60:
+        log.warning(f"resetting delay, too early. id: {bus_id}, reg: {reg}")
         delay = 0
 
     await r.sadd("total_buses", bus_id)
@@ -515,6 +517,7 @@ async def build_bus(
     # if times.finished and stop_id:
     #     return None
     if not times.started:
+        log.debug(f"bus not started yet. id: {bus_id}, reg: {reg}")
         delay = 0
 
     if get_journey:
