@@ -4,7 +4,7 @@ import getBus from "../../utils/getBus";
 import { useNavigate, useParams } from "react-router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { lateness, toTime } from "../../utils/timeUtils";
-import { generateWholeTrack, type LatLng } from "../../utils/locations";
+import { generateWholeTrack, type Latlon } from "../../utils/locations";
 import {
     faBus,
     faCalendarCheck,
@@ -41,23 +41,23 @@ const MapInfo: React.FC<MapInfoProps> = ({ text, color = "black" }) => {
 
 type MapViewProps = {
     lat: number;
-    lng: number;
+    lon: number;
     bus: Bus;
     accuracy: "high" | "med" | "low" | "unknown";
-    track: LatLng[];
+    track: Latlon[];
 };
 import React from "react";
 import { Pulse } from "../../components/ui/Pulse";
 
 const MapView: React.FC<MapViewProps> = ({
     lat,
-    lng,
+    lon,
     bus,
     accuracy,
     track = [],
 }) => {
     const [popup, setPopup] = React.useState<{
-        coords: LatLng;
+        coords: Latlon;
         content: React.ReactNode;
     } | null>(null);
 
@@ -67,12 +67,12 @@ const MapView: React.FC<MapViewProps> = ({
         if (
             mapRef.current &&
             lat !== 0 &&
-            lng !== 0 &&
+            lon !== 0 &&
             !mapRef.current.isMoving() &&
             !mapRef.current.isZooming()
         ) {
             mapRef.current.flyTo({
-                center: [lng, lat],
+                center: [lon, lat],
                 zoom:
                     mapRef.current.getZoom() < 9 ? 9 : mapRef.current.getZoom(),
                 bearing: 0,
@@ -80,7 +80,7 @@ const MapView: React.FC<MapViewProps> = ({
                 essential: false,
             });
         }
-    }, [lat, lng]);
+    }, [lat, lon]);
 
     const accuracyColor =
         accuracy === "high"
@@ -93,7 +93,7 @@ const MapView: React.FC<MapViewProps> = ({
             <MapGL
                 ref={mapRef}
                 initialViewState={{
-                    longitude: lng,
+                    longitude: lon,
                     latitude: lat,
                     zoom: 14,
                 }}
@@ -127,7 +127,7 @@ const MapView: React.FC<MapViewProps> = ({
                 style={{ width: "100%", height: "100%" }}>
                 <NavigationControl position="top-right" />
 
-                <Marker longitude={lng} latitude={lat} anchor="center">
+                <Marker longitude={lon} latitude={lat} anchor="center">
                     <div className="flex items-center justify-center w-6 h-6 rounded-full shadow-lg bg-rose-600">
                         <i className="text-xs text-white fas fa-bus" />
                     </div>
@@ -318,8 +318,8 @@ const JourneyPage: React.FC = () => {
                     setProg(0);
                 }
                 const lat = bus?.coords?.[1] ?? 0;
-                const lng = bus?.coords?.[0] ?? 0;
-                setLoc([lat, lng]);
+                const lon = bus?.coords?.[0] ?? 0;
+                setLoc([lat, lon]);
                 return;
             }
 
@@ -358,15 +358,15 @@ const JourneyPage: React.FC = () => {
             setSeq(upcoming.sequence);
 
             const latDelta = newCoords[0] - prevCoords[0];
-            const lngDelta = newCoords[1] - prevCoords[1];
+            const lonDelta = newCoords[1] - prevCoords[1];
 
             const lat =
                 prevCoords[0] + latDelta * (-timeDelta / predictionDuration);
 
-            const lng =
-                prevCoords[1] + lngDelta * (-timeDelta / predictionDuration);
+            const lon =
+                prevCoords[1] + lonDelta * (-timeDelta / predictionDuration);
 
-            setLoc([lat, lng]);
+            setLoc([lat, lon]);
         }, 200);
         return () => clearInterval(interval);
     }, [predictions]);
@@ -474,7 +474,7 @@ const JourneyPage: React.FC = () => {
                         </div>
                         <MapView
                             lat={location[0]}
-                            lng={location[1]}
+                            lon={location[1]}
                             bus={bus}
                             accuracy={accuracy}
                             track={generateWholeTrack(

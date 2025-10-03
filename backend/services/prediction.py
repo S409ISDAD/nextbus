@@ -68,13 +68,13 @@ async def calculate_loc(progress: float, track: list[list[float]]) -> list[float
                 return full_track[i]
             seg_prog = (target_dist - cumulative[i]) / seg_dist
 
-            lat1, lng1 = full_track[i]
-            lat2, lng2 = full_track[i + 1]
+            lat1, lon1 = full_track[i]
+            lat2, lon2 = full_track[i + 1]
 
             interp_lat = lat1 + (lat2 - lat1) * seg_prog
-            interp_lng = lng1 + (lng2 - lng1) * seg_prog
+            interp_lon = lon1 + (lon2 - lon1) * seg_prog
 
-            return [interp_lat, interp_lng]
+            return [interp_lat, interp_lon]
 
     return full_track[-1]
 

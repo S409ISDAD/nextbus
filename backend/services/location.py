@@ -9,8 +9,8 @@ import logging
 log = logging.getLogger(__name__)
 
 
-def get_nearby_services(lat: float, lng: float, dist: int = 200) -> list[Service]:
-    point = Point(lng, lat)
+def get_nearby_services(lat: float, lon: float, dist: int = 200) -> list[Service]:
+    point = Point(lon, lat)
 
     user_geom = from_shape(point, srid=4326)
 

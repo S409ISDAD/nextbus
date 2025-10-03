@@ -1,9 +1,9 @@
-import type {StopTime} from "../models/StopTime";
+import type { StopTime } from "../models/StopTime";
 import toast from "react-hot-toast";
 
-export type LatLng = [number, number];
+export type Latlon = [number, number];
 
-export function toLatLngArray(track?: number[][]): LatLng[] {
+export function toLatlonArray(track?: number[][]): Latlon[] {
     if (!track || !Array.isArray(track)) return [];
 
     return track
@@ -14,8 +14,8 @@ export function toLatLngArray(track?: number[][]): LatLng[] {
         );
 }
 
-export function generateWholeTrack(stops: StopTime[]): LatLng[] {
-    return stops.flatMap(stop => toLatLngArray(stop.track));
+export function generateWholeTrack(stops: StopTime[]): Latlon[] {
+    return stops.flatMap(stop => toLatlonArray(stop.track));
 }
 
 export function getCurrentPosition(): Promise<GeolocationPosition> {

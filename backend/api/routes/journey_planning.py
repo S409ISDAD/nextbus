@@ -6,6 +6,8 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from backend.db.db import SessionLocal
 from backend.deps import get_redis, limiter
 from backend.models import Locality
+from pydantic import BaseModel
+from backend.schemas.location import LocationRequest
 from backend.services.journey_planner import (
     possible_destinations,
     get_possible_journeys,
@@ -16,36 +18,35 @@ router = APIRouter()
 log = logging.getLogger(__name__)
 
 
-@router.get("/destinations")
+@router.post("/destinations")
 @limiter.limit("20/minute")
 async def destinations(
     request: Request,
-    lat: float,
-    lon: float,
+    body: LocationRequest,
     datetime: dt | None = None,
     redis=Depends(get_redis),
 ):
     try:
-        localities = await possible_destinations(lat, lon, datetime)
-
+        localities = await possible_destinations(body.lat, body.lon, datetime)
         return localities
     except Exception as e:
         log.error(f"Unexpected error: {e}")
         raise HTTPException(500, detail="An unexpected error occured")
 
 
-@router.get("/journeys")
+@router.post("/journeys")
 @limiter.limit("10/minute")
 async def journeys(
     request: Request,
-    lat: float,
-    lon: float,
+    body: LocationRequest,
     locality: str,
     datetime: dt | None = None,
     redis=Depends(get_redis),
 ):
     try:
-        journeys = await get_possible_journeys(lat, lon, locality, redis, datetime)
+        journeys = await get_possible_journeys(
+            body.lat, body.lon, locality, redis, datetime
+        )
         return journeys
     except Exception as e:
         log.error(f"Unexpected error: {e}")

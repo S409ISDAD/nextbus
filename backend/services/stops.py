@@ -124,9 +124,9 @@ async def get_times(stop_id, r: Redis):
     return times
 
 
-async def get_nearby_stops(lat, lng, dist=0.005):
-    xmin = lng - dist
-    xmax = lng + dist
+async def get_nearby_stops(lat, lon, dist=0.005):
+    xmin = lon - dist
+    xmax = lon + dist
     ymin = lat - dist
     ymax = lat + dist
 
@@ -140,17 +140,17 @@ async def get_nearby_stops(lat, lng, dist=0.005):
     nearby_stops = []
     for stop in stops.get("features", []):
         stop_lat = stop["geometry"]["coordinates"][1]
-        stop_lng = stop["geometry"]["coordinates"][0]
+        stop_lon = stop["geometry"]["coordinates"][0]
 
         bearing = stop["properties"].get("bearing", None)
         indicator = stop["properties"].get("indicator", "")
 
-        dist = geodesic((lat, lng), (stop_lat, stop_lng)).meters
+        dist = geodesic((lat, lon), (stop_lat, stop_lon)).meters
 
         nearby_stops.append(
             Stop(
                 stop_id=stop["properties"]["url"].split("/")[2],
-                coords=[stop_lng, stop_lat],
+                coords=[stop_lon, stop_lat],
                 long_name="",
                 name=stop["properties"]["name"],
                 indicator=indicator,
@@ -164,16 +164,16 @@ async def get_nearby_stops(lat, lng, dist=0.005):
     return nearby_stops
 
 
-async def get_closest_stop(lat, lng, ignore, dist=0.005, limit=1):
-    stops = await get_nearby_stops(lat, lng, dist)
+async def get_closest_stop(lat, lon, ignore, dist=0.005, limit=1):
+    stops = await get_nearby_stops(lat, lon, dist)
 
     closest_stops = []
 
     for stop in stops:
         stop_lat = stop.coords[1]
-        stop_lng = stop.coords[0]
+        stop_lon = stop.coords[0]
 
-        dist = geodesic((lat, lng), (stop_lat, stop_lng)).meters
+        dist = geodesic((lat, lon), (stop_lat, stop_lon)).meters
 
         if ignore != stop.stop_id:
             closest_stops.append(
@@ -181,13 +181,13 @@ async def get_closest_stop(lat, lng, ignore, dist=0.005, limit=1):
                     "stop_id": stop.stop_id,
                     "dist": stop.dist,
                     "lat": stop_lat,
-                    "lng": stop_lng,
+                    "lon": stop_lon,
                     "active_now": True,
                 }
             )
 
     if closest_stops is None:
-        return {"stop_id": "", "dist": 0, "lat": 0, "lng": 0}
+        return {"stop_id": "", "dist": 0, "lat": 0, "lon": 0}
 
     # r = await get_redis()
 
@@ -201,17 +201,17 @@ async def get_closest_stop(lat, lng, ignore, dist=0.005, limit=1):
     return closest_stops
 
 
-async def get_nearby_services(lat, lng, r, dist=0.005):
-    stops = await get_nearby_stops(lat, lng, dist)
+async def get_nearby_services(lat, lon, r, dist=0.005):
+    stops = await get_nearby_stops(lat, lon, dist)
 
     nearby_services = []
     seen_services = set()
 
     for stop in stops:
         stop_lat = stop.coords[1]
-        stop_lng = stop.coords[0]
+        stop_lon = stop.coords[0]
 
-        dist = geodesic((lat, lng), (stop_lat, stop_lng)).meters
+        dist = geodesic((lat, lon), (stop_lat, stop_lon)).meters
 
         stop_id = stop.stop_id
 
@@ -240,17 +240,17 @@ async def get_nearby_services(lat, lng, r, dist=0.005):
     return nearby_services
 
 
-async def get_closest_stop_for_service(lat, lng, service_id, r, dist=0.005):
-    stops = await get_nearby_stops(lat, lng, dist)
+async def get_closest_stop_for_service(lat, lon, service_id, r, dist=0.005):
+    stops = await get_nearby_stops(lat, lon, dist)
 
     closest_stop = None
     min_dist = float("inf")
 
     for stop in stops:
         stop_lat = stop.coords[1]
-        stop_lng = stop.coords[0]
+        stop_lon = stop.coords[0]
 
-        dist = geodesic((lat, lng), (stop_lat, stop_lng)).meters
+        dist = geodesic((lat, lon), (stop_lat, stop_lon)).meters
 
         stop_id = stop.stop_id
 
@@ -272,5 +272,5 @@ async def get_closest_stop_for_service(lat, lng, service_id, r, dist=0.005):
         "stop_id": closest_stop.stop_id,
         "dist": min_dist,
         "lat": closest_stop.coords[1],
-        "lng": closest_stop.coords[0],
+        "lon": closest_stop.coords[0],
     }

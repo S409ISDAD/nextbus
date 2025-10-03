@@ -86,7 +86,7 @@ async def get_vehicle_journey(journey_id, delay, r) -> Journey:
 
     for stop_idx, stop in enumerate(json_stops):
         if stop.get("track"):
-            track = [[lng_lat[1], lng_lat[0]] for lng_lat in stop.get("track")]
+            track = [[lon_lat[1], lon_lat[0]] for lon_lat in stop.get("track")]
         else:
             track = None
 
@@ -304,7 +304,7 @@ async def get_trip(trip_id, delay, r) -> Trip:
 
     for stop_idx, stop in enumerate(json_stops):
         if stop.get("track"):
-            track = [[lng_lat[1], lng_lat[0]] for lng_lat in stop.get("track")]
+            track = [[lon_lat[1], lon_lat[0]] for lon_lat in stop.get("track")]
         else:
             track = None
 
