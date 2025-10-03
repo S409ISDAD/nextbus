@@ -502,7 +502,17 @@ class Stop(Base):
 
         stop_times = stop_times_q.all()
 
-        for day_offset in [-1, 0, 1]:
+        day_offsets = [0]
+
+        if now.hour < 3:
+            # consider yesterdays night trips
+            day_offsets.insert(0, -1)
+
+        if now.hour >= 21:
+            # consider tomorrows morning trips
+            day_offsets.append(1)
+
+        for day_offset in day_offsets:
             service_day = (now + timedelta(days=day_offset)).date()
 
             stop_times_today = [
@@ -514,7 +524,7 @@ class Stop(Base):
                 if not depdt:
                     log.warning(
                         f"StopTime {st.id} has no departure datetime for service day {service_day}"
-                    )
+                    )  # should not happen
                     continue
                 if depdt >= now:
                     # make a new copy to avoid overwriting _dep_dt, as a stoptime object can be reused for multiple service days
