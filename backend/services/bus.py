@@ -112,17 +112,12 @@ async def fetch_buses(
     active = await fetch_active_buses(services, r)
 
     active_by_trip: dict[int, list[dict]] = {}
-    trip_to_id: dict[int, int] = {}
     if active:
         for bus in active:
             trip_id = bus.get("trip_id")
-            if trip_to_id.get(trip_id) == bus.get(
-                "id"
-            ):  # same bus is already on this trip
-                continue
-            if trip_id:
-                trip_to_id[trip_id] = bus.get("id", 0)
-                active_by_trip.setdefault(trip_id, []).append(bus)
+            active_by_trip.setdefault(trip_id, []).append(bus)
+
+    bus_seen_counts = {bus["id"]: 0 for bus in active} if active else {}
 
     tasks = []
 
@@ -132,8 +127,17 @@ async def fetch_buses(
         source = time.get("source", "api")
         matched_buses = active_by_trip.get(trip_id, [])
         if matched_buses:
+            for bus in matched_buses:
+                bus_seen_counts[bus["id"]] += 1
             tasks.append(
-                build_bus_candidates(matched_buses, r, stop_id, journey_id, source)
+                build_bus_candidates(
+                    matched_buses,
+                    r,
+                    stop_id,
+                    journey_id,
+                    source,
+                    bus_seen_counts,
+                )
             )
         else:
             if time.get("source") == "db":
@@ -350,11 +354,20 @@ async def build_bus_candidates(
     stop_id: str,
     journey_id: int | None = None,
     source: str = "api",
+    bus_seen_counts: dict[int, int] | None = None,
 ) -> TrackedBus | None:
     results = await asyncio.gather(
         *[
             build_bus(
-                bus["id"], r, stop_id, journey_id, get_journey=False, source=source
+                bus["id"],
+                r,
+                stop_id,
+                journey_id,
+                get_journey=False,
+                source=source,
+                bus_seen_count=bus_seen_counts.get(bus["id"], 1)
+                if bus_seen_counts
+                else 1,
             )
             for bus in buses
         ]
@@ -382,6 +395,7 @@ async def build_bus(
     journey_id: int | None = None,
     get_journey: bool = True,
     source: str = "api",
+    bus_seen_count: int = 1,
 ) -> TrackedBus | None:
     this_bus = await fetch_bus(bus_id, r)
 
@@ -489,7 +503,7 @@ async def build_bus(
         delay = 0
 
     target_seq, times, journey = await calculate_expected(
-        delay, progress.get("sequence", 0), stop_id, journey_id, r
+        delay, progress.get("sequence", 0), stop_id, journey_id, r, bus_seen_count
     )
 
     sequence = progress.get("sequence", None)

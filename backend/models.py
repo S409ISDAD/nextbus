@@ -474,10 +474,6 @@ class Stop(Base):
         limit: int = 10,
         line_names: list[str] | None = None,
     ) -> list["StopTime"]:
-        """
-        Returns a list of upcoming StopTime objects for this stop, with joined journey and service.
-        """
-
         now = date_time or datetime.now(tz=LONDON)
 
         results = []

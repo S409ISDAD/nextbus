@@ -146,7 +146,9 @@ async def predict_future(
     return predictions
 
 
-async def calculate_expected(delay, sequence, stop_id, journey_id, r):
+async def calculate_expected(
+    delay, sequence, stop_id, journey_id, r, bus_seen_count: int = 1
+):
     journey = await get_vehicle_journey(journey_id, delay, r)
 
     current_time = dt.now(tz=UTC)
@@ -157,6 +159,8 @@ async def calculate_expected(delay, sequence, stop_id, journey_id, r):
 
     expected_time = None
     scheduled_time = None
+
+    seen = bus_seen_count
 
     stop_idx = 0
     target_seq = None
@@ -173,6 +177,12 @@ async def calculate_expected(delay, sequence, stop_id, journey_id, r):
                 not_started = True
 
         if stop_time.stop_id == stop_id:
+            if seen > 1:
+                seen -= 1
+                log.warning(
+                    f"Skipping stop {stop_id} for journey {journey_id}, bus has been seen {bus_seen_count} times"
+                )
+                continue  # skip to next occurrence of the stop
             target_seq = stop_idx
 
         if stop_time.stop_id == stop_id and not sequence > stop_idx:

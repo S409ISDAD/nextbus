@@ -33,6 +33,9 @@ async def get_scheduled(stop_id: str, redis, services=None):
                 db_line_names = [line.line_name for line in db_lines]
                 db_times = stop.times_from_stop(db)
 
+            if len(line_names) == 0:
+                line_names = db_line_names
+
             for line_name in line_names:
                 if line_name in db_line_names:
                     filtered_st = [
