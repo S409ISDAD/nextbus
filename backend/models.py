@@ -487,7 +487,6 @@ class Stop(Base):
             .join(Journey.calendar)
             .filter(StopTime.stop_id == self.atco_code)
             .filter(StopTime.pick_up)
-            .filter(journey_is_valid_filter(now.date()))
             .options(
                 joinedload(StopTime.journey).joinedload(Journey.calendar),
                 joinedload(StopTime.journey).joinedload(Journey.timetable),
@@ -502,12 +501,14 @@ class Stop(Base):
             )
 
         stop_times = stop_times_q.all()
-        stop_times = [st for st in stop_times if st.journey.is_valid_exp(now.date())]
 
         for day_offset in [-1, 0, 1]:
             service_day = (now + timedelta(days=day_offset)).date()
 
-            for st in stop_times:
+            stop_times_today = [
+                st for st in stop_times if st.journey.is_valid(service_day)
+            ]
+            for st in stop_times_today:
                 depdt = st.departure_datetime(service_day)
 
                 if not depdt:
