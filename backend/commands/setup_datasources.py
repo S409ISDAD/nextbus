@@ -27,12 +27,32 @@ datasources = [
         "bods_id": 15872,
     },
     {
+        "name": "First Portsmouth, Fareham & Gosport",
+        "bods_id": 2349,
+    },
+    {
         "name": "Unilink",
         "url": "https://data.discoverpassenger.com/operator/unilink/dataset/current/download/txc",
     },
     {
         "name": "Brighton & Hove",
         "url": "https://data.discoverpassenger.com/operator/brightonhove/dataset/current/download/txc",
+    },
+    {
+        "name": "Reading Buses",
+        "url": "https://data.discoverpassenger.com/operator/readingbuses/dataset/current/download/txc",
+    },
+    {
+        "name": "Morebus",
+        "url": "https://data.discoverpassenger.com/operator/morebus/dataset/current/download/txc",
+    },
+    {
+        "name": "Newbury & District",
+        "url": "https://data.discoverpassenger.com/operator/kennections/dataset/current/download/txc",
+    },
+    {
+        "name": "Salisbury Reds",
+        "url": "https://data.discoverpassenger.com/operator/salisburyreds/dataset/current/download/txc",
     },
 ]
 

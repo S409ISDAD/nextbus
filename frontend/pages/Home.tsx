@@ -191,7 +191,7 @@ const Home: React.FC = () => {
                                     className="w-full p-2 mt-2 font-semibold text-white transition-all cursor-pointer bg-primary text-nowrap rounded-xl hover:bg-primary-700"
                                     onClick={() => {
                                         setShowStop(false);
-                                        navigate("/buses/stops/${closestStop}");
+                                        navigate(`/buses/stops/${closestStop}`);
                                     }}>
                                     Yes, show me!{" "}
                                 </button>
