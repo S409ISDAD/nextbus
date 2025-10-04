@@ -28,7 +28,16 @@ export const getDBService = async (service_id: string) => {
             `/lines/${service_id}`
         );
 
-        return response.data;
+        var data = response.data;
+
+        if (data.outbound_description === "") {
+            data.outbound_description = `To ${data.destination}`;
+        }
+        if (data.inbound_description === "") {
+            data.inbound_description = `To ${data.origin}`;
+        }
+
+        return data;
 
     } catch (error) {
         console.error("failed to get stop", error);

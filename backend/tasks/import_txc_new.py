@@ -1021,6 +1021,15 @@ class TXCImporter:
 
             # end from
 
+            if service.description is not None:
+                # add spaces around hyphens that don't already have spaces
+                service.description = re.sub(
+                    r"(?<! )-(?! )", " - ", str(service.description)
+                )
+
+                # remove "via"  from description
+                service.description = service.description.split("via")[0].strip()
+
             self.db.add(service)
             self.db.flush()
 
