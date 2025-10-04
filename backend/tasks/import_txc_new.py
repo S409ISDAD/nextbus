@@ -938,6 +938,7 @@ class TXCImporter:
                 .filter(
                     Service.line_name.ilike(txc_line.line_name),
                     Service.service_code == txc_service.service_code,
+                    Service.data_source_id == self.ds_id,
                 )
                 .order_by(
                     Service.current.desc(), Service.id.asc()
