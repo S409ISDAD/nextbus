@@ -14,7 +14,7 @@ class time_taken:
 
     def __exit__(self, *args):
         taken = time.time() - self.start
-        if self.threshold and taken > self.threshold:
+        if taken > self.threshold:
             if self.name:
                 log.debug(
                     f"Time taken for {self.name}: {time.time() - self.start:.3f}s"

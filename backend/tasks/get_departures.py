@@ -108,7 +108,7 @@ async def get_departures(stop_id: str, redis):
 
     service_ids = [service.get("id") for service in services]
 
-    times = await get_scheduled(stop_id, redis, services=services)
+    times = await get_scheduled(stop_id, redis, services)
 
     buses = await bus.fetch_buses(
         service_ids,

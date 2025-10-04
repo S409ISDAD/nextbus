@@ -39,6 +39,8 @@ from sqlalchemy import select
 from backend.utils.bulk_upsert import bulk_upsert
 from collections import namedtuple
 
+from backend.utils.time_taken import time_taken
+
 log = get_logger(__name__)
 
 Base = declarative_base()
@@ -1396,17 +1398,11 @@ class Journey(Base):
     def get_previous_journey(
         self, db: Session, date: date | None = None
     ) -> "Journey | None":
-        """
-        Returns the previous journey in the same block, active on the same date, ordered by end_time.
-        Adds debug output to show all candidate journeys.
-        """
-
         if self.block_id is None:
             log.debug(f"No block_id for journey {self.id}")
             return None
 
         date = date or datetime.now(tz=LONDON).date()
-
         query = (
             db.query(Journey)
             .join(Journey.calendar)
@@ -1419,13 +1415,13 @@ class Journey(Base):
             .options(joinedload(Journey.service).joinedload(Service.operator))
         )
 
-        candidate_journeys = (
+        candidate_journey = (
             query.options(joinedload(Journey.service))
             .order_by(Journey.sequence.desc())
-            .all()
+            .first()
         )
 
-        prev_journey = candidate_journeys[0] if candidate_journeys else None
+        prev_journey = candidate_journey if candidate_journey else None
         return prev_journey
 
     async def get_bt_trip_id(self, db: Session) -> int | None:
