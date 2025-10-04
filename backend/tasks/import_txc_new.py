@@ -957,7 +957,16 @@ class TXCImporter:
                 )
                 self.stats.services_created += 1
 
-            service.description = description
+            # from bustimes.org's import_transxchange.py
+
+            if description and (
+                not service.description
+                or "Origin - " not in description
+                and " - Destination" not in description
+            ):
+                service.description = description
+
+            # end from
 
             journeys = self.txc_data.get_journeys(
                 txc_service.service_code, line_id=txc_line.id
