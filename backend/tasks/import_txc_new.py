@@ -48,8 +48,9 @@ log = get_logger()
 BAD_ORIGIN_DEST = {"Origin", "Destination", "Unknown"}
 
 
-async def import_datasource(id, folder: Path, skip_checks=False):
+async def import_datasource(id, folder: Path, skip_checks=False) -> "Statistics":
     logs: list[tuple[datetime, str]] = []
+    stats = Statistics()
     with SessionLocal() as db:
         datasource = db.query(DataSource).filter(DataSource.id == id).first()
         name = datasource.name if datasource else "Unknown"
@@ -57,7 +58,7 @@ async def import_datasource(id, folder: Path, skip_checks=False):
         if not datasource:
             log.debug(f"No DataSource with id {id} found.")
             logs.append((datetime.now(tz=LONDON), f"No DataSource with id {id} found."))
-            return
+            return stats
 
         logs.append(
             (
@@ -106,6 +107,8 @@ async def import_datasource(id, folder: Path, skip_checks=False):
     with log_file.open("w") as f:
         for txc_log in logs:
             f.write(f"{txc_log[0].strftime('%d/%m/%Y, %H:%M:%S')} - {txc_log[1]}\n")
+
+    return stats
 
 
 async def import_txc_zip(zip_path, ds_id=None, skip_checks=False):
@@ -374,6 +377,14 @@ class Statistics:
         self.stop_times_created = 0
         self.stops_created = 0
         self.stops_updated = 0
+
+    def __add__(self, other):
+        if not isinstance(other, Statistics):
+            return NotImplemented
+        result = Statistics()
+        for attr in self.__dict__.keys():
+            setattr(result, attr, getattr(self, attr) + getattr(other, attr))
+        return result
 
 
 class TXCImporter:
