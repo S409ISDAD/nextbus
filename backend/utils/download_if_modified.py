@@ -33,7 +33,7 @@ def download_if_modified(
             and modified <= datasource.last_modified
             and not skip_checks
         ):
-            log.debug(f"data not modified: {datasource.url}")
+            log.debug(f"data not modified: {datasource.bods_id}")
             return None
 
         file_data = requests.get(download_url)
@@ -73,6 +73,8 @@ def download_if_modified(
             return file
 
         else:
-            log.debug(f"data not modified: {datasource.url}")
+            log.debug(
+                f"data not modified: {datasource.url}, {response.headers['Last-Modified']}"
+            )
 
         return None
