@@ -2,7 +2,7 @@ from datetime import datetime, timedelta, timezone
 import json
 from backend.config import get_logger
 import pathlib
-import redis.asyncio as redis
+from redis.asyncio import Redis, ConnectionPool
 import os
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -29,28 +29,34 @@ def get_version() -> str:
 
 VERSION = get_version()
 
+_redis_pool: ConnectionPool | None = None
+_redis_client: Redis | None = None
+
 
 def get_redis_url() -> str:
-    redis_host = os.getenv("REDIS_HOST", "redis://localhost:6379")
-    if not redis_host:
-        return "redis://localhost:6379"
-    return redis_host
+    return os.getenv("REDIS_HOST", "redis://localhost:6379")
 
 
-def get_redis_client() -> redis.Redis:
+def get_redis_client() -> Redis:
     redis_host = get_redis_url()
     if not redis_host:
         log.debug(
             "Warning: REDIS_HOST environment variable not set. Using default 'localhost:6379'."
         )
-        return redis.Redis(host="localhost", port=6379, db=0, decode_responses=True)
+        return Redis(host="localhost", port=6379, db=0, decode_responses=True)
 
     else:
-        return redis.Redis.from_url(redis_host, decode_responses=True)
+        return Redis.from_url(redis_host, decode_responses=True)
 
 
-async def get_redis() -> redis.Redis:
-    return get_redis_client()
+async def get_redis() -> Redis:
+    global _redis_pool, _redis_client
+
+    if _redis_client is None:
+        redis_url = get_redis_url()
+        _redis_pool = ConnectionPool.from_url(redis_url, decode_responses=True)
+        _redis_client = Redis(connection_pool=_redis_pool)
+    return _redis_client
 
 
 limiter = Limiter(

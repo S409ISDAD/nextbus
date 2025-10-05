@@ -450,6 +450,28 @@ class TXCImporter:
                 log.debug("Finalising services...")
                 self.finish_services()
 
+            # flag services that have no timetables, after importing timetables incase they have been replaced
+            services_to_go = (
+                self.db.query(Service)
+                .filter_by(service_code=service_id, data_source_id=self.ds_id)
+                .filter(
+                    ~self.db.query(Timetable)  # ~ = not
+                    .filter(
+                        Timetable.service_id == Service.id,
+                    )
+                    .exists()
+                )
+            )
+            if services_to_go.count() > 0:
+                log.info(f"deactivating {services_to_go.count()} services...")
+                self.stats.services_deactivated += services_to_go.count()
+                for service in services_to_go:
+                    service.current = False
+                    self.db.add(service)
+                self.db.commit()
+            else:
+                log.debug("No old services to clear.")
+
     def clear_old_data(self, service_code):
         timetables_to_go = (
             self.db.query(Timetable)
@@ -470,28 +492,6 @@ class TXCImporter:
             self.db.commit()
         else:
             log.debug("No old timetables to clear.")
-
-        # flag services that have no timetables
-        services_to_go = (
-            self.db.query(Service)
-            .filter_by(service_code=service_code, data_source_id=self.ds_id)
-            .filter(
-                ~self.db.query(Timetable)  # ~ = not
-                .filter(
-                    Timetable.service_id == Service.id,
-                )
-                .exists()
-            )
-        )
-        if services_to_go.count() > 0:
-            log.info(f"deactivating {services_to_go.count()} services...")
-            self.stats.services_deactivated += services_to_go.count()
-            for service in services_to_go:
-                service.current = False
-                self.db.add(service)
-            self.db.commit()
-        else:
-            log.debug("No old services to clear.")
 
         timetable_ds_to_go = (
             self.db.query(TimetableDataSource)
