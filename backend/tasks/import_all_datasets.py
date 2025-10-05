@@ -37,6 +37,12 @@ async def import_datasets():
 
     log.debug("dataset import complete.")
     import_time = time.time() - start
+
+    for k, v in full_stats.__dict__.items():
+        log.debug(f"{k}: {v}")
+
+    log.debug(f"Total import time: {import_time:.2f} seconds\n")
+
     log_dir = STATIC_DATA_DIR / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
     log_file = log_dir / "full_import.log"
