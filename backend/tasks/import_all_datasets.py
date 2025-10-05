@@ -41,7 +41,16 @@ async def import_datasets():
     for k, v in full_stats.__dict__.items():
         log.debug(f"{k}: {v}")
 
-    log.debug(f"Total import time: {import_time:.2f} seconds\n")
+    hours, rem = divmod(import_time, 3600)
+    mins, secs = divmod(rem, 60)
+    time_str = (
+        f"{int(hours)}h {int(mins)}m {secs:.2f}s"
+        if hours
+        else f"{int(mins)}m {secs:.2f}s"
+        if mins
+        else f"{secs:.2f}s"
+    )
+    log.debug(f"Total import time: {time_str}")
 
     log_dir = STATIC_DATA_DIR / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
@@ -54,7 +63,7 @@ async def import_datasets():
         for k, v in full_stats.__dict__.items():
             f.write(f"{k}: {v}\n")
 
-        f.write(f"Total import time: {import_time:.2f} seconds\n")
+        f.write(f"Total import time: {time_str}\n")
 
 
 if __name__ == "__main__":
