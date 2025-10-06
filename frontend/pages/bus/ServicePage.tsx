@@ -32,12 +32,14 @@ const ServicePage: React.FC = () => {
                     setservice(service);
                     document.title = `Service ${service.line_name} | nextbus`;
                     const pos = await getCurrentPosition();
-                    const closest_stop = await getClosestStopForService(
-                        [pos.coords.latitude, pos.coords.longitude],
-                        service.bt_service_id ? service.bt_service_id : ""
-                    );
-                    console.log("closest_stop", closest_stop);
-                    setStopID(closest_stop);
+                    if (service.bt_service_id) {
+                        const closest_stop = await getClosestStopForService(
+                            [pos.coords.latitude, pos.coords.longitude],
+                            service.bt_service_id ? service.bt_service_id : ""
+                        );
+                        console.log("closest_stop", closest_stop);
+                        setStopID(closest_stop);
+                    }
                     setMsg("");
                     setLoading(false);
                 }

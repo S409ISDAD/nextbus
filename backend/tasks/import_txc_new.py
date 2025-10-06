@@ -91,8 +91,8 @@ async def import_datasource(id, folder: Path, skip_checks=False) -> "Statistics"
             + (f" in {duration}" if duration else "")
         )
         if stats:
-            for k, v in stats.__dict__.items():
-                logs.append((datetime.now(tz=LONDON), f"{k}: {v}"))
+            for item in stats.output():
+                logs.append((datetime.now(tz=LONDON), item))
 
     else:
         logs.append((datetime.now(tz=LONDON), f"No updates for data source {name}"))
@@ -117,7 +117,7 @@ async def import_txc_zip(zip_path, ds_id=None, skip_checks=False):
     extract_dir = zip_path.parent / f"txc_extract_{ds_id or 'zip'}"
     extract_dir.mkdir(parents=True, exist_ok=True)
     txc_importer = None
-    stats = None
+    stats = Statistics()
     try:
         with zipfile.ZipFile(zip_path, "r") as zf:
             xml_files = [f for f in zf.namelist() if f.endswith(".xml")]
@@ -366,11 +366,11 @@ class TransXChangeMeta:
 class Statistics:
     def __init__(self):
         self.services_created = 0
-        self.services_updated = 0
+        self.services_updated: set[int] = set()
         self.services_deactivated = 0
         self.timetables_created = 0
-        self.timetables_updated = 0
-        self.timetables_skipped = 0
+        self.timetables_updated: set[int] = set()
+        self.timetables_skipped: set[int] = set()
         self.timetables_deleted = 0
         self.files_skipped = 0
         self.journeys_created = 0
@@ -383,8 +383,23 @@ class Statistics:
             return NotImplemented
         result = Statistics()
         for attr in self.__dict__.keys():
-            setattr(result, attr, getattr(self, attr) + getattr(other, attr))
+            if type(getattr(self, attr)) is set:
+                setattr(
+                    result, attr, getattr(self, attr) | getattr(other, attr)
+                )  # union of sets
+            else:
+                setattr(result, attr, getattr(self, attr) + getattr(other, attr))
         return result
+
+    def output(self) -> list[str]:
+        output = []
+        for k, v in self.__dict__.items():
+            if type(v) is set:
+                output.append(f"{k}: {len(v)}")
+            else:
+                output.append(f"{k}: {v}")
+
+        return output
 
 
 class TXCImporter:
@@ -1085,10 +1100,10 @@ class TXCImporter:
                     log.info(
                         f"No changes to timetable for service {service.service_code} on line {txc_line.line_name}, skipping"
                     )
-                    self.stats.timetables_skipped += 1
+                    self.stats.timetables_skipped.add(int(existing_timetable.id))
                     continue
                 else:
-                    self.stats.timetables_updated += 1
+                    self.stats.timetables_updated.add(int(existing_timetable.id))
             else:
                 self.stats.timetables_created += 1
 
@@ -1113,7 +1128,7 @@ class TXCImporter:
             )
 
             if existing_service:
-                self.stats.services_updated += 1
+                self.stats.services_updated.add(int(existing_service.id))
 
             if line_brand:
                 timetable.line_brand = line_brand

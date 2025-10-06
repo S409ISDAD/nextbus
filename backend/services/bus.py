@@ -551,7 +551,7 @@ async def build_bus(
         log.warning(f"no times. id: {bus_id}, reg: {reg}")
         return None
     if not times.include:
-        log.warning(f"id: {bus_id}, reg: {reg}")
+        log.warning(f"not including id: {bus_id}, reg: {reg}")
         return None
 
     # if times.finished and stop_id:

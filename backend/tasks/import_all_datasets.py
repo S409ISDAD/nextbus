@@ -38,8 +38,8 @@ async def import_datasets():
     log.debug("dataset import complete.")
     import_time = time.time() - start
 
-    for k, v in full_stats.__dict__.items():
-        log.debug(f"{k}: {v}")
+    for item in full_stats.output():
+        log.debug(item)
 
     hours, rem = divmod(import_time, 3600)
     mins, secs = divmod(rem, 60)
@@ -60,8 +60,8 @@ async def import_datasets():
             f"Full import statistics ({datetime.now(tz=LONDON).strftime('%d/%m/%Y, %H:%M:%S')}):\n"
         )
 
-        for k, v in full_stats.__dict__.items():
-            f.write(f"{k}: {v}\n")
+        for item in full_stats.output():
+            f.write(f"{item}\n")
 
         f.write(f"Total import time: {time_str}\n")
 
