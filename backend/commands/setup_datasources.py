@@ -39,6 +39,10 @@ datasources = [
         "bods_id": 18484,
     },
     {
+        "name": "Bee Network",
+        "bods_id": 17472,
+    },
+    {
         "name": "Thames Valley Buses",
         "url": "https://data.discoverpassenger.com/operator/courtney/dataset/current/download/txc",
     },
