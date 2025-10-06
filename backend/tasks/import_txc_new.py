@@ -397,7 +397,7 @@ class TXCImporter:
         self.timetable_datasource = None
         self.skip_checks = skip_checks
         self.services: set[int] = set()
-        self.timetables = set[int] = set()
+        self.timetables: set[int] = set()
         self.db = SessionLocal()
         self.today = datetime.now(tz=LONDON)
         self.operators: dict[int, Operator] = {}
