@@ -152,8 +152,8 @@ async def import_txc_zip(zip_path, ds_id=None, skip_checks=False):
             del txc_importer
             gc.collect()
 
-            for k, v in stats.__dict__.items():
-                log.debug(f"{k}: {v}")
+            for item in stats.output():
+                log.debug(item)
 
         if extract_dir.exists():
             try:

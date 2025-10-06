@@ -31,6 +31,22 @@ datasources = [
         "bods_id": 2349,
     },
     {
+        "name": "AMK",
+        "bods_id": 18180,
+    },
+    {
+        "name": "Xelabus",
+        "bods_id": 18484,
+    },
+    {
+        "name": "Thames Valley Buses",
+        "bods_id": 16227,
+    },
+    {
+        "name": "White Bus",
+        "bods_id": 19747,
+    },
+    {
         "name": "Unilink",
         "url": "https://data.discoverpassenger.com/operator/unilink/dataset/current/download/txc",
     },
