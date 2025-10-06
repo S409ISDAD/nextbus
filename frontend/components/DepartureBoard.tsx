@@ -34,11 +34,9 @@ interface Props {
 
 function BusCard({
     bus,
-    onClick,
     gettingLiveData,
 }: {
     bus: Departure;
-    onClick: () => void;
     gettingLiveData: boolean;
 }) {
     const [trackingBroken, setTrackingBroken] = useState(false);
@@ -528,16 +526,6 @@ function DepartureBoard({ stop_id, closest, filter }: Props) {
                                                     }}>
                                                     <BusCard
                                                         bus={bus}
-                                                        onClick={() => {
-                                                            isTrackedBus(bus)
-                                                                ? navigate(
-                                                                      `/buses/${bus.id}`
-                                                                  )
-                                                                : window.open(
-                                                                      `https://bustimes.org/trips/${bus.trip}`,
-                                                                      "_blank"
-                                                                  );
-                                                        }}
                                                         gettingLiveData={
                                                             gettingLiveData
                                                         }
