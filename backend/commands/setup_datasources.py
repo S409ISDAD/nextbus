@@ -40,11 +40,11 @@ datasources = [
     },
     {
         "name": "Thames Valley Buses",
-        "bods_id": 16227,
+        "url": "https://data.discoverpassenger.com/operator/courtney/dataset/current/download/txc",
     },
     {
         "name": "White Bus",
-        "bods_id": 19747,
+        "url": "https://opendata.ticketer.com/uk/WBSV/routes_and_timetables/current.zip",
     },
     {
         "name": "Unilink",

@@ -1035,67 +1035,81 @@ class Service(Base, AutoSlugMixin):
         builds the geometry for this service from its stops
         """
 
-        simplify_tolerance = 0.0002  # 20 meters
+        try:
+            simplify_tolerance = 0.0002  # 20 meters
 
-        route_link_count = (
-            db.query(RouteLink)
-            .join(Journey, Journey.timetable_id == RouteLink.timetable_id)
-            .filter(Journey.service_id == self.id)
-            .count()
-        )
-
-        if route_link_count == 0:
-            log.warning(
-                f"Service {self.id} has no route links, building geometry from stops"
-            )
-            subq = (
-                db.query(
-                    ServiceStopUsage.line_name,
-                    ServiceStopUsage.inbound,
-                    func.ST_Transform(Stop.point, 4326).label("pt"),
-                )
-                .join(Stop, Stop.atco_code == ServiceStopUsage.stop_id)
-                .filter(
-                    ServiceStopUsage.service_id == self.id,
-                    and_(Stop.lat.isnot(0), Stop.lon.isnot(0)),
-                )
-                .order_by(
-                    ServiceStopUsage.inbound,
-                    ServiceStopUsage.line_name,
-                    ServiceStopUsage.order,
-                )
-                .subquery()
+            route_link_count = (
+                db.query(RouteLink)
+                .join(Journey, Journey.timetable_id == RouteLink.timetable_id)
+                .filter(Journey.service_id == self.id)
+                .count()
             )
 
-            lines = (
-                db.query(func.ST_MakeLine(subq.c.pt))
-                .group_by(subq.c.line_name, subq.c.inbound)
-                .all()
-            )
+            if route_link_count == 0:
+                log.warning(
+                    f"Service {self.id} has no route links, building geometry from stops"
+                )
+                subq = (
+                    db.query(
+                        ServiceStopUsage.line_name,
+                        ServiceStopUsage.inbound,
+                        func.ST_Transform(Stop.point, 4326).label("pt"),
+                    )
+                    .join(Stop, Stop.atco_code == ServiceStopUsage.stop_id)
+                    .filter(
+                        ServiceStopUsage.service_id == self.id,
+                        and_(Stop.lat != 0, Stop.lon != 0),
+                    )
+                    .order_by(
+                        ServiceStopUsage.inbound,
+                        ServiceStopUsage.line_name,
+                        ServiceStopUsage.order,
+                    )
+                    .subquery()
+                )
 
-            if lines:
-                multiline = db.query(
-                    func.ST_Collect(*[line[0] for line in lines])
+                lines = (
+                    db.query(func.ST_MakeLine(subq.c.pt))
+                    .group_by(subq.c.line_name, subq.c.inbound)
+                    .all()
+                )
+
+                if lines:
+                    multiline = db.query(
+                        func.ST_Collect(*[line[0] for line in lines])
+                    ).scalar()
+                    self.geometry = multiline
+                    db.add(self)
+                    db.commit()
+                else:
+                    log.warning(f"Service {self.id} has no stops with valid geometry")
+                    self.geometry = None
+                    db.add(self)
+                    db.commit()
+            else:
+                subq = (
+                    db.query(RouteLink.geometry.label("geom"))
+                    .join(Journey, Journey.timetable_id == RouteLink.timetable_id)
+                    .filter(Journey.service_id == self.id)
+                    .subquery()
+                )
+                collected = db.query(
+                    func.ST_Collect(subq.c.geom).label("geom")
                 ).scalar()
-                self.geometry = multiline
-                db.add(self)
-                db.commit()
-            return
 
-        subq = (
-            db.query(RouteLink.geometry.label("geom"))
-            .join(Journey, Journey.timetable_id == RouteLink.timetable_id)
-            .filter(Journey.service_id == self.id)
-            .subquery()
-        )
-        collected = db.query(func.ST_Collect(subq.c.geom).label("geom")).scalar()
+                if collected:
+                    merged = db.query(func.ST_LineMerge(collected)).scalar()
+                    simplified = db.query(
+                        func.ST_Simplify(merged, simplify_tolerance)
+                    ).scalar()
+                    multiline = db.query(func.ST_Multi(simplified)).scalar()
 
-        if collected:
-            merged = db.query(func.ST_LineMerge(collected)).scalar()
-            simplified = db.query(func.ST_Simplify(merged, simplify_tolerance)).scalar()
-            multiline = db.query(func.ST_Multi(simplified)).scalar()
-
-            self.geometry = multiline
+                    self.geometry = multiline
+                    db.add(self)
+                    db.commit()
+        except Exception as e:
+            log.error(f"Error building geometry for service {self.id}: {e}")
+            self.geometry = None
             db.add(self)
             db.commit()
 

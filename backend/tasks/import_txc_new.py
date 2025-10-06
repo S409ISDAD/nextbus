@@ -1524,9 +1524,9 @@ class TXCImporter:
             # await update_dashboard()
 
         except Exception as e:
-            log.debug("An error occurred during txc import:")
+            log.error("An error occurred during txc import:")
             error_str = e.__str__()
-            log.debug(error_str[:1000])
+            log.error(error_str[:1000])
             # log.debug(error_str)
             self.db.rollback()
         finally:
