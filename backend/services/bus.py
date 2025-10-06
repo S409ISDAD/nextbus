@@ -386,6 +386,7 @@ async def build_bus_candidates(
                 bus_seen_count=bus_seen_counts.get(bus["id"], 1)
                 if bus_seen_counts
                 else 1,
+                pick_up_only=True,
             )
             for bus in buses
         ]
@@ -414,6 +415,7 @@ async def build_bus(
     get_journey: bool = True,
     source: str = "api",
     bus_seen_count: int = 1,
+    pick_up_only: bool = False,
 ) -> TrackedBus | None:
     this_bus = await fetch_bus(bus_id, r)
 
@@ -521,7 +523,13 @@ async def build_bus(
         delay = 0
 
     target_seq, times, journey = await calculate_expected(
-        delay, progress.get("sequence", 0), stop_id, journey_id, r, bus_seen_count
+        delay,
+        progress.get("sequence", 0),
+        stop_id,
+        journey_id,
+        r,
+        bus_seen_count,
+        pick_up_only,
     )
 
     sequence = progress.get("sequence", None)

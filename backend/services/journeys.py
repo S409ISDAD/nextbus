@@ -140,7 +140,8 @@ async def get_vehicle_journey(journey_id, delay, r) -> Journey:
                 departed=departed,
                 track=track,
                 coords=coords,
-                set_down=stop.get("set_down"),
+                set_down=stop.get("set_down", True),
+                pick_up=stop.get("pick_up", True),
                 timing_status=stop.get("timing_status", "OTH"),
             )
         )
@@ -212,6 +213,7 @@ async def get_live_journey(journey_id, r) -> LiveJourney:
                 track=None,
                 coords=[0, 0],
                 set_down=False,
+                pick_up=False,
                 timing_status="OTH",
             )
         )
@@ -353,7 +355,8 @@ async def get_trip(trip_id, delay, r) -> Trip:
                 departed=departed,
                 track=track,
                 coords=coords,
-                set_down=stop.get("set_down"),
+                set_down=stop.get("set_down", True),
+                pick_up=stop.get("pick_up", True),
             )
         )
 

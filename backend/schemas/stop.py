@@ -27,6 +27,7 @@ class StopTime(BaseModel):
     coords: list[float]
     track: Optional[list[list[float]]]
     set_down: bool
+    pick_up: bool
     timing_status: Literal["OTH", "PTP", "TIP"] = (
         "OTH"  # PTP: Principal Timing Point, OTH: Other, TIP: Timing Information Point
     )

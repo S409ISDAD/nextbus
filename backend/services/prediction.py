@@ -147,7 +147,13 @@ async def predict_future(
 
 
 async def calculate_expected(
-    delay, sequence, stop_id, journey_id, r, bus_seen_count: int = 1
+    delay,
+    sequence,
+    stop_id,
+    journey_id,
+    r,
+    bus_seen_count: int = 1,
+    pick_up_only: bool = False,
 ):
     journey = await get_vehicle_journey(journey_id, delay, r)
 
@@ -186,6 +192,10 @@ async def calculate_expected(
             target_seq = stop_idx
 
         if stop_time.stop_id == stop_id and not sequence > stop_idx:
+            if pick_up_only and stop_time.pick_up is False:
+                # only include stop if the bus picks up passengers there
+                include = False
+                break
             aimed = stop_time.aimed_time
 
             if not aimed:
