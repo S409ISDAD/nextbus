@@ -397,6 +397,7 @@ class TXCImporter:
         self.timetable_datasource = None
         self.skip_checks = skip_checks
         self.services: set[int] = set()
+        self.timetables = set[int] = set()
         self.db = SessionLocal()
         self.today = datetime.now(tz=LONDON)
         self.operators: dict[int, Operator] = {}
@@ -456,7 +457,9 @@ class TXCImporter:
                         f"Importing {file} ({idx + 1}/{self.file_count}, {round(((idx + 1) / self.file_count) * 100, 2)}%)"
                     )
                     self.file_idx_in_revision += 1
+                    self.timetables.clear()
                     await self.handle_txc_file(Path(file))
+                    self.do_tt_datasources()
                     idx += 1
                 log.debug("Finalising services...")
                 self.finish_services()
@@ -1068,6 +1071,7 @@ class TXCImporter:
             )
 
             if existing_timetable:
+                self.timetables.add(existing_timetable.id)
                 log.debug(f"Existing timetable: {existing_timetable.revision_number}")
                 log.debug(
                     f"New timetable: {self.txc_data.attributes['RevisionNumber']}"
@@ -1217,21 +1221,7 @@ class TXCImporter:
 
             log.debug(f"Timetable ID: {timetable.id}")
 
-            tt_to_ds = (
-                self.db.query(TimetableToTTDataSource)
-                .filter_by(
-                    timetable_id=timetable.id,
-                    tt_data_source_id=timetable_datasource.id,
-                )
-                .first()
-            )
-            if not tt_to_ds:
-                tt_to_ds = TimetableToTTDataSource(
-                    timetable_id=timetable.id,
-                    tt_data_source_id=timetable_datasource.id,
-                )
-                self.db.add(tt_to_ds)
-                self.db.flush()
+            self.timetables.add(timetable.id)
 
             if self.txc_data.route_sections:
                 self.handle_route_links(journeys, timetable.id)
@@ -1420,6 +1410,27 @@ class TXCImporter:
             service.do_geometry(db=self.db)
             self.db.add(service)
         self.db.commit()
+
+    def do_tt_datasources(self):
+        if not self.timetable_datasource:
+            log.warning("No timetable datasource")
+            return
+        for id in self.timetables:
+            tt_to_ds = (
+                self.db.query(TimetableToTTDataSource)
+                .filter_by(
+                    timetable_id=id,
+                    tt_data_source_id=self.timetable_datasource.id,
+                )
+                .first()
+            )
+            if not tt_to_ds:
+                tt_to_ds = TimetableToTTDataSource(
+                    timetable_id=id,
+                    tt_data_source_id=self.timetable_datasource.id,
+                )
+                self.db.add(tt_to_ds)
+                self.db.flush()
 
     async def handle_txc_file(self, file: Path):
         start = time.time()
