@@ -121,6 +121,24 @@ async def fetch_buses(
 
     tasks = []
 
+    scheduled_trip_ids = {t["trip_id"] for t in times if t.get("trip_id")}
+    not_included = [
+        bus for bus in active if bus.get("trip_id") not in scheduled_trip_ids
+    ]
+
+    for bus in not_included:
+        # add buses that are late, and the scheduled departure time has passed
+        tasks.append(
+            build_bus_candidates(
+                [bus],
+                r,
+                stop_id,
+                None,
+                "api",
+                bus_seen_counts,
+            )
+        )
+
     for time in times:
         trip_id = time.get("trip_id")
         journey_id = time.get("journey_id")
