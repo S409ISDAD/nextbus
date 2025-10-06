@@ -1055,7 +1055,7 @@ class Service(Base, AutoSlugMixin):
                     func.ST_Transform(Stop.point, 4326).label("pt"),
                 )
                 .join(Stop, Stop.atco_code == ServiceStopUsage.stop_id)
-                .filter(ServiceStopUsage.service_id == self.id)
+                .filter(ServiceStopUsage.service_id == self.id, Stop.lat.isnot(0))
                 .order_by(
                     ServiceStopUsage.inbound,
                     ServiceStopUsage.line_name,
