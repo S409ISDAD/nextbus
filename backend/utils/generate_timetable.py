@@ -14,6 +14,7 @@ from backend.models import (
 )
 from backend.deps import LONDON
 import sys
+from collections import Counter
 
 
 def generate_timetable(
@@ -42,6 +43,7 @@ def generate_timetable(
         )
         .join(Calendar, Journey.calendar)
         .order_by(Journey.start_time)
+        .distinct()
         .all()
     )
 

@@ -698,32 +698,52 @@ class Calendar(Base):
     def is_valid(self, service_day: date | None = None) -> bool:
         """
         Returns True if the calendar is valid on the given date (or today if no date is given).
-        Checks the weekday last as exceptions and bank holidays can override the weekday.
+        Precedence rules:
+        1. Any off exception or bank holiday -> False
+        2. Single-day exception or bank holiday on -> True
+        3. Multi-day exception -> respect weekday
+        4. Fallback -> weekday
         """
 
         date = service_day or datetime.now(tz=LONDON).date()
+        weekday = date.strftime("%A").lower()
 
-        # check date range
+        # check date range first
         if not (
             self.start_date <= date and (self.end_date is None or self.end_date >= date)
-        ):  # type: ignore
-            # log.debug("Date not in range of calendar")
+        ):
             return False
 
-        # check exceptions
+        # check explicit "off" exceptions
         for exc in self.calendar_exceptions:
-            if exc.start_date <= date <= exc.end_date:
-                return exc.operating
+            if exc.start_date <= date <= exc.end_date and not exc.operating:
+                return False
 
-        # check bank holidays
+        # check explicit "off" bank holidays
         for link in self.calendar_bank_holiday:
             bh = link.bh
             for bh_date in bh.dates:
-                if bh_date.date == date:
-                    return link.operating  # True or False
+                if bh_date.date == date and not link.operating:
+                    return False
 
-        # check day of week
-        weekday = date.strftime("%A").lower()
+        # check single-day "on" exceptions
+        for exc in self.calendar_exceptions:
+            if exc.start_date == date == exc.end_date and exc.operating:
+                return True
+
+        # check bank holidays turning on
+        for link in self.calendar_bank_holiday:
+            bh = link.bh
+            for bh_date in bh.dates:
+                if bh_date.date == date and link.operating:
+                    return True
+
+        # check multi-day "on" exceptions -> only include if weekday allows
+        for exc in self.calendar_exceptions:
+            if exc.start_date < date < exc.end_date and exc.operating:
+                return getattr(self, weekday)
+
+        # fallback to normal weekday
         return getattr(self, weekday)
 
     def is_valid_exp(self, service_day: date | None = None) -> bool:
@@ -1473,23 +1493,14 @@ def journey_is_valid_filter(date: date | None = None):
     CBH = aliased(CalendarToBankHoliday)
     BHD = aliased(BankHolidayDate)
 
-    # check date range
+    # base calendar date range
     base_filter = and_(
         Calendar.start_date <= date,
         or_(Calendar.end_date == None, Calendar.end_date >= date),
     )
 
-    # check exceptions
-    overlapping_exc_operating = exists().where(
-        and_(
-            CE.calendar_id == Calendar.id,
-            CE.start_date <= date,
-            CE.end_date >= date,
-            CE.operating.is_(True),
-        )
-    )
-
-    overlapping_exc_not_operating = exists().where(
+    # any exceptions turning off this date?
+    exc_off = exists().where(
         and_(
             CE.calendar_id == Calendar.id,
             CE.start_date <= date,
@@ -1498,21 +1509,8 @@ def journey_is_valid_filter(date: date | None = None):
         )
     )
 
-    # check bank holidays
-    bank_holiday_operating = exists().where(
-        and_(
-            CBH.calendar_id == Calendar.id,
-            exists().where(
-                and_(
-                    BHD.bank_holiday_name == CBH.bank_holiday,
-                    BHD.date == date,
-                )
-            ),
-            CBH.operating.is_(True),
-        )
-    )
-
-    bank_holiday_not_operating = exists().where(
+    # any bank holiday turning off this date?
+    bh_off = exists().where(
         and_(
             CBH.calendar_id == Calendar.id,
             exists().where(
@@ -1525,18 +1523,57 @@ def journey_is_valid_filter(date: date | None = None):
         )
     )
 
-    # Step 4: combine logic
-    # Priority: exceptions False > bank holiday False > exceptions True > bank holiday True > weekday
-    return and_(
+    # any exceptions turning on this date?
+    exc_on_single_day = exists().where(
+        and_(
+            CE.calendar_id == Calendar.id,
+            CE.start_date == date,
+            CE.end_date == date,
+            CE.operating.is_(True),
+        )
+    )
+    exc_on_multi_day = exists().where(
+        and_(
+            CE.calendar_id == Calendar.id,
+            CE.start_date <= date,
+            CE.end_date >= date,
+            CE.operating.is_(True),
+            CE.start_date != CE.end_date,
+        )
+    )
+
+    # any bank holidays turning on this date?
+    bh_on = exists().where(
+        and_(
+            CBH.calendar_id == Calendar.id,
+            exists().where(
+                and_(
+                    BHD.bank_holiday_name == CBH.bank_holiday,
+                    BHD.date == date,
+                )
+            ),
+            CBH.operating.is_(True),
+        )
+    )
+
+    # 1. any off exception or bank holiday -> False
+    # 2. single-day exception or bank holiday on -> True
+    # 3. multi-day exception -> respect weekday
+    # 4. fallback -> weekday
+    final_filter = and_(
         base_filter,
-        not_(overlapping_exc_not_operating),  # any exception turning off the day
-        not_(bank_holiday_not_operating),  # any bank holiday turning off the day
+        not_(exc_off),
+        not_(bh_off),
         or_(
-            overlapping_exc_operating,  # exceptions True
-            bank_holiday_operating,  # bank holidays True
-            getattr(Calendar, weekday),  # fallback to weekday
+            exc_on_single_day,  # single-day exceptions override weekday
+            bh_on,  # bank holidays override weekday
+            and_(
+                getattr(Calendar, weekday), exc_on_multi_day
+            ),  # weekday respected if multi-day exception
+            getattr(Calendar, weekday),  # fallback weekday
         ),
     )
+    return final_filter
 
 
 class StopTime(Base):
