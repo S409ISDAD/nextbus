@@ -45,7 +45,7 @@ async def service(
                 "vias": timetable.vias,
                 "operator_noc": operator.noc,
                 "operator": operator.name,
-                "last_modified": service.last_modified,
+                "last_modified": timetable.modified_at,
             }
     except HTTPException as e:
         raise e
