@@ -30,6 +30,7 @@ from backend.services.prediction import (
 from backend.services.services import fetch_active_buses, get_service_info
 from backend.services.tracking_confidence import calculate_confidence
 from backend.utils.fetch_json import fetch_json
+from backend.utils.match_bt import match_trip_journey
 from backend.utils.time_taken import time_taken
 
 log = logging.getLogger(__name__)
@@ -128,12 +129,15 @@ async def fetch_buses(
 
     for bus in not_included:
         # add buses that are late, and the scheduled departure time has passed
+        with SessionLocal() as db:
+            journey = await match_trip_journey(db, bus.get("trip_id"), r)
+            journey_id = journey.id if journey else None
         tasks.append(
             build_bus_candidates(
                 [bus],
                 r,
                 stop_id,
-                None,
+                journey_id,
                 "api",
                 bus_seen_counts,
             )
@@ -307,6 +311,7 @@ async def build_scheduled_db(
                 prev_journey = stop_time.journey.get_previous_journey(db, today)
 
             if not prev_journey:
+                log.warning("No previous journey")
                 return scheduled_bus
 
             layover_time = (
@@ -321,6 +326,9 @@ async def build_scheduled_db(
             this_service_id = await stop_time.journey.service.get_bt_service_id(db)
 
             if not prev_trip or not prev_service_id or not this_service_id:
+                log.warning(
+                    f"no previous trip or service: {prev_trip}, {prev_service_id}, {this_service_id}"
+                )
                 return scheduled_bus
 
             with time_taken("getting service info", threshold=5):
@@ -329,7 +337,9 @@ async def build_scheduled_db(
             potential_bus = await fetch_bus_trip(prev_service_id, prev_trip, r)
 
             if potential_bus:
-                log.debug("Found bus from previous trip")
+                log.debug(
+                    f"Found bus from previous trip: {service_info.line_name} {potential_bus['id']}"
+                )
 
                 bus = await build_bus(potential_bus["id"], r, get_journey=False)
                 if not bus:
@@ -362,6 +372,8 @@ async def build_scheduled_db(
                         bus.delay = 0
 
                     log.debug("Bus expected too far in future")
+            else:
+                log.debug(f"No potential bus found, {prev_trip}, {prev_service_id}")
 
         return scheduled_bus
 

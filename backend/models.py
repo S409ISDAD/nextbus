@@ -908,7 +908,7 @@ class Service(Base, AutoSlugMixin):
         noc = self.operator.noc or ""
 
         results = await fetch_json(
-            f"{API_BASE}/services/?operator={noc}&search={self.description.replace('-', ' ')}"
+            f"{API_BASE}/services/?operator={noc}&search={self.line_name} {self.description.replace('-', '')}"
         )
 
         if not results or "results" not in results or len(results["results"]) != 1:
@@ -1432,13 +1432,16 @@ class Journey(Base):
             .options(joinedload(Journey.service).joinedload(Service.operator))
         )
 
-        candidate_journey = (
-            query.options(joinedload(Journey.service))
-            .order_by(Journey.sequence.desc())
-            .first()
-        )
+        candidate_journey = query.order_by(Journey.sequence.desc()).all()
+
+        valid_journeys = [j for j in candidate_journey if j.is_valid_exp(date)]
+        candidate_journey = valid_journeys[0] if valid_journeys else None
 
         prev_journey = candidate_journey if candidate_journey else None
+
+        log.debug(
+            f"this: {self.start_time}, prev: {prev_journey.end_time if prev_journey else 'N/A'}"
+        )
         return prev_journey
 
     async def get_bt_trip_id(self, db: Session) -> int | None:
