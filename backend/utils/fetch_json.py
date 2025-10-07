@@ -34,7 +34,7 @@ async def fetch_json(url) -> dict | None:
             timeout=timeout,
         ) as response:
             if response.status != 200:
-                log.error(f"API failed: {response.status}")
+                log.error(f"API failed: {response.status} for URL {url}")
                 return None
             return await response.json()
 

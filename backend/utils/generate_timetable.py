@@ -3,7 +3,15 @@ from datetime import datetime
 from sqlalchemy.orm import Session
 
 from backend.db.db import SessionLocal
-from backend.models import Service, ServiceStopUsage, Stop, StopTime, Journey
+from backend.models import (
+    Calendar,
+    Service,
+    ServiceStopUsage,
+    Stop,
+    StopTime,
+    Journey,
+    journey_is_valid_filter,
+)
 from backend.deps import LONDON
 import sys
 
@@ -30,11 +38,12 @@ def generate_timetable(
         .filter(
             Journey.service_id == service.id,
             Journey.inbound.is_(inbound),
+            journey_is_valid_filter(today.date()),
         )
+        .join(Calendar, Journey.calendar)
         .order_by(Journey.start_time)
         .all()
     )
-    journeys = [j for j in journeys if j.is_valid(today.date())]
 
     print(
         f"Generating timetable for service {service.line_name} ({'inbound' if inbound else 'outbound'}) with {len(journeys)} journeys and {len(stops)} stops."
@@ -42,17 +51,20 @@ def generate_timetable(
 
     timing_points = {}
 
+    stoptimes = (
+        db.query(StopTime)
+        .filter(
+            StopTime.journey_id.in_([j.id for j in journeys]),
+            StopTime.stop_id.in_([s.stop_id for s in stops]),
+        )
+        .all()
+    )
+    journey_stop_to_stoptime = {(st.journey_id, st.stop_id): st for st in stoptimes}
+
     data = {j.id: [] for j in journeys}
     for su in stops:
         for i in journeys:
-            st = (
-                db.query(StopTime)
-                .filter(
-                    StopTime.journey_id == i.id,
-                    StopTime.stop_id == su.stop_id,
-                )
-                .first()
-            )
+            st = journey_stop_to_stoptime.get((i.id, su.stop_id))
             if st:
                 data[i.id].append(st.dep_or_arr_str)
                 timing_points[su.stop_id] = st.timing_status

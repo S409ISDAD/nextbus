@@ -19,9 +19,11 @@ from sqlalchemy import (
     String,
     UniqueConstraint,
     and_,
+    exists,
     func,
     Index,
     inspect,
+    not_,
     or_,
 )
 from sqlalchemy.ext.associationproxy import association_proxy
@@ -1432,10 +1434,10 @@ class Journey(Base):
             .options(joinedload(Journey.service).joinedload(Service.operator))
         )
 
-        candidate_journey = query.order_by(Journey.sequence.desc()).all()
+        candidate_journey = query.order_by(Journey.sequence.desc()).first()
 
-        valid_journeys = [j for j in candidate_journey if j.is_valid_exp(date)]
-        candidate_journey = valid_journeys[0] if valid_journeys else None
+        # valid_journeys = [j for j in candidate_journey if j.is_valid_exp(date)]
+        # candidate_journey = valid_journeys[0] if valid_journeys else None
 
         prev_journey = candidate_journey if candidate_journey else None
 
@@ -1493,26 +1495,65 @@ def journey_is_valid_filter(date: date | None = None):
     date = date or datetime.now(tz=LONDON).date()
     weekday = date.strftime("%A").lower()
 
+    CE = aliased(CalendarException)
+    CBH = aliased(CalendarToBankHoliday)
+    BHD = aliased(BankHolidayDate)
+
     base_filter = and_(
         Calendar.start_date <= date,
         or_(Calendar.end_date == None, Calendar.end_date >= date),
         getattr(Calendar, weekday),
     )
 
-    # bh_filter = or_(
-    #     ~Calendar.calendar_bank_holiday.any(),  # no bank holiday links
-    #     Calendar.calendar_bank_holiday.any(
-    #         and_(
-    #             CalendarToBankHoliday.operating == True,
-    #             CalendarToBankHoliday.bh.has(
-    #                 BankHoliday.dates.any(BankHolidayDate.date == date)
-    #             ),
-    #         )
-    #     ),
-    # )
+    before_exc_invalid = exists().where(
+        and_(
+            CE.calendar_id == Calendar.id,
+            CE.start_date > date,
+            CE.operating.is_(True),
+        )
+    )
 
-    # return and_(base_filter, bh_filter)
-    return base_filter
+    no_future_operating_excs = not_(before_exc_invalid)
+
+    overlapping_exc_exists = exists().where(
+        and_(
+            CE.calendar_id == Calendar.id,
+            CE.start_date <= date,
+            CE.end_date >= date,
+        )
+    )
+
+    overlapping_exc_operating = exists().where(
+        and_(
+            CE.calendar_id == Calendar.id,
+            CE.start_date <= date,
+            CE.end_date >= date,
+            CE.operating.is_(True),
+        )
+    )
+
+    bank_holiday_match = exists().where(
+        and_(
+            CBH.calendar_id == Calendar.id,
+            CBH.operating.is_(True),
+            exists().where(
+                and_(
+                    BHD.bank_holiday_name == CBH.bank_holiday,
+                    BHD.date == date,
+                )
+            ),
+        )
+    )
+
+    return and_(
+        base_filter,
+        no_future_operating_excs,
+        or_(
+            overlapping_exc_operating,
+            not_(overlapping_exc_exists),
+            bank_holiday_match,
+        ),
+    )
 
 
 class StopTime(Base):

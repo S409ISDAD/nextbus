@@ -154,7 +154,7 @@ async def get_vehicle_journey(journey_id, delay, r) -> Journey:
     )
 
 
-async def get_live_journey(journey_id, r) -> LiveJourney:
+async def get_live_journey(journey_id, r) -> LiveJourney | None:
     async def fetch(journey_id):
         data = await fetch_json(
             BASE + f"/journeys/{journey_id}.json",
@@ -194,6 +194,10 @@ async def get_live_journey(journey_id, r) -> LiveJourney:
         exp=JOURNEY_CACHE,
         r=r,
     )
+
+    if not live_journey:
+        log.warning(f"Live journey with ID {journey_id} not found.")
+        return None
 
     json_stops = live_journey.get("stops")
     stops: list[StopTime] = []

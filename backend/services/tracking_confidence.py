@@ -27,6 +27,14 @@ async def calculate_confidence(
 ):
     trip = await get_trip(trip_id, delay, redis)
     live_journey = await get_live_journey(journey_id, redis)
+    if not trip or not live_journey:
+        return Confidence(
+            final_confidence=0,
+            broken_down_confidence=0,
+            log_off_confidence=0,
+            diversion_confidence=0,
+            broken_tracking_confidence=0,
+        )
 
     broken_down_confidence = check_broken_down(live_journey, delay)
     log_off_confidence = check_log_off(trip, live_journey)
