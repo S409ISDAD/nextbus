@@ -32,3 +32,5 @@ pydantic_settings
 more_itertools
 python-slugify
 titlecase
+factory_boy
+pytest-factoryboy

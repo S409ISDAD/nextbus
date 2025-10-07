@@ -9,6 +9,21 @@ jobs:
     test-backend:
         runs-on: ubuntu-latest
 
+        services:
+            db:
+                image: imresamu/postgis:latest
+                ports:
+                    - 5434:5432
+                env:
+                    POSTGRES_USER: nextbus
+                    POSTGRES_PASSWORD: nextbus
+                    POSTGRES_DB: nextbus_test
+                options: >-
+                    --health-cmd="pg_isready -U nextbus -d nextbus_test"
+                    --health-interval=10s
+                    --health-timeout=5s
+                    --health-retries=5
+
         steps:
             - name: Checkout code
               uses: actions/checkout@v4
@@ -22,5 +37,9 @@ jobs:
                   python -m pip install --upgrade pip
                   pip install -r requirements.txt
             - name: Run tests
+              env:
+                  POSTGRES_TEST_HOST: localhost
+                  PYTHONUNBUFFERED: 1
+                  TZ: Europe/London
               run: |
-                pytest
+                  pytest -v
