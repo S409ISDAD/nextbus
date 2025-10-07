@@ -50,13 +50,29 @@ def test_valid(db_session, journey_factory, calendar_factory):
     db_session.add(cal_to_bh)
     db_session.flush()
 
-    cal_exception = CalendarException(
-        calendar_id=cal.id,
-        start_date=date(2025, 10, 19),
-        end_date=date(2025, 10, 19),
-        operating=True,
-    )  # operate on a sunday
-    db_session.add(cal_exception)
+    cal_exceptions = [
+        CalendarException(
+            calendar_id=cal.id,
+            start_date=date(2025, 10, 18),
+            end_date=date(2025, 10, 19),
+            operating=True,
+            special=True,
+        ),  # operate on a weekend, special condition only on these dates
+        CalendarException(
+            calendar_id=cal.id,
+            start_date=date(2025, 9, 1),
+            end_date=date(2025, 12, 17),
+            operating=True,
+            special=False,
+        ),  # operate normally on weekdays in this range
+        CalendarException(
+            calendar_id=cal.id,
+            start_date=date(2025, 10, 20),
+            end_date=date(2025, 10, 20),
+            operating=False,
+        ),  # do not operate on this monday
+    ]
+    db_session.add_all(cal_exceptions)
     db_session.flush()
 
     j1 = journey_factory(
@@ -65,57 +81,36 @@ def test_valid(db_session, journey_factory, calendar_factory):
 
     db_session.commit()
 
-    assert j1.is_valid(date(2025, 10, 7))  # tuesday
-    assert j1.is_valid(date(2025, 10, 6))  # monday
-    assert j1.is_valid(date(2025, 10, 19))  # exception sunday
-    assert not j1.is_valid(date(2025, 12, 25))  # bank holiday
-    assert not j1.is_valid(date(2024, 10, 7))  # wrong year
-    assert not j1.is_valid(date(2025, 10, 5))  # sunday
-
-    valid_cal_ids = [
-        c.id
-        for c in db_session.query(Calendar)
-        .filter(journey_is_valid_filter(date(2025, 10, 7)))
-        .all()
+    valid_dates = [
+        date(2025, 1, 1),  # boundary
+        date(2025, 12, 31),  # boundary
+        date(2025, 10, 6),  # monday
+        date(2025, 10, 7),  # tuesday
+        date(2025, 10, 2),  # thursday
+        date(2025, 10, 18),  # exception saturday
+        date(2025, 10, 19),  # exception sunday
     ]
-    assert cal.id in valid_cal_ids  # tuesday
 
-    valid_cal_ids = [
-        c.id
-        for c in db_session.query(Calendar)
-        .filter(journey_is_valid_filter(date(2025, 10, 6)))
-        .all()
+    invalid_dates = [
+        date(2024, 12, 31),  # before start
+        date(2026, 1, 1),  # after end
+        date(2025, 12, 25),  # bank holiday
+        date(2025, 10, 20),  # exception monday
+        date(2024, 10, 7),  # wrong year
+        date(2025, 10, 5),  # sunday
     ]
-    assert cal.id in valid_cal_ids  # monday
 
-    valid_cal_ids = [
-        c.id
-        for c in db_session.query(Calendar)
-        .filter(journey_is_valid_filter(date(2025, 10, 19)))
-        .all()
-    ]
-    assert cal.id in valid_cal_ids  # exception sunday
-
-    valid_cal_ids = [
-        c.id
-        for c in db_session.query(Calendar)
-        .filter(journey_is_valid_filter(date(2025, 12, 25)))
-        .all()
-    ]
-    assert cal.id not in valid_cal_ids  # bank holiday
-
-    valid_cal_ids = [
-        c.id
-        for c in db_session.query(Calendar)
-        .filter(journey_is_valid_filter(date(2025, 10, 5)))
-        .all()
-    ]
-    assert cal.id not in valid_cal_ids  # sunday
-
-    valid_cal_ids = [
-        c.id
-        for c in db_session.query(Calendar)
-        .filter(journey_is_valid_filter(date(2024, 10, 7)))
-        .all()
-    ]
-    assert cal.id not in valid_cal_ids  # wrong year
+    for d in valid_dates:
+        valid_cal_ids = [
+            c.id
+            for c in db_session.query(Calendar).filter(journey_is_valid_filter(d)).all()
+        ]
+        assert j1.is_valid(d), f"Journey should be valid on {d}"
+        assert cal.id in valid_cal_ids  # make sure both functions agree
+    for d in invalid_dates:
+        valid_cal_ids = [
+            c.id
+            for c in db_session.query(Calendar).filter(journey_is_valid_filter(d)).all()
+        ]
+        assert not j1.is_valid(d), f"Journey should be invalid on {d}"
+        assert cal.id not in valid_cal_ids  # make sure both functions agree

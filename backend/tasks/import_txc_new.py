@@ -569,7 +569,9 @@ class TXCImporter:
         ]
 
         calendar_exceptions += [
-            self.get_calendar_exception(date_range=date_range, operation=True)
+            self.get_calendar_exception(
+                date_range=date_range, operation=True, special=True
+            )
             for date_range in operating_profile.operation_days
         ]
 
@@ -681,6 +683,7 @@ class TXCImporter:
         date_range: txc.DateRange | None = None,
         date=None,
         operation=True,
+        special=False,
         description="",
     ):
         """
@@ -704,6 +707,7 @@ class TXCImporter:
             end_date=end_date,
             description=description,
             operating=operation,
+            special=special,
         )
 
     def get_stop_time(self, journey: Journey, cell: txc.Cell):
