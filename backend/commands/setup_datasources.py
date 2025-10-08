@@ -43,6 +43,10 @@ datasources = [
         "bods_id": 17472,
     },
     {
+        "name": "Swindon Bus Company",
+        "bods_id": 15879,
+    },
+    {
         "name": "Thames Valley Buses",
         "url": "https://data.discoverpassenger.com/operator/courtney/dataset/current/download/txc",
     },
