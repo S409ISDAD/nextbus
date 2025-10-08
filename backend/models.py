@@ -1434,15 +1434,17 @@ class Journey(Base):
             .options(joinedload(Journey.service).joinedload(Service.operator))
         )
 
-        candidate_journey = query.order_by(Journey.sequence.desc()).first()
+        candidate_journey = query.order_by(Journey.end_time.desc()).first()
 
         # valid_journeys = [j for j in candidate_journey if j.is_valid_exp(date)]
         # candidate_journey = valid_journeys[0] if valid_journeys else None
 
         prev_journey = candidate_journey if candidate_journey else None
 
+        layover_time = self.start_time - prev_journey.end_time if prev_journey else None
+
         log.debug(
-            f"this: {self.start_time}, prev: {prev_journey.end_time if prev_journey else 'N/A'}"
+            f"layover: {layover_time or 'none'} this: {self.start_time}, prev: {prev_journey.end_time if prev_journey else 'N/A'}"
         )
         return prev_journey
 
