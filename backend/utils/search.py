@@ -85,7 +85,7 @@ async def search_db(query: str, db: Session, limit: int = 20):
 
     services_served = set()
 
-    if len(results["localities"]) <= 2:
+    if len(results["localities"]) <= 4:
         for locality in results["localities"]:
             served = locality.services_served()
             for service in served:
