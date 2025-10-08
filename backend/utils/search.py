@@ -17,21 +17,29 @@ def search_services(query, db: Session, limit: int = 10):
     results = []
 
     if len(query) <= 3:
-        service_query = select(
-            Service,
-            func.ts_rank_cd(
-                Service.search_vector, func.websearch_to_tsquery(query)
-            ).label("rank"),
-        ).where(Service.line_name.ilike(f"%{query}%"))
+        service_query = (
+            select(
+                Service,
+                func.ts_rank_cd(
+                    Service.search_vector, func.websearch_to_tsquery(query)
+                ).label("rank"),
+            )
+            .where(Service.line_name.ilike(f"%{query}%"))
+            .limit(100)
+        )
     else:
-        service_query = search(
-            select(Service),
-            query,
-            sort=True,
-        ).add_columns(
-            func.ts_rank_cd(
-                Service.search_vector, func.websearch_to_tsquery(query)
-            ).label("rank")
+        service_query = (
+            search(
+                select(Service),
+                query,
+                sort=True,
+            )
+            .add_columns(
+                func.ts_rank_cd(
+                    Service.search_vector, func.websearch_to_tsquery(query)
+                ).label("rank")
+            )
+            .limit(100)
         )
 
     services = db.execute(service_query).all()
@@ -77,11 +85,12 @@ async def search_db(query: str, db: Session, limit: int = 20):
 
     services_served = set()
 
-    for locality in results["localities"]:
-        served = locality.services_served()
-        for service in served:
-            if service:
-                services_served.add(service.id)
+    if len(results["localities"]) <= 2:
+        for locality in results["localities"]:
+            served = locality.services_served()
+            for service in served:
+                if service:
+                    services_served.add(service.id)
 
     service_query = db.query(Service).filter(Service.id.in_(services_served)).all()
 
