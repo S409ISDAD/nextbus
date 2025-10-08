@@ -6,13 +6,13 @@ from discord.ext import commands
 from backend.config import get_logger, setup_logging
 from backend.db.db import SessionLocal
 from backend.deps import LONDON, UTC, datetime_decoder
-from backend.models import BotConfig, BotStatus
+from backend.models import BotStatus
 from backend.deps import get_redis
 from backend.utils.fetch_json import fetch_json
 from backend.schemas.discord_bot import ImportMessage
 from datetime import datetime, timedelta
-from sqlalchemy.orm import joinedload
-import socket
+import os
+from dotenv import load_dotenv
 
 setup_logging()
 log = get_logger()
@@ -27,6 +27,10 @@ STATUS_CHANNEL_ID = 1404456642090897669
 IMPORT_CHANNEL_ID = 1425506807773921280
 
 update_queue = asyncio.Queue()
+
+load_dotenv()
+
+MACHINE_NAME = os.getenv("MACHINE_NAME", "unknown-machine")
 
 
 async def redis_listener():
@@ -136,8 +140,7 @@ async def send_import_message(data: ImportMessage):
             value=f"{stats.fs} skipped",
             inline=False,
         )
-        hostname = socket.gethostname()
-        embed.set_footer(text=hostname)
+        embed.set_footer(text=MACHINE_NAME)
         await channel.send(embed=embed)
     else:
         log.error(f"Channel {IMPORT_CHANNEL_ID} not found or not a text channel")
