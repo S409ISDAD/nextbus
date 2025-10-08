@@ -6,6 +6,7 @@ from backend.config import setup_logging, get_logger
 from backend.db.db import SessionLocal
 from backend.deps import LONDON, STATIC_DATA_DIR
 from backend.models import DataSource
+from backend.services.publish_message import queue_import_message
 from backend.tasks import import_nptg, import_naptan, import_holidays
 from backend.tasks.import_txc_new import import_datasource, Statistics
 
@@ -51,6 +52,8 @@ async def import_datasets():
         else f"{secs:.2f}s"
     )
     log.debug(f"Total import time: {time_str}")
+
+    await queue_import_message(import_time, full_stats)
 
     log_dir = STATIC_DATA_DIR / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)

@@ -3,7 +3,9 @@ import os
 import signal
 import dotenv
 from backend.bot.bot import bot, send_message
-from backend.config import get_logger
+from backend.config import get_logger, setup_logging
+
+setup_logging()
 
 log = get_logger()
 
@@ -28,7 +30,6 @@ async def run_bot(token):
     try:
         bot_task = asyncio.create_task(bot.start(token))
         await stop_event.wait()
-        await send_message("Server Restarting...")
         await bot.close()
         bot_task.cancel()
     except Exception as e:
@@ -36,12 +37,12 @@ async def run_bot(token):
         await bot.close()
 
 
-if env == "development":
-    log.debug("Running in development mode, bot will not start.")
+# if env == "development":
+#     log.debug("Running in development mode, bot will not start.")
+# else:
+if disabled:
+    log.debug("Bot is disabled via BOT_DISABLED environment variable.")
+elif token:
+    asyncio.run(run_bot(token))
 else:
-    if disabled:
-        log.debug("Bot is disabled via BOT_DISABLED environment variable.")
-    elif token:
-        asyncio.run(run_bot(token))
-    else:
-        log.debug("No BOT_TOKEN found in environment, bot will not start.")
+    log.debug("No BOT_TOKEN found in environment, bot will not start.")
