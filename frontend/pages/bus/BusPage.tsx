@@ -90,10 +90,10 @@ const BusPage: React.FC = () => {
             </div>
             <div
                 style={{ display: tab === "nearby" ? "flex" : "none" }}
-                className="flex flex-col items-center justify-center gap-10 md:flex-row">
+                className="flex flex-col items-center justify-center max-w-full gap-10 md:flex-row">
                 <div className="flex flex-col items-center justify-center gap-2">
                     <span className="text-2xl font-bold">Nearby Services</span>
-                    <div className="flex flex-col items-center gap-2 overflow-x-auto whitespace-nowrap">
+                    <div className="flex flex-col flex-wrap items-center max-w-full gap-2 ">
                         {nearbyServices.length === 0 && (
                             <span className="text-sm text-neutral-400">
                                 {status != "" ? (
