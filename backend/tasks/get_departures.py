@@ -19,7 +19,11 @@ async def get_scheduled(stop_id: str, redis, services=None):
     async def fetch_times(stop_id, redis):
         times = await stops.get_times(stop_id, redis)
 
-        line_names = {time.get("service", {}).get("line_name") for time in times}
+        if not times:
+            log.error("times is none")
+            line_names = set()
+        else:
+            line_names = {time.get("service", {}).get("line_name") for time in times}
 
         scheduled_times = []
         db_line_names = []
