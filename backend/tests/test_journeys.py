@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 
 from backend.models import (
     Calendar,
@@ -12,10 +12,16 @@ from backend.models import (
 
 def test_previous_journey(db_session, journey_factory):
     j1 = journey_factory(
-        block_id="WI30", sequence=1, start_time="08:00", end_time="09:00"
+        block_id="WI30",
+        sequence=1,
+        start_time=timedelta(hours=8),
+        end_time=timedelta(hours=9),
     )
     j2 = journey_factory(
-        block_id="WI30", sequence=2, start_time="10:00", end_time="11:00"
+        block_id="WI30",
+        sequence=2,
+        start_time=timedelta(hours=10),
+        end_time=timedelta(hours=11),
     )
 
     prev = j2.get_previous_journey(db_session, date=date(2025, 10, 7))

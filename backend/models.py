@@ -1427,7 +1427,6 @@ class Journey(Base):
             .filter(
                 Journey.id != self.id,
                 Journey.block_id == self.block_id,
-                Journey.sequence < self.sequence,
                 Journey.end_time < self.start_time,
                 journey_is_valid_filter(date),
             )
@@ -1435,9 +1434,6 @@ class Journey(Base):
         )
 
         candidate_journey = query.order_by(Journey.end_time.desc()).first()
-
-        # valid_journeys = [j for j in candidate_journey if j.is_valid_exp(date)]
-        # candidate_journey = valid_journeys[0] if valid_journeys else None
 
         prev_journey = candidate_journey if candidate_journey else None
 
