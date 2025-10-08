@@ -8,7 +8,9 @@ const SearchPage: React.FC = () => {
     const navigate = useNavigate();
     const [results, setResults] = React.useState<Search>();
     const [loading, setLoading] = React.useState(false);
-    const [tab, setTab] = React.useState<"services" | "places">("services");
+    const [tab, setTab] = React.useState<"services" | "operators" | "places">(
+        "services"
+    );
     const { query } = useParams();
 
     useEffect(() => {
@@ -46,6 +48,16 @@ const SearchPage: React.FC = () => {
                     aria-selected={tab === "services"}>
                     {results?.services.length} Services
                 </button>
+                {/* <button
+                    className={`px-4 py-2 text-lg font-semibold rounded-xl transition-all duration-150 cursor-pointer ${
+                        tab === "operators"
+                            ? " bg-neutral-800 text-primary-400 scale-105"
+                            : " bg-neutral-900 text-neutral-400 hover:text-primary-300"
+                    }`}
+                    onClick={() => setTab("operators")}
+                    aria-selected={tab === "operators"}>
+                    {results?.operators.length} Operators
+                </button> */}
                 <button
                     className={`px-4 py-2 text-lg font-semibold rounded-xl transition-all duration-150 cursor-pointer ${
                         tab === "places"
@@ -64,7 +76,7 @@ const SearchPage: React.FC = () => {
             )}
             {query && !loading && (
                 <div className="flex flex-col w-full max-w-3xl gap-4">
-                    {tab === "services" ? (
+                    {tab === "services" && (
                         <div className="flex flex-col gap-2">
                             {results?.services.length === 0 ? (
                                 <span className="w-full mb-5 text-sm text-center text-gray-400">
@@ -127,7 +139,34 @@ const SearchPage: React.FC = () => {
                                 </div>
                             )}
                         </div>
-                    ) : (
+                    )}
+                    {tab == "operators" && (
+                        <div className="flex flex-col">
+                            {results?.operators.length === 0 ? (
+                                <span className="w-full mb-5 text-sm text-center text-gray-400">
+                                    No operators found.
+                                </span>
+                            ) : (
+                                <div className="gap-4 mb-8 columns-2 sm:columns-3">
+                                    {results?.operators.map((operator) => (
+                                        <div
+                                            key={operator.noc}
+                                            className="flex flex-col mb-2 cursor-pointer break-inside-avoid"
+                                            onClick={() =>
+                                                navigate(
+                                                    `buses/operators/${operator.noc}`
+                                                )
+                                            }>
+                                            <span className="underline text-link">
+                                                {operator.name}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+                    {tab == "places" && (
                         <div className="flex flex-col">
                             {results?.localities.length === 0 ? (
                                 <span className="w-full mb-5 text-sm text-center text-gray-400">

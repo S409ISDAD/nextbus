@@ -1,6 +1,12 @@
 export interface Search {
+    operators: OperatorResult[];
     localities: LocalityResult[];
     services: ServiceResult[];
+}
+
+export interface OperatorResult {
+    noc: string;
+    name: string;
 }
 
 export interface ServiceResult {
