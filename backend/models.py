@@ -1282,6 +1282,9 @@ class Timetable(Base):
         checks if the timetable is valid on the given date / today.
         """
 
+        if self.actual_end_date and self.start_date > self.actual_end_date:
+            return True  # consider always valid to avoid hiding data
+
         if not date:
             date = datetime.now(tz=LONDON).date()
 

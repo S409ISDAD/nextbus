@@ -104,6 +104,9 @@ async def search_db(query: str, db: Session, limit: int = 20):
     for service in service_query:
         if service.id not in service_ids:
             data = service.with_timetable()
+            if data is None:
+                log.warning(f"Service {service.id} returned None from with_timetable()")
+                continue
             data["rank"] = 0.0
             services.append(data)
 

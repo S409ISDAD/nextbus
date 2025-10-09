@@ -1109,6 +1109,16 @@ class TXCImporter:
             else:
                 self.stats.timetables_created += 1
 
+            if (
+                txc_service.operating_period.end
+                and txc_service.operating_period.end
+                < txc_service.operating_period.start
+            ):
+                log.warning(
+                    f"Service {txc_service.service_code} has an end date before its start date"
+                )
+                txc_service.operating_period.end = None
+
             timetable = Timetable(
                 service_id=service.id,
                 line_id=txc_line.id,
