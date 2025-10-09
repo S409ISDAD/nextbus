@@ -10,18 +10,18 @@ datasources = [
         "name": "Stagecoach South",
         "url": "https://opendata.stagecoachbus.com/stagecoach-scso-route-schedule-data-transxchange_2_4.zip",
     },
-    {
-        "name": "Stagecoach South East",
-        "url": "https://opendata.stagecoachbus.com/stagecoach-scek-route-schedule-data-transxchange_2_4.zip",
-    },
+    # {
+    #     "name": "Stagecoach South East",
+    #     "url": "https://opendata.stagecoachbus.com/stagecoach-scek-route-schedule-data-transxchange_2_4.zip",
+    # },
     {
         "name": "Cresta Coaches",
         "bods_id": 18347,
     },
-    {
-        "name": "Centrebus Group",
-        "bods_id": 16467,
-    },
+    # {
+    #     "name": "Centrebus Group",
+    #     "bods_id": 16467,
+    # },
     {
         "name": "Bluestar",
         "bods_id": 15872,
@@ -38,10 +38,10 @@ datasources = [
         "name": "Xelabus",
         "bods_id": 18484,
     },
-    {
-        "name": "Bee Network",
-        "url": "https://odata.tfgm.com/opendata/downloads/TfGMtxcnew.zip",
-    },
+    # {
+    #     "name": "Bee Network",
+    #     "url": "https://odata.tfgm.com/opendata/downloads/TfGMtxcnew.zip",
+    # },
     {
         "name": "Swindon Bus Company",
         "bods_id": 15879,
