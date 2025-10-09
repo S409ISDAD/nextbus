@@ -31,22 +31,23 @@ from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import relationship, Session, joinedload, deferred, aliased
 from sqlalchemy_searchable import make_searchable
 from sqlalchemy_utils.types import TSVectorType
-from functools import lru_cache
 from backend.autoslug import AutoSlugMixin
 from backend.config import API_BASE, get_logger
 from backend.db.db import SessionLocal
 from backend.deps import LONDON
+from shapely.geometry import base as shape_base
 from backend.utils.fetch_json import fetch_json
 from sqlalchemy import select
 from backend.utils.bulk_upsert import bulk_upsert
 from collections import namedtuple
 
-from backend.utils.time_taken import time_taken
 
 log = get_logger(__name__)
 
 Base = declarative_base()
 make_searchable(Base.metadata)
+
+shape_base.BaseGeometry.__repr__ = lambda self: f"<Geometry {self.geom_type}>"
 
 
 ServiceLite = namedtuple("ServiceLite", ["id", "line_name"])

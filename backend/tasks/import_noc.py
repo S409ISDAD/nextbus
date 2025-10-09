@@ -1,4 +1,3 @@
-import sys
 import xml.etree.ElementTree as ET
 
 import requests
@@ -6,11 +5,6 @@ from sqlalchemy_searchable import sync_trigger
 
 from backend.config import get_logger, setup_logging
 from backend.db.db import SessionLocal, engine
-from backend.deps import STATIC_DATA_DIR
-from backend.models import Operator
-from backend.utils.download_to_static import download_to_static
-from backend.utils.location import generate_point
-from backend.utils.time import to_datetime
 
 log = get_logger()
 

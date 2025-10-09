@@ -1,7 +1,7 @@
 import factory
 from datetime import date
 from backend.models import Calendar, Service, Timetable, Journey
-from backend.tests.db_session import test_engine, TestingSessionLocal
+from backend.tests.db_session import TestingSessionLocal
 
 
 class SQLAFactory(factory.alchemy.SQLAlchemyModelFactory):

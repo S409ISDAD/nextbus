@@ -6,7 +6,6 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from backend.db.db import SessionLocal
 from backend.deps import get_redis, limiter
 from backend.models import Locality
-from pydantic import BaseModel
 from backend.schemas.location import LocationRequest
 from backend.services.journey_planner import (
     possible_destinations,

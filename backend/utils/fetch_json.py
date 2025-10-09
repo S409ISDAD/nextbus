@@ -29,7 +29,7 @@ async def fetch_json(url) -> dict | None:
     async with aiohttp.ClientSession() as session:
         async with session.get(
             url,
-            headers={"Accept": "application/json"},
+            headers={"Accept": "application/json", "User-Agent": "nextbus/1.0"},
             ssl=ssl_context,
             timeout=timeout,
         ) as response:
@@ -43,7 +43,7 @@ async def fetch_rtt_json(url: str) -> dict | None:
     async with aiohttp.ClientSession(auth=auth) as session:
         async with session.get(
             url,
-            headers={"Accept": "application/json"},
+            headers={"Accept": "application/json", "User-Agent": "nextbus/1.0"},
             ssl=ssl_context,
             timeout=timeout,
         ) as response:

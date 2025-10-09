@@ -955,8 +955,6 @@ class TXCImporter:
 
         operator = self.operators.get(txc_service.operator)
 
-        timetable_datasource = self.timetable_datasource
-
         for txc_line in txc_service.lines:
             if (
                 txc_service.operating_period.end

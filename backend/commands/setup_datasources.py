@@ -40,7 +40,7 @@ datasources = [
     },
     {
         "name": "Bee Network",
-        "bods_id": 17472,
+        "url": "https://odata.tfgm.com/opendata/downloads/TfGMtxcnew.zip",
     },
     {
         "name": "Swindon Bus Company",

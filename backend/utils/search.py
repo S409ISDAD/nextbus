@@ -92,17 +92,27 @@ async def search_db(query: str, db: Session, limit: int = 20):
                 if service:
                     services_served.add(service.id)
 
+    if len(results["operators"]) <= 2:
+        for operator in results["operators"]:
+            served = operator.services
+            for service in served:
+                if service:
+                    services_served.add(service.id)
+
     service_query = db.query(Service).filter(Service.id.in_(services_served)).all()
 
     for service in service_query:
         if service.id not in service_ids:
             data = service.with_timetable()
-            data["rank"] = 1.0
+            data["rank"] = 0.0
             services.append(data)
 
     results["services"] = services
 
     results["services"].sort(key=lambda x: x["rank"], reverse=True)
+
+    for operator in results["operators"]:
+        del operator.services
 
     # stops_query = search(select(Stop), query, sort=True).limit(limit)
     # stops = list(db.scalars(stops_query).all())

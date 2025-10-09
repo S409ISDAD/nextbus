@@ -14,7 +14,6 @@ from backend.models import (
 )
 from backend.deps import LONDON
 import sys
-from collections import Counter
 
 
 def generate_timetable(

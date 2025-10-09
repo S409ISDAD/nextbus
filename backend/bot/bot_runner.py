@@ -2,7 +2,7 @@ import asyncio
 import os
 import signal
 import dotenv
-from backend.bot.bot import bot, send_message
+from backend.bot.bot import bot
 from backend.config import get_logger, setup_logging
 
 setup_logging()

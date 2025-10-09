@@ -19,7 +19,11 @@ async def service(
     try:
         service: Service = (
             db.query(Service)
-            .options(joinedload(Service.timetables), joinedload(Service.operator))
+            .options(
+                joinedload(Service.timetables),
+                joinedload(Service.operator),
+                joinedload(Service.data_source),
+            )
             .filter(Service.id == service_id)
             .first()
         )
@@ -45,7 +49,8 @@ async def service(
                 "vias": timetable.vias,
                 "operator_noc": operator.noc,
                 "operator": operator.name,
-                "last_modified": timetable.modified_at or service.last_modified,
+                "last_modified": timetable.modified_at
+                or service.data_source.last_modified,
             }
     except HTTPException as e:
         raise e

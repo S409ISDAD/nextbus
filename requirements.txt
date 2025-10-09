@@ -34,3 +34,4 @@ python-slugify
 titlecase
 factory_boy
 pytest-factoryboy
+bs4
