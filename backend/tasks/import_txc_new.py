@@ -973,6 +973,7 @@ class TXCImporter:
                     Service.line_name.ilike(txc_line.line_name),
                     Service.service_code == txc_service.service_code,
                     Service.data_source_id == self.ds_id,
+                    *([Service.operator_id == operator.id] if operator else []),
                 )
                 .order_by(
                     Service.current.desc(), Service.id.asc()
@@ -1077,25 +1078,47 @@ class TXCImporter:
             self.db.add(service)
             self.db.flush()
 
+            if (
+                txc_service.operating_period.end
+                and txc_service.operating_period.end
+                < txc_service.operating_period.start
+            ):
+                log.warning(
+                    f"Service {txc_service.service_code} has an end date before its start date"
+                )
+                txc_service.operating_period.end = None
+
             existing_timetable = (
                 self.db.query(Timetable)
                 .filter(
                     Timetable.service_id == service.id,
                     Timetable.data_source_id == self.ds_id,
                     Timetable.line_name == txc_line.line_name,
+                    Timetable.start_date == txc_service.operating_period.start,
+                    # make sure we dont overwrite an existing timetable if we find a new one with a different start date
                 )
                 .first()
             )
 
             if existing_timetable:
+                existing_timetable.end_date = txc_service.operating_period.end or date(
+                    9999, 12, 31
+                )  # ensure end date is updated if changed
+                self.db.add(existing_timetable)
+                self.db.flush()
                 self.timetables.add(existing_timetable.id)
+                try:
+                    new_revision = int(
+                        self.txc_data.attributes.get("RevisionNumber", 0)
+                    )
+                except ValueError:
+                    new_revision = 0
                 log.debug(f"Existing timetable: {existing_timetable.revision_number}")
-                log.debug(
-                    f"New timetable: {self.txc_data.attributes['RevisionNumber']}"
-                )
+                log.debug(f"New timetable: {new_revision}")
                 if (
-                    existing_timetable.revision_number
-                    == int(self.txc_data.attributes["RevisionNumber"])
+                    existing_timetable.revision_number == new_revision
+                    and not new_revision == 0
+                    # dont skip if revision number is 0, operator might not be setting it
                     and not self.skip_checks
                     and not self.is_repeat_revision
                 ):
@@ -1108,16 +1131,6 @@ class TXCImporter:
                     self.stats.timetables_updated.add(int(existing_timetable.id))
             else:
                 self.stats.timetables_created += 1
-
-            if (
-                txc_service.operating_period.end
-                and txc_service.operating_period.end
-                < txc_service.operating_period.start
-            ):
-                log.warning(
-                    f"Service {txc_service.service_code} has an end date before its start date"
-                )
-                txc_service.operating_period.end = None
 
             timetable = Timetable(
                 service_id=service.id,
