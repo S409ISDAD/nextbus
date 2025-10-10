@@ -495,6 +495,7 @@ class TXCImporter:
                     await self.handle_txc_file(Path(file))
                     self.do_tt_datasources()
                     self.end_date = None  # reset just in case
+                    del self.processed_cache[file.as_posix()]  # free memory
                     idx += 1
 
                 log.debug("Finalising services...")
