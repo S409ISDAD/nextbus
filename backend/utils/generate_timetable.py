@@ -32,17 +32,23 @@ def generate_timetable(
     )
     stop_ordered = [su.stop_id for su in stops]
 
+    current_timetable = service.get_correct_timetable()
+
     # Get valid inbound trips
+    journey_filters = [
+        Journey.service_id == service.id,
+        Journey.inbound.is_(inbound),
+        journey_is_valid_filter(today.date()),
+    ]
+    if current_timetable:
+        journey_filters.append(Journey.timetable_id == current_timetable.id)
+
     journeys = (
         db.query(Journey)
-        .filter(
-            Journey.service_id == service.id,
-            Journey.inbound.is_(inbound),
-            journey_is_valid_filter(today.date()),
-        )
+        .filter(*journey_filters)
         .join(Calendar, Journey.calendar)
         .order_by(Journey.start_time)
-        .distinct()
+        .distinct(Journey.start_time, Journey.end_time)
         .all()
     )
 

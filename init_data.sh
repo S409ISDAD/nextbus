@@ -1,3 +1,5 @@
+alembic upgrade head
+
 python -m backend.tasks.import_holidays 
 
 python -m backend.tasks.import_nptg

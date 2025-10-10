@@ -12,7 +12,7 @@ import sys
 
 from backend.utils.time_taken import time_taken
 
-log = get_logger()
+log = get_logger(__name__)
 
 
 def times_from_stop(stop_id: str, db: Session, limit: int = 10):

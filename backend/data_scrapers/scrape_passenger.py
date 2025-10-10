@@ -5,7 +5,7 @@ from urllib.parse import urljoin
 from backend.config import get_logger, setup_logging
 
 setup_logging()
-log = get_logger()
+log = get_logger(__name__)
 
 BASE = "https://data.discoverpassenger.com/"
 HEADERS = {

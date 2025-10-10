@@ -15,7 +15,7 @@ import os
 from dotenv import load_dotenv
 
 setup_logging()
-log = get_logger()
+log = get_logger(__name__)
 
 intents = discord.Intents.default()
 intents.messages = True

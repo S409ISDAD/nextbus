@@ -23,7 +23,7 @@ from backend.models import (
 from backend.utils.bulk_upsert import bulk_upsert
 from backend.utils.download_to_static import download_to_static
 
-log = get_logger()
+log = get_logger(__name__)
 
 new_stops = []
 new_stop_areas = []

@@ -26,7 +26,7 @@ import sys
 
 from shapely.wkb import loads as wkb_loads
 
-log = get_logger()
+log = get_logger(__name__)
 
 
 def safe_int(value):

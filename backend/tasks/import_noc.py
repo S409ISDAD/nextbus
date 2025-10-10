@@ -6,7 +6,7 @@ from sqlalchemy_searchable import sync_trigger
 from backend.config import get_logger, setup_logging
 from backend.db.db import SessionLocal, engine
 
-log = get_logger()
+log = get_logger(__name__)
 
 
 def get_mode(mode):

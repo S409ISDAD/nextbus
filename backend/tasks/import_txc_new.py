@@ -2,11 +2,15 @@ import argparse
 import asyncio
 import gc
 import hashlib
+import os
 import re
 import time
 import zipfile
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
+
+import asyncio
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 
 from geoalchemy2.shape import from_shape
 from shapely import Point
@@ -43,9 +47,12 @@ from backend.utils.download_if_modified import download_if_modified
 from backend.utils.time import to_datetime
 from backend.utils.time_taken import time_taken
 
-log = get_logger()
+log = get_logger(__name__)
 
 BAD_ORIGIN_DEST = {"Origin", "Destination", "Unknown"}
+
+num_cpus = os.cpu_count() or 2
+max_workers = max(num_cpus - 2, 1)
 
 
 async def import_datasource(id, folder: Path, skip_checks=False) -> "Statistics":
@@ -293,7 +300,7 @@ def get_description(txc_service: txc.Service):
 
 
 def get_service_data(path):
-    txc_data = TransXChangeMeta(path)
+    txc_data = txc.TransXChange(path)
     operators = getOperators(txc_data.operators)
 
     revision_num = txc_data.attributes.get("RevisionNumber")
@@ -303,31 +310,11 @@ def get_service_data(path):
     for service in txc_data.services.values():
         service_id = service.service_code
         operator = operators[service.operator].noc
+        operating_period = service.operating_period
 
-        services.append([operator, service_id, revision_num])
+        services.append([operator, service_id, revision_num, operating_period])
 
-    return services
-
-
-def generate_txc_map(dataset: Path):
-    txc_map = {}
-
-    files = dataset.glob("*.xml")
-    for file in files:
-        log.debug(file)
-
-        services = get_service_data(file)
-        for service in services:
-            operator, service_id, revision_num = service
-
-            if service_id in txc_map:
-                if revision_num in txc_map[service_id]:
-                    txc_map[service_id][revision_num].append(file.as_posix())
-                else:
-                    txc_map[service_id][revision_num] = [file.as_posix()]
-            else:
-                txc_map[service_id] = {revision_num: [file.as_posix()]}
-    return txc_map
+    return txc_data, services
 
 
 class ServiceMeta:
@@ -426,6 +413,8 @@ class TXCImporter:
         self.file_count = 0
         self.operator_updated = False
         self.stats = Statistics()
+        self.end_date = None
+        self.processed_cache: dict[str, txc.TransXChange] = {}
 
     @property
     def is_repeat_revision(self):
@@ -433,29 +422,59 @@ class TXCImporter:
 
     async def import_folder(self):
         with time_taken("Generating TXC map"):
-            self.generate_txc_map()
+            await self.generate_txc_map()
         await self.import_from_map()
 
-    def generate_txc_map(self):
-        txc_map = {}
+    async def generate_txc_map(self):
+        try:
+            txc_map = {}
+            loop = asyncio.get_running_loop()
 
-        files = self.folder.glob("*.xml")
-        self.file_count = len(list(files))
-        for file in self.folder.glob("*.xml"):
-            log.debug(file)
+            files = list(self.folder.glob("*.xml"))
+            self.file_count = len(list(files))
 
-            services = get_service_data(file)
-            for service in services:
-                operator, service_id, revision_num = service
+            with ProcessPoolExecutor(max_workers=max_workers) as pool:
+                tasks = [
+                    loop.run_in_executor(pool, get_service_data, file) for file in files
+                ]
+                for file, (txc_data, services) in zip(
+                    files, await asyncio.gather(*tasks)
+                ):
+                    log.debug(file)
 
-                if service_id in txc_map:
-                    if revision_num in txc_map[service_id]:
-                        txc_map[service_id][revision_num].append(file.as_posix())
-                    else:
-                        txc_map[service_id][revision_num] = [file.as_posix()]
-                else:
-                    txc_map[service_id] = {revision_num: [file.as_posix()]}
-        self.map = txc_map
+                    self.processed_cache[file.as_posix()] = txc_data
+                    for service in services:
+                        operator, service_id, revision_num, operating_period = service
+                        start = operating_period.start
+                        end = operating_period.end or date(9999, 12, 31)
+
+                        entry = {"files": [file.as_posix()], "start": start, "end": end}
+
+                        if service_id in txc_map:
+                            if revision_num in txc_map[service_id]:
+                                # append file(s) if multiple files exist for same service/revision
+                                txc_map[service_id][revision_num]["files"].append(
+                                    file.as_posix()
+                                )
+                                # optionally merge start/end if needed
+                                txc_map[service_id][revision_num]["start"] = min(
+                                    txc_map[service_id][revision_num]["start"], start
+                                )
+                                if end:
+                                    prev_end = txc_map[service_id][revision_num]["end"]
+                                    if prev_end:
+                                        txc_map[service_id][revision_num]["end"] = max(
+                                            prev_end, end
+                                        )
+                                    else:
+                                        txc_map[service_id][revision_num]["end"] = end
+                            else:
+                                txc_map[service_id][revision_num] = entry
+                        else:
+                            txc_map[service_id] = {revision_num: entry}
+                self.map = txc_map
+        except Exception as e:
+            log.debug(f"Error generating TXC map: {e}")
 
     async def import_from_map(self):
         log.debug(f"Importing {len(self.map.keys())} services...")
@@ -463,19 +482,32 @@ class TXCImporter:
         for service_id in self.map.keys():
             self.clear_old_timetables(service_id)
 
-            for revision in self.map[service_id]:
-                self.files_in_revision = len(self.map[service_id][revision])
+            sorted_revisions = sorted(
+                self.map[service_id].items(), key=lambda x: x[1]["start"]
+            )
+
+            for i, (revision, rev_data) in enumerate(sorted_revisions):
+                # determine end date based on next revision's start date
+                if i < len(sorted_revisions) - 1:
+                    next_start = sorted_revisions[i + 1][1]["start"]
+                    rev_data["end"] = next_start - timedelta(days=1)
+
+                self.files_in_revision = len(rev_data["files"])
                 self.file_idx_in_revision = 0
                 self.services.clear()
-                for file in self.map[service_id][revision]:
+
+                for file in rev_data["files"]:
                     log.debug(
                         f"Importing {file} ({idx + 1}/{self.file_count}, {round(((idx + 1) / self.file_count) * 100, 2)}%)"
                     )
+                    self.end_date = rev_data["end"]
                     self.file_idx_in_revision += 1
                     self.timetables.clear()
                     await self.handle_txc_file(Path(file))
                     self.do_tt_datasources()
+                    self.end_date = None  # reset just in case
                     idx += 1
+
                 log.debug("Finalising services...")
                 self.finish_services()
 
@@ -551,7 +583,7 @@ class TXCImporter:
 
         calendar = Calendar(
             start_date=operating_period.start,
-            end_date=operating_period.end or None,
+            end_date=self.end_date or operating_period.end or None,
             monday=0 in regular_days,
             tuesday=1 in regular_days,
             wednesday=2 in regular_days,
@@ -926,9 +958,13 @@ class TXCImporter:
     def handle_service(self, txc_service: txc.Service):
         skip_journeys = False
 
-        end_date = (
-            txc_service.operating_period.end if txc_service.operating_period else None
-        )
+        operator = self.operators.get(txc_service.operator)
+
+        if operator and "first" in operator.name.lower():
+            # use the artificial end date for first bus
+            end_date = self.end_date or txc_service.operating_period.end or None
+        else:
+            end_date = txc_service.operating_period.end or None
 
         if end_date and end_date < self.today.date():
             log.debug(
@@ -953,15 +989,10 @@ class TXCImporter:
 
         service = None
 
-        operator = self.operators.get(txc_service.operator)
-
         for txc_line in txc_service.lines:
-            if (
-                txc_service.operating_period.end
-                and txc_service.operating_period.end < self.today.date()
-            ):
+            if end_date and end_date < self.today.date():
                 log.debug(
-                    f"Skipping line {txc_line.line_name} for service {txc_service.service_code} as it ended on {txc_service.operating_period.end}"
+                    f"Skipping line {txc_line.line_name} for service {txc_service.service_code} as it ended on {end_date}"
                 )
                 continue
 
@@ -1078,15 +1109,11 @@ class TXCImporter:
             self.db.add(service)
             self.db.flush()
 
-            if (
-                txc_service.operating_period.end
-                and txc_service.operating_period.end
-                < txc_service.operating_period.start
-            ):
+            if end_date and end_date < txc_service.operating_period.start:
                 log.warning(
                     f"Service {txc_service.service_code} has an end date before its start date"
                 )
-                txc_service.operating_period.end = None
+                end_date = None
 
             existing_timetable = (
                 self.db.query(Timetable)
@@ -1101,7 +1128,7 @@ class TXCImporter:
             )
 
             if existing_timetable:
-                existing_timetable.end_date = txc_service.operating_period.end or date(
+                existing_timetable.end_date = end_date or date(
                     9999, 12, 31
                 )  # ensure end date is updated if changed
                 self.db.add(existing_timetable)
@@ -1142,7 +1169,7 @@ class TXCImporter:
                 outbound_description=txc_line.outbound_description or "",
                 inbound_description=txc_line.inbound_description or "",
                 start_date=txc_service.operating_period.start,
-                end_date=txc_service.operating_period.end or date(9999, 12, 31),
+                end_date=end_date or date(9999, 12, 31),
                 revision_number=self.txc_data.attributes["RevisionNumber"],
                 created_at=to_datetime(self.txc_data.attributes["CreationDateTime"]),
                 modified_at=to_datetime(
@@ -1506,7 +1533,12 @@ class TXCImporter:
 
             self.timetable_datasource = timetable_datasource
 
-            self.txc_data = txc.TransXChange(file)
+            self.txc_data = self.processed_cache.get(
+                file.as_posix(), None
+            ) or txc.TransXChange(
+                file
+            )  # use cached as we already processed when making the map
+
             if not self.txc_data:
                 log.warning("No TXC data loaded.")
                 return

@@ -878,8 +878,29 @@ class Service(Base, AutoSlugMixin):
     def get_full_name(self):
         return f"{self.line_name} {self.description}".strip()
 
+    def get_correct_timetable(self):
+        if len(self.timetables) == 1:
+            return self.timetables[0]
+
+        if self.data_source.name == "First Portsmouth, Fareham & Gosport":
+            # first dont use end dates, so we use the highest valid revision number
+            highest_revison = -1
+            correct_tt = None
+            for tt in self.timetables:
+                if (
+                    tt.revision_number
+                    and tt.revision_number > highest_revison
+                    and tt.is_valid()
+                ):
+                    highest_revison = tt.revision_number
+                    correct_tt = tt
+
+            return correct_tt
+        else:
+            return next((tt for tt in self.timetables if tt.is_valid()), None)
+
     def with_timetable(self):
-        timetable = next((tt for tt in self.timetables if tt.is_valid()), None)
+        timetable = self.get_correct_timetable()
         if timetable:
             return {
                 "service_id": self.id,

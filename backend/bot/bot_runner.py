@@ -7,7 +7,7 @@ from backend.config import get_logger, setup_logging
 
 setup_logging()
 
-log = get_logger()
+log = get_logger(__name__)
 
 log.debug("Starting discord bot...")
 dotenv.load_dotenv()

@@ -12,7 +12,7 @@ from pathlib import Path
 UTC = timezone.utc
 LONDON = ZoneInfo("Europe/London")
 
-log = get_logger()
+log = get_logger(__name__)
 
 
 script_dir = pathlib.Path(__file__).resolve().parent

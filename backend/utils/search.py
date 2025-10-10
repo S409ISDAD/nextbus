@@ -10,7 +10,7 @@ from backend.db.db import SessionLocal
 from backend.models import Service, Stop, Operator, Locality
 import sys
 
-log = get_logger()
+log = get_logger(__name__)
 
 
 def search_services(query, db: Session, limit: int = 10):

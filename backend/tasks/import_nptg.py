@@ -11,7 +11,7 @@ from backend.utils.download_to_static import download_to_static
 from backend.utils.location import generate_point
 from backend.utils.time import to_datetime
 
-log = get_logger()
+log = get_logger(__name__)
 
 
 def handle_region(element: ET.Element):
