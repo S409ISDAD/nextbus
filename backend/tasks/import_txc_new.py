@@ -2,7 +2,6 @@ import argparse
 import asyncio
 import gc
 import hashlib
-import os
 import re
 import time
 import zipfile
@@ -10,7 +9,7 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 
 import asyncio
-from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor
 
 from geoalchemy2.shape import from_shape
 from shapely import Point
@@ -50,9 +49,6 @@ from backend.utils.time_taken import time_taken
 log = get_logger(__name__)
 
 BAD_ORIGIN_DEST = {"Origin", "Destination", "Unknown"}
-
-num_cpus = os.cpu_count() or 2
-max_workers = max(num_cpus - 2, 1)
 
 
 async def import_datasource(id, folder: Path, skip_checks=False) -> "Statistics":
@@ -422,57 +418,50 @@ class TXCImporter:
 
     async def import_folder(self):
         with time_taken("Generating TXC map"):
-            await self.generate_txc_map()
+            self.generate_txc_map()
         await self.import_from_map()
 
-    async def generate_txc_map(self):
+    def generate_txc_map(self):
         try:
             txc_map = {}
-            loop = asyncio.get_running_loop()
 
             files = list(self.folder.glob("*.xml"))
             self.file_count = len(list(files))
+            for file in files:
+                log.debug(file)
 
-            with ProcessPoolExecutor(max_workers=max_workers) as pool:
-                tasks = [
-                    loop.run_in_executor(pool, get_service_data, file) for file in files
-                ]
-                for file, (txc_data, services) in zip(
-                    files, await asyncio.gather(*tasks)
-                ):
-                    log.debug(file)
+                txc_data, services = get_service_data(file)
+                self.processed_cache[file.as_posix()] = txc_data
+                for service in services:
+                    operator, service_id, revision_num, operating_period = service
+                    start = operating_period.start
+                    end = operating_period.end or date(9999, 12, 31)
 
-                    self.processed_cache[file.as_posix()] = txc_data
-                    for service in services:
-                        operator, service_id, revision_num, operating_period = service
-                        start = operating_period.start
-                        end = operating_period.end or date(9999, 12, 31)
+                    entry = {"files": [file.as_posix()], "start": start, "end": end}
 
-                        entry = {"files": [file.as_posix()], "start": start, "end": end}
-
-                        if service_id in txc_map:
-                            if revision_num in txc_map[service_id]:
-                                # append file(s) if multiple files exist for same service/revision
-                                txc_map[service_id][revision_num]["files"].append(
-                                    file.as_posix()
-                                )
-                                # optionally merge start/end if needed
-                                txc_map[service_id][revision_num]["start"] = min(
-                                    txc_map[service_id][revision_num]["start"], start
-                                )
-                                if end:
-                                    prev_end = txc_map[service_id][revision_num]["end"]
-                                    if prev_end:
-                                        txc_map[service_id][revision_num]["end"] = max(
-                                            prev_end, end
-                                        )
-                                    else:
-                                        txc_map[service_id][revision_num]["end"] = end
-                            else:
-                                txc_map[service_id][revision_num] = entry
+                    if service_id in txc_map:
+                        if revision_num in txc_map[service_id]:
+                            # append file(s) if multiple files exist for same service/revision
+                            txc_map[service_id][revision_num]["files"].append(
+                                file.as_posix()
+                            )
+                            # optionally merge start/end if needed
+                            txc_map[service_id][revision_num]["start"] = min(
+                                txc_map[service_id][revision_num]["start"], start
+                            )
+                            if end:
+                                prev_end = txc_map[service_id][revision_num]["end"]
+                                if prev_end:
+                                    txc_map[service_id][revision_num]["end"] = max(
+                                        prev_end, end
+                                    )
+                                else:
+                                    txc_map[service_id][revision_num]["end"] = end
                         else:
-                            txc_map[service_id] = {revision_num: entry}
-                self.map = txc_map
+                            txc_map[service_id][revision_num] = entry
+                    else:
+                        txc_map[service_id] = {revision_num: entry}
+            self.map = txc_map
         except Exception as e:
             log.debug(f"Error generating TXC map: {e}")
 
