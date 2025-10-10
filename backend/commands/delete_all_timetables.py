@@ -3,6 +3,7 @@ from backend.db.db import SessionLocal
 from backend.models import (
     Timetable,
     TimetableToTTDataSource,
+    TimetableDataSource,
     Calendar,
     Service,
     Operator,
@@ -18,18 +19,21 @@ def reset_all():
         timetable_count = db.query(Timetable).count()
         calendar_count = db.query(Calendar).count()
         service_count = db.query(Service).count()
+        tds_count = db.query(TimetableDataSource).count()
         tttds_count = db.query(TimetableToTTDataSource).count()
         operator_count = db.query(Operator).count()
 
         log.info(f"Deleting {timetable_count} Timetable rows")
         log.info(f"Deleting {calendar_count} Calendar rows")
         log.info(f"Deleting {service_count} Service rows")
+        log.info(f"Deleting {tds_count} TimetableDataSource rows")
         log.info(f"Deleting {tttds_count} TimetableToTTDataSource rows")
         log.info(f"Deleting {operator_count} Operator rows")
 
         db.query(Timetable).delete()
         db.query(Calendar).delete()
         db.query(Service).delete()
+        db.query(TimetableDataSource).delete()
         db.query(TimetableToTTDataSource).delete()
         db.query(Operator).delete()
 
