@@ -232,7 +232,7 @@ export const BusProgress: React.FC<{
                         <div
                             style={{
                                 position: "absolute",
-                                top: showAppNav ? "0px" : "100px",
+                                top: showAppNav ? "0px" : "-50px",
                                 left: 0,
                                 width: "100%",
                                 height: 0,

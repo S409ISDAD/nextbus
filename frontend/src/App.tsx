@@ -28,6 +28,8 @@ import RegionPage from "../pages/places/Region.tsx";
 import AdminAreaPage from "../pages/places/AdminArea.tsx";
 import DistrictPage from "../pages/places/District.tsx";
 import LocalityPage from "../pages/places/Locality.tsx";
+import SourcesPage from "../pages/Sources.tsx";
+import DataSourcePage from "../pages/DataSource.tsx";
 
 import { useEffect, useState } from "react";
 import {
@@ -213,6 +215,11 @@ function App() {
                             <Route
                                 path="/locality/:locality_id"
                                 element={<LocalityPage />}
+                            />
+                            <Route path="/sources" element={<SourcesPage />} />
+                            <Route
+                                path="/sources/:source_id"
+                                element={<DataSourcePage />}
                             />
                             <Route path="/buses" element={<BusPage />} />
                             <Route

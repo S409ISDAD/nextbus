@@ -29,6 +29,7 @@ from backend.api.routes import (
     journey_planning,
     places,
     timetable,
+    sources,
 )
 from backend.config import config, setup_logging
 from backend.db.db import SessionLocal, get_db
@@ -73,9 +74,7 @@ async def record_snapshot(redis):
                     db.query(ActiveUsersSnapshot).filter_by(timestamp=timestamp).first()
                 )
                 if not exists:
-                    log.debug(
-                        f"Logging {unique} active users at {timestamp.isoformat()}"
-                    )
+                    log.debug(f"Logging {unique} active users")
                     db.add(
                         ActiveUsersSnapshot(
                             total_connections=total,
@@ -250,3 +249,4 @@ app.include_router(search.router, prefix="/api/v1/search")
 app.include_router(journey_planning.router, prefix="/api/v1/planning")
 app.include_router(places.router, prefix="/api/v1/places")
 app.include_router(timetable.router, prefix="/api/v1/timetable")
+app.include_router(sources.router, prefix="/api/v1/sources")

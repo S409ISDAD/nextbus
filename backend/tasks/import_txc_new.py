@@ -135,6 +135,8 @@ async def import_txc_zip(zip_path, ds_id=None, skip_checks=False):
                 extract_dir, ds_id=ds_id, skip_checks=skip_checks
             )
             await txc_importer.import_folder()
+    except Exception as e:
+        log.error(f"Error importing TXC zip {zip_path}: {e}")
     finally:
         end = time.time()
         time_taken = end - start
@@ -495,7 +497,7 @@ class TXCImporter:
                     await self.handle_txc_file(Path(file))
                     self.do_tt_datasources()
                     self.end_date = None  # reset just in case
-                    del self.processed_cache[file.as_posix()]  # free memory
+                    del self.processed_cache[Path(file).as_posix()]  # free memory
                     idx += 1
 
                 log.debug("Finalising services...")

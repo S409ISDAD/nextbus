@@ -295,6 +295,9 @@ class Locality(Base, AutoSlugMixin):
         )
     )
 
+    def __repr__(self):
+        return f"<Locality {self.get_full_name}>"
+
     @property
     def get_full_name(self):
         if self.qualifier_name:
@@ -882,22 +885,32 @@ class Service(Base, AutoSlugMixin):
         if len(self.timetables) == 1:
             return self.timetables[0]
 
-        if self.data_source.name == "First Portsmouth, Fareham & Gosport":
-            # first dont use end dates, so we use the highest valid revision number
-            highest_revison = -1
-            correct_tt = None
-            for tt in self.timetables:
-                if (
-                    tt.revision_number
-                    and tt.revision_number > highest_revison
-                    and tt.is_valid()
-                ):
-                    highest_revison = tt.revision_number
-                    correct_tt = tt
+        revisions = [
+            tt.revision_number
+            for tt in self.timetables
+            if tt.revision_number is not None
+        ]
 
-            return correct_tt
-        else:
+        if revisions and all(r == revisions[0] for r in revisions):
+            log.warning(
+                f"Service {self.id} has multiple timetables with the same revision number {revisions[0]}"
+            )
             return next((tt for tt in self.timetables if tt.is_valid()), None)
+
+        highest_revison = -1
+        correct_tt = None
+        for tt in self.timetables:
+            if (
+                tt.revision_number is not None
+                and tt.revision_number > highest_revison
+                and tt.is_valid()
+            ):
+                highest_revison = tt.revision_number
+                correct_tt = tt
+
+        if not correct_tt:
+            return next((tt for tt in self.timetables if tt.is_valid()), None)
+        return correct_tt
 
     def with_timetable(self):
         timetable = self.get_correct_timetable()

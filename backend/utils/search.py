@@ -75,6 +75,9 @@ async def search_db(query: str, db: Session, limit: int = 20):
         for loc in localities:
             del loc.point
             del loc.stops
+            del loc.parent
+            del loc.district
+            del loc.admin_area
             setattr(loc, "full_name", loc.get_full_name)
         results["localities"] = localities
     else:
@@ -117,12 +120,11 @@ async def search_db(query: str, db: Session, limit: int = 20):
     for operator in results["operators"]:
         del operator.services
 
-    # stops_query = search(select(Stop), query, sort=True).limit(limit)
-    # stops = list(db.scalars(stops_query).all())
-    # for s in stops:
-    #     if hasattr(s, "point"):
-    #         setattr(s, "point", None)
-    # results["stops"] = stops
+    from fastapi.encoders import jsonable_encoder
+
+    results["localities"] = [jsonable_encoder(loc) for loc in results["localities"]]
+
+    results["operators"] = [jsonable_encoder(op) for op in results["operators"]]
 
     return results
 
