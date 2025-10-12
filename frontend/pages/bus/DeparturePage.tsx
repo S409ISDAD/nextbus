@@ -740,21 +740,23 @@ const DeparturePage: React.FC = () => {
                         </a> */}
                     </div>
                 </div>
-                <div className="flex flex-row justify-center gap-1 overflow-x-auto">
-                    {stop?.services
-                        .sort((a, b) =>
-                            new Intl.Collator(undefined, {
-                                numeric: true,
-                                sensitivity: "base",
-                            }).compare(a.line_name, b.line_name)
-                        )
-                        .map((service) => (
-                            <span
-                                key={service.id}
-                                className="flex items-center justify-center px-3 py-1 text-lg font-bold text-center rounded-xl bg-neutral-800/50">
-                                {service.line_name}
-                            </span>
-                        ))}
+                <div className="overflow-x-auto">
+                    <div className="inline-flex justify-center min-w-full gap-1">
+                        {stop?.services
+                            .sort((a, b) =>
+                                new Intl.Collator(undefined, {
+                                    numeric: true,
+                                    sensitivity: "base",
+                                }).compare(a.line_name, b.line_name)
+                            )
+                            .map((service) => (
+                                <span
+                                    key={service.id}
+                                    className="flex items-center justify-center px-3 py-1 text-lg font-bold text-center rounded-xl bg-neutral-800/50">
+                                    {service.line_name}
+                                </span>
+                            ))}
+                    </div>
                 </div>
 
                 <div className="flex justify-center gap-2">

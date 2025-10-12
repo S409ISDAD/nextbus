@@ -33,7 +33,7 @@ const DataSourcePage: React.FC = () => {
     }, []);
 
     return (
-        <div className="flex flex-col items-center justify-center w-full p-8 pb-0">
+        <div className="flex flex-col items-center justify-center w-full p-8 px-1 pb-0 md:px-8">
             {loading && (
                 <span className="mb-5 text-xl font-medium text-center text-gray-400">
                     Loading...
@@ -44,43 +44,41 @@ const DataSourcePage: React.FC = () => {
                     <span className="mb-5 text-4xl font-bold">
                         {dataSource.name}
                     </span>
-                    <div className="flex flex-col w-full gap-4">
-                        <div className="flex flex-col max-h-[75vh] items-center overflow-auto w-full mt-4 text-neutral-300/95">
-                            {!dataSource ? (
-                                <span className="w-full mb-5 text-sm text-center text-neutral-400">
-                                    No DataSource found.
-                                </span>
-                            ) : (
-                                <table className="min-w-full mb-8 border rounded border-neutral-800">
-                                    <thead className="sticky top-0 z-10 bg-neutral-900">
-                                        <tr>
-                                            <th className="px-4 py-2 text-left border-b">
-                                                service code
-                                            </th>
-                                            <th className="px-4 py-2 text-left border-b">
-                                                line
-                                            </th>
-                                            <th className="px-4 py-2 text-left border-b">
-                                                revision
-                                            </th>
-                                            <th className="px-4 py-2 text-left border-b">
-                                                start
-                                            </th>
-                                            <th className="px-4 py-2 text-left border-b">
-                                                end
-                                            </th>
-                                            <th className="px-4 py-2 text-left border-b">
-                                                modified
-                                            </th>
-                                            <th className="px-4 py-2 text-left border-b">
-                                                journeys
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {Object.entries(
-                                            dataSource.services
-                                        ).map(([serviceCode, lines]) =>
+                    <div className="w-full mt-4 overflow-x-auto max-h-[75vh] text-neutral-300/95">
+                        {!dataSource ? (
+                            <span className="w-full mb-5 text-sm text-center text-neutral-400">
+                                No DataSource found.
+                            </span>
+                        ) : (
+                            <table className="min-w-full mb-8 border rounded border-neutral-800">
+                                <thead className="sticky top-0 z-10 bg-neutral-900">
+                                    <tr>
+                                        <th className="px-4 py-2 text-left border-b">
+                                            service code
+                                        </th>
+                                        <th className="px-4 py-2 text-left border-b">
+                                            line
+                                        </th>
+                                        <th className="px-4 py-2 text-left border-b">
+                                            revision
+                                        </th>
+                                        <th className="px-4 py-2 text-left border-b">
+                                            start
+                                        </th>
+                                        <th className="px-4 py-2 text-left border-b">
+                                            end
+                                        </th>
+                                        <th className="px-4 py-2 text-left border-b">
+                                            modified
+                                        </th>
+                                        <th className="px-4 py-2 text-left border-b">
+                                            journeys
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {Object.entries(dataSource.services).map(
+                                        ([serviceCode, lines]) =>
                                             Object.entries(lines).map(
                                                 ([
                                                     lineName,
@@ -225,11 +223,10 @@ const DataSourcePage: React.FC = () => {
                                                         </tr>
                                                     )
                                             )
-                                        )}
-                                    </tbody>
-                                </table>
-                            )}
-                        </div>
+                                    )}
+                                </tbody>
+                            </table>
+                        )}
                     </div>
                 </>
             )}

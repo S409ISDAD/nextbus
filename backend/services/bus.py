@@ -117,6 +117,9 @@ async def fetch_buses(
         for bus in active:
             trip_id = bus.get("trip_id")
             active_by_trip.setdefault(trip_id, []).append(bus)
+    else:
+        log.debug("No active buses")
+        active = []
 
     bus_seen_counts = {bus["id"]: 0 for bus in active} if active else {}
 
@@ -476,6 +479,13 @@ async def build_bus(
 
     # Ignore buses with a delay of over 2 hours, they are likely broken down or similar
     if delay > 2 * 60 * 60:
+        log.warning(
+            f"ignoring bus with delay of {round(delay / 60)} minutes. id: {bus_id}"
+        )
+        return None
+
+    # Ignore buses more than 2 hours early, probably logged on to the wrong trip
+    if delay < -2 * 60 * 60:
         log.warning(
             f"ignoring bus with delay of {round(delay / 60)} minutes. id: {bus_id}"
         )
