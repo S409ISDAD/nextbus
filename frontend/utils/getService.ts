@@ -30,10 +30,10 @@ export const getDBService = async (service_id: string) => {
 
         var data = response.data;
 
-        if (data.outbound_description === "") {
+        const bothEmpty = data.outbound_description === "" && data.inbound_description === "";
+
+        if (bothEmpty) {
             data.outbound_description = data.destination !== "" ? `To ${data.destination}` : "Outbound";
-        }
-        if (data.inbound_description === "") {
             data.inbound_description = data.origin !== "" ? `To ${data.origin}` : "Inbound";
         }
 
