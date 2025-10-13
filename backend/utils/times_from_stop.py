@@ -1,41 +1,49 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from sqlalchemy.orm import Session
 
+from backend.config import get_logger, setup_logging
 from backend.db.db import SessionLocal
 from backend.deps import LONDON
 from backend.models import (
     Stop,
 )
+import sys
+
+from backend.utils.time_taken import time_taken
+
+log = get_logger(__name__)
 
 
 def times_from_stop(stop_id: str, db: Session, limit: int = 10):
-    # now = datetime.now(tz=LONDON)
-    now = datetime(year=2025, month=9, day=19, hour=7, minute=1, second=0, tzinfo=LONDON)
-    seconds_since_midnight = now.hour * 3600 + now.minute * 60 + now.second
-    current_time = timedelta(seconds=seconds_since_midnight)
+    now = datetime.now(tz=LONDON)
+    # now = datetime(
+    #     year=2025, month=9, day=29, hour=23, minute=2, second=0, tzinfo=LONDON
+    # )
 
-    stop = db.query(Stop).filter(Stop.atco_code == stop_id).first()
+    stop: Stop | None = db.query(Stop).filter(Stop.atco_code == stop_id).first()
     if not stop:
-        print(f"Stop with ID {stop_id} not found.")
+        log.warning(f"Stop with ID {stop_id} not found.")
         return
 
-    stop_times = stop.times_from_stop(db, date=now)
+    with time_taken("fetching stop times"):
+        stop_times = stop.times_from_stop(db, date_time=now)
 
-    # 5️⃣ Format results
     results = []
-    for st in stop_times[:limit]:
-        line_name = st.journey.line.line_name if st.journey.line else None
+    for st in stop_times:
+        line_name = st.journey.timetable.line_name if st.journey.timetable else None
         dest = st.headsign
         dep_str = st.departure_time_str
-        time_to = st.departure_time - current_time
+        time_to = st._dep_dt - now
         mins = int(time_to.total_seconds() // 60)
         if mins < 1:
             time_to_str = "due"
         elif mins < 60:
             time_to_str = f"{mins} min"
         else:
-            time_to_str = dep_str
+            time_to_str = dep_str + (
+                " (tomorrow)" if st._dep_dt.date() > now.date() else ""
+            )
         results.append((line_name, dest, time_to_str, st.journey.id))
 
     stop = db.query(Stop).filter(Stop.atco_code == stop_id).first()
@@ -44,21 +52,22 @@ def times_from_stop(stop_id: str, db: Session, limit: int = 10):
         print(f"Stop with ID {stop_id} not found.")
         return
 
-    print(
-        f"Departures from {stop.long_name}:"
-    )
+    print(f"Departures from {stop.long_name} at {now.strftime('%H:%M:%S')}:")
 
-    # 6️⃣ Print nicely
     if results:
         longest_dest = max(len(dest or "") for _, dest, _, _ in results)
         longest_line = max(len(line or "") for line, _, _, _ in results)
         for line_name, dest, dep, id in results:
-            print(f"{line_name:<{longest_line + 1}}to {dest:<{longest_dest + 2}} {dep} ({id})")
+            print(f"{line_name:<{longest_line + 1}}to {dest:<{longest_dest + 2}} {dep}")
     else:
         print("No departures found.")
 
 
 if __name__ == "__main__":
-    stop_id = "1900HA020331"
+    setup_logging()
+    if len(sys.argv) != 2:
+        log.debug("Usage: python times_from_stop.py <stop_id>")
+        exit(1)
+    stop_id = sys.argv[1]
     with SessionLocal() as db:
         times_from_stop(stop_id, db)

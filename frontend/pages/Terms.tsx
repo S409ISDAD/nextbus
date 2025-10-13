@@ -23,7 +23,7 @@ const Terms: React.FC = () => {
                     <strong>
                         <a
                             href="/data"
-                            className="underline text-sky-400 h-fit">
+                            className="underline text-link-400 h-fit">
                             Data Sources
                         </a>
                     </strong>{" "}
@@ -45,7 +45,7 @@ const Terms: React.FC = () => {
                     <strong>
                         <a
                             href="https://forms.gle/SxrFyLQ1HedQcLLC7"
-                            className="underline text-sky-500"
+                            className="underline text-link"
                             target="_blank"
                             rel="noopener noreferrer">
                             Google Form

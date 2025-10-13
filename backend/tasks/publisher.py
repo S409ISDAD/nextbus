@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from .get_departures import get_departures
 from backend.deps import DateTimeEncoder
 import logging
+import sentry_sdk
 
 log = logging.getLogger(__name__)
 
@@ -19,33 +20,34 @@ async def publish_loop(channel: str, key: str, redis: Redis):
     try:
         times = []
         while key in active[channel]:
-            start = time()
-            departures = await get_departures(key, redis)
-            duration = round(time() - start, 2)
+            with sentry_sdk.start_span(op="start_publishing", description=key):
+                start = time()
+                departures = await get_departures(key, redis)
+                duration = round(time() - start, 2)
 
-            times.append(duration)
+                times.append(duration)
 
-            avg = round(sum(times) / len(times), 2)
+                avg = round(sum(times) / len(times), 2)
 
-            if len(times) > 5:
-                times.pop()
+                if len(times) > 5:
+                    times.pop()
 
-            payload = {
-                "type": "departures",
-                "data": {
-                    "timestamp": datetime.now(timezone.utc),
-                    "buses": jsonable_encoder(departures),
-                },
-            }
+                payload = {
+                    "type": "departures",
+                    "data": {
+                        "timestamp": datetime.now(timezone.utc),
+                        "buses": jsonable_encoder(departures),
+                    },
+                }
 
-            await redis.publish(
-                f"stop:departures:{key}", json.dumps(payload, cls=DateTimeEncoder)
-            )
-            await redis.set(
-                f"stop:departures:{key}",
-                json.dumps(payload, cls=DateTimeEncoder),
-                ex=40,
-            )
+                await redis.publish(
+                    f"stop:departures:{key}", json.dumps(payload, cls=DateTimeEncoder)
+                )
+                await redis.set(
+                    f"stop:departures:{key}",
+                    json.dumps(payload, cls=DateTimeEncoder),
+                    ex=40,
+                )
 
             await asyncio.sleep(20 - avg)
     except asyncio.CancelledError:

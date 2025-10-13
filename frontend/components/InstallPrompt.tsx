@@ -42,7 +42,7 @@ function InstallToast() {
                         </span>
                         <div className="flex w-full gap-2">
                             <button
-                                className="w-full px-3 py-1 text-sm font-medium rounded-lg cursor-pointer hover:bg-blue-600"
+                                className="w-full px-3 py-1 text-sm font-medium rounded-lg cursor-pointer hover:bg-primary"
                                 style={{ background: "#2563eb", color: "#fff" }}
                                 onClick={async () => {
                                     deferredPrompt.prompt();
@@ -57,7 +57,7 @@ function InstallToast() {
                                 Install
                             </button>
                             <button
-                                className="w-full px-3 py-1 text-sm font-medium rounded-lg cursor-pointer hover:bg-blue-600"
+                                className="w-full px-3 py-1 text-sm font-medium rounded-lg cursor-pointer hover:bg-primary"
                                 style={{
                                     background: "#414141FF",
                                     color: "#fff",

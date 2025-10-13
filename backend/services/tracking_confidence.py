@@ -22,16 +22,32 @@ diversion_weight = 0.1
 broken_tracking_weight = 0.1
 
 
-async def calculate_confidence(delay: int, location: list[float], journey_id: int,  trip_id: int, redis: Redis):
+async def calculate_confidence(
+    delay: int, location: list[float], journey_id: int, trip_id: int, redis: Redis
+):
     trip = await get_trip(trip_id, delay, redis)
     live_journey = await get_live_journey(journey_id, redis)
+    if not trip or not live_journey:
+        return Confidence(
+            final_confidence=0,
+            broken_down_confidence=0,
+            log_off_confidence=0,
+            diversion_confidence=0,
+            broken_tracking_confidence=0,
+        )
 
     broken_down_confidence = check_broken_down(live_journey, delay)
     log_off_confidence = check_log_off(trip, live_journey)
     diversion_confidence = check_diversion(trip, live_journey, delay)
     broken_tracking_confidence = check_broken_tracking(trip, live_journey, delay)
 
-    final_confidence: float = min(broken_tracking_confidence + diversion_confidence + log_off_confidence + broken_down_confidence, 1)
+    final_confidence: float = min(
+        broken_tracking_confidence
+        + diversion_confidence
+        + log_off_confidence
+        + broken_down_confidence,
+        1,
+    )
 
     return Confidence(
         final_confidence=final_confidence,
@@ -67,7 +83,9 @@ def check_log_off(trip: Trip, live_journey: LiveJourney) -> float:
     if len(live_journey.locations) < 2:
         return 0.0
 
-    if ended_ago.total_seconds() < 60 * 15: # if it hasn't ended yet, we don't need to check
+    if (
+        ended_ago.total_seconds() < 60 * 15
+    ):  # if it hasn't ended yet, we don't need to check
         return 0.0
 
     last_locs = live_journey.generate_location_history()[-5:]
@@ -77,7 +95,7 @@ def check_log_off(trip: Trip, live_journey: LiveJourney) -> float:
 
     diffs = []
 
-    fwd_dist = 50 # meters ahead to calculate bearing
+    fwd_dist = 50  # meters ahead to calculate bearing
 
     for loc, heading in zip(last_locs, last_headings):
         p = Point(loc)
@@ -107,10 +125,10 @@ def check_log_off(trip: Trip, live_journey: LiveJourney) -> float:
 
 def check_diversion(trip: Trip, live_journey: LiveJourney, delay) -> float:
     """
-        Return confidence of diversion if similarity is less than 92%
-        :param trip:
-        :param live_journey:
-        :return float:
+    Return confidence of diversion if similarity is less than 92%
+    :param trip:
+    :param live_journey:
+    :return float:
     """
     if len(live_journey.locations) < 8:
         return 0.0
@@ -125,7 +143,12 @@ def check_diversion(trip: Trip, live_journey: LiveJourney, delay) -> float:
     if ended_ago.total_seconds() > 60 * 15:  # trip has ended, no need to check
         return 0.0
 
-    loc_history = LineString(live_journey.generate_location_history(exclude_start=True))
+    hist = live_journey.generate_location_history(exclude_start=True)
+
+    if len(hist) < 5:
+        return 0.0
+
+    loc_history = LineString(hist)
     track = LineString(trip.generate_full_track())
     similarity = track_location_similarity(track, loc_history)
 
@@ -150,7 +173,7 @@ def check_broken_tracking(trip: Trip, live_journey: LiveJourney, delay) -> float
 
     ended_ago = now - (end_time + timedelta(seconds=delay_secs))
 
-    if started_ago.total_seconds() < 60 * 5: # dont bother if started recently
+    if started_ago.total_seconds() < 60 * 5:  # dont bother if started recently
         log.debug("Started recently, skipping")
         return 0.0
 
@@ -162,17 +185,27 @@ def check_broken_tracking(trip: Trip, live_journey: LiveJourney, delay) -> float
         log.debug("Not enough locations, skipping")
         return 0.0
 
-    loc_history = LineString(live_journey.generate_location_history(exclude_start=True))
+    live = live_journey.generate_location_history(exclude_start=True)
+
+    if len(live) < 5:
+        log.debug("Not enough locations after excluding start, skipping")
+        return 0.0
+
+    loc_history = LineString(live)
     track = LineString(trip.generate_full_track())
     similarity = track_location_similarity(track, loc_history)
 
     total_dist = geod.geometry_length(track)
 
+    if total_dist == 0:
+        log.debug("Total distance of track is zero, skipping")
+        return 0.0
+
     dist_moved = geod.geometry_length(loc_history)
 
     completion = dist_moved / total_dist
 
-    return 1-(similarity * 1- completion/10)
+    return 1 - (similarity * 1 - completion / 10)
 
 
 def track_location_similarity(track: LineString, locations: LineString) -> float:
@@ -181,7 +214,11 @@ def track_location_similarity(track: LineString, locations: LineString) -> float
     for lon, lat in locations.coords:
         p = Point(lon, lat)
         nearest_point = track.interpolate(track.project(p))  # closest point on route
-        d = geodesic((lat, lon), (nearest_point.y, nearest_point.x)).meters # distance to the closest point
+        if nearest_point is None or nearest_point.is_empty:
+            continue
+        d = geodesic(
+            (lat, lon), (nearest_point.y, nearest_point.x)
+        ).meters  # distance to the closest point
         deviation.append(d)
 
     total_deviation = sum(deviation)

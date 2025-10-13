@@ -1,71 +1,80 @@
-import DeparturePage from "../pages/DeparturePage";
-import DepartureScreen from "../pages/DepartureScreen";
+import DeparturePage from "../pages/bus/DeparturePage.tsx";
+import DepartureScreen from "../pages/bus/DepartureScreen.tsx";
 import Home from "../pages/Home";
-import JourneyPage from "../pages/JourneyPage";
+import LiveJourneyPage from "../pages/bus/LiveJourneyPage.tsx";
 import PrivacyPolicy from "../pages/Privacy";
 import Terms from "../pages/Terms";
 import Data from "../pages/Data";
-import BusPage from "../pages/BusPage";
-import ServicePage from "../pages/ServicePage";
-import LinePage from "../pages/LinePage";
+import BusPage from "../pages/bus/BusPage.tsx";
+import ServicePage from "../pages/bus/ServicePage.tsx";
 import Layout from "../components/Layout";
-import StationPage from "../pages/StationPage";
-import TrainPage from "../pages/TrainPage";
+import StationPage from "../pages/train/StationPage.tsx";
+import TrainPage from "../pages/train/TrainPage.tsx";
 import NotFound from "../pages/NotFound";
 import StatsPage from "../pages/Stats";
-import TrainSearchPage from "../pages/TrainSearchPage";
-import TrainsDashboard from "../pages/Trains";
-import {BrowserRouter, Route, Routes, useLocation} from "react-router";
-import toast, {Toaster} from "react-hot-toast";
-import {faXmark} from "@fortawesome/free-solid-svg-icons";
-import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
+import TrainSearchPage from "../pages/train/TrainSearchPage.tsx";
+import TrainsDashboard from "../pages/train/Trains.tsx";
+import { BrowserRouter, Route, Routes } from "react-router";
+import toast, { Toaster } from "react-hot-toast";
 import useReloadPrompt from "../components/ReloadPrompt";
 import InstallToast from "../components/InstallPrompt";
 import useLocalStorageState from "use-local-storage-state";
 import version from "../utils/version";
-import {useShowAppNav} from "../utils/AppNav";
-import {MotionConfig} from "framer-motion";
+import { useShowAppNav } from "../utils/AppNav";
+import { MotionConfig } from "framer-motion";
 import SearchPage from "../pages/Search";
+import RegionsPage from "../pages/places/Regions.tsx";
+import RegionPage from "../pages/places/Region.tsx";
+import AdminAreaPage from "../pages/places/AdminArea.tsx";
+import DistrictPage from "../pages/places/District.tsx";
+import LocalityPage from "../pages/places/Locality.tsx";
+import SourcesPage from "../pages/Sources.tsx";
+import DataSourcePage from "../pages/DataSource.tsx";
 
-import {useEffect, useState} from "react";
-import {Dialog, DialogBackdrop, DialogPanel, DialogTitle,} from "@headlessui/react";
+import { useEffect, useState } from "react";
+import {
+    Dialog,
+    DialogBackdrop,
+    DialogPanel,
+    DialogTitle,
+} from "@headlessui/react";
 import Map from "../components/Map";
 import PossibleJourneysPage from "../pages/PossibleJourneysPage.tsx";
 
-function UsefulBanner() {
-    const location = useLocation();
-    const [visible, setVisible] = useState(true);
-    const showAppNav = useShowAppNav();
+// function UsefulBanner() {
+//     const location = useLocation();
+//     const [visible, setVisible] = useState(true);
+//     const showAppNav = useShowAppNav();
 
-    useEffect(() => {
-        setVisible(true);
-    }, []);
+//     useEffect(() => {
+//         setVisible(true);
+//     }, []);
 
-    if (location.pathname === "/" || !visible) return null;
-    return (
-        <div
-            className={`fixed flex gap-2 items-center justify-center p-3 transform -translate-x-1/2 bg-neutral-800 shadow-lg z-[99999] ${
-                showAppNav ? "bottom-19" : "bottom-4"
-            } left-1/2 rounded-2xl`}>
-            <span className="text-center text-gray-200 text-nowrap">
-                Finding this useful?{" "}
-                <a
-                    href="https://forms.gle/SxrFyLQ1HedQcLLC7"
-                    className="underline text-sky-500"
-                    target="_blank"
-                    rel="noopener noreferrer">
-                    Help improve it!
-                </a>
-            </span>
-            <button
-                className="flex items-center justify-center px-2 cursor-pointer aspect-square bg-neutral-900/50 rounded-2xl hover:bg-neutral-900"
-                onClick={() => setVisible(false)}>
-                {" "}
-                <FontAwesomeIcon icon={faXmark} size="sm" />
-            </button>
-        </div>
-    );
-}
+//     if (location.pathname === "/" || !visible) return null;
+//     return (
+//         <div
+//             className={`fixed flex gap-2 items-center justify-center p-3 transform -translate-x-1/2 bg-neutral-800 shadow-lg z-[99999] ${
+//                 showAppNav ? "bottom-19" : "bottom-4"
+//             } left-1/2 rounded-2xl`}>
+//             <span className="text-center text-gray-200 text-nowrap">
+//                 Finding this useful?{" "}
+//                 <a
+//                     href="https://forms.gle/SxrFyLQ1HedQcLLC7"
+//                     className="underline text-link"
+//                     target="_blank"
+//                     rel="noopener noreferrer">
+//                     Help improve it!
+//                 </a>
+//             </span>
+//             <button
+//                 className="flex items-center justify-center px-2 cursor-pointer aspect-square bg-neutral-900/50 rounded-2xl hover:bg-neutral-900"
+//                 onClick={() => setVisible(false)}>
+//                 {" "}
+//                 <FontAwesomeIcon icon={faXmark} size="sm" />
+//             </button>
+//         </div>
+//     );
+// }
 
 function App() {
     const [isOpen, setIsOpen] = useState(false);
@@ -164,7 +173,7 @@ function App() {
                                     </p>
                                     <div className="mt-4">
                                         <div
-                                            className="inline-flex cursor-pointer items-center gap-2 rounded-md bg-blue-600 px-3 py-1.5 text-sm/6 font-semibold text-white  transition-all focus:not-data-focus:outline-none hover:bg-blue-700 data-focus:outline data-focus:outline-white data-hover:bg-gray-600 data-open:bg-gray-700"
+                                            className="inline-flex cursor-pointer items-center gap-2 rounded-md bg-primary px-3 py-1.5 text-sm/6 font-semibold text-white  transition-all focus:not-data-focus:outline-none hover:bg-primary-700 data-focus:outline data-focus:outline-white data-hover:bg-gray-600 data-open:bg-gray-700"
                                             onClick={() => setIsOpen(false)}>
                                             Got it, thanks!
                                         </div>
@@ -173,7 +182,7 @@ function App() {
                             </div>
                         </div>
                     </Dialog>
-                    <UsefulBanner />
+                    {/* <UsefulBanner /> */}
                     <Routes>
                         <Route element={<Layout />}>
                             <Route path="*" element={<NotFound />} />
@@ -190,10 +199,32 @@ function App() {
                                 element={<SearchPage />}
                             />
                             <Route path="/map" element={<Map />} />
+                            <Route path="/regions" element={<RegionsPage />} />
+                            <Route
+                                path="/region/:region_id"
+                                element={<RegionPage />}
+                            />
+                            <Route
+                                path="/adminarea/:admin_area_id"
+                                element={<AdminAreaPage />}
+                            />
+                            <Route
+                                path="/district/:district_id"
+                                element={<DistrictPage />}
+                            />
+                            <Route
+                                path="/locality/:locality_id"
+                                element={<LocalityPage />}
+                            />
+                            <Route path="/sources" element={<SourcesPage />} />
+                            <Route
+                                path="/sources/:source_id"
+                                element={<DataSourcePage />}
+                            />
                             <Route path="/buses" element={<BusPage />} />
                             <Route
                                 path="/buses/journeysearch/:locality/:datetime?"
-                                element={<PossibleJourneysPage/>}
+                                element={<PossibleJourneysPage />}
                             />
                             <Route
                                 path="/buses/stops/:stop_id"
@@ -201,15 +232,11 @@ function App() {
                             />
                             <Route
                                 path="/buses/:bus_id"
-                                element={<JourneyPage />}
+                                element={<LiveJourneyPage />}
                             />
                             <Route
                                 path="buses/services/:service_id"
                                 element={<ServicePage />}
-                            />
-                            <Route
-                                path="buses/lines/:line_id"
-                                element={<LinePage />}
                             />
                             <Route
                                 path="/trains"

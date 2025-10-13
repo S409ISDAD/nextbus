@@ -1,3 +1,4 @@
+@import url("https://fonts.googleapis.com/css2?family=Creepster:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&display=swap");
 @import "tailwindcss";
 
 :root {
@@ -15,8 +16,50 @@
     -moz-osx-font-smoothing: grayscale;
 }
 
+.spooky-font {
+    font-family: "Creepster", system-ui;
+    font-weight: 400;
+    font-style: normal;
+}
+
+:root[data-theme="blue"] {
+    --color-primary-300: #8ec5ff;
+    --color-primary-400: #51a2ff;
+    --color-primary-500: #2b7fff;
+    --color-primary: #155dfc;
+    --color-primary-700: #1447e6;
+    --color-link: #00a6f4;
+    --color-link-400: #00bcff;
+    --shadow-primary: rgba(43, 127, 255, 0.5);
+    --shadow-primary-hover: rgba(43, 127, 255, 0.6);
+}
+
+:root[data-theme="orange"] {
+    --color-primary-300: #ffb86a;
+    --color-primary-400: #ff8904;
+    --color-primary-500: #615fff;
+    --color-primary: #f54900;
+    --color-primary-700: #e74d06;
+    --color-link: #7876fd;
+    --color-link-400: #7876fd;
+    --shadow-primary: rgba(97, 95, 255, 0.5);
+    --shadow-primary-hover: rgba(97, 95, 255, 0.6);
+}
+
+@theme {
+    --color-primary-300: var(--color-primary-300);
+    --color-primary-400: var(--color-primary-400);
+    --color-primary-500: var(--color-primary-500);
+    --color-primary: var(--color-primary);
+    --color-primary-700: var(--color-primary-700);
+    --color-link: var(--color-link);
+    --color-link-400: var(--color-link-400);
+    --shadow-primary: var(--shadow-primary);
+    --shadow-primary-hover: var(--shadow-primary-hover);
+}
+
 .button {
-    @apply w-full p-2 px-5 font-semibold text-white transition-all bg-blue-600 cursor-pointer rounded-xl hover:bg-blue-700;
+    @apply w-full p-2 px-5 font-semibold text-white transition-all cursor-pointer bg-primary rounded-xl hover:bg-primary-700;
 }
 
 html,

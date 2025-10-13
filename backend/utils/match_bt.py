@@ -1,11 +1,12 @@
 from sqlalchemy import func, or_
-from backend.models import Journey, Line, Service
+from backend.models import Journey, Service
 from sqlalchemy.orm import Session
 from backend.services.journeys import get_trip
 from backend.services.services import get_service_info
 import logging
 
 log = logging.getLogger(__name__)
+
 
 def fuzzy_search_service(query, db, limit=10, threshold=0.2):
     return (
@@ -27,11 +28,11 @@ def fuzzy_search_service(query, db, limit=10, threshold=0.2):
     )
 
 
-async def match_service_line(db: Session, service_id: int, r) -> Line | None:
+async def match_service(db: Session, service_id: int, r) -> Service | None:
     # try to find a matching Line in our DB for this service_id
-    line = db.query(Line).filter(Line.bt_service_id == service_id).first()
-    if line:
-        return line
+    db_service = db.query(Service).filter(Service.bt_service_id == service_id).first()
+    if db_service:
+        return db_service
 
     # if no match by bt_service_id, try to match with other parameters
     service = await get_service_info(service_id, r)
@@ -45,24 +46,26 @@ async def match_service_line(db: Session, service_id: int, r) -> Line | None:
             db_service = db_service[0]
             line_ids = db_service.line_names.split(", ")
             log.debug(db_service.service_code)
-            line = (
-                db.query(Line)
-                .filter(Line.service_code == db_service.service_code)
-                .filter(Line.line_name.in_(line_ids))
+            db_service = (
+                db.query(Service)
+                .filter(Service.service_code == db_service.service_code)
+                .filter(Service.line_name.in_(line_ids))
                 .first()
             )
-        if line:
+        if db_service:
             log.debug(
-                f"Matched service {service_id} to line {line.line_name} via fuzzy search"
+                f"Matched service {service_id} to db {db_service.id} via fuzzy search"
             )
-            line.bt_service_id = service_id
+            db_service.bt_service_id = service_id
             db.commit()
-            return line
+            return db_service
     return None
 
 
 async def match_trip_journey(db: Session, trip_id: int, r) -> Journey | None:
-    # try to find a matching Line in our DB for this service_id
+    # try to find a matching journey in our DB for this trip_id
+    if not trip_id:
+        return None
     journey = db.query(Journey).filter(Journey.bt_trip_id == trip_id).first()
     if journey:
         return journey

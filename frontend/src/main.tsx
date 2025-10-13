@@ -5,4 +5,5 @@ import "leaflet/dist/leaflet.css";
 import "@fortawesome/fontawesome-free/css/all.min.css";
 import App from "./App.tsx";
 
+document.documentElement.setAttribute("data-theme", "orange");
 createRoot(document.getElementById("root")!).render(<App />);

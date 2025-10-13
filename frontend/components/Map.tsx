@@ -12,9 +12,9 @@ import { useShowAppNav } from "../utils/AppNav";
 import type { MapBus } from "../models/Bus";
 import getLivery from "../utils/getLivery";
 import { SHOW_BUSES } from "../src/settings";
-import {useNavigate} from "react-router";
-import {TimeSince} from "./ui/TimeSince.tsx";
-import parse from 'html-react-parser';
+import { useNavigate } from "react-router";
+import { TimeSince } from "./ui/TimeSince.tsx";
+import parse from "html-react-parser";
 
 type Stop = {
     stop_id: string;
@@ -40,6 +40,7 @@ const MapView: React.FC<MapViewProps> = ({
     onBoundsChange,
 }) => {
     const [zoom, setZoom] = useState(9);
+    const geoLocateRef = useRef<any>(null);
 
     const showAppNav = useShowAppNav();
 
@@ -113,10 +114,16 @@ const MapView: React.FC<MapViewProps> = ({
                 //         },
                 //     ],
                 // }}
-                onMoveEnd={handleMove}>
+                onMoveEnd={handleMove}
+                onLoad={() => {
+                    if (geoLocateRef.current) {
+                        geoLocateRef.current.trigger();
+                    }
+                }}>
                 <NavigationControl position="top-right" />
 
                 <GeolocateControl
+                    ref={geoLocateRef}
                     position="top-right"
                     trackUserLocation={true}
                     showAccuracyCircle={true}
@@ -140,7 +147,7 @@ const MapView: React.FC<MapViewProps> = ({
                                         </span>
                                         <a
                                             href={`/buses/stops/${stop.stop_id}`}
-                                            className="text-xs text-sky-400 hover:underline">
+                                            className="text-xs text-link-400 hover:underline">
                                             View Stop
                                         </a>
                                     </div>
@@ -148,7 +155,7 @@ const MapView: React.FC<MapViewProps> = ({
                             });
                         }}>
                         <i
-                            className={`text-blue-500 fas ${
+                            className={`text-primary-500 fas ${
                                 stop.bearing
                                     ? "fa-location-dot scale-130"
                                     : "fa-circle-dot"
@@ -168,16 +175,17 @@ const MapView: React.FC<MapViewProps> = ({
                         longitude={bus.coords[1]}
                         latitude={bus.coords[0]}
                         anchor="center"
-                        onClick={(e) =>{
+                        onClick={(e) => {
                             e.originalEvent.stopPropagation();
                             setPopup({
                                 lngLat: [bus.coords[1], bus.coords[0]],
                                 content: (
                                     <div className="flex flex-col font-bold text-white bg-[#222]">
-                                        <span className="text-sky-500 underline cursor-pointer"
-                                        onClick={() =>
-                                            navigate(`/buses/${bus.id}`)
-                                        }>
+                                        <span
+                                            className="underline cursor-pointer text-link"
+                                            onClick={() =>
+                                                navigate(`/buses/${bus.id}`)
+                                            }>
                                             {bus.service.line_name} to{" "}
                                             {bus.destination}
                                         </span>
@@ -187,10 +195,13 @@ const MapView: React.FC<MapViewProps> = ({
                                         <span className="text-xs font-normal text-gray-400">
                                             {parse(bus.vehicle.features)}
                                         </span>
-                                            <TimeSince className="text-xs text-gray-300" time={bus.updated} />
+                                        <TimeSince
+                                            className="text-xs text-gray-300"
+                                            time={bus.updated}
+                                        />
                                     </div>
                                 ),
-                            })
+                            });
                         }}>
                         <div
                             style={{
@@ -250,12 +261,16 @@ const Map: React.FC = () => {
     // useEffect(() => {
     //     if (navigator.geolocation) {
     //         navigator.geolocation.getCurrentPosition(
-    //             (pos) => setCenter([pos.coords.latitude, pos.coords.longitude]),
+    //             (pos) =>
+    //                 mapRef.current?.setCenter([
+    //                     pos.coords.latitude,
+    //                     pos.coords.longitude,
+    //                 ]),
     //             () => {},
-    //             { enableHighAccuracy: true, timeout: 10000 }
+    //             { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
     //         );
     //     }
-    // }, []);
+    // }, [mapRef]);
 
     const fetchStops = useCallback(async (bounds: maplibregl.LngLatBounds) => {
         setLoading(true);

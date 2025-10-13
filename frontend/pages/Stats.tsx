@@ -168,12 +168,12 @@ const StatsPage: React.FC = () => {
 
     return (
         <div className="flex items-center justify-center w-full h-full">
-            <div className="flex flex-col items-center justify-center w-full md:w-[80vw] gap-4 pt-0 p-3 h-fit">
-                <div className="flex flex-row items-center gap-1">
+            <div className="flex flex-col  items-center justify-center w-full md:w-[80vw] gap-4 pt-0 p-3 h-fit">
+                <div className="flex flex-row items-center gap-1 spooky-font">
                     <span className="text-5xl font-black text-center pt-7">
                         nextbus
                     </span>
-                    <span className="text-xl font-bold h-fit text-sky-500">
+                    <span className="text-xl font-bold h-fit text-link">
                         stats
                     </span>
                 </div>
@@ -188,7 +188,7 @@ const StatsPage: React.FC = () => {
                 </div>
                 <div className="flex flex-wrap items-center justify-center w-full gap-4 mb-4">
                     <div className="flex flex-col items-center p-4 shadow w-50 bg-neutral-800/50 rounded-xl">
-                        <span className="text-3xl font-bold text-sky-400">
+                        <span className="text-3xl font-bold text-link-400">
                             {stats?.unique_active ?? "--"}
                         </span>
                         <span className="mt-1 text-sm text-neutral-400">

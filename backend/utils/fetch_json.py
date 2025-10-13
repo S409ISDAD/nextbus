@@ -22,12 +22,19 @@ if ENVIRONMENT == "production":
 auth = aiohttp.BasicAuth(RTT_USERNAME, RTT_PASSWORD)
 
 
+timeout = aiohttp.ClientTimeout(total=20)
+
+
 async def fetch_json(url) -> dict | None:
     async with aiohttp.ClientSession() as session:
         async with session.get(
-            url, headers={"Accept": "application/json"}, ssl=ssl_context
+            url,
+            headers={"Accept": "application/json", "User-Agent": "nextbus/1.0"},
+            ssl=ssl_context,
+            timeout=timeout,
         ) as response:
             if response.status != 200:
+                log.error(f"API failed: {response.status} for URL {url}")
                 return None
             return await response.json()
 
@@ -35,7 +42,10 @@ async def fetch_json(url) -> dict | None:
 async def fetch_rtt_json(url: str) -> dict | None:
     async with aiohttp.ClientSession(auth=auth) as session:
         async with session.get(
-            url, headers={"Accept": "application/json"}, ssl=ssl_context
+            url,
+            headers={"Accept": "application/json", "User-Agent": "nextbus/1.0"},
+            ssl=ssl_context,
+            timeout=timeout,
         ) as response:
             if response.status != 200 or "error" in (await response.json()):
                 log.error(f"RTT API failed: {response.status}")

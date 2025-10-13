@@ -1,7 +1,6 @@
 import asyncio
 import logging
 import time
-from logging.config import dictConfig
 from contextlib import asynccontextmanager
 from datetime import timedelta, timezone, datetime
 
@@ -29,8 +28,10 @@ from backend.api.routes import (
     trains,
     journey_planning,
     places,
+    timetable,
+    sources,
 )
-from backend.config import config, LOGGING_CONFIG, setup_logging
+from backend.config import config, setup_logging
 from backend.db.db import SessionLocal, get_db
 from backend.deps import (
     floor_to_30s,
@@ -41,6 +42,7 @@ from backend.deps import (
 )
 from backend.models import ActiveUsersSnapshot
 from backend.tasks.import_all_datasets import import_datasets, import_weekly_data
+from backend.tasks.reset_bt_trip_ids import reset_trip_ids
 from backend.websockets.routes import ws_router
 
 setup_logging()
@@ -72,9 +74,7 @@ async def record_snapshot(redis):
                     db.query(ActiveUsersSnapshot).filter_by(timestamp=timestamp).first()
                 )
                 if not exists:
-                    log.debug(
-                        f"Logging {unique} active users at {timestamp.isoformat()}"
-                    )
+                    log.debug(f"Logging {unique} active users")
                     db.add(
                         ActiveUsersSnapshot(
                             total_connections=total,
@@ -111,8 +111,8 @@ async def lifespan(app: FastAPI):
     else:
         log.debug("This instance is not the leader.")
 
-    scheduler = AsyncIOScheduler()
     if is_leader:
+        scheduler = AsyncIOScheduler()
         scheduler.add_job(
             record_snapshot,
             CronTrigger(second="0,30"),  # run every 30 seconds
@@ -134,6 +134,12 @@ async def lifespan(app: FastAPI):
             replace_existing=True,
         )
         scheduler.add_job(
+            reset_trip_ids,
+            CronTrigger(hour="1", minute="55", second="0"),  # daily at 1:55am
+            id="reset_trip_ids",
+            replace_existing=True,
+        )
+        scheduler.add_job(
             import_weekly_data,
             CronTrigger(
                 day_of_week="0", hour="5", minute="30", second="0"
@@ -141,7 +147,9 @@ async def lifespan(app: FastAPI):
             id="import_weekly_data",
             replace_existing=True,
         )
-    scheduler.start()
+        scheduler.start()
+    else:
+        scheduler = None
     log.info("App startup complete.")
 
     # log.debug("Starting full import...")
@@ -152,29 +160,30 @@ async def lifespan(app: FastAPI):
     finally:
         if is_leader:
             await redis.delete("app:leader")
-        scheduler.shutdown(wait=False)
+        if scheduler:
+            scheduler.shutdown(wait=False)
 
 
-if config.env != "development":
-    sentry_sdk.init(
-        dsn="https://3da698c3793790b5233cb0a4a72d017f@o4509935722889216.ingest.de.sentry.io/4509935731277904",
-        # Add data like request headers and IP for users,
-        # see https://docs.sentry.io/platforms/python/data-management/data-collected/ for more info
-        integrations=[
-            SqlalchemyIntegration(),
-        ],
-        environment=config.env,
-        send_default_pii=True,
-        # Set traces_sample_rate to 1.0 to capture 100%
-        # of transactions for tracing.
-        traces_sample_rate=0.2,
-        # Set profile_session_sample_rate to 1.0 to profile 100%
-        # of profile sessions.
-        profile_session_sample_rate=0.1,
-        # Set profile_lifecycle to "trace" to automatically
-        # run the profiler on when there is an active transaction
-        profile_lifecycle="trace",
-    )
+# if config.env != "development":
+sentry_sdk.init(
+    dsn="https://3da698c3793790b5233cb0a4a72d017f@o4509935722889216.ingest.de.sentry.io/4509935731277904",
+    # Add data like request headers and IP for users,
+    # see https://docs.sentry.io/platforms/python/data-management/data-collected/ for more info
+    integrations=[
+        SqlalchemyIntegration(),
+    ],
+    environment=config.env,
+    send_default_pii=True,
+    # Set traces_sample_rate to 1.0 to capture 100%
+    # of transactions for tracing.
+    traces_sample_rate=0.2,
+    # Set profile_session_sample_rate to 1.0 to profile 100%
+    # of profile sessions.
+    profile_session_sample_rate=0.1,
+    # Set profile_lifecycle to "trace" to automatically
+    # run the profiler on when there is an active transaction
+    profile_lifecycle="trace",
+)
 
 log.info(f"running in {config.env} mode")
 app = FastAPI(lifespan=lifespan, redirect_slashes=False)
@@ -239,3 +248,5 @@ app.include_router(stats.router, prefix="/api/v1/stats")
 app.include_router(search.router, prefix="/api/v1/search")
 app.include_router(journey_planning.router, prefix="/api/v1/planning")
 app.include_router(places.router, prefix="/api/v1/places")
+app.include_router(timetable.router, prefix="/api/v1/timetable")
+app.include_router(sources.router, prefix="/api/v1/sources")

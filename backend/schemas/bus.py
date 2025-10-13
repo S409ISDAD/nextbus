@@ -19,6 +19,7 @@ class ScheduledBus(BaseModel):
     started: bool
     trip: int
     status: str
+    source: str  # "api" or "db"
 
 
 class TrackedBus(BaseModel):
@@ -50,3 +51,4 @@ class TrackedBus(BaseModel):
     confidence: Confidence
     coords: list[float]
     status: str
+    source: str  # "api" or "db"

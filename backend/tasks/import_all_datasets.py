@@ -1,11 +1,14 @@
 import asyncio
+from datetime import datetime
+import time
 
 from backend.config import setup_logging, get_logger
 from backend.db.db import SessionLocal
-from backend.deps import STATIC_DATA_DIR
+from backend.deps import LONDON, STATIC_DATA_DIR
 from backend.models import DataSource
+from backend.services.publish_message import queue_import_message
 from backend.tasks import import_nptg, import_naptan, import_holidays
-from backend.tasks.import_txc import import_datasource
+from backend.tasks.import_txc_new import import_datasource, Statistics
 
 log = get_logger(__name__)
 
@@ -23,12 +26,47 @@ async def import_weekly_data():
 
 async def import_datasets():
     log.debug("running dataset import...")
+    start = time.time()
+    full_stats = Statistics()
     with SessionLocal() as db:
         datasource_ids = [id[0] for id in db.query(DataSource.id).all()]
     for id in datasource_ids:
-        await import_datasource(id, STATIC_DATA_DIR)
+        stats = await import_datasource(id, STATIC_DATA_DIR)
+
+        if stats:
+            full_stats += stats
 
     log.debug("dataset import complete.")
+    import_time = time.time() - start
+
+    for item in full_stats.output():
+        log.debug(item)
+
+    hours, rem = divmod(import_time, 3600)
+    mins, secs = divmod(rem, 60)
+    time_str = (
+        f"{int(hours)}h {int(mins)}m {secs:.2f}s"
+        if hours
+        else f"{int(mins)}m {secs:.2f}s"
+        if mins
+        else f"{secs:.2f}s"
+    )
+    log.debug(f"Total import time: {time_str}")
+
+    await queue_import_message(import_time, full_stats)
+
+    log_dir = STATIC_DATA_DIR / "logs"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    log_file = log_dir / "full_import.log"
+    with log_file.open("w") as f:
+        f.write(
+            f"Full import statistics ({datetime.now(tz=LONDON).strftime('%d/%m/%Y, %H:%M:%S')}):\n"
+        )
+
+        for item in full_stats.output():
+            f.write(f"{item}\n")
+
+        f.write(f"Total import time: {time_str}\n")
 
 
 if __name__ == "__main__":

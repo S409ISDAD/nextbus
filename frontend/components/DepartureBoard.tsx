@@ -1,13 +1,13 @@
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { isTrackedBus, type Departure } from "../models/Bus";
 import fetchDepartures, { parseDepartures } from "../utils/getDepartures";
 import { useNavigate } from "react-router";
 import timeTo, { lateness, toTime } from "../utils/timeUtils";
 import { Card } from "./ui/Card";
-import { getClosestStop } from "../utils/closestStop";
+import { getClosestStops } from "../utils/closestStop";
 import { getCurrentPosition } from "../utils/locations";
 import getStopData from "../utils/getStopData";
-import type { Stop } from "../models/Stop";
+import type { BTStop } from "../models/Stop";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -17,6 +17,14 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import clsx from "clsx";
 import { WebSocketManager } from "../websockets/ws_manager";
+import {
+    Transition,
+    TransitionChild,
+    Dialog,
+    DialogPanel,
+    DialogTitle,
+    Description,
+} from "@headlessui/react";
 
 interface Props {
     stop_id: string;
@@ -26,27 +34,35 @@ interface Props {
 
 function BusCard({
     bus,
-    onClick,
     gettingLiveData,
 }: {
     bus: Departure;
-    onClick: () => void;
     gettingLiveData: boolean;
 }) {
-        const [trackingBroken, setTrackingBroken] = useState(false);
+    const [trackingBroken, setTrackingBroken] = useState(false);
     const [notLoggedOff, setNotLoggedOff] = useState(false);
     const [brokenDown, setBrokenDown] = useState(false);
     const [isOnDiversion, setIsOnDiversion] = useState(false);
+    const [showExternalDialog, setShowExternalDialog] = useState(false);
+    const [externalUrl, setExternalUrl] = useState<string | null>(null);
+
+    const navigate = useNavigate();
 
     useEffect(() => {
         setTrackingBroken(false);
         setBrokenDown(false);
         setNotLoggedOff(false);
         setIsOnDiversion(false);
-        if (isTrackedBus(bus) && bus.confidence.broken_tracking_confidence >= 0.65) {
+        if (
+            isTrackedBus(bus) &&
+            bus.confidence.broken_tracking_confidence >= 0.65
+        ) {
             setTrackingBroken(true);
         }
-        if (isTrackedBus(bus) && bus.confidence.broken_down_confidence >= 0.65) {
+        if (
+            isTrackedBus(bus) &&
+            bus.confidence.broken_down_confidence >= 0.65
+        ) {
             setBrokenDown(true);
         }
         if (isTrackedBus(bus) && bus.confidence.log_off_confidence >= 0.65) {
@@ -54,168 +70,256 @@ function BusCard({
         }
         if (isTrackedBus(bus) && bus.confidence.diversion_confidence >= 0.65) {
             setIsOnDiversion(true);
-        }}, [bus]);
-    return (
-        <div
-            className={clsx(
-                "cursor-pointer",
-                isTrackedBus(bus) && (bus.delay >= 2700 || trackingBroken || brokenDown || notLoggedOff) && "opacity-75"
-            )}
-            key={bus.trip}
-            onClick={onClick}>
-            <div className="flex flex-row items-center justify-between gap-2">
-                <div className="flex flex-col justify-around">
-                    <div className="flex flex-row items-stretch mb-1">
-                        <div className="flex items-center px-2 bg-blue-700 rounded-l-2xl">
-                            <span className="flex items-center justify-center text-lg font-bold text-center">
-                                {isTrackedBus(bus)
-                                    ? bus.service.line_name
-                                    : bus.line}
-                            </span>
-                        </div>
-                        <div className="flex flex-col justify-center px-2 bg-neutral-800/50 rounded-r-2xl">
-                            <span className="font-semibold text">
-                                {bus.destination}
-                            </span>
-                        </div>
-                    </div>
-                    {isTrackedBus(bus) && bus.delay >= 2700 && (
-                        <div className="flex items-center gap-1 text-xs ">
-                            <FontAwesomeIcon
-                                icon={faWarning}
-                                className="text-red-400"
-                            />
-                            This bus is quite late, it may not arrive
-                        </div>
-                    )}
-                    {trackingBroken && (
-                        <div className="flex items-center gap-1 text-xs ">
-                            <FontAwesomeIcon
-                                icon={faWarning}
-                                className="text-red-400"
-                            />
-                            This bus may not be tracking properly.
-                        </div>
-                    )}
+        }
+    }, [bus]);
 
-                    {brokenDown && (
-                        <div className="flex items-center gap-1 text-xs ">
-                            <FontAwesomeIcon
-                                icon={faWarning}
-                                className="text-red-400"
-                            />
-                            This bus may have broken down or is not moving.
+    const handleClick = () => {
+        if (isTrackedBus(bus) && bus.status !== "on_prev_trip") {
+            navigate(`/buses/${bus.id}`);
+        } else {
+            setExternalUrl(`https://bustimes.org/trips/${bus.trip}`);
+            setShowExternalDialog(true);
+        }
+    };
+
+    return (
+        <>
+            <div
+                className={clsx(
+                    "cursor-pointer",
+                    isTrackedBus(bus) &&
+                        (bus.delay >= 2700 ||
+                            trackingBroken ||
+                            brokenDown ||
+                            notLoggedOff) &&
+                        "opacity-75"
+                )}
+                key={bus.trip}
+                onClick={handleClick}>
+                <div className="flex flex-row items-center justify-between gap-2">
+                    <div className="flex flex-col justify-around">
+                        <div className="flex flex-row items-stretch mb-1">
+                            <div className="flex items-center px-2 bg-primary-700 rounded-l-2xl">
+                                <span className="flex items-center justify-center text-lg font-bold text-center">
+                                    {isTrackedBus(bus)
+                                        ? bus.service.line_name
+                                        : bus.line}
+                                </span>
+                            </div>
+                            <div className="flex flex-col justify-center px-2 bg-neutral-800/50 rounded-r-2xl">
+                                <span className="font-semibold text">
+                                    {bus.destination}
+                                </span>
+                            </div>
                         </div>
-                    )}
-                    {notLoggedOff && (
-                        <div className="flex items-center gap-1 text-xs ">
-                            <FontAwesomeIcon
-                                icon={faWarning}
-                                className="text-red-400"
-                            />
-                            This bus may have finished its route.
-                        </div>
-                    )}
-                    {isOnDiversion && (
-                        <div className="flex items-center gap-1 text-xs ">
-                            <FontAwesomeIcon
-                                icon={faWarning}
-                                className="text-red-400"
-                            />
-                            This bus may be on diversion.
-                        </div>
-                    )}
-                    <div className="flex flex-row items-center gap-3 font-semibold text-nowrap">
-                        <div className="flex items-center gap-2">
-                            {bus.expected && bus.scheduled
-                                ? (() => {
-                                      const aimed = new Date(
-                                          bus.scheduled
-                                      ).getTime();
-                                      const expt = new Date(
-                                          bus.expected
-                                      ).getTime();
-                                      const diff = Math.abs(expt - aimed);
-                                      const isLate =
-                                          expt > aimed && diff > 60000;
-                                      return (
-                                          <div className="flex gap-2">
-                                              {isLate && (
-                                                  <span className="line-through text-neutral-500">
-                                                      {toTime(bus.scheduled)}
-                                                  </span>
-                                              )}
-                                              <span className={"text-sky-400"}>
-                                                  {toTime(bus.expected)}
-                                              </span>
-                                          </div>
-                                      );
-                                  })()
-                                : "-"}
-                        </div>
-                        {isTrackedBus(bus) && (
-                            <span
-                                className={`text-${
-                                    bus.delay >= 60 ? "red" : "green"
-                                }-400`}>
-                                {lateness(bus ? bus.delay : 0)}
-                            </span>
-                        )}
-                        {!bus.started && (
-                            <span className="text-sm font-medium opacity-70">
-                                {bus.status === "not_tracking"
-                                    ? "Upcoming"
-                                    : bus.status === "waiting"
-                                    ? "Not Started"
-                                    : "On prev. trip"}
-                            </span>
-                        )}
-                        {bus.started && (
-                            <div className="relative w-5 h-5">
+                        {isTrackedBus(bus) && bus.delay >= 2700 && (
+                            <div className="flex items-center gap-1 text-xs ">
                                 <FontAwesomeIcon
-                                    icon={faSatelliteDish}
-                                    beatFade={gettingLiveData}
-                                    className={clsx(
-                                        "absolute top-0 left-0 w-5 h-5",
-                                        gettingLiveData
-                                            ? "text-neutral-500"
-                                            : {
-                                                  "text-blue-400 opacity-40":
-                                                      bus.status ===
-                                                      "not_tracking",
-                                                  "text-sky-500":
-                                                      bus.status === "tracking",
-                                                  "text-emerald-500":
-                                                      bus.status ===
-                                                      "user_tracking",
-                                              }
-                                    )}
+                                    icon={faWarning}
+                                    className="text-red-400"
                                 />
-                                {!gettingLiveData &&
-                                    bus.status === "not_tracking" && (
-                                        <FontAwesomeIcon
-                                            icon={faSlash}
-                                            className="absolute top-0 left-0 w-5 h-5 text-red-500"
-                                        />
-                                    )}
+                                This bus is quite late, it may not arrive
                             </div>
                         )}
+                        {trackingBroken && (
+                            <div className="flex items-center gap-1 text-xs ">
+                                <FontAwesomeIcon
+                                    icon={faWarning}
+                                    className="text-red-400"
+                                />
+                                This bus may not be tracking properly.
+                            </div>
+                        )}
+
+                        {brokenDown && (
+                            <div className="flex items-center gap-1 text-xs ">
+                                <FontAwesomeIcon
+                                    icon={faWarning}
+                                    className="text-red-400"
+                                />
+                                This bus may have broken down or is not moving.
+                            </div>
+                        )}
+                        {notLoggedOff && (
+                            <div className="flex items-center gap-1 text-xs ">
+                                <FontAwesomeIcon
+                                    icon={faWarning}
+                                    className="text-red-400"
+                                />
+                                This bus may have finished its route.
+                            </div>
+                        )}
+                        {isOnDiversion && (
+                            <div className="flex items-center gap-1 text-xs ">
+                                <FontAwesomeIcon
+                                    icon={faWarning}
+                                    className="text-red-400"
+                                />
+                                This bus may be on diversion.
+                            </div>
+                        )}
+                        <div className="flex flex-row items-center gap-3 font-semibold text-nowrap">
+                            <div className="flex items-center gap-2">
+                                {bus.expected && bus.scheduled
+                                    ? (() => {
+                                          const aimed = new Date(
+                                              bus.scheduled
+                                          ).getTime();
+                                          const expt = new Date(
+                                              bus.expected
+                                          ).getTime();
+                                          const diff = Math.abs(expt - aimed);
+                                          const isLate =
+                                              expt > aimed && diff > 60000;
+                                          return (
+                                              <div className="flex gap-2">
+                                                  {isLate && (
+                                                      <span className="line-through text-neutral-500">
+                                                          {toTime(
+                                                              bus.scheduled
+                                                          )}
+                                                      </span>
+                                                  )}
+                                                  <span
+                                                      className={
+                                                          "text-link-400"
+                                                      }>
+                                                      {toTime(bus.expected)}
+                                                  </span>
+                                              </div>
+                                          );
+                                      })()
+                                    : "-"}
+                            </div>
+                            {isTrackedBus(bus) && (
+                                <span
+                                    className={`text-${
+                                        bus.delay >= 60 ? "red" : "green"
+                                    }-400`}>
+                                    {lateness(bus ? bus.delay : 0)}
+                                </span>
+                            )}
+                            {!bus.started && (
+                                <span className="text-sm font-medium opacity-70">
+                                    {bus.status === "not_tracking"
+                                        ? "Upcoming"
+                                        : bus.status === "waiting"
+                                        ? "Not Started"
+                                        : "On prev. trip"}
+                                </span>
+                            )}
+                            {bus.started && (
+                                <div className="relative w-5 h-5">
+                                    <FontAwesomeIcon
+                                        icon={faSatelliteDish}
+                                        beatFade={gettingLiveData}
+                                        className={clsx(
+                                            "absolute top-0 left-0 w-5 h-5",
+                                            gettingLiveData
+                                                ? "text-neutral-500"
+                                                : {
+                                                      "text-primary-400 opacity-40":
+                                                          bus.status ===
+                                                          "not_tracking",
+                                                      "text-link":
+                                                          bus.status ===
+                                                          "tracking",
+                                                      "text-emerald-500":
+                                                          bus.status ===
+                                                          "user_tracking",
+                                                  }
+                                        )}
+                                    />
+                                    {!gettingLiveData &&
+                                        bus.status === "not_tracking" && (
+                                            <FontAwesomeIcon
+                                                icon={faSlash}
+                                                className="absolute top-0 left-0 w-5 h-5 text-red-500"
+                                            />
+                                        )}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="flex items-center justify-center gap-1 p-1 ml-5 rounded-lg bg-neutral-800/50 w-15 min-w-fit h-fit">
+                        <span className="text-sm font-bold text-nowrap">
+                            {bus.timeTo}
+                        </span>
                     </div>
                 </div>
-
-                <div className="flex items-center justify-center gap-1 p-1 ml-5 rounded-lg bg-neutral-800/50 w-15 h-fit">
-                    <span className="text-sm font-bold text-nowrap">
-                        {bus.timeTo}
-                    </span>
-                </div>
             </div>
-        </div>
+            <Transition appear show={showExternalDialog} as={Fragment}>
+                <Dialog
+                    as="div"
+                    className="relative z-50"
+                    onClose={() => setShowExternalDialog(false)}>
+                    <TransitionChild
+                        as={Fragment}
+                        enter="ease-out duration-200"
+                        enterFrom="opacity-0"
+                        enterTo="opacity-100"
+                        leave="ease-in duration-150"
+                        leaveFrom="opacity-100"
+                        leaveTo="opacity-0">
+                        <div className="fixed inset-0 bg-black/30" />
+                    </TransitionChild>
+
+                    <div className="fixed inset-0 flex items-center justify-center p-2">
+                        <TransitionChild
+                            as={Fragment}
+                            enter="ease-out duration-200"
+                            enterFrom="opacity-0 scale-95"
+                            enterTo="opacity-100 scale-100"
+                            leave="ease-in duration-150"
+                            leaveFrom="opacity-100 scale-100"
+                            leaveTo="opacity-0 scale-95">
+                            <DialogPanel className="w-full max-w-sm p-4 text-center shadow-lg rounded-2xl bg-neutral-900">
+                                <DialogTitle className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                                    Leaving nextbus
+                                </DialogTitle>
+                                <Description className="mt-2 text-sm text-neutral-300">
+                                    You're about to visit{" "}
+                                    <span className="font-bold">
+                                        bustimes.org
+                                    </span>
+                                    , which is an external website that is not
+                                    part of nextbus.
+                                </Description>
+
+                                <div className="flex justify-center gap-3 mt-6">
+                                    <button
+                                        onClick={() =>
+                                            setShowExternalDialog(false)
+                                        }
+                                        className="px-4 py-2 text-sm font-medium rounded-lg bg-neutral-700 hover:bg-neutral-600">
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            if (externalUrl)
+                                                window.open(
+                                                    externalUrl,
+                                                    "_blank"
+                                                );
+                                            setShowExternalDialog(false);
+                                        }}
+                                        className="px-4 py-2 text-sm font-medium rounded-lg cursor-pointer bg-primary hover:bg-primary-700">
+                                        Continue
+                                    </button>
+                                </div>
+                            </DialogPanel>
+                        </TransitionChild>
+                    </div>
+                </Dialog>
+            </Transition>
+        </>
     );
 }
 
 function DepartureBoard({ stop_id, closest, filter }: Props) {
     const [buses, setBuses] = useState<Departure[]>([]);
-    const [stop, setStop] = useState<Stop>();
+    const [stop, setStop] = useState<BTStop>();
     const [stopID, setStopID] = useState<string>("");
     const [loading, setLoading] = useState(true);
     const [gettingLiveData, setGettingLiveData] = useState(true);
@@ -303,11 +407,11 @@ function DepartureBoard({ stop_id, closest, filter }: Props) {
                 let stop_id = id;
                 if (closest) {
                     const pos = await getCurrentPosition();
-                    const closestStop = await getClosestStop([
+                    const closestStop = await getClosestStops([
                         pos.coords.latitude,
                         pos.coords.longitude,
                     ]);
-                    stop_id = closestStop.stop_id;
+                    stop_id = closestStop[0].stop_id;
                     if (!stop_id) {
                         setMsg("No stop found nearby");
                         setLoading(false);
@@ -366,7 +470,7 @@ function DepartureBoard({ stop_id, closest, filter }: Props) {
                         className="flex flex-col justify-center gap-1 cursor-pointer"
                         onClick={() => navigate(`/buses/stops/${stopID}`)}>
                         {closest && (
-                            <div className="flex items-center justify-center gap-1 p-1 bg-indigo-800 rounded-lg w-fit h-fit">
+                            <div className="flex items-center justify-center gap-1 px-1 bg-indigo-800 rounded-lg w-fit h-fit">
                                 <span className="text-xs font-bold ">
                                     Closest Stop
                                 </span>
@@ -389,7 +493,7 @@ function DepartureBoard({ stop_id, closest, filter }: Props) {
                         </div>
                     ) : (
                         <>
-                            <div className="px-2">
+                            <div className="">
                                 <div className="flex flex-col overflow-y-auto max-h-[200px]">
                                     {msg ? (
                                         <div className="flex justify-center">
@@ -422,16 +526,6 @@ function DepartureBoard({ stop_id, closest, filter }: Props) {
                                                     }}>
                                                     <BusCard
                                                         bus={bus}
-                                                        onClick={() => {
-                                                            isTrackedBus(bus)
-                                                                ? navigate(
-                                                                      `/buses/${bus.id}`
-                                                                  )
-                                                                : window.open(
-                                                                      `https://bustimes.org/trips/${bus.trip}`,
-                                                                      "_blank"
-                                                                  );
-                                                        }}
                                                         gettingLiveData={
                                                             gettingLiveData
                                                         }

@@ -1,8 +1,9 @@
 import enum
 from datetime import date, datetime, timedelta
-
+import copy
 from geoalchemy2 import Geometry
 from sqlalchemy import (
+    BigInteger,
     Boolean,
     Column,
     Computed,
@@ -13,28 +14,51 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
     Interval,
+    PrimaryKeyConstraint,
+    SmallInteger,
     String,
     UniqueConstraint,
+    and_,
+    exists,
     func,
     Index,
+    inspect,
+    not_,
+    or_,
 )
 from sqlalchemy.ext.associationproxy import association_proxy
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import relationship, Session, joinedload, deferred, aliased
 from sqlalchemy_searchable import make_searchable
 from sqlalchemy_utils.types import TSVectorType
-
-from backend.autoslug import AutoSlug, AutoSlugMixin
-from backend.config import API_BASE
+from backend.autoslug import AutoSlugMixin
+from backend.config import API_BASE, get_logger
 from backend.db.db import SessionLocal
 from backend.deps import LONDON
+from shapely.geometry import base as shape_base
 from backend.utils.fetch_json import fetch_json
-import logging
+from sqlalchemy import select
+from backend.utils.bulk_upsert import bulk_upsert
+from collections import namedtuple
 
-log = logging.getLogger(__name__)
+
+log = get_logger(__name__)
 
 Base = declarative_base()
 make_searchable(Base.metadata)
+
+shape_base.BaseGeometry.__repr__ = lambda self: f"<Geometry {self.geom_type}>"
+
+
+ServiceLite = namedtuple("ServiceLite", ["id", "line_name"])
+
+
+def to_dict(obj, exclude: list = []):
+    return {
+        c.key: getattr(obj, c.key)
+        for c in inspect(obj).mapper.column_attrs
+        if c.key not in exclude
+    }
 
 
 class RouteType(enum.Enum):
@@ -138,11 +162,10 @@ class StopAreaTypeEnum(str, enum.Enum):
     coach_service_coverage = "GCCH"
 
 
-class DirectionType(enum.Enum):
-    outbound = "outbound"
-    inbound = "inbound"
-    circular = "circular"
-    unknown = "unknown"
+class TimingStatusEnum(str, enum.Enum):
+    other = "OTH"
+    time_info_point = "TIP"
+    principal_timing_point = "PTP"
 
 
 class BotStatusEnum(enum.Enum):
@@ -182,16 +205,19 @@ class DataSource(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String, nullable=False, unique=True)
     description = Column(String, nullable=True)
-    url = Column(String, nullable=True)
+    url = Column(String, nullable=True, doc="URL for non-BODS like stagecoach")
+    bods_id = Column(Integer, nullable=True, doc="BODS dataset ID")
+    search = Column(String, nullable=True, doc="Search term for BODS")
     last_modified = Column(DateTime(timezone=True), nullable=True)
 
     services = relationship(
         "Service",
         back_populates="data_source",
     )
-
-    def __repr__(self):
-        return f"<DataSource(name={self.name}, url={self.url})>"
+    timetables = relationship(
+        "Timetable",
+        back_populates="data_source",
+    )
 
 
 class Region(Base):
@@ -269,24 +295,32 @@ class Locality(Base, AutoSlugMixin):
         )
     )
 
+    def __repr__(self):
+        return f"<Locality {self.get_full_name}>"
+
     @property
     def get_full_name(self):
         if self.qualifier_name:
             return f"{self.name}, {self.qualifier_name}"
         return self.name
 
-    def lines_served(self):
+    @property
+    def has_stops(self):
+        return len(self.stops) > 0
+
+    def services_served(self):
         with SessionLocal() as db:
-            lines: list["Line"] | list[None] = (
-                db.query(Line)
-                .join(LineStopUsage, Line.id == LineStopUsage.line_id)
-                .join(Stop, Stop.atco_code == LineStopUsage.stop_id)
+            services: list["Service"] | list[None] = (
+                db.query(Service)
+                .join(ServiceStopUsage, Service.id == ServiceStopUsage.service_id)
+                .join(Stop, Stop.atco_code == ServiceStopUsage.stop_id)
+                .options(joinedload(Service.operator))
                 .filter(Stop.locality_id == self.id)
                 .distinct()
                 .all()
             )
 
-            return lines if lines else []
+            return services if services else []
 
 
 class Stop(Base):
@@ -306,7 +340,7 @@ class Stop(Base):
     lat = Column(Float, Computed("ST_Y(point::geometry)"), nullable=False)
     lon = Column(Float, Computed("ST_X(point::geometry)"), nullable=False)
     stop_area_id = Column(
-        String, ForeignKey("stoparea.id", ondelete="CASCADE"), nullable=True
+        String, ForeignKey("stop_area.id", ondelete="CASCADE"), nullable=True
     )
     locality_id = Column(String, ForeignKey("locality.id"), nullable=True, index=True)
     admin_area_id = Column(Integer, ForeignKey("admin_area.id"), nullable=True)
@@ -329,7 +363,9 @@ class Stop(Base):
     locality = relationship("Locality", back_populates="stops")
     admin_area = relationship("AdminArea", back_populates="stops")
     stop_times = relationship("StopTime", back_populates="stop")
-    lines = relationship("Line", secondary="line_stop_usage", back_populates="stops")
+    services = relationship(
+        "Service", secondary="service_stop_usage", back_populates="stops"
+    )
 
     search_vector = deferred(
         Column(
@@ -363,23 +399,54 @@ class Stop(Base):
     def long_name(self):
         return f"{self.name} ({self.indicator or self.bearing})"
 
-    def lines_served(self, db: Session) -> list["Line"]:
+    @property
+    def does_serve_buses(self) -> bool:
+        return any(s for s in self.services if s.public_use)
+
+    def lines_served(self, db: Session) -> list["ServiceLite"]:
         """
-        Returns a list of lines that serve this stop.
+        Returns a list of services that serve this stop.
         """
-        lines: list["Line"] = (
-            db.query(Line)
-            .join(LineStopUsage, Line.id == LineStopUsage.line_id)
-            .filter(LineStopUsage.stop_id == self.atco_code)
-            .distinct()
-            .all()
-        )
+
+        lines = [
+            ServiceLite(id=row[0], line_name=row[1])
+            for row in (
+                db.query(Service.id, Service.line_name)
+                .filter(
+                    db.query(ServiceStopUsage)
+                    .filter(
+                        ServiceStopUsage.service_id == Service.id,
+                        ServiceStopUsage.stop_id == self.atco_code,
+                    )
+                    .exists()
+                )
+                .all()
+            )
+        ]
         return lines
+
+    def headsigns(self):
+        with SessionLocal() as db:
+            service_ids = [service.id for service in self.lines_served(db)]
+            if not service_ids:
+                return []
+
+            headsigns = (
+                db.query(StopTime.headsign)
+                .join(StopTime, StopTime.journey_id == Journey.id)
+                .filter(
+                    Journey.service_id.in_(service_ids),
+                    StopTime.stop_id == self.atco_code,
+                )
+                .distinct()
+            ).all()
+
+            return headsigns
 
     def localities_towards(self):
         with SessionLocal() as db:
-            line_ids = [line.id for line in self.lines_served(db)]
-            if not line_ids:
+            service_ids = [service.id for service in self.lines_served(db)]
+            if not service_ids:
                 return []
 
             ST_origin = aliased(StopTime)
@@ -390,7 +457,7 @@ class Stop(Base):
                 .join(Journey, Journey.destination_stop_id == Stop.atco_code)
                 .join(ST_origin, ST_origin.journey_id == Journey.id)
                 .filter(
-                    Journey.line_id.in_(line_ids),
+                    Journey.service_id.in_(service_ids),
                     ST_origin.stop_id == self.atco_code,
                     Stop.locality_id.isnot(None),
                 )
@@ -409,55 +476,72 @@ class Stop(Base):
             return result
 
     def times_from_stop(
-        self, db: Session, date: datetime | None = None, limit: int = 10
+        self,
+        db: Session,
+        date_time: datetime | None = None,
+        limit: int = 10,
+        line_names: list[str] | None = None,
     ) -> list["StopTime"]:
-        """
-        Returns a list of upcoming StopTime objects for this stop, with joined journey, line, and service.
-        """
+        now = date_time or datetime.now(tz=LONDON)
 
-        if date is None:
-            now = datetime.now(tz=LONDON)
-        else:
-            now = date
-
-        today_date = now.date()
-        seconds_since_midnight = now.hour * 3600 + now.minute * 60 + now.second
-        current_time = timedelta(seconds=seconds_since_midnight)
-
-        stop_times = (
+        results = []
+        stop_times_q = (
             db.query(StopTime)
+            .join(StopTime.journey)
+            .join(Journey.calendar)
             .filter(StopTime.stop_id == self.atco_code)
-            .filter(StopTime.pick_up == True)
-            .join(Journey)
-            .join(Calendar)
+            .filter(StopTime.pick_up)
             .options(
                 joinedload(StopTime.journey).joinedload(Journey.calendar),
-                joinedload(StopTime.journey)
-                .joinedload(Journey.line)
-                .joinedload(Line.service),
+                joinedload(StopTime.journey).joinedload(Journey.timetable),
             )
-            .all()
         )
 
-        active_stop_times = []
-        for st in stop_times:
-            if not st.journey.is_valid(today_date):
-                continue
-            active_stop_times.append(st)
+        if line_names:
+            stop_times_q = (
+                stop_times_q.join(StopTime.journey)
+                .join(Journey.service)
+                .filter(Service.line_name.in_(line_names))
+            )
 
-        future_stop_times = [
-            st
-            for st in active_stop_times
-            if st.departure_time and st.departure_time >= current_time
-        ]
+        stop_times = stop_times_q.all()
 
-        future_stop_times.sort(key=lambda st: st.departure_time)
+        day_offsets = [0]
 
-        return future_stop_times[:limit]
+        if now.hour < 3:
+            # consider yesterdays night trips
+            day_offsets.insert(0, -1)
+
+        if now.hour >= 21:
+            # consider tomorrows morning trips
+            day_offsets.append(1)
+
+        for day_offset in day_offsets:
+            service_day = (now + timedelta(days=day_offset)).date()
+
+            stop_times_today = [
+                st for st in stop_times if st.journey.is_valid(service_day)
+            ]
+            for st in stop_times_today:
+                depdt = st.departure_datetime(service_day)
+
+                if not depdt:
+                    log.warning(
+                        f"StopTime {st.id} has no departure datetime for service day {service_day}"
+                    )  # should not happen
+                    continue
+                if depdt >= now:
+                    # make a new copy to avoid overwriting _dep_dt, as a stoptime object can be reused for multiple service days
+                    st_copy = copy.copy(st)
+                    st_copy._dep_dt = depdt
+                    results.append(st_copy)
+
+        results.sort(key=lambda x: x._dep_dt)
+        return results[:limit]
 
 
 class StopArea(Base):
-    __tablename__ = "stoparea"
+    __tablename__ = "stop_area"
 
     id = Column(String, primary_key=True)
     name = Column(String, nullable=True)
@@ -468,7 +552,7 @@ class StopArea(Base):
     lat = Column(Float, Computed("ST_Y(point::geometry)"), nullable=True)
     lon = Column(Float, Computed("ST_X(point::geometry)"), nullable=True)
     type = Column(Enum(StopAreaTypeEnum), nullable=True)
-    parent_id = Column(String, ForeignKey("stoparea.id"), nullable=True)
+    parent_id = Column(String, ForeignKey("stop_area.id"), nullable=True)
     admin_area_id = Column(Integer, ForeignKey("admin_area.id"))
     active = Column(Boolean, nullable=False)
     revision_number = Column(Integer, nullable=True)
@@ -487,8 +571,9 @@ class StopArea(Base):
 class Operator(Base):
     __tablename__ = "operator"
 
-    noc = Column(String, nullable=False, primary_key=True)
-    ref = Column(String, nullable=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    noc = Column(String, nullable=False)
     name = Column(String, nullable=False)
 
     services = relationship(
@@ -503,8 +588,9 @@ class Operator(Base):
 
 class BankHoliday(Base):
     __tablename__ = "bank_holiday"
+
     id = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(String, nullable=False, unique=True)
+    name = Column(String, unique=True)
 
     dates = relationship(
         "BankHolidayDate",
@@ -512,28 +598,25 @@ class BankHoliday(Base):
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
-    calendar_links = relationship(
-        "CalendarToBankHoliday",
-        back_populates="bank_holiday",
-        cascade="all, delete-orphan",
-        passive_deletes=True,
-    )
 
-    calendars = association_proxy("calendar_links", "calendar")
+    def __str__(self):
+        return str(self.name)
 
 
 class BankHolidayDate(Base):
     __tablename__ = "bank_holiday_date"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    bank_holiday_id = Column(Integer, ForeignKey("bank_holiday.id"), nullable=False)
+    bank_holiday_name = Column(
+        String, ForeignKey("bank_holiday.name"), nullable=False, index=True
+    )
     date = Column(Date, nullable=False)
 
     bank_holiday = relationship("BankHoliday", back_populates="dates")
 
     __table_args__ = (
         UniqueConstraint(
-            "bank_holiday_id",
+            "bank_holiday_name",
             "date",
             name="uq_bank_holiday_date_per_holiday",
         ),
@@ -547,18 +630,20 @@ class CalendarToBankHoliday(Base):
 
     __tablename__ = "calendar_bank_holiday"
     operating = Column(Boolean, nullable=False, default=True)
+    bank_holiday = Column(
+        String,
+        ForeignKey("bank_holiday.name"),
+        nullable=False,
+    )
     calendar_id = Column(
-        Integer, ForeignKey("calendar.id"), primary_key=True, nullable=False
+        Integer, ForeignKey("calendar.id", ondelete="CASCADE"), nullable=False
     )
-    bank_holiday_id = Column(
-        Integer, ForeignKey("bank_holiday.id"), primary_key=True, nullable=False
-    )
-
-    bank_holiday = relationship(
-        "BankHoliday", back_populates="calendar_links", overlaps="calendars"
-    )
-    calendar = relationship(
-        "Calendar", back_populates="calendar_bank_holiday", overlaps="calendars"
+    calendar = relationship("Calendar", back_populates="calendar_bank_holiday")
+    bh = relationship("BankHoliday")
+    __table_args__ = (
+        PrimaryKeyConstraint(
+            "bank_holiday", "calendar_id", name="pk_calendar_bank_holiday"
+        ),
     )
 
 
@@ -614,24 +699,68 @@ class Calendar(Base):
             "sunday": self.sunday,
         }
 
-    def is_valid(self, date: date | None = None) -> bool:
+    def is_valid(self, service_day: date | None = None) -> bool:
         """
         Returns True if the calendar is valid on the given date (or today if no date is given).
+        rules:
+        1. Any off exception or bank holiday -> False
+        2. Special exceptions (special=True) or bank holiday on -> True
+        3. Normal exceptions (special=False) -> respect weekday
+        4. Fallback -> weekday
         """
 
-        if not date:
-            date = datetime.now(tz=LONDON).date()
-
-        if not (
-            self.start_date <= date and (self.end_date is None or self.end_date >= date)
-        ):  # type: ignore
-            return False
-
-        # check day
+        date = service_day or datetime.now(tz=LONDON).date()
         weekday = date.strftime("%A").lower()
-        if not getattr(self, weekday):
-            # log.debug("Not valid on this weekday, active days:", self.days_of_week)
+
+        # check date range first
+        if not (
+            bool(self.start_date <= date)
+            and (self.end_date is None or bool(self.end_date >= date))
+        ):
             return False
+
+        # check exceptions not operating
+        for exc in self.calendar_exceptions:
+            if exc.start_date <= date <= exc.end_date and not exc.operating:
+                return False
+
+        # check bank holidays not operating
+        for link in self.calendar_bank_holiday:
+            bh = link.bh
+            for bh_date in bh.dates:
+                if bh_date.date == date and not link.operating:
+                    return False
+
+        # check special operating exceptions
+        for exc in self.calendar_exceptions:
+            if exc.start_date <= date <= exc.end_date and exc.operating and exc.special:
+                return True
+
+        # check bank holidays operating
+        for link in self.calendar_bank_holiday:
+            bh = link.bh
+            for bh_date in bh.dates:
+                if bh_date.date == date and link.operating:
+                    return True
+
+        # check normal operating exceptions and respect weekday
+        for exc in self.calendar_exceptions:
+            if (
+                exc.start_date <= date <= exc.end_date
+                and exc.operating
+                and not exc.special
+            ):
+                return getattr(self, weekday)
+
+        # fallback to normal weekday
+        return getattr(self, weekday)
+
+    def is_valid_exp(self, service_day: date | None = None) -> bool:
+        """
+        Checks only exceptions (and bank holidays for now)
+        """
+
+        date = service_day or datetime.now(tz=LONDON).date()
 
         # check exceptions
         for exc in self.calendar_exceptions:
@@ -644,7 +773,7 @@ class Calendar(Base):
 
         # check bank holidays
         for link in self.calendar_bank_holiday:
-            bh = link.bank_holiday
+            bh = link.bh
             for bh_date in bh.dates:
                 if bh_date.date == date:
                     log.debug(f"Bank holiday valid, and operating={link.operating}")
@@ -661,42 +790,69 @@ class CalendarException(Base):
     __tablename__ = "calendar_exception"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    calendar_id = Column(Integer, ForeignKey("calendar.id"), nullable=False)
+    calendar_id = Column(
+        Integer, ForeignKey("calendar.id", ondelete="CASCADE"), nullable=False
+    )
     start_date = Column(Date, nullable=False)
     end_date = Column(Date, nullable=False)
     operating = Column(Boolean, nullable=False, default=True)
     description = Column(String, nullable=True)
+    special = Column(Boolean, nullable=False, default=False)
 
     calendar = relationship("Calendar", back_populates="calendar_exceptions")
 
+    __table_args__ = (
+        UniqueConstraint(
+            "calendar_id",
+            "start_date",
+            "end_date",
+            "operating",
+            name="uq_calendar_exception",
+        ),
+    )
 
-class Service(Base):
+
+class Service(Base, AutoSlugMixin):
     """
-    Represents a bus service, can have multiple lines e.g 67, 667, 67X
+    The top level representation of a bus service, containing all the generic information. can have multiple route objects, being timetable revisions
     """
 
     __tablename__ = "service"
-    service_code = Column(String, nullable=False, primary_key=True)
-    description = Column(String)
-    origin = Column(String, nullable=True)
-    destination = Column(String, nullable=True)
-
-    vias = Column(String, nullable=True)
-    operator_noc = Column(String, ForeignKey("operator.noc"), nullable=True)
-    line_names = Column(String, nullable=True)  # List of line names
-
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    service_code = Column(String, nullable=False, index=True)
+    operator_id = Column(Integer, ForeignKey("operator.id"), nullable=True)
+    bt_service_id = Column(Integer, nullable=True, index=True)
     data_source_id = Column(
         Integer, ForeignKey("data_source.id", ondelete="SET NULL"), nullable=True
     )
 
-    data_source = relationship("DataSource", back_populates="services")
+    line_name = Column(String, nullable=False)
+    line_brand = Column(String, nullable=True)
+    description = Column(String)
+    vias = Column(String, nullable=True)
+    # slug = AutoSlug(source="get_full_name", max_length=100, unique=True, nullable=False)
 
-    operator = relationship("Operator", back_populates="services")
-    lines = relationship(
-        "Line",
+    public_use = Column(Boolean)
+    current = Column(Boolean, nullable=False, default=True, index=True)
+    geometry = Column(
+        Geometry(geometry_type="MULTILINESTRING", srid=4326), nullable=True
+    )
+    data_wrong = Column(
+        Boolean, nullable=False, default=False
+    )  # flag to indicate that the timetable is incorrect
+    last_modified = Column(DateTime(timezone=True), server_default=func.now())
+
+    operator = relationship(
+        "Operator",
+        back_populates="services",
+    )
+    data_source = relationship("DataSource", back_populates="services")
+    timetables = relationship(
+        "Timetable",
         back_populates="service",
-        cascade="all, delete-orphan",
-        passive_deletes=True,
+    )
+    stops = relationship(
+        "Stop", secondary="service_stop_usage", back_populates="services"
     )
     journeys = relationship(
         "Journey",
@@ -707,75 +863,73 @@ class Service(Base):
     search_vector = deferred(
         Column(
             TSVectorType(
-                "description",
-                "origin",
-                "destination",
-                "vias",
-                "line_names",
-                weights={
-                    "line_names": "A",
-                    "description": "B",
-                    "origin": "C",
-                    "destination": "C",
-                    "vias": "C",
-                },
-            ),
-        )
-    )
-
-
-class Line(Base, AutoSlugMixin):
-    """
-    A line is a specific route of a service, e.g. 67, 667, 67X
-    """
-
-    __tablename__ = "line"
-    id = Column(String, primary_key=True, index=True)
-    bt_service_id = Column(Integer, nullable=True)
-    line_name = Column(String, nullable=False)
-    inbound_description = Column(String)
-    outbound_description = Column(String)
-    # slug = AutoSlug(source="get_full_name", max_length=100, unique=True, nullable=False)
-    geometry = Column(
-        Geometry(geometry_type="MULTILINESTRING", srid=4326), nullable=True
-    )  # an overall geometry of the line, merged from all track sections
-    service_code = Column(
-        String, ForeignKey("service.service_code", ondelete="CASCADE"), nullable=False
-    )
-
-    service = relationship("Service", back_populates="lines")
-    journeys = relationship("Journey", back_populates="line")
-    routes = relationship(
-        "Route",
-        back_populates="lines",
-        secondary="line_to_route",
-        cascade="all",
-        passive_deletes=True,
-    )
-    stops = relationship("Stop", secondary="line_stop_usage", back_populates="lines")
-
-    __table_args__ = (
-        UniqueConstraint("line_name", "service_code", name="uq_line_per_service"),
-    )
-
-    search_vector = deferred(
-        Column(
-            TSVectorType(
                 "line_name",
-                "inbound_description",
-                "outbound_description",
+                "line_brand",
+                "description",
+                "vias",
                 weights={
                     "line_name": "A",
-                    "inbound_description": "B",
-                    "outbound_description": "B",
+                    "description": "A",
+                    "line_brand": "B",
+                    "vias": "B",
                 },
-            ),
+            )
         )
     )
 
     @property
     def get_full_name(self):
-        return f"{self.line_name} {self.service.description}".strip()
+        return f"{self.line_name} {self.description}".strip()
+
+    def get_correct_timetable(self):
+        if len(self.timetables) == 1:
+            return self.timetables[0]
+
+        revisions = [
+            tt.revision_number
+            for tt in self.timetables
+            if tt.revision_number is not None
+        ]
+
+        if revisions and all(r == revisions[0] for r in revisions):
+            log.warning(
+                f"Service {self.id} has multiple timetables with the same revision number {revisions[0]}"
+            )
+            return next((tt for tt in self.timetables if tt.is_valid()), None)
+
+        highest_revison = -1
+        correct_tt = None
+        for tt in self.timetables:
+            if (
+                tt.revision_number is not None
+                and tt.revision_number > highest_revison
+                and tt.is_valid()
+            ):
+                highest_revison = tt.revision_number
+                correct_tt = tt
+
+        if not correct_tt:
+            return next((tt for tt in self.timetables if tt.is_valid()), None)
+        return correct_tt
+
+    def with_timetable(self):
+        timetable = self.get_correct_timetable()
+        if timetable:
+            return {
+                "service_id": self.id,
+                "line_name": timetable.line_name,
+                "inbound_description": timetable.inbound_description,
+                "outbound_description": timetable.outbound_description,
+                "geometry": None,
+                "bt_service_id": self.bt_service_id,
+                "service_code": self.service_code,
+                "description": self.description,
+                "origin": timetable.origin,
+                "destination": timetable.destination,
+                "vias": timetable.vias,
+                "operator_noc": self.operator.noc,
+                "operator": self.operator.name,
+            }
 
     def get_dest_localities(self):
         with SessionLocal() as db:
@@ -783,7 +937,7 @@ class Line(Base, AutoSlugMixin):
                 db.query(Locality)
                 .join(Stop, Stop.locality_id == Locality.id)
                 .join(Journey, Journey.destination_stop_id == Stop.atco_code)
-                .filter(Journey.line_id == self.id)
+                .filter(Journey.service_id == self.id)
                 .filter(Stop.locality_id.isnot(None))
                 .distinct()
                 .all()
@@ -804,143 +958,420 @@ class Line(Base, AutoSlugMixin):
         """
         Returns the bustimes service ID if available, otherwise finds it.
         """
-        bt_service_id = getattr(self, "bt_service_id", None)
-        if bt_service_id is not None:
-            return bt_service_id
-        else:
-            noc = self.service.operator_noc or ""
-            line_name = self.line_name
-            origin = self.service.origin
-            destination = self.service.destination
+        if self.bt_service_id is not None:
+            return self.bt_service_id
 
-            results = await fetch_json(
-                f"{API_BASE}/services/?operator={noc}&search={' '.join([str(line_name), str(origin), str(destination)])}"
+        noc = self.operator.noc or ""
+
+        results = await fetch_json(
+            f"{API_BASE}/services/?operator={noc}&search={self.line_name} {self.description.replace('-', '')}"
+        )
+
+        if not results or "results" not in results or len(results["results"]) != 1:
+            return None
+
+        service_id = results["results"][0]["id"]
+
+        obj = db.merge(self)
+        obj.bt_service_id = service_id
+        db.commit()
+        db.refresh(obj)
+
+        self.bt_service_id = service_id
+        return service_id
+
+    def do_stopusages(self, db: Session):
+        """
+        builds the service_stop_usage table for this service
+        """
+
+        existing = (
+            db.query(ServiceStopUsage)
+            .filter(ServiceStopUsage.service_id == self.id)
+            .order_by(ServiceStopUsage.inbound, ServiceStopUsage.order)
+            .all()
+        )
+
+        stop_times_subq = (
+            select(
+                Journey.inbound,
+                Timetable.line_name,
+                StopTime.stop_sequence.label("sequence"),
+                StopTime.id.label("st_id"),
+                StopTime.stop_id,
+                StopTime.timing_status,
+            )
+            .join(Journey, StopTime.journey_id == Journey.id)
+            .join(Timetable, Journey.timetable_id == Timetable.id)
+            .where(Journey.service_id == self.id, StopTime.stop_id is not None)
+            .distinct(Journey.inbound, Timetable.line_name, StopTime.stop_id)
+            .subquery()
+        )
+
+        rows = db.execute(select(stop_times_subq)).all()
+
+        stop_usages = [
+            (
+                row.line_name,
+                row.inbound,
+                row.sequence or 0,
+                row.st_id,
+                row.stop_id,
+                row.timing_status,
+            )
+            for row in rows
+        ]
+
+        stop_usages.sort()
+
+        new = [
+            ServiceStopUsage(
+                service_id=self.id,
+                stop_id=stop_id,
+                timing_point=(timing_status == "PTP"),
+                inbound=inbound,
+                order=i,
+                line_name=line_name,
+            )
+            for i, (line_name, inbound, _, _, stop_id, timing_status) in enumerate(
+                stop_usages
+            )
+        ]
+
+        existing_hash = [
+            (su.stop_id, su.timing_point, su.inbound, su.order, su.line_name)
+            for su in existing
+        ]
+        new_hash = [
+            (su.stop_id, su.timing_point, su.inbound, su.order, su.line_name)
+            for su in new
+        ]
+
+        if existing_hash != new_hash:
+            log.info(
+                f"ServiceStopUsage for service {self.id} is out of date, updating..."
+            )
+            if len(existing_hash) >= len(new_hash):
+                for new_su, exist_su in zip(new, existing):
+                    new_su.id = exist_su.id
+
+                upsert_data = [to_dict(n) for n in new if n.id is not None]
+                bulk_upsert(
+                    db,
+                    ServiceStopUsage,
+                    upsert_data,
+                    ["id"],
+                    [
+                        "service_id",
+                        "stop_id",
+                        "timing_point",
+                        "inbound",
+                        "order",
+                        "line_name",
+                    ],
+                )
+                if len(existing_hash) > len(new_hash):
+                    existing_ids = [su.id for su in existing[len(new) :]]
+                    db.query(ServiceStopUsage).filter(
+                        ServiceStopUsage.id.in_(existing_ids)
+                    ).delete(synchronize_session=False)
+            else:
+                if existing_hash:
+                    existing_ids = [su.id for su in existing]
+                    db.query(ServiceStopUsage).filter(
+                        ServiceStopUsage.id.in_(existing_ids)
+                    ).delete(synchronize_session=False)
+
+                db.add_all(new)
+
+            db.commit()
+
+    def do_geometry(self, db: Session):
+        """
+        builds the geometry for this service from its stops
+        """
+
+        try:
+            simplify_tolerance = 0.0002  # 20 meters
+
+            route_link_count = (
+                db.query(RouteLink)
+                .join(Journey, Journey.timetable_id == RouteLink.timetable_id)
+                .filter(Journey.service_id == self.id)
+                .count()
             )
 
-            if not results or "results" not in results:
-                return None
+            if route_link_count == 0:
+                log.warning(
+                    f"Service {self.id} has no route links, building geometry from stops"
+                )
+                subq = (
+                    db.query(
+                        ServiceStopUsage.line_name,
+                        ServiceStopUsage.inbound,
+                        func.ST_Transform(Stop.point, 4326).label("pt"),
+                    )
+                    .join(Stop, Stop.atco_code == ServiceStopUsage.stop_id)
+                    .filter(
+                        ServiceStopUsage.service_id == self.id,
+                        and_(Stop.lat != 0, Stop.lon != 0),
+                    )
+                    .order_by(
+                        ServiceStopUsage.inbound,
+                        ServiceStopUsage.line_name,
+                        ServiceStopUsage.order,
+                    )
+                    .subquery()
+                )
 
-            bt_service = results["results"]
+                lines = (
+                    db.query(func.ST_MakeLine(subq.c.pt))
+                    .group_by(subq.c.line_name, subq.c.inbound)
+                    .all()
+                )
 
-            if len(bt_service) != 1:
-                return None
+                if lines:
+                    multiline = db.query(
+                        func.ST_Collect(*[line[0] for line in lines])
+                    ).scalar()
+                    self.geometry = multiline
+                    db.add(self)
+                    db.commit()
+                else:
+                    log.warning(f"Service {self.id} has no stops with valid geometry")
+                    self.geometry = None
+                    db.add(self)
+                    db.commit()
+            else:
+                subq = (
+                    db.query(RouteLink.geometry.label("geom"))
+                    .join(Journey, Journey.timetable_id == RouteLink.timetable_id)
+                    .filter(Journey.service_id == self.id)
+                    .subquery()
+                )
+                collected = db.query(
+                    func.ST_Collect(subq.c.geom).label("geom")
+                ).scalar()
 
-            service_id = bt_service[0]["id"]
+                if collected:
+                    merged = db.query(func.ST_LineMerge(collected)).scalar()
+                    simplified = db.query(
+                        func.ST_Simplify(merged, simplify_tolerance)
+                    ).scalar()
+                    multiline = db.query(func.ST_Multi(simplified)).scalar()
 
-            obj = db.merge(self)
-            obj.bt_service_id = service_id
+                    self.geometry = multiline
+                    db.add(self)
+                    db.commit()
+        except Exception as e:
+            log.error(f"Error building geometry for service {self.id}: {e}")
+            self.geometry = None
+            db.add(self)
             db.commit()
-            db.refresh(obj)
-
-            self.bt_service_id = service_id
-            return service_id
 
 
-class LineStopUsage(Base):
+class ServiceStopUsage(Base):
     """
-    A collection of all the stops that a line serves across all journeys
+    A collection of all the stops that a service serves across all journeys
     """
 
-    __tablename__ = "line_stop_usage"
-    line_id = Column(
-        String,
-        ForeignKey("line.id", ondelete="CASCADE"),
-        primary_key=True,
+    __tablename__ = "service_stop_usage"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    service_id = Column(
+        Integer,
+        ForeignKey("service.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
     stop_id = Column(
         String,
         ForeignKey("stop.atco_code", ondelete="CASCADE"),
-        primary_key=True,
+        nullable=False,
+        index=True,
+    )
+    order = Column(SmallInteger)
+    inbound = Column(Boolean, default=False)
+    line_name = Column(String, nullable=True)
+    timing_point = Column(Boolean, default=True)
+
+    __table_args__ = (Index("ix_stopusage_inbound_order", "inbound", "order"),)
+
+
+class TimetableDataSource(Base):
+    __tablename__ = "timetable_data_source"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    filename = Column(String)
+    file_hash = Column(String, nullable=False, unique=True, index=True)
+    size_bytes = Column(Integer, nullable=True)
+    processed_at = Column(DateTime(timezone=True), nullable=True)
+    data_source_id = Column(Integer, ForeignKey("data_source.id"), nullable=True)
+
+    data_source = relationship("DataSource")
+    timetables = relationship(
+        "Timetable",
+        back_populates="timetable_data_sources",
+        secondary="timetable_tt_data_source_link",
+        passive_deletes=True,
+    )
+
+
+class TimetableToTTDataSource(Base):
+    """
+    Many-to-many relationship between Timetable and TimetableDataSource
+    """
+
+    __tablename__ = "timetable_tt_data_source_link"
+    timetable_id = Column(
+        Integer,
+        ForeignKey("timetable.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    tt_data_source_id = Column(
+        Integer,
+        ForeignKey("timetable_data_source.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
 
     __table_args__ = (
-        UniqueConstraint("line_id", "stop_id", name="uq_line_stop_usage"),
+        PrimaryKeyConstraint(
+            "timetable_id", "tt_data_source_id", name="pk_timetable_data_source_link"
+        ),
     )
 
 
-class LineToRoute(Base):
+class Timetable(Base):
     """
-    Many-to-many relationship between Line and Route
-    """
-
-    __tablename__ = "line_to_route"
-    line_id = Column(
-        String,
-        ForeignKey("line.id", ondelete="CASCADE"),
-        primary_key=True,
-        nullable=False,
-    )
-    route_id = Column(
-        String,
-        ForeignKey("route.id", ondelete="CASCADE"),
-        primary_key=True,
-        nullable=False,
-    )
-
-    __table_args__ = (UniqueConstraint("line_id", "route_id", name="uq_line_to_route"),)
-
-
-class TrackSection(Base):
-    """
-    A point in a track, used to build the geometry of a route. known as RouteLink in TXC.
+    The timetable level of a bus route, associated with one service. contains information about the bus timetable itself, being stuff that can change.
     """
 
-    __tablename__ = "track_section"
+    __tablename__ = "timetable"
     id = Column(Integer, primary_key=True, autoincrement=True)
-    from_stop = Column(String, nullable=True)  # if null, it is the first
-    to_stop = Column(String, nullable=True)  # if null, it is the last
+    service_id = Column(Integer, ForeignKey("service.id"), nullable=False, index=True)
+    line_id = Column(String, nullable=True)
+    operator_id = Column(Integer, ForeignKey("operator.id"), nullable=True)
+    data_source_id = Column(
+        Integer,
+        ForeignKey("data_source.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    bt_service_id = Column(Integer, nullable=True, index=True)
+
+    service_code = Column(String, nullable=False)
+    line_name = Column(String, nullable=False)
+    line_brand = Column(String, nullable=True)
+    description = Column(String)
+    origin = Column(String, nullable=True)
+    destination = Column(String, nullable=True)
+    vias = Column(String, nullable=True)
+    inbound_description = Column(String, nullable=True)
+    outbound_description = Column(String, nullable=True)
+
+    revision_number = Column(Integer, nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=True)
+    modified_at = Column(DateTime(timezone=True), nullable=True)
+    start_date = Column(Date)
+    end_date = Column(
+        Date, default=date(9999, 12, 31)
+    )  # no end date means it is valid indefinitely
+    geometry = Column(
+        Geometry(geometry_type="MULTILINESTRING", srid=4326), nullable=True
+    )
+
+    public_use = Column(Boolean)
+
+    service = relationship("Service", back_populates="timetables")
+    operator = relationship("Operator")
+    data_source = relationship("DataSource", back_populates="timetables")
+    timetable_data_sources = relationship(
+        "TimetableDataSource",
+        back_populates="timetables",
+        secondary="timetable_tt_data_source_link",
+        passive_deletes=True,
+    )
+    journeys = relationship(
+        "Journey",
+        back_populates="timetable",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    route_links = relationship(
+        "RouteLink",
+        back_populates="timetable",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+
+    @property
+    def actual_end_date(self):
+        if self.end_date == date(9999, 12, 31):
+            return None
+        return self.end_date
+
+    def is_valid(self, date: date | None = None) -> bool:
+        """
+        checks if the timetable is valid on the given date / today.
+        """
+
+        if self.actual_end_date and self.start_date > self.actual_end_date:
+            return True  # consider always valid to avoid hiding data
+
+        if not date:
+            date = datetime.now(tz=LONDON).date()
+
+        if not (
+            self.start_date <= date
+            and (self.actual_end_date is None or self.actual_end_date >= date)
+        ):  # type: ignore
+            return False
+
+        return True
+
+    __table_args__ = (
+        Index(
+            "uq_service_revision_with_nulls",
+            "service_id",
+            "revision_number",
+            "start_date",
+            "end_date",
+            "data_source_id",
+            unique=True,
+        ),
+        Index("ix_timetable_service_line_name", "service_id", "line_name"),
+    )
+
+
+class RouteLink(Base):
+    """
+    A connection between 2 stops, used to build the geometry of a route
+    """
+
+    __tablename__ = "route_link"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    timetable_id = Column(
+        Integer, ForeignKey("timetable.id", ondelete="CASCADE"), nullable=False
+    )
+    from_stop = Column(
+        String, ForeignKey("stop.atco_code"), nullable=True
+    )  # if null, it is the first
+    to_stop = Column(
+        String, ForeignKey("stop.atco_code"), nullable=True
+    )  # if null, it is the last
     distance = Column(Float, nullable=True)  # distance in meters
     geometry = Column(Geometry(geometry_type="LINESTRING", srid=4326), nullable=False)
-    route_link_ref = Column(String, nullable=True)  # Reference to the route link
-    route_section_id = Column(
-        String, ForeignKey("route_section.id", ondelete="CASCADE"), nullable=False
+
+    timetable = relationship("Timetable", back_populates="route_links")
+    link_from = relationship("Stop", foreign_keys=[from_stop])
+    link_to = relationship("Stop", foreign_keys=[to_stop])
+
+    __table_args__ = (
+        UniqueConstraint(
+            "timetable_id", "from_stop", "to_stop", name="uq_timetable_routelink"
+        ),
     )
-
-    route_section = relationship("RouteSection", back_populates="track")
-
-
-class RouteSection(Base):
-    """
-    A section of a route, used to build the geometry of a route.
-    """
-
-    __tablename__ = "route_section"
-    id = Column(String, primary_key=True)
-    geometry = Column(Geometry(geometry_type="LINESTRING", srid=4326), nullable=True)
-
-    track = relationship(
-        "TrackSection",
-        back_populates="route_section",
-        cascade="all, delete-orphan",
-        passive_deletes=True,
-    )
-    route = relationship(
-        "Route",
-        back_populates="route_section",
-        cascade="all, delete-orphan",
-        passive_deletes=True,
-    )
-
-
-class Route(Base):
-    """
-    container for a route section
-    """
-
-    __tablename__ = "route"
-    id = Column(String, primary_key=True)
-    private_code = Column(String, nullable=True)
-    description = Column(String, nullable=True)
-    route_section_id = Column(
-        String, ForeignKey("route_section.id", ondelete="CASCADE"), nullable=True
-    )
-
-    lines = relationship("Line", back_populates="routes", secondary="line_to_route")
-    route_section = relationship("RouteSection", back_populates="route")
 
 
 class Journey(Base):
@@ -949,21 +1380,28 @@ class Journey(Base):
     """
 
     __tablename__ = "journey"
-    id = Column(String, primary_key=True)
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
     bt_trip_id = Column(Integer, nullable=True)
-    service_code = Column(
-        String, ForeignKey("service.service_code", ondelete="CASCADE"), nullable=False
+    service_id = Column(
+        Integer,
+        ForeignKey("service.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    timetable_id = Column(
+        Integer,
+        ForeignKey("timetable.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     vehicle_journey_code = Column(String, nullable=True)
     ticket_machine_code = Column(String, nullable=True)
-    line_id = Column(
-        String, ForeignKey("line.id", ondelete="CASCADE"), nullable=True, index=True
-    )
+    sequence = Column(SmallInteger, nullable=True)
     block_id = Column(String, nullable=True)
-    direction = Column(Enum(DirectionType))
+    inbound = Column(Boolean)
     headsign = Column(String, nullable=True)
-    start_time = Column(Interval, nullable=False)
-    end_time = Column(Interval)
+    start_time = Column(Interval, nullable=True)
+    end_time = Column(Interval, nullable=True)
     origin_stop_id = Column(
         String, ForeignKey("stop.atco_code"), nullable=True, index=True
     )
@@ -980,60 +1418,68 @@ class Journey(Base):
     destination = relationship("Stop", foreign_keys=[destination_stop_id])
 
     service = relationship("Service", back_populates="journeys")
-    line = relationship("Line", back_populates="journeys")
+    timetable = relationship("Timetable", back_populates="journeys")
     stop_times = relationship(
         "StopTime", back_populates="journey", cascade="all, delete-orphan"
     )
 
-    def is_valid(self, date: date | None = None) -> bool:
+    def __repr__(self):
+        return f"<Journey id={self.id} service_id={self.service_id} timetable_id={self.timetable_id} start_time={self.start_time} end_time={self.end_time} inbound={self.inbound} sequence={self.sequence}>"
+
+    def is_valid(self, service_day: date | None = None) -> bool:
         """
         Returns True if the journey is valid on the given date (or today if no date is given).
         """
         if not self.calendar:
-            return False
+            log.warning(f"No calendar for journey {self.id}")
+            return True
 
-        if not date:
-            date = datetime.now(tz=LONDON).date()
+        date = service_day or datetime.now(tz=LONDON).date()
 
         return self.calendar.is_valid(date)
 
+    def is_valid_exp(self, service_day: date | None = None) -> bool:
+        """
+        Checks only exceptions
+        """
+        if not self.calendar:
+            log.warning(f"No calendar for journey {self.id}")
+            return True
+
+        date = service_day or datetime.now(tz=LONDON).date()
+
+        return self.calendar.is_valid_exp(date)
+
+    # @lru_cache(maxsize=128)
     def get_previous_journey(
         self, db: Session, date: date | None = None
     ) -> "Journey | None":
-        """
-        Returns the previous journey in the same block, active on the same date, ordered by end_time.
-        Adds debug output to show all candidate journeys.
-        """
-
         if self.block_id is None:
             log.debug(f"No block_id for journey {self.id}")
             return None
 
-        if not date:
-            date = datetime.now(tz=LONDON).date()
-
-        query = db.query(Journey).filter(
-            Journey.block_id == self.block_id,
-            Journey.id != self.id,
-            Journey.end_time < self.start_time,
+        date = date or datetime.now(tz=LONDON).date()
+        query = (
+            db.query(Journey)
+            .join(Journey.calendar)
+            .filter(
+                Journey.id != self.id,
+                Journey.block_id == self.block_id,
+                Journey.end_time < self.start_time,
+                journey_is_valid_filter(date),
+            )
+            .options(joinedload(Journey.service).joinedload(Service.operator))
         )
 
-        candidate_journeys = (
-            query.options(joinedload(Journey.line).joinedload(Line.service))
-            .order_by(Journey.end_time.desc())
-            .all()
+        candidate_journey = query.order_by(Journey.end_time.desc()).first()
+
+        prev_journey = candidate_journey if candidate_journey else None
+
+        layover_time = self.start_time - prev_journey.end_time if prev_journey else None
+
+        log.debug(
+            f"layover: {layover_time or 'none'} this: {self.start_time}, prev: {prev_journey.end_time if prev_journey else 'N/A'}"
         )
-
-        valid_candidates = [j for j in candidate_journeys if j.is_valid(date)]
-        # log.debug(
-        #     f"Candidate journeys for {self.ticket_machine_code} block {self.block_id} on {date} starting {self.start_time}:"
-        # )
-        # for j in valid_candidates:
-        #     log.debug(
-        #         f"  tmc: {j.ticket_machine_code}, End Time: {j.end_time}, Valid: {j.is_valid(date)}"
-        #     )
-
-        prev_journey = valid_candidates[0] if valid_candidates else None
         return prev_journey
 
     async def get_bt_trip_id(self, db: Session) -> int | None:
@@ -1055,12 +1501,22 @@ class Journey(Base):
             if not results or "results" not in results:
                 return None
 
-            bt_trip = results["results"]
+            bt_trips = results["results"]
 
-            if len(bt_trip) != 1:
-                return None
+            if len(bt_trips) == 1:
+                trip_id = bt_trips[0]["id"]
 
-            trip_id = bt_trip[0]["id"]
+            elif len(bt_trips) > 1:
+                trip_id = next(
+                    (
+                        trip["id"]
+                        for trip in bt_trips
+                        if trip.get("service") and trip["service"].get("id")
+                    ),
+                    None,
+                )
+            else:
+                trip_id = None
 
             obj = db.merge(self)
             obj.bt_trip_id = trip_id
@@ -1071,15 +1527,110 @@ class Journey(Base):
             return trip_id
 
 
+def journey_is_valid_filter(date: date | None = None):
+    date = date or datetime.now(tz=LONDON).date()
+    weekday = date.strftime("%A").lower()
+
+    CE = aliased(CalendarException)
+    CBH = aliased(CalendarToBankHoliday)
+    BHD = aliased(BankHolidayDate)
+
+    # base calendar date range
+    base_filter = and_(
+        Calendar.start_date <= date,
+        or_(Calendar.end_date == None, Calendar.end_date >= date),
+    )
+
+    # any exceptions turning off this date?
+    exc_off = exists().where(
+        and_(
+            CE.calendar_id == Calendar.id,
+            CE.start_date <= date,
+            CE.end_date >= date,
+            CE.operating.is_(False),
+        )
+    )
+
+    # any bank holiday turning off this date?
+    bh_off = exists().where(
+        and_(
+            CBH.calendar_id == Calendar.id,
+            exists().where(
+                and_(
+                    BHD.bank_holiday_name == CBH.bank_holiday,
+                    BHD.date == date,
+                )
+            ),
+            CBH.operating.is_(False),
+        )
+    )
+
+    # exceptions that override weekday, special = true
+    exc_special = exists().where(
+        and_(
+            CE.calendar_id == Calendar.id,
+            CE.start_date <= date,
+            CE.end_date >= date,
+            CE.operating.is_(True),
+            CE.special.is_(True),
+        )
+    )
+
+    # exceptions that respect weekday, special = false
+    exc_weekday = exists().where(
+        and_(
+            CE.calendar_id == Calendar.id,
+            CE.start_date <= date,
+            CE.end_date >= date,
+            CE.operating.is_(True),
+            CE.special.is_(False),
+        )
+    )
+
+    # any bank holidays turning on this date?
+    bh_on = exists().where(
+        and_(
+            CBH.calendar_id == Calendar.id,
+            exists().where(
+                and_(
+                    BHD.bank_holiday_name == CBH.bank_holiday,
+                    BHD.date == date,
+                )
+            ),
+            CBH.operating.is_(True),
+        )
+    )
+
+    # final filter
+    final_filter = and_(
+        base_filter,
+        not_(exc_off),
+        not_(bh_off),
+        or_(
+            exc_special,  # special exceptions override weekday
+            bh_on,  # bank holidays override weekday
+            and_(
+                getattr(Calendar, weekday), exc_weekday
+            ),  # respect weekday for normal exceptions
+            getattr(Calendar, weekday),  # fallback weekday
+        ),
+    )
+
+    return final_filter
+
+
 class StopTime(Base):
     """
     every time a journey stops at a stop
     """
 
     __tablename__ = "stop_time"
-    id = Column(Integer, primary_key=True, autoincrement=True)
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
     journey_id = Column(
-        String, ForeignKey("journey.id", ondelete="CASCADE"), nullable=False, index=True
+        BigInteger,
+        ForeignKey("journey.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     stop_id = Column(
         String,
@@ -1087,72 +1638,110 @@ class StopTime(Base):
         nullable=False,
         index=True,
     )
-    stop_sequence = Column(Integer, nullable=False)
+    stop_sequence = Column(SmallInteger, nullable=False)
     arrival_time = Column(Interval, nullable=True)
     departure_time = Column(Interval, nullable=True, index=True)
     dest_display = Column(String, nullable=True)
-    timing_status = Column(String, nullable=True)
+    timing_status = Column(Enum(TimingStatusEnum), nullable=True)
     pick_up = Column(Boolean, nullable=True)
     drop_off = Column(Boolean, nullable=True)
-    wait_time = Column(Interval, nullable=True)  # wait time in seconds
-    distance_traveled = Column(Float, nullable=True)  # distance in meters
 
     journey = relationship("Journey", back_populates="stop_times")
     stop = relationship("Stop", back_populates="stop_times")
 
     __table_args__ = (Index("ix_stoptime_journey_seq", "journey_id", "stop_sequence"),)
 
+    def __repr__(self):
+        return f"id={self.id}, journey_id={self.journey_id}, stop_id={self.stop_id}, stop_sequence={self.stop_sequence}, arrival_time={self.arrival_time}, departure_time={self.departure_time}"
+
     @property
     def headsign(self):
-        # return self.journey.destination.locality.name#
+        try:
+            # return self.journey.destination.locality.name#
 
-        is_outbound = self.journey.direction == DirectionType.outbound
+            is_outbound = self.journey.inbound is False
 
-        main_dest = (
-            self.journey.line.service.destination
-            if is_outbound
-            else self.journey.line.service.origin
-        )
-
-        line_dest = (
-            self.journey.line.outbound_description
-            if is_outbound
-            else self.journey.line.inbound_description
-        )
-
-        vias = self.journey.line.service.vias or ""
-
-        raw_headsign = self.dest_display or self.journey.headsign
-        fallback_headsign = main_dest
-
-        do_makeshift = False
-
-        show_headsign = False
-        if raw_headsign:
-            short_enough = len(raw_headsign) < 25
-            overlaps = any(
-                word in raw_headsign.split()
-                for word in (main_dest.split() + line_dest.split() + vias.split(", "))
+            main_dest = (
+                self.journey.timetable.destination
+                if is_outbound
+                else self.journey.timetable.origin
             )
-            show_headsign = short_enough and overlaps
-        if do_makeshift:
-            if show_headsign:
-                final = raw_headsign
-            else:
-                makeshift = (
-                    f"{main_dest} {raw_headsign}" if raw_headsign else fallback_headsign
-                )
-                log.debug("using makeshift headsign", makeshift)
-                final = makeshift
-        else:
-            if show_headsign:
-                final = raw_headsign
-            else:
-                final = fallback_headsign
-        if self.journey.destination and self.journey.destination.locality:
-            return final or self.journey.destination.locality.name
 
-        return final or fallback_headsign
+            line_dest = (
+                self.journey.timetable.outbound_description
+                if is_outbound
+                else self.journey.timetable.inbound_description
+            )
+
+            vias = self.journey.timetable.vias or ""
+
+            raw_headsign = self.dest_display or self.journey.headsign
+            fallback_headsign = main_dest
+
+            do_makeshift = False
+
+            show_headsign = False
+            if raw_headsign:
+                short_enough = len(raw_headsign) < 25
+                overlaps = any(
+                    word in raw_headsign.split()
+                    for word in (
+                        main_dest.split()
+                        + line_dest.split()
+                        + vias.split(", ")
+                        + self.journey.service.description.split()
+                    )
+                )
+                bad_chars = any(c in raw_headsign for c in ("/",))
+                show_headsign = short_enough and overlaps and not bad_chars
+
+            if do_makeshift:
+                if show_headsign:
+                    final = raw_headsign
+                else:
+                    makeshift = (
+                        f"{main_dest} {raw_headsign}"
+                        if raw_headsign
+                        else fallback_headsign
+                    )
+                    log.debug("using makeshift headsign", makeshift)
+                    final = makeshift
+            else:
+                if show_headsign:
+                    final = raw_headsign
+                else:
+                    final = fallback_headsign
+
+            bad_chars = any(c in final for c in ("/",))
+            if (
+                bad_chars
+                and self.journey.destination
+                and self.journey.destination.locality
+            ):
+                return self.journey.destination.locality.name
+
+            if self.journey.destination and self.journey.destination.locality:
+                return final or self.journey.destination.locality.name
+
+            return final or fallback_headsign
+        except Exception as e:
+            log.error(f"Error getting headsign for stoptime {self.id}: {e}")
+            return None
+
+    def departure_datetime(self, service_day: date) -> datetime | None:
+        dep = self.departure_time or self.arrival_time
+        if dep is None:
+            return None
+
+        return datetime.combine(service_day, (datetime.min + dep).time(), tzinfo=LONDON)
+
+    @property
+    def dep_or_arr(self):
+        return self.departure_time or self.arrival_time
+
+    @property
+    def dep_or_arr_str(self):
+        return self.departure_time_str or self.arrival_time_str
 
     @property
     def departure_time_str(self):

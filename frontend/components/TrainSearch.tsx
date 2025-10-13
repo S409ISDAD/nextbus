@@ -52,9 +52,9 @@ export default function TrainSearchCard() {
                 </div>
             </div>
             <button
-                className={`w-full p-2 mt-2 font-semibold text-white transition-all bg-blue-600 rounded-xl ${
+                className={`w-full p-2 mt-2 font-semibold text-white transition-all bg-primary rounded-xl ${
                     selectedFrom && selectedTo
-                        ? "cursor-pointer hover:bg-blue-700"
+                        ? "cursor-pointer hover:bg-primary-700"
                         : "brightness-50 cursor-not-allowed"
                 }`}
                 disabled={!selectedFrom || !selectedTo}

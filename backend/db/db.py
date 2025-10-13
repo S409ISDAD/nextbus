@@ -1,8 +1,7 @@
 import os
-
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, scoped_session
+from sqlalchemy.orm import sessionmaker
 from sqlalchemy_searchable import sync_trigger
 
 load_dotenv()
@@ -15,10 +14,19 @@ POSTGRES_PORT = os.getenv("POSTGRES_PORT", "5432")
 
 DATABASE_URL = f"postgresql+psycopg2://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
 
-engine = create_engine(DATABASE_URL)
 
-SessionLocal = scoped_session(
-    sessionmaker(autocommit=False, autoflush=False, bind=engine)
+engine = create_engine(
+    DATABASE_URL,
+    pool_size=20,
+    max_overflow=20,
+    pool_timeout=30,
+    pool_recycle=3600,
+    pool_pre_ping=True,
+)
+
+
+SessionLocal = sessionmaker(
+    autocommit=False, autoflush=False, bind=engine, expire_on_commit=False
 )
 
 
@@ -50,11 +58,10 @@ def sync_search_vectors():
             "service",
             "search_vector",
             [
+                "line_name",
+                "line_brand",
                 "description",
-                "origin",
-                "destination",
                 "vias",
-                "line_names",
             ],
         )
         sync_trigger(
@@ -62,16 +69,6 @@ def sync_search_vectors():
             "operator",
             "search_vector",
             ["name", "noc"],
-        )
-        sync_trigger(
-            conn,
-            "line",
-            "search_vector",
-            [
-                "line_name",
-                "inbound_description",
-                "outbound_description",
-            ],
         )
         sync_trigger(
             conn,

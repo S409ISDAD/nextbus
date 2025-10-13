@@ -1,77 +1,155 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 
-import pandas as pd
 from sqlalchemy.orm import Session
 
 from backend.db.db import SessionLocal
-from backend.models import Service, StopTime, Journey, DirectionType
+from backend.models import (
+    Calendar,
+    Service,
+    ServiceStopUsage,
+    Stop,
+    StopTime,
+    Journey,
+    journey_is_valid_filter,
+)
 from backend.deps import LONDON
+import sys
 
 
-def generate_timetable(line_id: str, db: Session):
-    today = datetime.now(tz=LONDON).date() + timedelta(days=1)
+def generate_timetable(
+    service: Service, today: datetime, db: Session, inbound: bool = True
+):
+    # Get ordered stops for inbound trips
+    stops = (
+        db.query(ServiceStopUsage)
+        .filter(
+            ServiceStopUsage.service_id == service.id,
+            ServiceStopUsage.line_name == service.line_name,
+            ServiceStopUsage.inbound.is_(inbound),
+        )
+        .order_by(ServiceStopUsage.order)
+        .all()
+    )
+    stop_ordered = [su.stop_id for su in stops]
 
-    # Fetch the services for the given route
-    services = (
-        db.query(Service)
-        .join(Journey, Service.service_code == Journey.service_code)
-        .filter(Journey.line_id == line_id)
+    current_timetable = service.get_correct_timetable()
+
+    # Get valid inbound trips
+    journey_filters = [
+        Journey.service_id == service.id,
+        Journey.inbound.is_(inbound),
+        journey_is_valid_filter(today.date()),
+    ]
+    if current_timetable:
+        journey_filters.append(Journey.timetable_id == current_timetable.id)
+
+    journeys = (
+        db.query(Journey)
+        .filter(*journey_filters)
+        .join(Calendar, Journey.calendar)
+        .order_by(Journey.start_time)
+        .distinct(Journey.start_time, Journey.end_time)
         .all()
     )
 
-    # Collect all unique stops in order of appearance
-    stop_order = {}
-    journey_stop_times = {}
-    journey_ids = set()
-    start_times = {}
+    print(
+        f"Generating timetable for service {service.line_name} ({'inbound' if inbound else 'outbound'}) with {len(journeys)} journeys and {len(stops)} stops."
+    )
 
-    for service in services:
-        for journey in service.journeys:
-            if not journey.is_valid(today):
-                continue
-            if journey.direction == DirectionType.outbound:
-                journey_ids.add(journey.id)
-                start_times[journey.id] = journey.start_time
-                stop_times = (
-                    db.query(StopTime)
-                    .filter(StopTime.journey_id == journey.id)
-                    .order_by(StopTime.stop_sequence)
-                    .all()
-                )
-                journey_stop_times[journey.id] = {}
-                for stop_time in stop_times:
-                    stop = stop_time.stop
-                    if stop:
-                        if stop.common_name not in stop_order.keys():
-                            stop_order[stop.common_name] = stop_time.stop_sequence
-                        dep_time = stop_time.departure_time
-                        if dep_time is not None:
-                            journey_stop_times[journey.id][stop.common_name] = (
-                                stop_time.departure_time_str
-                            )
-                        else:
-                            journey_stop_times[journey.id][stop.common_name] = "-"
+    timing_points = {}
 
-    # Sort stops by their sequence
-    stop_ordered = [stop[0] for stop in sorted(stop_order.items(), key=lambda x: x[1])]
+    stoptimes = (
+        db.query(StopTime)
+        .filter(
+            StopTime.journey_id.in_([j.id for j in journeys]),
+            StopTime.stop_id.in_([s.stop_id for s in stops]),
+        )
+        .all()
+    )
+    journey_stop_to_stoptime = {(st.journey_id, st.stop_id): st for st in stoptimes}
 
-    # Sort journey_ids by their start_time (timedelta)
-    sorted_journey_ids = sorted(journey_ids, key=lambda jid: start_times[jid])
+    data = {j.id: [] for j in journeys}
+    for su in stops:
+        for i in journeys:
+            st = journey_stop_to_stoptime.get((i.id, su.stop_id))
+            if st:
+                data[i.id].append(st.dep_or_arr_str)
+                timing_points[su.stop_id] = st.timing_status
+            else:
+                data[i.id].append(None)
 
-    # Build DataFrame: rows=stops, columns=journeys
-    data = {}
-    for id in sorted_journey_ids:
-        data[id] = [journey_stop_times[id].get(stop, "-") for stop in stop_ordered]
+    stop_mask = []
+    for i, atco in enumerate(stop_ordered):
+        if any(data[j.id][i] is not None for j in journeys):
+            stop_mask.append(True)
+        else:
+            stop_mask.append(False)
 
-    df = pd.DataFrame(data, index=stop_ordered)
-    df.columns = [""] * len(
-        df.columns
-    )  # Hide journey ids by setting empty column names
-    df.to_html("timetable.html", justify="center", border=1)
-    print("✔ Timetable generated at timetable.html")
+    stop_ordered_filtered = [
+        atco for atco, keep in zip(stop_ordered, stop_mask) if keep
+    ]
+
+    for j_id in data:
+        data[j_id] = [time for time, keep in zip(data[j_id], stop_mask) if keep]
+
+    stops_objs = db.query(Stop).filter(Stop.atco_code.in_(stop_ordered_filtered)).all()
+
+    stop_names = [
+        next((s.name for s in stops_objs if s.atco_code == atco), "Unknown")
+        for atco in stop_ordered_filtered
+    ]
+
+    response = {
+        "service": {
+            "id": service.id,
+            "line_name": service.line_name,
+            "inbound": inbound,
+        },
+        "stops": [
+            {"id": atco, "name": name, "timing_status": timing_points.get(atco, "OTH")}
+            for atco, name in zip(stop_ordered_filtered, stop_names)
+        ],
+        "journeys": [
+            {
+                "id": j.id,
+                "start_time": str(j.start_time),
+                "times": data[j.id],
+            }
+            for j in journeys
+        ],
+    }
+
+    return response
 
 
 if __name__ == "__main__":
-    line_id = "SCSO:PH0005857:165:64"
+    if len(sys.argv) < 2:
+        print("Usage: python generate_timetable.py <service_id> <inbound (1/0)>")
+        sys.exit(1)
+    service_id = int(sys.argv[1])
+    inbound = bool(int(sys.argv[2])) if len(sys.argv) > 2 else True
     with SessionLocal() as db:
-        generate_timetable(line_id, db)
+        service = db.query(Service).filter(Service.id == service_id).first()
+        if not service:
+            print(f"Service with ID {service_id} not found.")
+            sys.exit(1)
+        today = datetime.now(tz=LONDON)
+        data = generate_timetable(service, today, db, inbound=inbound)
+
+        stops = data["stops"]
+        journeys = data["journeys"]
+
+        # Header row
+        header = ["Stop"]
+        print("{:<30}".format(header[0]), end="")
+        for h in header[1:]:
+            print("{:<6}".format(h), end="")
+        print()
+
+        # Rows
+        for i, stop in enumerate(stops):
+            print("{:<30}".format(stop["name"]), end="")
+            for j in journeys:
+                time = j["times"][i] if i < len(j["times"]) else None
+                print("{:<6}".format(time or "  -  "), end="")
+            print()

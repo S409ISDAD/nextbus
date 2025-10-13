@@ -1,6 +1,6 @@
 import type { ServiceInfo } from "./ServiceInfo";
 import type { ProgressInfo } from "./ProgressInfo";
-import type { Journey } from "./Journey";
+import type { LiveJourney } from "./Journey";
 import type { Livery } from "./Livery";
 
 export interface ScheduledBus {
@@ -38,7 +38,7 @@ export interface Bus {
     coords?: number[];
     predictions: Prediction[];
     livery?: Livery
-    journey: Journey
+    journey: LiveJourney
     confidence: Confidence;
     timeTo: string;
     status: string;

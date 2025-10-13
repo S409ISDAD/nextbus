@@ -9,25 +9,26 @@ from shapely.geometry import Point
 from sqlalchemy.orm import Session
 from sqlalchemy_searchable import sync_trigger
 
+from backend.config import get_logger, setup_logging
 from backend.db.db import SessionLocal
 from backend.db.db import engine
 from backend.deps import LONDON
 from backend.models import (
     Stop,
     StopArea,
-    StopAreaTypeEnum, AdminArea, Locality,
+    StopAreaTypeEnum,
+    AdminArea,
+    Locality,
 )
 from backend.utils.bulk_upsert import bulk_upsert
 from backend.utils.download_to_static import download_to_static
-import logging
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 new_stops = []
 new_stop_areas = []
 admin_areas = set()
 localities = set()
-
 
 
 def get_datetime(string):
@@ -129,7 +130,7 @@ def get_stop_area(element: ET.Element):
         try:
             stop_area_type = StopAreaTypeEnum(element.findtext("StopAreaType"))
         except Exception as e:
-            log.debug(f"an error occurred parsing stop area type: {e}")
+            log.warning(f"an error occurred parsing stop area type: {e}")
             stop_area_type = None
 
         return {
@@ -265,7 +266,14 @@ def create_or_update(db: Session, no_update: bool):
 def import_naptan_data(file_path: Path, no_update=False):
     log.debug("Importing NAPTAN data...")
 
-    global new_stops, existing_stop_ids, stop_area_ids, new_stop_areas, admin_areas, localities, localities_not_exist
+    global \
+        new_stops, \
+        existing_stop_ids, \
+        stop_area_ids, \
+        new_stop_areas, \
+        admin_areas, \
+        localities, \
+        localities_not_exist
     iterator = ET.iterparse(file_path, events=("start", "end"))
     with SessionLocal() as db:
         try:
@@ -273,8 +281,8 @@ def import_naptan_data(file_path: Path, no_update=False):
                 atco_code[0] for atco_code in db.query(Stop.atco_code).all()
             }
             stop_area_ids = {code[0] for code in db.query(StopArea.id).all()}
-            admin_areas = {a[0] for a in db.query(AdminArea.id).all()}
-            localities = {l[0] for l in db.query(Locality.id).all()}
+            admin_areas = {adm[0] for adm in db.query(AdminArea.id).all()}
+            localities = {loc[0] for loc in db.query(Locality.id).all()}
             localities_not_exist = set()
             log.debug("Loaded existing data")
             for event, element in iterator:
@@ -305,9 +313,9 @@ def import_naptan_data(file_path: Path, no_update=False):
                 )
             log.debug("Import complete.")
         except Exception as e:
-            log.debug("An error occurred during NaPTAN import:")
+            log.error("An error occurred during NaPTAN import:")
             error_str = e.__str__()
-            log.debug(error_str[:1000])
+            log.error(error_str[:1000])
             # log.debug(error_str)
             db.rollback()
 
@@ -344,4 +352,5 @@ def main():
 
 
 if __name__ == "__main__":
+    setup_logging()
     main()

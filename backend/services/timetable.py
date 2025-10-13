@@ -3,6 +3,7 @@ import logging
 
 log = logging.getLogger(__name__)
 
+
 async def calculate_distances(stops: list) -> list[float]:
     distances = []
 

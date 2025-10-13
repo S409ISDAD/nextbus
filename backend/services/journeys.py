@@ -1,6 +1,5 @@
 from datetime import datetime as dt
 from datetime import timedelta
-from types import NoneType
 
 from dateutil.parser import isoparse
 from geopy.distance import geodesic
@@ -87,7 +86,7 @@ async def get_vehicle_journey(journey_id, delay, r) -> Journey:
 
     for stop_idx, stop in enumerate(json_stops):
         if stop.get("track"):
-            track = [[lng_lat[1], lng_lat[0]] for lng_lat in stop.get("track")]
+            track = [[lon_lat[1], lon_lat[0]] for lon_lat in stop.get("track")]
         else:
             track = None
 
@@ -141,7 +140,8 @@ async def get_vehicle_journey(journey_id, delay, r) -> Journey:
                 departed=departed,
                 track=track,
                 coords=coords,
-                set_down=stop.get("set_down"),
+                set_down=stop.get("set_down", True),
+                pick_up=stop.get("pick_up", True),
                 timing_status=stop.get("timing_status", "OTH"),
             )
         )
@@ -153,7 +153,8 @@ async def get_vehicle_journey(journey_id, delay, r) -> Journey:
         stops=stops,
     )
 
-async def get_live_journey(journey_id, r) -> LiveJourney:
+
+async def get_live_journey(journey_id, r) -> LiveJourney | None:
     async def fetch(journey_id):
         data = await fetch_json(
             BASE + f"/journeys/{journey_id}.json",
@@ -181,9 +182,8 @@ async def get_live_journey(journey_id, r) -> LiveJourney:
 
         for i, location in enumerate(locations):
             coords = location["coordinates"]
-            location["coords"] = [coords[1], coords[0]] # geojson is backwards
+            location["coords"] = [coords[1], coords[0]]  # geojson is backwards
             location["timestamp"] = isoparse(location["datetime"])
-
 
         return data
 
@@ -194,6 +194,10 @@ async def get_live_journey(journey_id, r) -> LiveJourney:
         exp=JOURNEY_CACHE,
         r=r,
     )
+
+    if not live_journey:
+        log.warning(f"Live journey with ID {journey_id} not found.")
+        return None
 
     json_stops = live_journey.get("stops")
     stops: list[StopTime] = []
@@ -211,8 +215,9 @@ async def get_live_journey(journey_id, r) -> LiveJourney:
                 expt_time=stop.get("expt_time"),
                 departed=departed,
                 track=None,
-                coords=[0,0],
+                coords=[0, 0],
                 set_down=False,
+                pick_up=False,
                 timing_status="OTH",
             )
         )
@@ -305,7 +310,7 @@ async def get_trip(trip_id, delay, r) -> Trip:
 
     for stop_idx, stop in enumerate(json_stops):
         if stop.get("track"):
-            track = [[lng_lat[1], lng_lat[0]] for lng_lat in stop.get("track")]
+            track = [[lon_lat[1], lon_lat[0]] for lon_lat in stop.get("track")]
         else:
             track = None
 
@@ -354,7 +359,8 @@ async def get_trip(trip_id, delay, r) -> Trip:
                 departed=departed,
                 track=track,
                 coords=coords,
-                set_down=stop.get("set_down"),
+                set_down=stop.get("set_down", True),
+                pick_up=stop.get("pick_up", True),
             )
         )
 

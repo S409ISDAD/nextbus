@@ -1,26 +1,26 @@
-import React, {useEffect, useState} from "react";
-import {useNavigate, useParams} from "react-router";
-import {Skeleton} from "@radix-ui/themes";
-import {Card} from "../components/ui/Card";
-import {lateness, timedeltaDisplay, toTime} from "../utils/timeUtils";
-import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
+import React, { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router";
+import { Skeleton } from "@radix-ui/themes";
+import { Card } from "../components/ui/Card";
+import { lateness, timedeltaDisplay, toTime } from "../utils/timeUtils";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
     faArrowLeft,
     faBus,
     faHourglassStart,
     faPersonWalkingArrowRight,
-    faStopwatch
+    faStopwatch,
 } from "@fortawesome/free-solid-svg-icons";
-import type {Locality} from "../models/Locality.ts";
-import type {PossibleJourney} from "../models/PossibleJourneys.ts";
-import {getLocality, getPossibleJourneys} from "../utils/JourneyPlanning.ts";
-import {getCurrentPosition} from "../utils/locations.ts";
+import type { Locality } from "../models/Locality.ts";
+import type { PossibleJourney } from "../models/PossibleJourneys.ts";
+import { getLocality, getPossibleJourneys } from "../utils/JourneyPlanning.ts";
+import { getCurrentPosition } from "../utils/locations.ts";
 
 function JourneyCard({
-                         journey,
-                         onClick,
-                         idx,
-                     }: {
+    journey,
+    onClick,
+    idx,
+}: {
     journey: PossibleJourney;
     onClick: () => void;
     idx: number;
@@ -33,14 +33,13 @@ function JourneyCard({
             <div className="flex items-center justify-between font-semibold">
                 {/* LEFT BLOCK */}
                 <div className="flex flex-col gap-3">
-
                     <div className="flex flex-col items-start gap-4">
                         <div className="flex flex-col items-start gap-2 justify-between w-full">
                             <div className="flex mb-1">
-                                <div className="flex items-center px-3 py-1 bg-blue-700 rounded-l-2xl">
-                                <span className="flex items-center justify-center text-xl font-bold text-center">
-                                    {journey.line_name}
-                                </span>
+                                <div className="flex items-center px-3 py-1 bg-primary-700 rounded-l-2xl">
+                                    <span className="flex items-center justify-center text-xl font-bold text-center">
+                                        {journey.line_name}
+                                    </span>
                                 </div>
                                 <div className="flex flex-col justify-center px-3 bg-neutral-800/50 rounded-r-2xl">
                                     <span className="font-semibold text">
@@ -53,42 +52,46 @@ function JourneyCard({
                                     )}
                                 </div>
                                 {idx === 0 && (
-                                    <span
-                                        className="px-2 py-1 align-self-center h-fit ml-2 text-xs font-bold text-blue-400 rounded-full bg-blue-600/20">
-                                    arrives first
-                                </span>
+                                    <span className="px-2 py-1 align-self-center h-fit ml-2 text-xs font-bold text-primary-400 rounded-full bg-primary/20">
+                                        arrives first
+                                    </span>
                                 )}
-
                             </div>
-                            {journey.live_bus && (<div className="flex items-center gap-3">
-                                <div className="flex justify-center px-2 py-1 rounded-lg bg-amber-400">
-                            <span className="text-xs font-bold align-middle text-neutral-950 text-nowrap">
-                                {journey.live_bus.reg}
-                            </span>
+                            {journey.live_bus && (
+                                <div className="flex items-center gap-3">
+                                    <div className="flex justify-center px-2 py-1 rounded-lg bg-amber-400">
+                                        <span className="text-xs font-bold align-middle text-neutral-950 text-nowrap">
+                                            {journey.live_bus.reg}
+                                        </span>
+                                    </div>
+                                    <span
+                                        className={`text-${
+                                            journey.live_bus.delay >= 60
+                                                ? "red"
+                                                : "green"
+                                        }-400`}>
+                                        {lateness(journey.live_bus.delay)}
+                                    </span>
                                 </div>
-                                <span
-                                    className={`text-${
-                                        journey.live_bus.delay >= 60 ? "red" : "green"
-                                    }-400`}>
-                                {lateness(journey.live_bus.delay)}
-                            </span></div>)}
-
+                            )}
                         </div>
-
 
                         {/* Journey Details Timeline */}
                         <div className="relative flex flex-col gap-4">
                             {/* Origin Stop */}
 
                             <div className="flex items-center gap-3">
-                                <div className="text-sm font-bold">{journey.origin_stop_name}</div>
+                                <div className="text-sm font-bold">
+                                    {journey.origin_stop_name}
+                                </div>
                                 {journey.departure &&
                                     (() => {
                                         const aimed = new Date(
                                             journey.departure
                                         ).getTime();
                                         const expt = new Date(
-                                            journey.live_bus?.expected || journey.departure
+                                            journey.live_bus?.expected ||
+                                                journey.departure
                                         ).getTime();
                                         const diff = Math.abs(expt - aimed);
                                         const isLate =
@@ -97,44 +100,65 @@ function JourneyCard({
                                             <div className="flex gap-2">
                                                 {isLate && (
                                                     <span className="line-through text-neutral-500">
-                                                      {toTime(journey.departure)}
-                                                  </span>
+                                                        {toTime(
+                                                            journey.departure
+                                                        )}
+                                                    </span>
                                                 )}
-                                                <span className={"text-sky-400"}>
-                                                  {toTime(journey.live_bus?.expected || journey.departure)}
-                                              </span>
+                                                <span
+                                                    className={"text-link-400"}>
+                                                    {toTime(
+                                                        journey.live_bus
+                                                            ?.expected ||
+                                                            journey.departure
+                                                    )}
+                                                </span>
                                             </div>
                                         );
-                                    })()
-                                }
+                                    })()}
                             </div>
 
                             {/* Journey Steps */}
                             <div className="flex flex-col gap-2 text-sm text-neutral-400">
                                 {journey.wait_seconds && (
                                     <div className="flex items-center gap-2">
-                                        <FontAwesomeIcon icon={faHourglassStart} className="text-neutral-100"/>
-                                        Go in {timedeltaDisplay(journey.wait_seconds)}
+                                        <FontAwesomeIcon
+                                            icon={faHourglassStart}
+                                            className="text-neutral-100"
+                                        />
+                                        Go in{" "}
+                                        {timedeltaDisplay(journey.wait_seconds)}
                                     </div>
                                 )}
                                 {journey.walk_seconds && (
                                     <div className="flex items-center gap-2">
-                                        <FontAwesomeIcon icon={faPersonWalkingArrowRight} className="text-neutral-100"/>
-                                        Walk {timedeltaDisplay(journey.walk_seconds)}
+                                        <FontAwesomeIcon
+                                            icon={faPersonWalkingArrowRight}
+                                            className="text-neutral-100"
+                                        />
+                                        Walk{" "}
+                                        {timedeltaDisplay(journey.walk_seconds)}
                                     </div>
                                 )}
                                 <div className="flex items-start gap-2 flex-col">
                                     <div className="flex items-center gap-2">
-                                        <FontAwesomeIcon icon={faBus} className="text-neutral-100"/>
+                                        <FontAwesomeIcon
+                                            icon={faBus}
+                                            className="text-neutral-100"
+                                        />
                                         Board the {journey.line_name}
                                     </div>
-
-
                                 </div>
                                 {journey.in_vehicle_seconds && (
                                     <div className="flex items-center gap-2">
-                                        <FontAwesomeIcon icon={faStopwatch} className="text-neutral-100"/>
-                                        Ride for {timedeltaDisplay(journey.in_vehicle_seconds)}
+                                        <FontAwesomeIcon
+                                            icon={faStopwatch}
+                                            className="text-neutral-100"
+                                        />
+                                        Ride for{" "}
+                                        {timedeltaDisplay(
+                                            journey.in_vehicle_seconds
+                                        )}
                                     </div>
                                 )}
                             </div>
@@ -142,14 +166,19 @@ function JourneyCard({
                             {/* Destination Stop */}
 
                             <div className="flex items-center gap-3">
-                                <div className="text-sm font-bold">{journey.dest_stop_name}</div>
+                                <div className="text-sm font-bold">
+                                    {journey.dest_stop_name}
+                                </div>
                                 {journey.arrival &&
                                     (() => {
                                         const aimed = new Date(
                                             journey.arrival
                                         ).getTime();
                                         const expt = new Date(
-                                            journey.live_bus ? journey.live_bus.delay + journey.arrival : journey.arrival
+                                            journey.live_bus
+                                                ? journey.live_bus.delay +
+                                                  journey.arrival
+                                                : journey.arrival
                                         ).getTime();
                                         const diff = Math.abs(expt - aimed);
                                         const isLate =
@@ -158,26 +187,37 @@ function JourneyCard({
                                             <div className="flex gap-2">
                                                 {isLate && (
                                                     <span className="line-through text-neutral-500">
-                                                      {toTime(journey.arrival)}
-                                                  </span>
+                                                        {toTime(
+                                                            journey.arrival
+                                                        )}
+                                                    </span>
                                                 )}
-                                                <span className={"text-sky-400"}>
-                                                  {toTime(journey.live_bus ? new Date(journey.live_bus.delay + new Date(journey.arrival).getTime()).toString() : journey.arrival)}
-                                              </span>
+                                                <span
+                                                    className={"text-link-400"}>
+                                                    {toTime(
+                                                        journey.live_bus
+                                                            ? new Date(
+                                                                  journey
+                                                                      .live_bus
+                                                                      .delay +
+                                                                      new Date(
+                                                                          journey.arrival
+                                                                      ).getTime()
+                                                              ).toString()
+                                                            : journey.arrival
+                                                    )}
+                                                </span>
                                             </div>
                                         );
-                                    })()
-                                }
+                                    })()}
                             </div>
-
                         </div>
                     </div>
-
                 </div>
 
                 {/* RIGHT BLOCK */}
                 {/*<div className="flex flex-wrap items-center justify-center gap-2 text-sm md:gap-4 sm:text-base">*/}
-                {/*    <div className="px-1.5 py-0.5 bg-blue-600 rounded-lg">*/}
+                {/*    <div className="px-1.5 py-0.5 bg-primary rounded-lg">*/}
                 {/*        <span className="text-xs font-bold text-neutral-950 whitespace-nowrap">*/}
                 {/*            Platform {train.fromStop?.platform ?? "-"}*/}
                 {/*        </span>*/}
@@ -198,11 +238,13 @@ function JourneyCard({
 }
 
 const PossibleJourneysPage: React.FC = () => {
-    const {locality, datetime} = useParams();
+    const { locality, datetime } = useParams();
 
     const navigate = useNavigate();
 
-    const [possibleJourneys, setPossibleJourneys] = useState<PossibleJourney[]>([]);
+    const [possibleJourneys, setPossibleJourneys] = useState<PossibleJourney[]>(
+        []
+    );
     const [destination, setDestination] = useState<Locality>();
     const [loading, setLoading] = useState(true);
     const [lastRefreshed, setRefreshed] = useState(new Date());
@@ -269,13 +311,15 @@ const PossibleJourneysPage: React.FC = () => {
             try {
                 const destination = await getLocality(locality);
                 if (destination) {
-                    setDestination(destination)
+                    setDestination(destination);
                 }
                 const pos = await getCurrentPosition();
                 // const fakePos = [51.0812758, -1.1592113]
                 // const fakePos = [51.062069, -1.294477]
                 const possible = await getPossibleJourneys(
-                    [pos.coords.latitude, pos.coords.longitude], locality, undefined
+                    [pos.coords.latitude, pos.coords.longitude],
+                    locality,
+                    undefined
                 );
                 // const possible = await getPossibleJourneys(
                 //     fakePos, locality
@@ -304,7 +348,7 @@ const PossibleJourneysPage: React.FC = () => {
 
         getData();
         const interval = setInterval(() => {
-            getData()
+            getData();
         }, 60000);
         return () => clearInterval(interval);
     }, [locality, datetime]);
@@ -312,11 +356,11 @@ const PossibleJourneysPage: React.FC = () => {
     return (
         <div className="gap-3 p-5 md:mx-20">
             <div
-                className="flex items-center gap-2 p-1.5 px-2.5 my-2 text-sm font-semibold text-white transition-all cursor-pointer bg-neutral-800 w-fit rounded-xl hover:bg-blue-700"
+                className="flex items-center gap-2 p-1.5 px-2.5 my-2 text-sm font-semibold text-white transition-all cursor-pointer bg-neutral-800 w-fit rounded-xl hover:bg-primary-700"
                 onClick={() => {
                     navigate(-1);
                 }}>
-                <FontAwesomeIcon icon={faArrowLeft}/>
+                <FontAwesomeIcon icon={faArrowLeft} />
                 Back
             </div>
             <div className="flex flex-col items-center w-full gap-4">

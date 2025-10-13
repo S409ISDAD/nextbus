@@ -68,13 +68,13 @@ async def calculate_loc(progress: float, track: list[list[float]]) -> list[float
                 return full_track[i]
             seg_prog = (target_dist - cumulative[i]) / seg_dist
 
-            lat1, lng1 = full_track[i]
-            lat2, lng2 = full_track[i + 1]
+            lat1, lon1 = full_track[i]
+            lat2, lon2 = full_track[i + 1]
 
             interp_lat = lat1 + (lat2 - lat1) * seg_prog
-            interp_lng = lng1 + (lng2 - lng1) * seg_prog
+            interp_lon = lon1 + (lon2 - lon1) * seg_prog
 
-            return [interp_lat, interp_lng]
+            return [interp_lat, interp_lon]
 
     return full_track[-1]
 
@@ -146,7 +146,15 @@ async def predict_future(
     return predictions
 
 
-async def calculate_expected(delay, sequence, stop_id, journey_id, r):
+async def calculate_expected(
+    delay,
+    sequence,
+    stop_id,
+    journey_id,
+    r,
+    bus_seen_count: int = 1,
+    pick_up_only: bool = False,
+):
     journey = await get_vehicle_journey(journey_id, delay, r)
 
     current_time = dt.now(tz=UTC)
@@ -157,6 +165,8 @@ async def calculate_expected(delay, sequence, stop_id, journey_id, r):
 
     expected_time = None
     scheduled_time = None
+
+    seen = bus_seen_count
 
     stop_idx = 0
     target_seq = None
@@ -173,9 +183,19 @@ async def calculate_expected(delay, sequence, stop_id, journey_id, r):
                 not_started = True
 
         if stop_time.stop_id == stop_id:
+            if seen > 1:
+                seen -= 1
+                log.warning(
+                    f"Skipping stop {stop_id} for journey {journey_id}, bus has been seen {bus_seen_count} times"
+                )
+                continue  # skip to next occurrence of the stop
             target_seq = stop_idx
 
         if stop_time.stop_id == stop_id and not sequence > stop_idx:
+            if pick_up_only and stop_time.pick_up is False:
+                # only include stop if the bus picks up passengers there
+                include = False
+                break
             aimed = stop_time.aimed_time
 
             if not aimed:

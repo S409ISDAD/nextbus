@@ -3,15 +3,15 @@ import xml.etree.ElementTree as ET
 
 from sqlalchemy_searchable import sync_trigger
 
+from backend.config import get_logger, setup_logging
 from backend.db.db import SessionLocal, engine
 from backend.deps import STATIC_DATA_DIR
 from backend.models import AdminArea, District, Locality, Region
 from backend.utils.download_to_static import download_to_static
 from backend.utils.location import generate_point
 from backend.utils.time import to_datetime
-import logging
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 def handle_region(element: ET.Element):
@@ -33,17 +33,23 @@ def handle_region(element: ET.Element):
                 short_name=admin_area_element.findtext("ShortName", ""),
                 country=region_element.findtext("Country")[:3],
                 created_at=to_datetime(admin_area_element.attrib["CreationDateTime"]),
-                modified_at=to_datetime(admin_area_element.attrib["ModificationDateTime"]),
+                modified_at=to_datetime(
+                    admin_area_element.attrib["ModificationDateTime"]
+                ),
                 region_id=region.id,
             )
             yield admin_area
 
-            for district_element in admin_area_element.findall("NptgDistricts/NptgDistrict"):
+            for district_element in admin_area_element.findall(
+                "NptgDistricts/NptgDistrict"
+            ):
                 district = District(
                     id=int(district_element.findtext("NptgDistrictCode")),
                     name=district_element.findtext("Name"),
                     created_at=to_datetime(district_element.attrib["CreationDateTime"]),
-                    modified_at=to_datetime(district_element.attrib["ModificationDateTime"]),
+                    modified_at=to_datetime(
+                        district_element.attrib["ModificationDateTime"]
+                    ),
                     admin_area_id=admin_area.id,
                 )
                 yield district
@@ -59,26 +65,32 @@ def handle_locality(element: ET.Element):
         yield Locality(
             id=locality_element.findtext("NptgLocalityCode"),
             name=locality_element.findtext("Descriptor/LocalityName"),
-            qualifier_name=locality_element.findtext("Descriptor/Qualify/QualifierName", ""),
+            qualifier_name=locality_element.findtext(
+                "Descriptor/Qualify/QualifierName", ""
+            ),
             created_at=to_datetime(locality_element.attrib["CreationDateTime"]),
             modified_at=to_datetime(locality_element.attrib["ModificationDateTime"]),
             admin_area_id=int(locality_element.findtext("AdministrativeAreaRef")),
             parent_id=locality_element.findtext("ParentNptgLocalityRef"),
             district_id=district_id,
             point=generate_point(lat, lon),
-
         )
 
 
 def import_nptg_data():
+    log.debug("Importing NPTG data...")
     with SessionLocal() as db:
         try:
             file = STATIC_DATA_DIR / "NPTG.xml"
 
-            regions: dict[str, Region] = {r.id: r for r in db.query(Region).all()}
-            admin_areas: dict[int, AdminArea] = {a.id: a for a in db.query(AdminArea).all()}
+            regions: dict[str, Region] = {reg.id: reg for reg in db.query(Region).all()}
+            admin_areas: dict[int, AdminArea] = {
+                adm.id: adm for adm in db.query(AdminArea).all()
+            }
             districts: dict[int, District] = {d.id: d for d in db.query(District).all()}
-            localities: dict[str, Locality] = {l.id: l for l in db.query(Locality).all()}
+            localities: dict[str, Locality] = {
+                loc.id: loc for loc in db.query(Locality).all()
+            }
 
             iterator = ET.iterparse(file)
             for _, element in iterator:
@@ -146,6 +158,7 @@ def import_nptg_data():
 
 
 def main():
+    setup_logging()
     url = "https://naptan.api.dft.gov.uk/v1/nptg"
 
     log.debug(f"Downloading NPTG data from {url}...")
@@ -159,6 +172,7 @@ def main():
         log.debug("Stopped by user.")
     finally:
         nptg_path.unlink()
+
 
 if __name__ == "__main__":
     main()

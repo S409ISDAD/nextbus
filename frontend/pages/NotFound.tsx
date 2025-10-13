@@ -3,11 +3,11 @@ import React from "react";
 const NotFound: React.FC = () => (
     <div className="flex flex-col items-center justify-center gap-4 text-center py-50">
         <h1 className="text-6xl font-bold">
-            404 to <span className="text-blue-500">Nowhere</span>
+            404 to <span className="text-primary-500">Nowhere</span>
         </h1>
         <p className="text-lg">Sorry, but this page will never depart.</p>
         <button
-            className="p-2 px-10 mt-2 font-semibold text-white transition-all bg-blue-600 cursor-pointer rounded-xl hover:bg-blue-700"
+            className="p-2 px-10 mt-2 font-semibold text-white transition-all bg-primary cursor-pointer rounded-xl hover:bg-primary-700"
             onClick={() => {
                 window.location.href = `/`;
             }}>

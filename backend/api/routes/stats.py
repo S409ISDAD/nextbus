@@ -4,7 +4,7 @@ import logging
 
 from backend.db.db import get_db
 from backend.deps import floor_to_30s, get_redis
-from backend.models import ActiveUsersSnapshot, Line, Stop, Operator
+from backend.models import ActiveUsersSnapshot, Service, Stop, Operator
 from fastapi import Query
 from datetime import timedelta
 
@@ -33,14 +33,15 @@ async def stats(redis=Depends(get_redis)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @router.get("/db")
 async def db_stats(request: Request, db=Depends(get_db), redis=Depends(get_redis)):
     async def get_stats(db):
-        total_lines = db.query(Line).count()
-        total_stops = db.query(Stop).filter(Stop.active == True).count()
+        total_services = db.query(Service).filter(Service.current).count()
+        total_stops = db.query(Stop).filter(Stop.active).count()
         total_operators = db.query(Operator).count()
         return {
-            "lines": total_lines,
+            "lines": total_services,
             "stops": total_stops,
             "operators": total_operators,
         }
@@ -50,7 +51,7 @@ async def db_stats(request: Request, db=Depends(get_db), redis=Depends(get_redis
             "db_stats",
             get_stats,
             (db,),
-            300, # 5 minutes
+            1,  # 5 minutes
             redis,
         )
         return cached_stats

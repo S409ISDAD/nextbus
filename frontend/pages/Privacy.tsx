@@ -14,36 +14,36 @@ const Privacy: React.FC = () => {
         <div className="flex flex-col max-w-3xl gap-5 p-6 mx-auto">
             <span className="text-4xl font-bold">Privacy Policy</span>
             <span>
-                <strong>Last updated:</strong> 17/08/2025
+                <strong>Last updated:</strong> October 2nd, 2025
             </span>
 
             <span>
-                This website "nextbus" cares about your privacy. We do not
+                This website "nextbus" cares about your privacy. I do not
                 collect or store any personal data (data linked to you or your
-                identity) on our servers.
+                identity) on the servers.
             </span>
             <div className="flex flex-col gap-2">
                 <span className="text-2xl font-bold">Location Data</span>
                 <span>
-                    When you use our location-based features, we use your
+                    When you use the location-based features, I use your
                     approximate location solely to find your nearest bus stop.
-                    Your location is briefly sent to our server and then passed
+                    Your location is briefly sent to the server and then passed
                     to{" "}
                     <strong>
                         <a
                             href="https://bustimes.org/privacy"
-                            className="underline text-sky-500"
+                            className="underline text-link"
                             target="_blank"
                             rel="noopener noreferrer">
                             bustimes.org
                         </a>
                     </strong>{" "}
-                    to look up stop data. We do not store your location, and we
-                    are not responsible for how{" "}
+                    to look up stop data. I do not store your location, and I am
+                    not responsible for how{" "}
                     <strong>
                         <a
                             href="https://bustimes.org/privacy"
-                            className="underline text-sky-500"
+                            className="underline text-link"
                             target="_blank"
                             rel="noopener noreferrer">
                             bustimes.org
@@ -55,24 +55,24 @@ const Privacy: React.FC = () => {
             <div className="flex flex-col gap-2">
                 <span className="text-2xl font-bold">Google Form</span>
                 <span>
-                    If you choose to submit our Google Form (e.g. to provide
+                    If you choose to fill out the Google Form (e.g. to provide
                     feedback), the information you provide is stored by Google
                     Forms and may include your email address or other
-                    information you choose to share. We use this information
-                    only to contact you about NextBus updates or feedback.
+                    information you choose to share. I use this information only
+                    to contact you about nextbus updates or feedback.
                 </span>
             </div>
             <div className="flex flex-col gap-2">
                 <span className="text-2xl font-bold">Cookies & Analytics</span>
                 <span>
-                    We use cookies for the stop favoriting feature. The stop
-                    code and coordinates of the stop are stored in the browser's
+                    I use cookies for the stop favoriting feature. The stop code
+                    and coordinates of the stop are stored in the browser's
                     localStorage under{" "}
                     <span className="p-1 rounded-lg bg-neutral-800">
                         favStops
                     </span>
                     . You can delete this data at any time by pressing the
-                    'Clear Favorites' button in the Bus Page or here. We also
+                    'Clear Favorites' button in the Bus Page or here. I also
                     store a randomly generated client ID in your browser's
                     localStorage under{" "}
                     <span className="p-1 rounded-lg bg-neutral-800">
@@ -81,7 +81,7 @@ const Privacy: React.FC = () => {
                     . This ID is used to identify your WebSocket connection or
                     API request and is not linked to any personal information.
                     This data is used to generate the statistics on the{" "}
-                    <a href="/stats" className="underline text-sky-500">
+                    <a href="/stats" className="underline text-link">
                         Stats Page.
                     </a>{" "}
                     You can delete the ID at any time by clearing your browser's
@@ -89,7 +89,7 @@ const Privacy: React.FC = () => {
                     next use the site.
                 </span>
                 <button
-                    className="p-1.5 px-4 w-fit text-sm font-semibold text-white transition-all bg-blue-600 cursor-pointer rounded-xl hover:bg-blue-700"
+                    className="p-1.5 px-4 w-fit text-sm font-semibold text-white transition-all bg-primary cursor-pointer rounded-xl hover:bg-primary-700"
                     onClick={() => setFavStops({})}>
                     Clear Favorites
                 </button>
@@ -100,7 +100,7 @@ const Privacy: React.FC = () => {
                     If you have any questions, please contact:{" "}
                     <a
                         href="mailto:contact@orbitix.dev"
-                        className="underline text-sky-500">
+                        className="underline text-link">
                         contact@orbitix.dev
                     </a>
                 </p>

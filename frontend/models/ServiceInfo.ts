@@ -8,12 +8,13 @@ export interface ServiceInfo {
 
 
 export interface Service {
-    description: string;
-    origin: string;
-    vias: string;
-    line_names: string;
-    service_code: string;
-    destination: string;
-    operator_noc: string;
+    id: number;
+    service_code?: string;
+    description?: string;
+    vias?: string;
+    line_name: string;
+    line_brand?: string;
+    last_modified?: string;
     operator?: Operator;
+    _user_distance?: number; // in meters, optional
 }

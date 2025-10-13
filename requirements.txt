@@ -12,7 +12,6 @@ websockets
 pubsub
 slowapi
 sqlalchemy
-asyncpg
 psycopg2-binary
 geoalchemy2
 alembic
@@ -32,3 +31,7 @@ sentry-sdk[fastapi]
 pydantic_settings
 more_itertools
 python-slugify
+titlecase
+factory_boy
+pytest-factoryboy
+bs4
