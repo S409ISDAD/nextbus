@@ -310,7 +310,11 @@ def get_service_data(path):
         operator = operators[service.operator].noc
         operating_period = service.operating_period
 
-        services.append([operator, service_id, revision_num, operating_period])
+        for line in service.lines:
+            line_name = line.line_name
+            services.append(
+                [operator, service_id, line_name, revision_num, operating_period]
+            )
 
     return txc_data, services
 
@@ -435,49 +439,54 @@ class TXCImporter:
                 txc_data, services = get_service_data(file)
                 self.processed_cache[file.as_posix()] = txc_data
                 for service in services:
-                    operator, service_id, revision_num, operating_period = service
+                    operator, service_id, line_name, revision_num, operating_period = (
+                        service
+                    )
+                    line_key = (service_id, line_name)
                     start = operating_period.start
                     end = operating_period.end or date(9999, 12, 31)
 
                     entry = {"files": [file.as_posix()], "start": start, "end": end}
 
-                    if service_id in txc_map:
-                        if revision_num in txc_map[service_id]:
-                            # append file(s) if multiple files exist for same service/revision
-                            txc_map[service_id][revision_num]["files"].append(
-                                file.as_posix()
-                            )
-                            # optionally merge start/end if needed
-                            txc_map[service_id][revision_num]["start"] = min(
-                                txc_map[service_id][revision_num]["start"], start
-                            )
-                            if end:
-                                prev_end = txc_map[service_id][revision_num]["end"]
-                                if prev_end:
-                                    txc_map[service_id][revision_num]["end"] = max(
-                                        prev_end, end
-                                    )
-                                else:
-                                    txc_map[service_id][revision_num]["end"] = end
-                        else:
-                            txc_map[service_id][revision_num] = entry
+                    if line_key not in txc_map:
+                        txc_map[line_key] = {}
+
+                    revision_key = (revision_num, start)
+
+                    if revision_key in txc_map[line_key]:
+                        # append file(s) if multiple files exist for same service/(revision_num, start)
+                        txc_map[line_key][revision_key]["files"].append(file.as_posix())
+                        existing = txc_map[line_key][revision_key]
+                        existing["start"] = min(existing["start"], start)
+                        existing["end"] = max(existing["end"], end)
+                        txc_map[line_key][revision_key]["start"] = min(
+                            txc_map[line_key][revision_key]["start"], start
+                        )
                     else:
-                        txc_map[service_id] = {revision_num: entry}
+                        txc_map[line_key][revision_key] = entry
+
             self.map = txc_map
         except Exception as e:
+            import traceback
+
+            traceback.print_exc()
             log.debug(f"Error generating TXC map: {e}")
 
     async def import_from_map(self):
         log.debug(f"Importing {len(self.map.keys())} services...")
         idx = 0
-        for service_id in self.map.keys():
+        for line_key in self.map.keys():
+            service_id, line_name = line_key
             self.clear_old_timetables(service_id)
 
             sorted_revisions = sorted(
-                self.map[service_id].items(), key=lambda x: x[1]["start"]
+                self.map[line_key].items(), key=lambda x: x[1]["start"]
             )
 
-            for i, (revision, rev_data) in enumerate(sorted_revisions):
+            for i, ((revision, start_date), rev_data) in enumerate(sorted_revisions):
+                log.debug(
+                    f"Processing service {service_id} - {line_name}, revision {revision} starting {start_date}"
+                )
                 # determine end date based on next revision's start date
                 if i < len(sorted_revisions) - 1:
                     next_start = sorted_revisions[i + 1][1]["start"]
@@ -492,9 +501,9 @@ class TXCImporter:
                         f"Importing {file} ({idx + 1}/{self.file_count}, {round(((idx + 1) / self.file_count) * 100, 2)}%)"
                     )
                     self.end_date = rev_data["end"]
-                    self.file_idx_in_revision += 1
                     self.timetables.clear()
                     await self.handle_txc_file(Path(file))
+                    self.file_idx_in_revision += 1
                     self.do_tt_datasources()
                     self.end_date = None  # reset just in case
                     del self.processed_cache[Path(file).as_posix()]  # free memory

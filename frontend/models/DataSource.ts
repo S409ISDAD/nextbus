@@ -7,7 +7,7 @@ export interface DataSource {
     description: string | null;
     url: string | null;
     bods_id: string | null;
-    last_modified: string | null;
+    modified_at: string | null;
 }
 
 export interface SimpleDataSource extends DataSource {

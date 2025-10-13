@@ -157,19 +157,17 @@ const DataSourcePage: React.FC = () => {
                                                                             : "Ongoing"}
                                                                     </td>
                                                                     <td className="px-4 py-2 align-top text-nowrap">
-                                                                        {service.last_modified
+                                                                        {timetable.modified_at
                                                                             ? new Date(
-                                                                                  service.last_modified
+                                                                                  timetable.modified_at
                                                                               ).toLocaleString(
                                                                                   "en-GB",
                                                                                   {
                                                                                       day: "numeric",
-                                                                                      month: "long",
+                                                                                      month: "numeric",
                                                                                       year: "numeric",
                                                                                       hour: "2-digit",
                                                                                       minute: "2-digit",
-                                                                                      timeZoneName:
-                                                                                          "short",
                                                                                   }
                                                                               )
                                                                             : "N/A"}

@@ -1,3 +1,5 @@
+from datetime import date
+import re
 from fastapi import APIRouter, Depends, HTTPException, Request
 import logging
 
@@ -11,6 +13,29 @@ from backend.utils.time_taken import time_taken
 router = APIRouter()
 
 log = logging.getLogger(__name__)
+
+
+def natural_sort_key(text: str):
+    """
+    Returns a tuple that sorts:
+    - pure numbers numerically first
+    - then alphanumeric lines naturally
+    """
+    if not text:
+        return (float("inf"),)  # empty lines go last
+
+    if text.isdigit():
+        return (int(text),)  # purely numeric: sort by number
+
+    # alphanumeric: split letters/numbers
+    chunks = re.split(r"(\d+)", text)
+    key = []
+    for c in chunks:
+        if c.isdigit():
+            key.append(int(c))
+        else:
+            key.append(c.lower())
+    return (float("inf"),) + tuple(key)  # put after pure numbers
 
 
 @router.get("/")
@@ -78,7 +103,6 @@ async def source(
                         Service.id,
                         Service.line_name,
                         Service.service_code,
-                        Service.last_modified,
                     )
                     # Also prefetch timetables for each service
                     .selectinload(Service.timetables)
@@ -89,6 +113,7 @@ async def source(
                         Timetable.start_date,
                         Timetable.end_date,
                         Timetable.revision_number,
+                        Timetable.modified_at,
                     )
                     .selectinload(Timetable.journeys)
                     .load_only(Journey.id),
@@ -113,21 +138,37 @@ async def source(
 
             for s in source.services:
                 for tt in s.timetables:
-                    if tt.service_code not in grouped_timetables:
-                        grouped_timetables[tt.service_code] = {}
-
-                    group = grouped_timetables[tt.service_code]
-
+                    setattr(tt, "journey_count", journey_counts.get(tt.id, 0))
                     del tt.journeys
 
                     tt.end_date = tt.actual_end_date
 
-                    setattr(tt, "journey_count", journey_counts.get(tt.id, 0))
+                    service_code = tt.service_code
+                    line_name = tt.line_name or "Unknown"
 
-                    if tt.line_name not in group:
-                        group[tt.line_name] = {"service": s, "timetables": []}
+                    group = grouped_timetables.setdefault(service_code, {})
+                    line_group = group.setdefault(
+                        line_name, {"service": s, "timetables": []}
+                    )
+                    line_group["timetables"].append(tt)
 
-                    group[tt.line_name]["timetables"].append(tt)
+            all_lines = [
+                (line_name, service_code)
+                for service_code, lines in grouped_timetables.items()
+                for line_name in lines
+            ]
+            all_lines.sort(key=lambda x: natural_sort_key(x[0]))
+
+            sorted_grouped_timetables: dict[str, dict] = {}
+            for line_name, service_code in all_lines:
+                sorted_grouped_timetables.setdefault(service_code, {})[line_name] = (
+                    grouped_timetables[service_code][line_name]
+                )
+                sorted_grouped_timetables[service_code][line_name]["timetables"].sort(
+                    key=lambda tt: tt.start_date
+                )
+
+            grouped_timetables = sorted_grouped_timetables
 
         return {
             "id": source.id,
@@ -137,5 +178,8 @@ async def source(
             "services": grouped_timetables,
         }
     except Exception as e:
+        import traceback
+
+        traceback.print_exc()
         log.error(f"Unexpected error: {e}")
         raise HTTPException(500, detail="An unexpected error occurred")
