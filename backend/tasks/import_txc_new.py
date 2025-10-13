@@ -136,6 +136,9 @@ async def import_txc_zip(zip_path, ds_id=None, skip_checks=False):
             )
             await txc_importer.import_folder()
     except Exception as e:
+        import traceback
+
+        traceback.print_exc()
         log.error(f"Error importing TXC zip {zip_path}: {e}")
     finally:
         end = time.time()
@@ -311,7 +314,7 @@ def get_service_data(path):
         operating_period = service.operating_period
 
         for line in service.lines:
-            line_name = line.line_name
+            line_name = line.line_name or "Unknown"
             services.append(
                 [operator, service_id, line_name, revision_num, operating_period]
             )
@@ -506,7 +509,6 @@ class TXCImporter:
                     self.file_idx_in_revision += 1
                     self.do_tt_datasources()
                     self.end_date = None  # reset just in case
-                    del self.processed_cache[Path(file).as_posix()]  # free memory
                     idx += 1
 
                 log.debug("Finalising services...")
