@@ -18,7 +18,7 @@ const BusPage: React.FC = () => {
         document.title = "bus dashboard | nextbus";
     }, []);
 
-    const [tab, setTab] = useState<"nearby" | "fav">("nearby");
+    const [tab, setTab] = useState<"nearby" | "fav">("fav");
     const [closestStops, setClosestStops] = useState<string[]>([]);
     const [nearbyServices, setNearbyServices] = useState<Service[]>([]);
     const [status, setStatus] = useState<string>("Getting location...");
@@ -69,16 +69,6 @@ const BusPage: React.FC = () => {
             <div className="flex flex-row justify-center gap-4 mb-4">
                 <button
                     className={`px-4 py-2 text-lg font-semibold rounded-xl transition-all duration-150 cursor-pointer ${
-                        tab === "nearby"
-                            ? " bg-neutral-800 text-primary-400 scale-105"
-                            : " bg-neutral-900 text-neutral-400 hover:text-primary-300"
-                    }`}
-                    onClick={() => setTab("nearby")}
-                    aria-selected={tab === "nearby"}>
-                    Nearby
-                </button>
-                <button
-                    className={`px-4 py-2 text-lg font-semibold rounded-xl transition-all duration-150 cursor-pointer ${
                         tab === "fav"
                             ? " bg-neutral-800 text-primary-400 scale-105"
                             : " bg-neutral-900 text-neutral-400 hover:text-primary-300"
@@ -86,6 +76,16 @@ const BusPage: React.FC = () => {
                     onClick={() => setTab("fav")}
                     aria-selected={tab === "fav"}>
                     Favourites
+                </button>
+                <button
+                    className={`px-4 py-2 text-lg font-semibold rounded-xl transition-all duration-150 cursor-pointer ${
+                        tab === "nearby"
+                            ? " bg-neutral-800 text-primary-400 scale-105"
+                            : " bg-neutral-900 text-neutral-400 hover:text-primary-300"
+                    }`}
+                    onClick={() => setTab("nearby")}
+                    aria-selected={tab === "nearby"}>
+                    Nearby
                 </button>
             </div>
             <div
