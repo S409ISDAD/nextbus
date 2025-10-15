@@ -151,7 +151,8 @@ function BusCard({
                         (bus.delay >= 2700 ||
                             trackingBroken ||
                             brokenDown ||
-                            notLoggedOff) &&
+                            notLoggedOff ||
+                            bus.status == "cancelled") &&
                         "opacity-75"
                 )}>
                 <div className="flex flex-row items-center justify-between gap-x-2">
@@ -237,89 +238,108 @@ function BusCard({
                                               expt > aimed && diff > 60000;
                                           return (
                                               <div className="flex gap-2">
-                                                  {isLate && (
+                                                  {(isLate ||
+                                                      bus.status ==
+                                                          "cancelled") && (
                                                       <span className="line-through text-neutral-500">
                                                           {toTime(
                                                               bus.scheduled
                                                           )}
                                                       </span>
                                                   )}
-                                                  <span
-                                                      className={
-                                                          "text-link-400"
-                                                      }>
-                                                      {toTime(bus.expected)}
-                                                  </span>
+
+                                                  {bus.status !=
+                                                      "cancelled" && (
+                                                      <span
+                                                          className={
+                                                              "text-link-400"
+                                                          }>
+                                                          {toTime(bus.expected)}
+                                                      </span>
+                                                  )}
                                               </div>
                                           );
                                       })()
                                     : "-"}
                             </div>
-                            {isTrackedBus(bus) && (
+                            {bus.status === "cancelled" ? (
+                                <span className="font-bold text-red-400">
+                                    Cancelled
+                                </span>
+                            ) : (
                                 <>
-                                    {trackingBroken ? (
-                                        <span className="text-sm font-medium opacity-70">
-                                            no data
-                                        </span>
-                                    ) : (
+                                    {isTrackedBus(bus) && (
+                                        <>
+                                            {trackingBroken ? (
+                                                <span className="text-sm font-medium opacity-70">
+                                                    no data
+                                                </span>
+                                            ) : (
+                                                <span
+                                                    className={`text-${
+                                                        bus.delay >= 60
+                                                            ? "red"
+                                                            : "green"
+                                                    }-400`}>
+                                                    {lateness(
+                                                        bus ? bus.delay : 0
+                                                    )}
+                                                </span>
+                                            )}
+                                        </>
+                                    )}
+                                    {!bus.started && (
                                         <span
-                                            className={`text-${
-                                                bus.delay >= 60
-                                                    ? "red"
-                                                    : "green"
-                                            }-400`}>
-                                            {lateness(bus ? bus.delay : 0)}
+                                            className="text-sm font-medium opacity-70"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                isTrackedBus(bus) &&
+                                                bus.status == "on_prev_trip"
+                                                    ? navigate(
+                                                          `/buses/${bus.id}`
+                                                      )
+                                                    : null;
+                                            }}>
+                                            {bus.status === "not_tracking"
+                                                ? "Upcoming"
+                                                : bus.status === "waiting"
+                                                ? "Not Started"
+                                                : "On prev. trip"}
                                         </span>
                                     )}
-                                </>
-                            )}
-                            {!bus.started && (
-                                <span
-                                    className="text-sm font-medium opacity-70"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        isTrackedBus(bus) &&
-                                        bus.status == "on_prev_trip"
-                                            ? navigate(`/buses/${bus.id}`)
-                                            : null;
-                                    }}>
-                                    {bus.status === "not_tracking"
-                                        ? "Upcoming"
-                                        : bus.status === "waiting"
-                                        ? "Not Started"
-                                        : "On prev. trip"}
-                                </span>
-                            )}
-                            {bus.started && !trackingBroken && (
-                                <div className="relative w-5 h-5">
-                                    <FontAwesomeIcon
-                                        icon={faSatelliteDish}
-                                        beatFade={gettingLiveData}
-                                        className={clsx(
-                                            "absolute top-0 left-0 w-5 h-5",
-                                            gettingLiveData
-                                                ? "text-neutral-500"
-                                                : {
-                                                      "text-primary-400 opacity-40":
-                                                          bus.status ===
-                                                          "not_tracking",
-                                                      "text-link":
-                                                          bus.status ===
-                                                          "tracking",
-                                                      "text-emerald-500":
-                                                          bus.status ===
-                                                          "user_tracking",
-                                                  }
-                                        )}
-                                    />
-                                    {!gettingLiveData &&
-                                        bus.status === "not_tracking" && (
+                                    {bus.started && !trackingBroken && (
+                                        <div className="relative w-5 h-5">
                                             <FontAwesomeIcon
-                                                icon={faSlash}
-                                                className="absolute top-0 left-0 w-5 h-5 text-red-500"
+                                                icon={faSatelliteDish}
+                                                beatFade={gettingLiveData}
+                                                className={clsx(
+                                                    "absolute top-0 left-0 w-5 h-5",
+                                                    gettingLiveData
+                                                        ? "text-neutral-500"
+                                                        : {
+                                                              "text-primary-400 opacity-40":
+                                                                  bus.status ===
+                                                                  "not_tracking",
+                                                              "text-link":
+                                                                  bus.status ===
+                                                                  "tracking",
+                                                              "text-emerald-500":
+                                                                  bus.status ===
+                                                                  "user_tracking",
+                                                          }
+                                                )}
                                             />
-                                        )}
-                                </div>
+                                            {!gettingLiveData &&
+                                                bus.status ===
+                                                    "not_tracking" && (
+                                                    <FontAwesomeIcon
+                                                        icon={faSlash}
+                                                        className="absolute top-0 left-0 w-5 h-5 text-red-500"
+                                                    />
+                                                )}
+                                        </div>
+                                    )}
+                                </>
                             )}
                         </div>
                     </div>
@@ -334,12 +354,21 @@ function BusCard({
                         )}
 
                         <div className="flex items-center justify-center gap-1 p-[0.3rem] min-w-18 rounded-xl bg-neutral-800/50 h-fit">
-                            <span className="text-lg font-bold text-nowrap">
-                                {bus.timeTo.split(" ")[0]}
-                            </span>
-                            <span className="self-end h-full mb-[0.15rem] text-sm font-bold ">
-                                {bus.timeTo.split(" ")[1]}
-                            </span>
+                            {bus.status == "cancelled" ? (
+                                <span className="text-lg font-bold text-nowrap">
+                                    -
+                                </span>
+                            ) : (
+                                <>
+                                    {" "}
+                                    <span className="text-lg font-bold text-nowrap">
+                                        {bus.timeTo.split(" ")[0]}
+                                    </span>
+                                    <span className="self-end h-full mb-[0.15rem] text-sm font-bold ">
+                                        {bus.timeTo.split(" ")[1]}
+                                    </span>
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -349,6 +378,7 @@ function BusCard({
                         isTrackedBus(bus) &&
                         bus.target_seq !== undefined &&
                         sequence !== null &&
+                        bus.status !== "cancelled" &&
                         (() => {
                             const startIdx = Math.max(0, bus.target_seq! - 5);
                             const endIdx = bus.target_seq! + 2;

@@ -8,4 +8,5 @@ export interface StopTime {
     track: number[][];
     set_down: boolean;
     timing_status: "PTP" | "OTH";
+    call_condition?: string; // "notStopping" means cancelled
 }

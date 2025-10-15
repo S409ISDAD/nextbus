@@ -9,3 +9,4 @@ class Times(BaseModel):
     started: bool
     finished: bool
     include: bool
+    call_condition: Optional[str] = None  # "notStopping" means cancelled

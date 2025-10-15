@@ -155,7 +155,11 @@ async def calculate_expected(
     bus_seen_count: int = 1,
     pick_up_only: bool = False,
 ):
-    journey = await get_vehicle_journey(journey_id, delay, r)
+    journey: Journey | None = await get_vehicle_journey(journey_id, delay, r)
+
+    if not journey:
+        log.warning(f"no journey found for journey_id {journey_id}")
+        return None, None, None
 
     current_time = dt.now(tz=UTC)
 
@@ -166,12 +170,15 @@ async def calculate_expected(
     expected_time = None
     scheduled_time = None
 
+    call_condition = None
+
     seen = bus_seen_count
 
     stop_idx = 0
     target_seq = None
 
     for stop_time in journey.stops:
+        call_condition = stop_time.call_condition
         if stop_idx == 0:
             scheduled_time_start = stop_time.aimed_time
 
@@ -225,6 +232,7 @@ async def calculate_expected(
             started=not not_started,
             finished=finished,
             include=include,
+            call_condition=call_condition,
         ),
         journey,
     )

@@ -143,6 +143,7 @@ async def get_vehicle_journey(journey_id, delay, r) -> Journey:
                 set_down=stop.get("set_down", True),
                 pick_up=stop.get("pick_up", True),
                 timing_status=stop.get("timing_status", "OTH"),
+                call_condition=stop.get("call_condition", None),
             )
         )
 
@@ -361,6 +362,7 @@ async def get_trip(trip_id, delay, r) -> Trip:
                 coords=coords,
                 set_down=stop.get("set_down", True),
                 pick_up=stop.get("pick_up", True),
+                call_condition=stop.get("call_condition", None),
             )
         )
 

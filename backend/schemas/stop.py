@@ -31,3 +31,4 @@ class StopTime(BaseModel):
     timing_status: Literal["OTH", "PTP", "TIP"] = (
         "OTH"  # PTP: Principal Timing Point, OTH: Other, TIP: Timing Information Point
     )
+    call_condition: Optional[str] = None  # "notStopping" means cancelled
