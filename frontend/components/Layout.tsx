@@ -12,6 +12,7 @@ import { faDiscord } from "@fortawesome/free-brands-svg-icons";
 import version from "../utils/version";
 import { motion } from "framer-motion";
 import { useState } from "react";
+import ThemeToggle from "./ThemeToggle";
 
 function NavSearchBar(queryProp?: { query?: string }) {
     const [searchQuery, setSearchQuery] = useState(queryProp?.query || "");
@@ -72,6 +73,7 @@ const footer = (currentYear: number) => (
             Stats
         </a>
         ·
+        <ThemeToggle /> ·
         <a
             href="https://discord.gg/dyEmZSkwge"
             target="_blank"
