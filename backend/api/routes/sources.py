@@ -1,18 +1,18 @@
-from datetime import date
 import re
 from fastapi import APIRouter, Depends, HTTPException, Request
-import logging
 
 from sqlalchemy import distinct, func
 from backend.models import DataSource, Journey, Service, Timetable
 from backend.db.db import get_db
-from sqlalchemy.orm import load_only, selectinload
+from sqlalchemy.orm import selectinload
 
 from backend.utils.time_taken import time_taken
+from backend.deps import get_logger
 
 router = APIRouter()
 
-log = logging.getLogger(__name__)
+
+log = get_logger(__name__)
 
 
 def natural_sort_key(text: str):

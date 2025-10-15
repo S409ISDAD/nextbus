@@ -1,16 +1,16 @@
 import asyncio
 from datetime import datetime as dt
-import logging
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from backend.deps import UTC, get_redis, limiter
 from backend.services import bus, stops
 from backend.tasks.get_departures import get_departures, get_scheduled
+from backend.deps import get_logger
 
 router = APIRouter()
 
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 @router.get("/scheduled")

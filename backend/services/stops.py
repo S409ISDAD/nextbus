@@ -14,9 +14,10 @@ from backend.services.caching import (
 )
 from dateutil.parser import isoparse
 from backend.utils.fetch_json import fetch_json
-import logging
 
-log = logging.getLogger(__name__)
+from backend.deps import get_logger
+
+log = get_logger(__name__)
 
 
 async def get_stop_details(stop_id, r: Redis):

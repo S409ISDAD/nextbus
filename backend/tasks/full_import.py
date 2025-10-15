@@ -4,9 +4,10 @@ from backend.tasks.import_holidays import import_bank_holidays
 from backend.tasks.import_txc import import_datasource
 from backend.db.db import SessionLocal
 from backend.models import DataSource
-import logging
 
-log = logging.getLogger(__name__)
+from backend.deps import get_logger
+
+log = get_logger(__name__)
 
 
 async def do_import():

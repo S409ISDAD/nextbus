@@ -1,5 +1,4 @@
 import asyncio
-import logging
 import time
 from contextlib import asynccontextmanager
 from datetime import timedelta, timezone, datetime
@@ -30,6 +29,7 @@ from backend.api.routes import (
     places,
     timetable,
     sources,
+    journeys,
 )
 from backend.config import config, setup_logging
 from backend.db.db import SessionLocal, get_db
@@ -41,12 +41,12 @@ from backend.deps import (
     VERSION,
 )
 from backend.models import ActiveUsersSnapshot
-from backend.tasks.import_all_datasets import import_datasets, import_weekly_data
-from backend.tasks.reset_bt_trip_ids import reset_trip_ids
 from backend.websockets.routes import ws_router
+from backend.deps import get_logger
 
 setup_logging()
-log = logging.getLogger(__name__)
+
+log = get_logger(__name__)
 
 
 async def clear_redis_stats(redis):
@@ -227,3 +227,4 @@ app.include_router(journey_planning.router, prefix="/api/v1/planning")
 app.include_router(places.router, prefix="/api/v1/places")
 app.include_router(timetable.router, prefix="/api/v1/timetable")
 app.include_router(sources.router, prefix="/api/v1/sources")
+app.include_router(journeys.router, prefix="/api/v1/journeys")

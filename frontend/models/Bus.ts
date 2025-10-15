@@ -11,14 +11,16 @@ export interface ScheduledBus {
     scheduled: string;
     timeTo: string;
     started: boolean;
-    trip: number;
+    trip: number | null;
+    db_journey: number | null;
     status: string;
 }
 
 export interface Bus {
     type: string;
     id: number;
-    trip: number;
+    trip: number | null;
+    db_journey: number | null;
     timestamp: string;
     service: ServiceInfo;
     destination: string;

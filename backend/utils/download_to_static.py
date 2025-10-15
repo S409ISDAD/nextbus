@@ -1,10 +1,11 @@
-import logging
 
 import requests
 
 from backend.deps import STATIC_DATA_DIR
 
-log = logging.getLogger(__name__)
+from backend.deps import get_logger
+
+log = get_logger(__name__)
 
 
 def download_to_static(url: str, filename: str):

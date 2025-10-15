@@ -1,10 +1,11 @@
 from govuk_bank_holidays.bank_holidays import BankHolidays
 from backend.db.db import SessionLocal
 from backend.models import BankHoliday, BankHolidayDate
-import logging
 
 
-log = logging.getLogger(__name__)
+from backend.deps import get_logger
+
+log = get_logger(__name__)
 
 
 def get_bank_holiday_name(bank_holiday):

@@ -1,4 +1,3 @@
-import logging
 import math
 from datetime import datetime as dt, timedelta
 
@@ -12,7 +11,9 @@ from backend.schemas.confidence import Confidence
 from backend.schemas.journey import Trip, LiveJourney
 from backend.services.journeys import get_trip, get_live_journey
 
-log = logging.getLogger(__name__)
+from backend.deps import get_logger
+
+log = get_logger(__name__)
 
 geod = Geod(ellps="WGS84")
 
@@ -100,6 +101,8 @@ def check_log_off(trip: Trip, live_journey: LiveJourney) -> float:
     for loc, heading in zip(last_locs, last_headings):
         p = Point(loc)
         nearest = track.interpolate(track.project(p))
+        if not nearest:
+            continue
 
         end_dist = track.project(nearest) + fwd_dist
         if end_dist > track.length:
@@ -115,6 +118,9 @@ def check_log_off(trip: Trip, live_journey: LiveJourney) -> float:
     log.debug(diffs)
 
     # avg_diff = sum(abs(d) for d in diffs) / len(diffs)
+
+    if not diffs:
+        return 0.0
 
     rms_diff = math.sqrt(sum(d * d for d in diffs) / len(diffs))
 

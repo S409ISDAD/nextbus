@@ -8,8 +8,6 @@ import zipfile
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
-import asyncio
-from concurrent.futures import ThreadPoolExecutor
 
 from geoalchemy2.shape import from_shape
 from shapely import Point

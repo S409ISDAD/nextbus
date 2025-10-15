@@ -2,6 +2,7 @@ import DeparturePage from "../pages/bus/DeparturePage.tsx";
 import DepartureScreen from "../pages/bus/DepartureScreen.tsx";
 import Home from "../pages/Home";
 import LiveJourneyPage from "../pages/bus/LiveJourneyPage.tsx";
+import JourneyPage from "../pages/bus/JourneyPage.tsx";
 import PrivacyPolicy from "../pages/Privacy";
 import Terms from "../pages/Terms";
 import Data from "../pages/Data";
@@ -233,6 +234,14 @@ function App() {
                             <Route
                                 path="/buses/:bus_id"
                                 element={<LiveJourneyPage />}
+                            />
+                            <Route
+                                path="/buses/dbjourneys/:journey_id"
+                                element={<JourneyPage />}
+                            />
+                            <Route
+                                path="/buses/trips/:trip_id"
+                                element={<JourneyPage />}
                             />
                             <Route
                                 path="buses/services/:service_id"

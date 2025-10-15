@@ -46,6 +46,8 @@ function BusCard({
     const [showExternalDialog, setShowExternalDialog] = useState(false);
     const [externalUrl, setExternalUrl] = useState<string | null>(null);
 
+    setExternalUrl(null);
+
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -76,9 +78,10 @@ function BusCard({
     const handleClick = () => {
         if (isTrackedBus(bus) && bus.status !== "on_prev_trip") {
             navigate(`/buses/${bus.id}`);
+        } else if (bus.db_journey) {
+            navigate(`/buses/dbjourneys/${bus.db_journey}`);
         } else {
-            setExternalUrl(`https://bustimes.org/trips/${bus.trip}`);
-            setShowExternalDialog(true);
+            navigate(`/buses/trips/${bus.trip}`);
         }
     };
 

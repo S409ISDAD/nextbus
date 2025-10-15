@@ -1,4 +1,3 @@
-import logging
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from backend.deps import get_redis, limiter
@@ -10,10 +9,11 @@ from backend.services.trains import (
     get_service,
 )
 from enum import Enum
+from backend.deps import get_logger
 
 router = APIRouter()
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 class TrainDataType(str, Enum):

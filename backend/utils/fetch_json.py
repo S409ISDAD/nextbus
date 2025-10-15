@@ -4,9 +4,10 @@ import certifi
 import os
 from dotenv import load_dotenv
 from backend.config import config
-import logging
 
-log = logging.getLogger(__name__)
+from backend.deps import get_logger
+
+log = get_logger(__name__)
 
 load_dotenv()
 

@@ -1,12 +1,13 @@
 from fastapi import APIRouter, Depends, Request, HTTPException
-import logging
 from backend.deps import get_redis, limiter
 from backend.schemas.service import Service
 from backend.services import services
+from backend.deps import get_logger
 
 router = APIRouter()
 
-log = logging.getLogger(__name__)
+
+log = get_logger(__name__)
 
 
 @router.get("/", response_model=Service)

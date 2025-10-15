@@ -46,10 +46,6 @@ def import_noc_data():
                 for line in element.find("NOCLines")
             }
 
-            to_create = []
-            to_update = []
-            op_codes = []
-            op_licences = []
 
             for e in element.find("NOCTable"):
                 noc = e.findtext("NOCCODE").removeprefix("=")

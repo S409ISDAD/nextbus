@@ -8,9 +8,10 @@ from fastapi import WebSocket, WebSocketDisconnect
 from backend.deps import datetime_decoder
 from backend.tasks.publisher import start_publishing, stop_publishing
 from backend.websockets.manager import manager
-import logging
 
-log = logging.getLogger(__name__)
+from backend.deps import get_logger
+
+log = get_logger(__name__)
 
 
 def convert(obj):

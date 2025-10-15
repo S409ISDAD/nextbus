@@ -1,14 +1,14 @@
-import logging
-
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from backend.deps import get_redis, limiter
 from backend.schemas.stop import Stop
 from backend.services import stops
+from backend.deps import get_logger
 
 router = APIRouter()
 
-log = logging.getLogger(__name__)
+
+log = get_logger(__name__)
 
 
 @router.get("/", response_model=Stop)

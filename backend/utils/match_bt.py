@@ -3,9 +3,10 @@ from backend.models import Journey, Service
 from sqlalchemy.orm import Session
 from backend.services.journeys import get_trip
 from backend.services.services import get_service_info
-import logging
 
-log = logging.getLogger(__name__)
+from backend.deps import get_logger
+
+log = get_logger(__name__)
 
 
 def fuzzy_search_service(query, db, limit=10, threshold=0.2):

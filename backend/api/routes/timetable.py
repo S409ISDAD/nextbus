@@ -1,15 +1,16 @@
 from datetime import datetime
 from fastapi import APIRouter, Depends, Request, HTTPException
-import logging
 from backend.db.db import get_db
 from backend.deps import LONDON, get_redis, limiter
 from backend.models import Service
 from backend.utils.generate_timetable import generate_timetable
 from backend.services.caching import TIMETABLE_CACHE, get_cached
+from backend.deps import get_logger
 
 router = APIRouter()
 
-log = logging.getLogger(__name__)
+
+log = get_logger(__name__)
 
 
 @router.get("/{service_id}")

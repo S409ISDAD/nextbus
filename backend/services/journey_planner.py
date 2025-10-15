@@ -10,9 +10,10 @@ from backend.models import Service, ServiceStopUsage, Journey, Stop, Locality, S
 from backend.schemas.stop import Stop as StopSchema
 from backend.services.bus import fetch_bus_trip, build_bus
 from backend.services.stops import get_nearby_stops
-import logging
 
-log = logging.getLogger(__name__)
+from backend.deps import get_logger
+
+log = get_logger(__name__)
 
 
 async def get_possible_journeys(

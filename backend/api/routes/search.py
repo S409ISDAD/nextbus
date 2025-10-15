@@ -1,13 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException
-import logging
 from backend.db.db import get_db
 from backend.deps import get_redis
 from backend.utils.search import search_db
 from backend.services.caching import get_cached
+from backend.deps import get_logger
 
 router = APIRouter()
 
-log = logging.getLogger(__name__)
+
+log = get_logger(__name__)
 
 
 @router.get("/")

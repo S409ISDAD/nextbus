@@ -1,12 +1,13 @@
 import calendar
 import xml.etree.cElementTree as ET
 from datetime import timedelta
-import logging
 from shapely import Point
 
 from backend.utils.time import to_datetime
 
-log = logging.getLogger(__name__)
+from backend.deps import get_logger
+
+log = get_logger(__name__)
 
 WEEKDAYS = {day: i for i, day in enumerate(calendar.day_name)}
 

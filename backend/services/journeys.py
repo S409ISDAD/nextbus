@@ -14,9 +14,10 @@ from backend.services.caching import (
 )
 from backend.utils.fetch_json import fetch_json
 from backend.utils.time import check_scheduled_time
-import logging
 
-log = logging.getLogger(__name__)
+from backend.deps import get_logger
+
+log = get_logger(__name__)
 
 
 async def get_vehicle_journey(journey_id, delay, r) -> Journey:
@@ -362,6 +363,7 @@ async def get_trip(trip_id, delay, r) -> Trip:
                 coords=coords,
                 set_down=stop.get("set_down", True),
                 pick_up=stop.get("pick_up", True),
+                timing_status=stop.get("timing_status", "OTH"),
                 call_condition=stop.get("call_condition", None),
             )
         )

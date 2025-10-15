@@ -4,9 +4,10 @@ from backend.db.db import SessionLocal
 from backend.models import Service
 from geoalchemy2 import functions as geofunc
 
-import logging
 
-log = logging.getLogger(__name__)
+from backend.deps import get_logger
+
+log = get_logger(__name__)
 
 
 def get_nearby_services(lat: float, lon: float, dist: int = 200) -> list[Service]:
@@ -21,7 +22,7 @@ def get_nearby_services(lat: float, lon: float, dist: int = 200) -> list[Service
                 geofunc.ST_Distance(Service.geometry, user_geom).label("distance"),
             )
             .filter(
-                Service.geometry != None,
+                Service.geometry is not None,
                 geofunc.ST_DWithin(
                     Service.geometry, user_geom, dist / 10000
                 ),  # convert from meters

@@ -17,9 +17,10 @@ from datetime import datetime
 from datetime import timezone, timedelta
 import asyncio
 from backend.deps import LONDON, UTC
-import logging
 
-log = logging.getLogger(__name__)
+from backend.deps import get_logger
+
+log = get_logger(__name__)
 
 
 async def parse_operator(atocName: str):

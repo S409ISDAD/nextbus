@@ -3,13 +3,14 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from backend.schemas.bus import TrackedBus
 from backend.services import bus
 from backend.deps import get_redis
-import logging
 
+from backend.deps import get_logger
 from backend.deps import limiter
 
 router = APIRouter()
 
-log = logging.getLogger(__name__)
+
+log = get_logger(__name__)
 
 
 @router.get("/", response_model=Optional[TrackedBus])

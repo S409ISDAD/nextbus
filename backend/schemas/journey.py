@@ -43,6 +43,8 @@ class Location(BaseModel):
 class Trip(BaseModel):
     vehicle_journey_code: str
     ticket_machine_code: str
+    route_name: Optional[str] = None
+    destination: Optional[str] = None
     block: Optional[str] = None
     service_id: int
     stops: list[StopTime]

@@ -26,6 +26,7 @@ from sqlalchemy import (
     not_,
     or_,
 )
+from geoalchemy2.shape import to_shape
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import relationship, Session, joinedload, deferred, aliased
@@ -40,6 +41,9 @@ from backend.utils.fetch_json import fetch_json
 from sqlalchemy import select
 from backend.utils.bulk_upsert import bulk_upsert
 from collections import namedtuple
+from shapely import wkb
+from geoalchemy2.functions import ST_Transform
+from sqlalchemy.orm import object_session
 
 
 log = get_logger(__name__)
@@ -398,6 +402,21 @@ class Stop(Base):
     @property
     def long_name(self):
         return f"{self.name} ({self.indicator or self.bearing})"
+
+    @property
+    def location(self) -> list[float]:
+        """
+        Returns the stop's location as [latitude, longitude] in WGS84 (SRID 4326).
+        """
+        if self.point is not None:
+            shape = to_shape(self.point)
+            if hasattr(self.point, "srid") and self.point.srid != 4326:
+                session = object_session(self)
+                if session:
+                    point_4326 = session.scalar(ST_Transform(self.point, 4326))
+                    shape = to_shape(point_4326)
+            return [shape.y, shape.x]
+        return [None, None]
 
     @property
     def does_serve_buses(self) -> bool:
@@ -1450,6 +1469,45 @@ class Journey(Base):
 
         return self.calendar.is_valid_exp(date)
 
+    def get_track(self, db: Session):
+        stops = {
+            st.stop_id: st.stop_sequence
+            for st in self.stop_times
+            if st.stop_id and st.stop_sequence is not None
+        }
+
+        stop_order = list(dict(sorted(stops.items(), key=lambda x: x[1])).keys())
+
+        if len(stop_order) < 2:
+            return {}
+
+        route_links = (
+            db.query(RouteLink.from_stop, RouteLink.to_stop, RouteLink.geometry)
+            .filter(
+                RouteLink.from_stop.in_(stop_order), RouteLink.to_stop.in_(stop_order)
+            )
+            .all()
+        )
+
+        link_map = {(rl.from_stop, rl.to_stop): rl.geometry for rl in route_links}
+
+        track = {}
+        for idx in range(1, len(stop_order)):
+            last_stop_id = stop_order[idx - 1]
+            stop_id = stop_order[idx]
+
+            geom = link_map.get((last_stop_id, stop_id))
+            if geom:
+                geom = wkb.loads(bytes(geom.data))
+                if geom.geom_type == "LineString":
+                    track[stop_id] = [[c[1], c[0]] for c in geom.coords]
+                else:
+                    track[stop_id] = []
+            else:
+                track[stop_id] = []
+
+        return track
+
     # @lru_cache(maxsize=128)
     def get_previous_journey(
         self, db: Session, date: date | None = None
@@ -1538,7 +1596,7 @@ def journey_is_valid_filter(date: date | None = None):
     # base calendar date range
     base_filter = and_(
         Calendar.start_date <= date,
-        or_(Calendar.end_date == None, Calendar.end_date >= date),
+        or_(Calendar.end_date is None, Calendar.end_date >= date),
     )
 
     # any exceptions turning off this date?

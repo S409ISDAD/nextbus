@@ -4,10 +4,11 @@ from backend.models import Stop, to_dict
 from datetime import datetime
 from backend.services.caching import get_cached
 from backend.deps import LONDON
-import logging
 from backend.models import StopTime
 
-log = logging.getLogger(__name__)
+from backend.deps import get_logger
+
+log = get_logger(__name__)
 
 
 async def get_scheduled(stop_id: str, redis, services=None):

@@ -7,10 +7,11 @@ from typing import Set
 from datetime import datetime, timezone
 from .get_departures import get_departures
 from backend.deps import DateTimeEncoder
-import logging
 import sentry_sdk
 
-log = logging.getLogger(__name__)
+from backend.deps import get_logger
+
+log = get_logger(__name__)
 
 active: dict[str, Set[str]] = {}
 publish_tasks: dict[str, asyncio.Task] = {}

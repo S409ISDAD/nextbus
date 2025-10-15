@@ -1,5 +1,4 @@
 import asyncio
-import logging
 from datetime import datetime, timedelta
 
 from dateutil import parser
@@ -33,7 +32,9 @@ from backend.utils.fetch_json import fetch_json
 from backend.utils.match_bt import match_trip_journey
 from backend.utils.time_taken import time_taken
 
-log = logging.getLogger(__name__)
+from backend.deps import get_logger
+
+log = get_logger(__name__)
 
 
 async def fetch_bus(bus_id, r: Redis):
@@ -232,6 +233,7 @@ async def build_scheduled(time, r, include_started=True):
         expected=expected,
         started=started,
         trip=trip_id,
+        db_journey=None,
         status="not_tracking",
         source="api",
     )
@@ -304,7 +306,8 @@ async def build_scheduled_db(
             scheduled=scheduled,
             expected=scheduled,
             started=started,
-            trip=trip_id or stop_time.journey.id,
+            trip=trip_id,
+            db_journey=stop_time.journey.id,
             status="not_tracking",
             source="db",
         )
@@ -355,7 +358,8 @@ async def build_scheduled_db(
                     bus.scheduled = scheduled
                     bus.expected = scheduled + timedelta(seconds=delay)
                     bus.delay = delay
-                    bus.trip = trip_id if trip_id != 0 else stop_time.journey.id
+                    bus.trip = trip_id if trip_id != 0 else None
+                    bus.db_journey = stop_time.journey.id
                     bus.started = False
                     bus.status = "on_prev_trip"
                     service = service_info if service_info else bus.service
@@ -426,7 +430,7 @@ async def build_bus(
     bus_id: int,
     r: Redis,
     stop_id: str = "",
-    journey_id: int | None = None,
+    db_journey_id: int | None = None,
     get_journey: bool = True,
     source: str = "api",
     bus_seen_count: int = 1,
@@ -441,11 +445,13 @@ async def build_bus(
 
     db_stoptime = None
 
-    if journey_id:
+    if db_journey_id:
         with SessionLocal() as db:
             db_stoptime: StopTime | None = (
                 db.query(StopTime)
-                .filter(StopTime.journey_id == journey_id, StopTime.stop_id == stop_id)
+                .filter(
+                    StopTime.journey_id == db_journey_id, StopTime.stop_id == stop_id
+                )
                 .options(
                     joinedload(StopTime.journey).joinedload(Journey.timetable),
                     joinedload(StopTime.journey)
@@ -619,6 +625,7 @@ async def build_bus(
         id=bus_id,
         service=service_info,
         trip=this_bus.get("trip_id", 0),
+        db_journey=db_journey_id,
         timestamp=timestamp,
         destination=destination,
         reg=reg,

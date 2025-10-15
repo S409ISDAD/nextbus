@@ -17,7 +17,8 @@ class ScheduledBus(BaseModel):
     scheduled: datetime
     expected: datetime
     started: bool
-    trip: int
+    trip: Optional[int]  # link to bustimes trip if exists
+    db_journey: Optional[int]  # link to scheduled journey if exists
     status: str
     source: str  # "api" or "db"
 
@@ -25,7 +26,8 @@ class ScheduledBus(BaseModel):
 class TrackedBus(BaseModel):
     type: str = "tracked"
     id: int
-    trip: int
+    trip: Optional[int] = None  # link to bustimes trip if exists
+    db_journey: Optional[int] = None  # link to scheduled journey if exists
     timestamp: Optional[datetime]
     service: Optional[Service]
     destination: str

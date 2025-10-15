@@ -1,13 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
-import logging
 from backend.deps import get_redis, limiter
 from backend.services import location, stops
 from backend.schemas.location import LocationRequest
 import traceback
+from backend.deps import get_logger
 
 router = APIRouter()
 
-log = logging.getLogger(__name__)
+
+log = get_logger(__name__)
 
 
 @router.post("/closest")

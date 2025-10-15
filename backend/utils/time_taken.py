@@ -1,7 +1,8 @@
 import time
-import logging
 
-log = logging.getLogger(__name__)
+from backend.deps import get_logger
+
+log = get_logger(__name__)
 
 
 class time_taken:

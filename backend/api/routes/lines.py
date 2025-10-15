@@ -1,14 +1,15 @@
 from fastapi import APIRouter, Depends, Request, HTTPException
-import logging
 from backend.deps import get_redis, limiter
 
 from backend.models import Service
 from backend.db.db import get_db
 from sqlalchemy.orm import joinedload
+from backend.deps import get_logger
 
 router = APIRouter()
 
-log = logging.getLogger(__name__)
+
+log = get_logger(__name__)
 
 
 @router.get("/{service_id}")
