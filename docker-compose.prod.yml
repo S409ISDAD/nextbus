@@ -67,12 +67,18 @@ services:
       - "traefik.http.services.app.loadbalancer.server.port=8000"
       - "traefik.http.services.app.loadbalancer.sticky.cookie=true"
       - "traefik.http.routers.app.priority=100"
+      - autoheal=true
     depends_on:
       - redis
       - db
       - migrate
     networks:
       - web
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
     deploy:
       replicas: 2   
       update_config:
@@ -81,6 +87,13 @@ services:
         delay: 5s
       restart_policy:
         condition: on-failure
+
+  scheduler:
+    image: nextbus-app:latest 
+    command: ["python", "-m", "backend.scheduler"]
+    restart: always
+    depends_on:
+      - app
 
   bot:
     image: nextbus-app:latest 
@@ -128,6 +141,7 @@ services:
       - web
     depends_on:
       - db
+      - test-db
 
   redis:
     image: redis:latest
@@ -167,6 +181,16 @@ services:
       - ./backend/db/init_db:/docker-entrypoint-initdb.d
     networks:
       - web
+    
+  autoheal:
+    image: willfarrell/autoheal
+    restart: always
+    environment:
+      - AUTOHEAL_CONTAINER_LABEL=autoheal
+      - AUTOHEAL_INTERVAL=10
+      - AUTOHEAL_START_PERIOD=60
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
 
 
 networks:

@@ -127,34 +127,11 @@ async def lifespan(app: FastAPI):
             replace_existing=True,
             args=[redis],
         )
-        scheduler.add_job(
-            import_datasets,
-            CronTrigger(hour="2", minute="0", second="0"),  # daily at 2am
-            id="import_datasets",
-            replace_existing=True,
-        )
-        scheduler.add_job(
-            reset_trip_ids,
-            CronTrigger(hour="1", minute="55", second="0"),  # daily at 1:55am
-            id="reset_trip_ids",
-            replace_existing=True,
-        )
-        scheduler.add_job(
-            import_weekly_data,
-            CronTrigger(
-                day_of_week="0", hour="5", minute="30", second="0"
-            ),  # weekly at 5:30am on sunday
-            id="import_weekly_data",
-            replace_existing=True,
-        )
         scheduler.start()
     else:
         scheduler = None
     log.info("App startup complete.")
 
-    # log.debug("Starting full import...")
-    # asyncio.create_task(asyncio.to_thread(do_import))
-    # log.debug("Import started in background.")
     try:
         yield
     finally:
