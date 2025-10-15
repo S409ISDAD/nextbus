@@ -16,7 +16,7 @@ const ThemeToggle: React.FC = () => {
     return (
         <span
             onClick={toggleTheme}
-            className="underline cursor-pointer text-link">
+            className="underline cursor-pointer text-link-400">
             change theme
         </span>
     );
