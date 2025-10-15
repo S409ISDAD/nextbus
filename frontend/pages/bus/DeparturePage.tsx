@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { isTrackedBus, type Departure } from "../../models/Bus";
 import type { BTStop } from "../../models/Stop";
 import fetchDepartures, { parseDepartures } from "../../utils/getDepartures";
@@ -24,14 +24,14 @@ import { WebSocketManager } from "../../websockets/ws_manager";
 import getBus from "../../utils/getBus";
 import type { Bus } from "../../models/Bus";
 import useLocalStorageState from "use-local-storage-state";
-import {
-    Description,
-    Dialog,
-    DialogPanel,
-    DialogTitle,
-    Transition,
-    TransitionChild,
-} from "@headlessui/react";
+// import {
+//     Description,
+//     Dialog,
+//     DialogPanel,
+//     DialogTitle,
+//     Transition,
+//     TransitionChild,
+// } from "@headlessui/react";
 
 const getBusDetail = async (bus: Departure) => {
     if (isTrackedBus(bus)) {

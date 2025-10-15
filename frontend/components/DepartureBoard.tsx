@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { isTrackedBus, type Departure } from "../models/Bus";
 import fetchDepartures, { parseDepartures } from "../utils/getDepartures";
 import { useNavigate } from "react-router";
@@ -17,14 +17,14 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import clsx from "clsx";
 import { WebSocketManager } from "../websockets/ws_manager";
-import {
-    Transition,
-    TransitionChild,
-    Dialog,
-    DialogPanel,
-    DialogTitle,
-    Description,
-} from "@headlessui/react";
+// import {
+//     Transition,
+//     TransitionChild,
+//     Dialog,
+//     DialogPanel,
+//     DialogTitle,
+//     Description,
+// } from "@headlessui/react";
 
 interface Props {
     stop_id: string;
