@@ -1596,7 +1596,7 @@ def journey_is_valid_filter(date: date | None = None):
     # base calendar date range
     base_filter = and_(
         Calendar.start_date <= date,
-        or_(Calendar.end_date is None, Calendar.end_date >= date),
+        or_(Calendar.end_date == None, Calendar.end_date >= date),
     )
 
     # any exceptions turning off this date?

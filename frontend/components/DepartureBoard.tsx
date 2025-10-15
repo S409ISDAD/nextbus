@@ -43,10 +43,8 @@ function BusCard({
     const [notLoggedOff, setNotLoggedOff] = useState(false);
     const [brokenDown, setBrokenDown] = useState(false);
     const [isOnDiversion, setIsOnDiversion] = useState(false);
-    const [showExternalDialog, setShowExternalDialog] = useState(false);
-    const [externalUrl, setExternalUrl] = useState<string | null>(null);
-
-    setExternalUrl(null);
+    // const [showExternalDialog, setShowExternalDialog] = useState(false);
+    // const [externalUrl, setExternalUrl] = useState<string | null>(null);
 
     const navigate = useNavigate();
 
@@ -269,7 +267,7 @@ function BusCard({
                     </div>
                 </div>
             </div>
-            <Transition appear show={showExternalDialog} as={Fragment}>
+            {/* <Transition appear show={showExternalDialog} as={Fragment}>
                 <Dialog
                     as="div"
                     className="relative z-50"
@@ -332,7 +330,7 @@ function BusCard({
                         </TransitionChild>
                     </div>
                 </Dialog>
-            </Transition>
+            </Transition> */}
         </>
     );
 }
