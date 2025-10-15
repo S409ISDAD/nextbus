@@ -16,6 +16,12 @@
     -moz-osx-font-smoothing: grayscale;
 }
 
+@layer base {
+    * {
+        @apply transition-colors duration-300 ease-in-out;
+    }
+}
+
 .spooky-font {
     font-family: "Creepster", system-ui;
     font-weight: 400;
