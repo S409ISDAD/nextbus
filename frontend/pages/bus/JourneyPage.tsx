@@ -326,7 +326,7 @@ const JourneyPage: React.FC = () => {
                                             <div className="absolute z-10 w-3 h-3 translate-y-[-30%] rounded-full bg-neutral-700 flex items-center justify-center"></div>
                                         )} */}
                                     {idx < journey.stops.length - 1 && (
-                                        <div className="w-[4px] bg-neutral-700 flex-1 min-h-[68px]"></div>
+                                        <div className="w-[4px] bg-neutral-700 flex-1 min-h-[4.25rem]"></div>
                                     )}
                                 </div>
                             ))}
