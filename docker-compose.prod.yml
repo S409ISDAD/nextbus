@@ -109,6 +109,8 @@ services:
     restart: always
     depends_on:
       - app
+    networks:
+      - web
 
   bot:
     image: nextbus-app:latest 
