@@ -8,7 +8,7 @@ const Data: React.FC = () => {
         <div className="flex flex-col max-w-3xl gap-5 p-6 mx-auto">
             <span className="text-4xl font-bold">Data Sources</span>
             <span>
-                <strong>Last updated:</strong> October 2nd, 2025
+                <strong>Last updated:</strong> October 16th, 2025
             </span>
 
             <span>I use lots of open data to make nextbus possible.</span>
@@ -71,8 +71,34 @@ const Data: React.FC = () => {
                                 rel="noopener noreferrer">
                                 BODS (Bus Open Data Service)
                             </a>
+                        </strong>
+                        ,{" "}
+                        <strong>
+                            <a
+                                href="https://data.discoverpassenger.com"
+                                className="underline text-link"
+                                target="_blank"
+                                rel="noopener noreferrer">
+                                Passenger
+                            </a>
+                        </strong>
+                        ,{" "}
+                        <strong>
+                            <a
+                                href="https://www.stagecoachbus.com/open-data"
+                                className="underline text-link"
+                                target="_blank"
+                                rel="noopener noreferrer">
+                                Stagecoach
+                            </a>
                         </strong>{" "}
-                        for timetables and routes.
+                        and Ticketer for timetables and routes. For more
+                        information, see the{" "}
+                        <strong>
+                            <a href="/sources" className="underline text-link">
+                                Sources Page
+                            </a>
+                        </strong>
                     </li>
                 </ul>
             </div>
