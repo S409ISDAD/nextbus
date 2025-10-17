@@ -112,7 +112,7 @@ async def send_import_message(data: ImportMessage):
         )
         embed.add_field(
             name="Services",
-            value=f"{stats.sc} added, {stats.su} updated\n{stats.sd} deactivated",
+            value=f"{stats.sc} added, {stats.su} updated\n{stats.sd} deactivated, {stats.ss} skipped",
             inline=False,
         )
         embed.add_field(
@@ -133,11 +133,6 @@ async def send_import_message(data: ImportMessage):
         embed.add_field(
             name="Stops",
             value=f"{stats.stpc} added, {stats.stpu} updated",
-            inline=False,
-        )
-        embed.add_field(
-            name="Files",
-            value=f"{stats.fs} skipped",
             inline=False,
         )
         embed.set_footer(text=MACHINE_NAME)

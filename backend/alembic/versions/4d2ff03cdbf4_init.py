@@ -1,22 +1,22 @@
-"""fresh start
+"""init
 
-Revision ID: 096b45ae3254
+Revision ID: 4d2ff03cdbf4
 Revises:
-Create Date: 2025-09-29 10:35:14.011533
+Create Date: 2025-10-17 23:36:58.626050
 
 """
 
 from typing import Sequence, Union
 
 from alembic import op
-from sqlalchemy_searchable import sql_expressions
 import geoalchemy2
 import sqlalchemy as sa
 import sqlalchemy_utils
+from sqlalchemy_searchable import sql_expressions
 
 
 # revision identifiers, used by Alembic.
-revision: str = "096b45ae3254"
+revision: str = "4d2ff03cdbf4"
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -184,6 +184,7 @@ def upgrade() -> None:
         sa.Column("end_date", sa.Date(), nullable=False),
         sa.Column("operating", sa.Boolean(), nullable=False),
         sa.Column("description", sa.String(), nullable=True),
+        sa.Column("special", sa.Boolean(), nullable=False),
         sa.ForeignKeyConstraint(["calendar_id"], ["calendar.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint(
@@ -193,6 +194,23 @@ def upgrade() -> None:
             "operating",
             name="uq_calendar_exception",
         ),
+    )
+    op.create_table(
+        "file_import",
+        sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
+        sa.Column("filename", sa.String(), nullable=True),
+        sa.Column("file_hash", sa.String(), nullable=False),
+        sa.Column("size_bytes", sa.Integer(), nullable=True),
+        sa.Column("processed_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("data_source_id", sa.Integer(), nullable=True),
+        sa.ForeignKeyConstraint(
+            ["data_source_id"],
+            ["data_source.id"],
+        ),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(
+        op.f("ix_file_import_file_hash"), "file_import", ["file_hash"], unique=True
     )
     op.create_table(
         "service",
@@ -239,6 +257,7 @@ def upgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("id"),
     )
+
     op.create_index(
         op.f("ix_service_bt_service_id"), "service", ["bt_service_id"], unique=False
     )
@@ -252,26 +271,6 @@ def upgrade() -> None:
     )
     op.create_index(
         op.f("ix_service_service_code"), "service", ["service_code"], unique=False
-    )
-    op.create_table(
-        "timetable_data_source",
-        sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
-        sa.Column("filename", sa.String(), nullable=True),
-        sa.Column("file_hash", sa.String(), nullable=False),
-        sa.Column("size_bytes", sa.Integer(), nullable=True),
-        sa.Column("processed_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("data_source_id", sa.Integer(), nullable=True),
-        sa.ForeignKeyConstraint(
-            ["data_source_id"],
-            ["data_source.id"],
-        ),
-        sa.PrimaryKeyConstraint("id"),
-    )
-    op.create_index(
-        op.f("ix_timetable_data_source_file_hash"),
-        "timetable_data_source",
-        ["file_hash"],
-        unique=True,
     )
     op.create_table(
         "district",
@@ -379,6 +378,7 @@ def upgrade() -> None:
             nullable=True,
         ),
         sa.Column("public_use", sa.Boolean(), nullable=True),
+        sa.Column("hash", sa.String(), nullable=False),
         sa.ForeignKeyConstraint(
             ["data_source_id"], ["data_source.id"], ondelete="SET NULL"
         ),
@@ -395,6 +395,7 @@ def upgrade() -> None:
     op.create_index(
         op.f("ix_timetable_bt_service_id"), "timetable", ["bt_service_id"], unique=False
     )
+    op.create_index(op.f("ix_timetable_hash"), "timetable", ["hash"], unique=False)
     op.create_index(
         op.f("ix_timetable_service_id"), "timetable", ["service_id"], unique=False
     )
@@ -472,30 +473,6 @@ def upgrade() -> None:
         ["search_vector"],
         unique=False,
         postgresql_using="gin",
-    )
-    op.create_table(
-        "timetable_tt_data_source_link",
-        sa.Column("timetable_id", sa.Integer(), nullable=False),
-        sa.Column("tt_data_source_id", sa.Integer(), nullable=False),
-        sa.ForeignKeyConstraint(["timetable_id"], ["timetable.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(
-            ["tt_data_source_id"], ["timetable_data_source.id"], ondelete="CASCADE"
-        ),
-        sa.PrimaryKeyConstraint(
-            "timetable_id", "tt_data_source_id", name="pk_timetable_data_source_link"
-        ),
-    )
-    op.create_index(
-        op.f("ix_timetable_tt_data_source_link_timetable_id"),
-        "timetable_tt_data_source_link",
-        ["timetable_id"],
-        unique=False,
-    )
-    op.create_index(
-        op.f("ix_timetable_tt_data_source_link_tt_data_source_id"),
-        "timetable_tt_data_source_link",
-        ["tt_data_source_id"],
-        unique=False,
     )
     op.create_table(
         "stop",
@@ -792,15 +769,6 @@ def downgrade() -> None:
     op.drop_index("idx_stop_point", table_name="stop", postgresql_using="gist")
     op.drop_table("stop")
     op.drop_index(
-        op.f("ix_timetable_tt_data_source_link_tt_data_source_id"),
-        table_name="timetable_tt_data_source_link",
-    )
-    op.drop_index(
-        op.f("ix_timetable_tt_data_source_link_timetable_id"),
-        table_name="timetable_tt_data_source_link",
-    )
-    op.drop_table("timetable_tt_data_source_link")
-    op.drop_index(
         "ix_locality_search_vector", table_name="locality", postgresql_using="gin"
     )
     op.drop_index("idx_locality_point", table_name="locality", postgresql_using="gist")
@@ -808,6 +776,7 @@ def downgrade() -> None:
     op.drop_index("uq_service_revision_with_nulls", table_name="timetable")
     op.drop_index("ix_timetable_service_line_name", table_name="timetable")
     op.drop_index(op.f("ix_timetable_service_id"), table_name="timetable")
+    op.drop_index(op.f("ix_timetable_hash"), table_name="timetable")
     op.drop_index(op.f("ix_timetable_bt_service_id"), table_name="timetable")
     op.drop_index(
         "idx_timetable_geometry", table_name="timetable", postgresql_using="gist"
@@ -818,10 +787,6 @@ def downgrade() -> None:
     )
     op.drop_table("stop_area")
     op.drop_table("district")
-    op.drop_index(
-        op.f("ix_timetable_data_source_file_hash"), table_name="timetable_data_source"
-    )
-    op.drop_table("timetable_data_source")
     op.drop_index(op.f("ix_service_service_code"), table_name="service")
     op.drop_index(
         "ix_service_search_vector", table_name="service", postgresql_using="gin"
@@ -830,6 +795,8 @@ def downgrade() -> None:
     op.drop_index(op.f("ix_service_bt_service_id"), table_name="service")
     op.drop_index("idx_service_geometry", table_name="service", postgresql_using="gist")
     op.drop_table("service")
+    op.drop_index(op.f("ix_file_import_file_hash"), table_name="file_import")
+    op.drop_table("file_import")
     op.drop_table("calendar_exception")
     op.drop_table("calendar_bank_holiday")
     op.drop_index(

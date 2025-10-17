@@ -33,8 +33,7 @@ from backend.models import (
     Stop,
     StopTime,
     RouteLink,
-    TimetableDataSource,
-    TimetableToTTDataSource,
+    FileImport,
 )
 from backend.tasks.import_naptan import get_stop
 from backend.transxchange import txc
@@ -358,11 +357,11 @@ class Statistics:
         self.services_created = 0
         self.services_updated: set[int] = set()
         self.services_deactivated = 0
+        self.services_skipped = 0
         self.timetables_created = 0
         self.timetables_updated: set[int] = set()
         self.timetables_skipped: set[int] = set()
         self.timetables_deleted = 0
-        self.files_skipped = 0
         self.journeys_created = 0
         self.stop_times_created = 0
         self.stops_created = 0
@@ -399,7 +398,6 @@ class TXCImporter:
         self.filename = None
         self.file_hash = None
         self.file_size_bytes = None
-        self.timetable_datasource = None
         self.skip_checks = skip_checks
         self.services: set[int] = set()
         self.timetables: set[int] = set()
@@ -418,6 +416,7 @@ class TXCImporter:
         self.stats = Statistics()
         self.end_date = None
         self.processed_cache: dict[str, txc.TransXChange] = {}
+        self.service_line_key: tuple[str, str] | None = None
 
     @property
     def is_repeat_revision(self):
@@ -476,9 +475,17 @@ class TXCImporter:
     async def import_from_map(self):
         log.debug(f"Importing {len(self.map.keys())} services...")
         idx = 0
+        total_passes = sum(
+            len(rev_data["files"])
+            for revisions in self.map.values()
+            for rev_data in revisions.values()
+        )
+        log.debug(f"Total file appearances to process: {total_passes}")
         for line_key in self.map.keys():
             service_id, line_name = line_key
             self.clear_old_timetables(service_id)
+
+            self.service_line_key = line_key
 
             sorted_revisions = sorted(
                 self.map[line_key].items(), key=lambda x: x[1]["start"]
@@ -499,13 +506,12 @@ class TXCImporter:
 
                 for file in rev_data["files"]:
                     log.debug(
-                        f"Importing {file} ({idx + 1}/{self.file_count}, {round(((idx + 1) / self.file_count) * 100, 2)}%)"
+                        f"Importing {file} ({idx + 1}/{total_passes}, {round(((idx + 1) / total_passes) * 100, 2)}%)"
                     )
                     self.end_date = rev_data["end"]
                     self.timetables.clear()
                     await self.handle_txc_file(Path(file))
                     self.file_idx_in_revision += 1
-                    self.do_tt_datasources()
                     self.end_date = None  # reset just in case
                     idx += 1
 
@@ -557,20 +563,6 @@ class TXCImporter:
             self.db.commit()
         else:
             log.debug("No old services to clear.")
-
-        timetable_ds_to_go = (
-            self.db.query(TimetableDataSource)
-            .filter_by(data_source_id=self.ds_id)
-            .filter(~TimetableDataSource.timetables.any())
-        )
-
-        if timetable_ds_to_go.count() > 0:
-            log.info(f"deleting {timetable_ds_to_go.count()} tds...")
-            for tds in timetable_ds_to_go:
-                self.db.delete(tds)
-            self.db.commit()
-        else:
-            log.debug("No old timetable data sources to clear.")
 
     def get_calendar(
         self, operating_profile: txc.OperatingProfile, operating_period: txc.DateRange
@@ -971,7 +963,7 @@ class TXCImporter:
             log.debug(
                 f"Skipping file for {txc_service.service_code} as it ended on {end_date}"
             )
-            self.stats.files_skipped += 1
+            self.stats.services_skipped += 1
             return
 
         description = get_description(txc_service)
@@ -991,6 +983,11 @@ class TXCImporter:
         service = None
 
         for txc_line in txc_service.lines:
+            if self.service_line_key and self.service_line_key[1] != txc_line.line_name:
+                log.debug(
+                    f"Skipping {txc_line.line_name} for {txc_service.service_code}, not the target line ({self.service_line_key[1]})"
+                )
+                continue
             if end_date and end_date < self.today.date():
                 log.debug(
                     f"Skipping line {txc_line.line_name} for service {txc_service.service_code} as it ended on {end_date}"
@@ -1249,42 +1246,6 @@ class TXCImporter:
             else:
                 self.db.add(timetable)
 
-            # bulk_upsert(
-            #     self.db,
-            #     Timetable,
-            #     [
-            #         {
-            #             c.name: getattr(timetable, c.name)
-            #             for c in Timetable.__table__.columns
-            #             if c.name != "id"
-            #         }
-            #     ],
-            #     [
-            #         "service_id",
-            #         "revision_number",
-            #         "start_date",
-            #         "end_date",
-            #         "data_source_id",
-            #     ],
-            #     [
-            #         "end_date",
-            #         "description",
-            #         "origin",
-            #         "destination",
-            #         "vias",
-            #         "line_brand",
-            #         "outbound_description",
-            #         "inbound_description",
-            #         "public_use",
-            #         "revision_number",
-            #         "created_at",
-            #         "modified_at",
-            #         "timetable_data_source_id",
-            #         "operator_id",
-            #         "service_code",
-            #     ],
-            # )
-
             self.db.flush()
 
             log.debug(f"Timetable ID: {timetable.id}")
@@ -1479,27 +1440,6 @@ class TXCImporter:
             self.db.add(service)
         self.db.commit()
 
-    def do_tt_datasources(self):
-        if not self.timetable_datasource:
-            log.warning("No timetable datasource")
-            return
-        for id in self.timetables:
-            tt_to_ds = (
-                self.db.query(TimetableToTTDataSource)
-                .filter_by(
-                    timetable_id=id,
-                    tt_data_source_id=self.timetable_datasource.id,
-                )
-                .first()
-            )
-            if not tt_to_ds:
-                tt_to_ds = TimetableToTTDataSource(
-                    timetable_id=id,
-                    tt_data_source_id=self.timetable_datasource.id,
-                )
-                self.db.add(tt_to_ds)
-                self.db.flush()
-
     async def handle_txc_file(self, file: Path):
         start = time.time()
         try:
@@ -1508,31 +1448,24 @@ class TXCImporter:
             with open(file, "rb") as f:
                 self.file_hash = hashlib.file_digest(f, "sha256").hexdigest()
 
-            timetable_datasource = (
-                self.db.query(TimetableDataSource)
+            file_import_log = (
+                self.db.query(FileImport)
                 .filter_by(file_hash=self.file_hash, data_source_id=self.ds_id)
                 .first()
             )
 
-            if not timetable_datasource:
-                timetable_datasource = TimetableDataSource(
+            self.hash_different = True
+
+            if not file_import_log:
+                file_import_log = FileImport(
                     filename=self.filename,
                     file_hash=self.file_hash,
                     size_bytes=self.file_size_bytes,
                     data_source_id=self.ds_id,
                     processed_at=datetime.now(tz=LONDON),
                 )
-                self.db.add(timetable_datasource)
+                self.db.add(file_import_log)
                 self.db.flush()
-            else:
-                if not self.skip_checks:
-                    log.info(
-                        f"No changes to timetable data source {self.filename}, skipping"
-                    )
-                    self.stats.files_skipped += 1
-                    return
-
-            self.timetable_datasource = timetable_datasource
 
             self.txc_data = self.processed_cache.get(
                 file.as_posix(), None
@@ -1576,6 +1509,11 @@ class TXCImporter:
             self.get_stops(self.txc_data.stops)
 
             for service_code, txc_service in self.txc_data.services.items():
+                if self.service_line_key and self.service_line_key[0] != service_code:
+                    log.debug(
+                        f"Skipping {txc_service.service_code}, not the target service ({self.service_line_key[0]})"
+                    )
+                    continue
                 self.handle_service(txc_service)
 
             self.db.commit()

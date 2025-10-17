@@ -1,13 +1,6 @@
 from backend.config import get_logger, setup_logging
 from backend.db.db import SessionLocal
-from backend.models import (
-    Timetable,
-    TimetableToTTDataSource,
-    TimetableDataSource,
-    Calendar,
-    Service,
-    Operator,
-)
+from backend.models import Timetable, Calendar, Service, Operator, FileImport
 from sqlalchemy import text
 from backend.commands.reset_datasource import reset_datasource
 
@@ -19,23 +12,20 @@ def reset_all():
         timetable_count = db.query(Timetable).count()
         calendar_count = db.query(Calendar).count()
         service_count = db.query(Service).count()
-        tds_count = db.query(TimetableDataSource).count()
-        tttds_count = db.query(TimetableToTTDataSource).count()
         operator_count = db.query(Operator).count()
+        file_import_count = db.query(FileImport).count()
 
         log.info(f"Deleting {timetable_count} Timetable rows")
         log.info(f"Deleting {calendar_count} Calendar rows")
         log.info(f"Deleting {service_count} Service rows")
-        log.info(f"Deleting {tds_count} TimetableDataSource rows")
-        log.info(f"Deleting {tttds_count} TimetableToTTDataSource rows")
         log.info(f"Deleting {operator_count} Operator rows")
+        log.info(f"Deleting {file_import_count} FileImport rows")
 
         db.query(Timetable).delete()
         db.query(Calendar).delete()
         db.query(Service).delete()
-        db.query(TimetableDataSource).delete()
-        db.query(TimetableToTTDataSource).delete()
         db.query(Operator).delete()
+        db.query(FileImport).delete()
 
         db.commit()
 

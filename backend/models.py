@@ -1217,8 +1217,8 @@ class ServiceStopUsage(Base):
     __table_args__ = (Index("ix_stopusage_inbound_order", "inbound", "order"),)
 
 
-class TimetableDataSource(Base):
-    __tablename__ = "timetable_data_source"
+class FileImport(Base):
+    __tablename__ = "file_import"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     filename = Column(String)
@@ -1228,38 +1228,6 @@ class TimetableDataSource(Base):
     data_source_id = Column(Integer, ForeignKey("data_source.id"), nullable=True)
 
     data_source = relationship("DataSource")
-    timetables = relationship(
-        "Timetable",
-        back_populates="timetable_data_sources",
-        secondary="timetable_tt_data_source_link",
-        passive_deletes=True,
-    )
-
-
-class TimetableToTTDataSource(Base):
-    """
-    Many-to-many relationship between Timetable and TimetableDataSource
-    """
-
-    __tablename__ = "timetable_tt_data_source_link"
-    timetable_id = Column(
-        Integer,
-        ForeignKey("timetable.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-    )
-    tt_data_source_id = Column(
-        Integer,
-        ForeignKey("timetable_data_source.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-    )
-
-    __table_args__ = (
-        PrimaryKeyConstraint(
-            "timetable_id", "tt_data_source_id", name="pk_timetable_data_source_link"
-        ),
-    )
 
 
 class Timetable(Base):
@@ -1295,7 +1263,7 @@ class Timetable(Base):
     start_date = Column(Date)
     end_date = Column(
         Date, default=date(9999, 12, 31)
-    )  # no end date means it is valid indefinitely
+    )  # no / max end date means it is valid indefinitely
     geometry = Column(
         Geometry(geometry_type="MULTILINESTRING", srid=4326), nullable=True
     )
@@ -1305,12 +1273,6 @@ class Timetable(Base):
     service = relationship("Service", back_populates="timetables")
     operator = relationship("Operator")
     data_source = relationship("DataSource", back_populates="timetables")
-    timetable_data_sources = relationship(
-        "TimetableDataSource",
-        back_populates="timetables",
-        secondary="timetable_tt_data_source_link",
-        passive_deletes=True,
-    )
     journeys = relationship(
         "Journey",
         back_populates="timetable",

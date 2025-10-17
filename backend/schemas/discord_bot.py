@@ -12,11 +12,11 @@ class SimpleStatistics(BaseModel):
     sc: int
     su: int
     sd: int
+    ss: int
     tc: int
     tu: int
     td: int
     ts: int
-    fs: int
     jc: int
     stc: int
     stpc: int
