@@ -4,7 +4,7 @@ import { useNavigate, useParams } from "react-router";
 import { Skeleton } from "@radix-ui/themes";
 import { Card } from "../../components/ui/Card";
 import type { ServiceLocation, TrainService } from "../../models/Trains";
-import timeTo, { generateTimeTo, toTime } from "../../utils/timeUtils";
+import { generateTimeTo, toTime } from "../../utils/timeUtils";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowLeft, faArrowRight } from "@fortawesome/free-solid-svg-icons";
 
