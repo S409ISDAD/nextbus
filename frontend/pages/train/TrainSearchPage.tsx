@@ -4,7 +4,7 @@ import { useNavigate, useParams } from "react-router";
 import { Skeleton } from "@radix-ui/themes";
 import { Card } from "../../components/ui/Card";
 import type { ServiceLocation, TrainService } from "../../models/Trains";
-import { generateTimeTo, toTime } from "../../utils/timeUtils";
+import timeTo, { generateTimeTo, toTime } from "../../utils/timeUtils";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowLeft, faArrowRight } from "@fortawesome/free-solid-svg-icons";
 
@@ -130,21 +130,17 @@ function TrainCard({
                             </span> */}
                             {train.duration && (
                                 <span className="text-sm font-semibold md:text-base text-neutral-400">
-                                    {`${Math.floor(
-                                        train.duration / 3600
-                                    )}h ${Math.floor(
-                                        (train.duration % 3600) / 60
-                                    )}m`}
+                                    {generateTimeTo(train.duration)}
                                 </span>
                             )}
 
                             {idx === 0 && (
-                                <span className="px-2 py-1 text-xs font-bold text-primary-400 rounded-full bg-primary/20">
+                                <span className="px-2 py-1 text-xs font-bold rounded-full text-primary-400 bg-primary/20">
                                     arrives first
                                 </span>
                             )}
                             {train.fastest && (
-                                <span className="px-2 py-1 text-xs font-bold text-primary-400 rounded-full bg-primary/20">
+                                <span className="px-2 py-1 text-xs font-bold rounded-full text-primary-400 bg-primary/20">
                                     fastest
                                 </span>
                             )}
@@ -185,9 +181,9 @@ function TrainCard({
                         </span>
                     </div>
 
-                    <div className="flex items-end justify-center gap-1 px-2 py-[0.2rem] w-16 sm:w-18 rounded-xl bg-neutral-800/50">
-                        <span className="text-base font-bold sm:text-lg">
-                            {train.timeTo?.split(" ")[0] ?? "--"}
+                    <div className="flex items-end justify-center gap-1 px-2 py-[0.2rem] min-w-16 sm:min-w-18 rounded-xl bg-neutral-800/50">
+                        <span className="text-base font-bold sm:text-lg text-nowrap">
+                            in {train.timeTo?.split(" ")[0] ?? "--"}
                         </span>
                         <span className="text-xs sm:text-sm font-bold mb-[0.15rem]">
                             {train.timeTo?.split(" ")[1]}
