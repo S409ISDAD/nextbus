@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from geopy.distance import geodesic
 from redis.asyncio import Redis
 
@@ -94,6 +94,8 @@ async def get_times(stop_id, r: Redis):
     """Fetches departures from a stop."""
 
     async def fetch(stop_id):
+        now = datetime.now(tz=LONDON)
+    
         data = await fetch_json(BASE + f"/stops/{stop_id}/times.json")
 
         if not data:
@@ -101,7 +103,6 @@ async def get_times(stop_id, r: Redis):
 
         times = data.get("times", [])
 
-        now = datetime.now(tz=LONDON).date()
 
         for time in times:
             dep = time.get("expected_departure_time")
@@ -109,7 +110,7 @@ async def get_times(stop_id, r: Redis):
 
             if dep:
                 dep = isoparse(dep)
-                if dep.date() > now:
+                if dep.date() > now.date():
                     time["dayshift"] = 1
 
         return times

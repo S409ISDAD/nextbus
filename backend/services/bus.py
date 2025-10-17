@@ -18,6 +18,7 @@ from backend.models import (
 from backend.schemas.bus import ScheduledBus, TrackedBus
 from backend.schemas.livery import Livery
 from backend.schemas.progress import Progress
+from backend.services import stops
 from backend.services.caching import BUS_CACHE, get_cached
 from backend.services.livery import get_livery
 from backend.services.prediction import (
@@ -112,6 +113,8 @@ async def fetch_buses(
     services, stop_id, times, r: Redis, use_db=False, is_tomorrow=False
 ) -> list[TrackedBus]:
     active = await fetch_active_buses(services, r)
+    
+    bustimes_times = await stops.get_times(stop_id, r)
 
     active_by_trip: dict[int, list[dict]] = {}
     if active:
@@ -128,17 +131,18 @@ async def fetch_buses(
 
     scheduled_trip_ids = {t["trip_id"] for t in times if t.get("trip_id")}
     not_included = [
-        bus for bus in active if bus.get("trip_id") not in scheduled_trip_ids
+        bus for bus in bustimes_times if bus.get("trip_id") not in scheduled_trip_ids
     ]
 
-    for bus in not_included:
+    for time in not_included:
         # add buses that are late, and the scheduled departure time has passed
+        buses = active_by_trip.get(time.get("trip_id"), [])
         with SessionLocal() as db:
-            journey = await match_trip_journey(db, bus.get("trip_id"), r)
+            journey = await match_trip_journey(db, time.get("trip_id"), r)
             journey_id = journey.id if journey else None
         tasks.append(
             build_bus_candidates(
-                [bus],
+                buses,
                 r,
                 stop_id,
                 journey_id,
