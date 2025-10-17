@@ -575,7 +575,7 @@ async def build_bus(
 
     service_info = await get_service_info(journey.service_id, r)
 
-    if not times:
+    if not times or times.scheduled is None or times.expected is None:
         log.warning(f"no times. id: {bus_id}, reg: {reg}")
         return None
     if not times.include:

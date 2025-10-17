@@ -1576,6 +1576,11 @@ class Journey(Base):
             else:
                 trip_id = None
 
+            if trip_id is None:
+                log.warning(
+                    f"{API_BASE}/trips/?vehicle_journey_code={vjc}&ticket_machine_code={tmc}&block={block or ''}"
+                )
+
             obj = db.merge(self)
             obj.bt_trip_id = trip_id
             db.commit()

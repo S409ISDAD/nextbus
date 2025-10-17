@@ -115,7 +115,12 @@ function BusCard({
         if (isTrackedBus(bus) && bus.confidence.diversion_confidence >= 0.65) {
             setIsOnDiversion(true);
         }
-        if (idx === 0 && isTrackedBus(bus) && busDetail) {
+        if (
+            idx === 0 &&
+            isTrackedBus(bus) &&
+            busDetail &&
+            busDetail.predictions
+        ) {
             const now = Date.now();
             const progressIdx = busDetail.predictions.findIndex(
                 (p) => now < new Date(p.timestamp).getTime()
