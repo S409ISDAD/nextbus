@@ -131,7 +131,6 @@ async def get_vehicle_journey(journey_id, delay, r) -> Journey:
         departed = False
         if expt < current_time:
             departed = True
-            
 
         stops.append(
             StopTime(
@@ -370,6 +369,8 @@ async def get_trip(trip_id, delay, r) -> Trip:
         )
 
     return Trip(
+        route_name=trip.get("service").get("line_name"),
+        destination=trip.get("headsign"),
         service_id=trip.get("service").get("id"),
         vehicle_journey_code=trip.get("vehicle_journey_code"),
         ticket_machine_code=trip.get("ticket_machine_code"),

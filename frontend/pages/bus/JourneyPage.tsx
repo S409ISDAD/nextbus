@@ -244,23 +244,22 @@ const JourneyPage: React.FC = () => {
                 ref={busInfoRef}>
                 {journey ? (
                     <div className="flex flex-col items-center justify-center gap-2">
-                        {isDBJourney && (
-                            <div
-                                className={`fixed flex flex-row items-stretch p-2 px-3 my-1 mb-1 z-10000000 ${
-                                    !showAppNav ? "top-15" : "top-0"
-                                }`}>
-                                <div className="flex items-center px-3 py-1 bg-primary-700 rounded-l-2xl">
-                                    <span className="flex items-center justify-center text-xl font-bold text-center">
-                                        {journey.route_name}
-                                    </span>
-                                </div>
-                                <div className="flex flex-col justify-center px-3 py-1 bg-neutral-800 rounded-r-2xl">
-                                    <span className="font-semibold text">
-                                        {journey.destination}
-                                    </span>
-                                </div>
+                        <div
+                            className={`fixed flex flex-row items-stretch p-2 px-3 my-1 mb-1 z-10000000 ${
+                                !showAppNav ? "top-15" : "top-0"
+                            }`}>
+                            <div className="flex items-center px-3 py-1 bg-primary-700 rounded-l-2xl">
+                                <span className="flex items-center justify-center text-xl font-bold text-center">
+                                    {journey.route_name}
+                                </span>
                             </div>
-                        )}
+                            <div className="flex flex-col justify-center px-3 py-1 bg-neutral-800 rounded-r-2xl">
+                                <span className="font-semibold text">
+                                    {journey.destination}
+                                </span>
+                            </div>
+                        </div>
+
                         <MapView
                             journey={journey}
                             track={generateWholeTrack(journey.stops)}></MapView>
