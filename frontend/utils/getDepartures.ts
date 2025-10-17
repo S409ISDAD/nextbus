@@ -46,7 +46,12 @@ export const parseDepartures = async (departures: Departures, filter?: string) =
             )
             .sort(
                 (a, b) => new Date(a.expected).getTime() - new Date(b.expected).getTime()
-            );
+            )
+            .sort((a, b) => {
+                if (a.status === "cancelled" && b.status !== "cancelled") return -1;
+                if (b.status === "cancelled" && a.status !== "cancelled") return 1;
+                return 0;
+            });
         const timestamp = new Date(departures.timestamp);
         return { updatedBuses, timestamp };
 

@@ -608,9 +608,12 @@ async def build_bus(
     if times.call_condition == "notStopping":
         log.info(f"bus cancelled. id: {bus_id}, reg: {reg}")
         status = "cancelled"
-        times.expected += timedelta(
-            minutes=30
-        )  # show as cancelled after departure time so that everyone sees it
+        if times.expected and times.scheduled:
+            delay = 0
+            times.expected = times.scheduled
+            times.expected += timedelta(
+                minutes=30
+            )  # show as cancelled after departure time so that everyone sees it
 
     min_expected = None
     max_expected = None

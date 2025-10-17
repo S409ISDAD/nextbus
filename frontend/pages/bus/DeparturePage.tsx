@@ -82,7 +82,11 @@ function BusCard({
     }, [idx === 0 && isTrackedBus(bus) ? bus.id : null]);
 
     const handleClick = () => {
-        if (isTrackedBus(bus) && bus.status !== "on_prev_trip") {
+        if (
+            isTrackedBus(bus) &&
+            bus.status !== "on_prev_trip" &&
+            bus.status !== "cancelled"
+        ) {
             navigate(`/buses/${bus.id}`);
         } else if (bus.db_journey) {
             navigate(`/buses/dbjourneys/${bus.db_journey}`);
@@ -182,15 +186,17 @@ function BusCard({
                                 )}
                             </div>
                         </div>
-                        {isTrackedBus(bus) && bus.delay >= 2700 && (
-                            <div className="flex items-center gap-1 text-xs ">
-                                <FontAwesomeIcon
-                                    icon={faWarning}
-                                    className="text-red-400"
-                                />
-                                This bus is quite late, it may not arrive.
-                            </div>
-                        )}
+                        {isTrackedBus(bus) &&
+                            bus.delay >= 2700 &&
+                            bus.status !== "cancelled" && (
+                                <div className="flex items-center gap-1 text-xs ">
+                                    <FontAwesomeIcon
+                                        icon={faWarning}
+                                        className="text-red-400"
+                                    />
+                                    This bus is quite late, it may not arrive.
+                                </div>
+                            )}
                         {trackingBroken && (
                             <div className="flex items-center gap-1 text-xs ">
                                 <FontAwesomeIcon
