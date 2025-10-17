@@ -570,13 +570,16 @@ async def build_bus(
         and sequence > 5
     ):  # bus may be logging on early
         if (sequence == target_seq and prog >= 0.1) or sequence > target_seq:
-            log.warning(f"bus has likely passed the stop. id: {bus_id}, reg: {reg}")
+            log.info(f"bus has likely passed the stop. id: {bus_id}, reg: {reg}")
             return None  # bus has likely passed the stop
 
     service_info = await get_service_info(journey.service_id, r)
 
-    if not times or times.scheduled is None or times.expected is None:
-        log.warning(f"no times. id: {bus_id}, reg: {reg}")
+    if not times:
+        log.warning(f"no times object. id: {bus_id}, reg: {reg}")
+        return None
+    if (times.scheduled is None or times.expected is None) and stop_id:
+        log.info(f"no scheduled time. id: {bus_id}, reg: {reg}")
         return None
     if not times.include:
         log.warning(f"not including id: {bus_id}, reg: {reg}")

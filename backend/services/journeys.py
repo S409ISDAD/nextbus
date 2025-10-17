@@ -131,6 +131,7 @@ async def get_vehicle_journey(journey_id, delay, r) -> Journey:
         departed = False
         if expt < current_time:
             departed = True
+            
 
         stops.append(
             StopTime(
