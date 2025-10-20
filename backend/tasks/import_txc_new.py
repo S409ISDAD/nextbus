@@ -12,7 +12,8 @@ from pathlib import Path
 from geoalchemy2.shape import from_shape
 from shapely import Point
 from shapely.geometry import LineString
-from sqlalchemy import func, select
+from sqlalchemy import and_, exists, func, not_, or_, select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy_searchable import sync_trigger
 
 from titlecase import titlecase
@@ -25,7 +26,7 @@ from backend.models import (
     Calendar,
     CalendarException,
     CalendarToBankHoliday,
-    DataSource,
+    DataSourceVersion,
     Journey,
     Service,
     Operator,
@@ -34,11 +35,12 @@ from backend.models import (
     StopTime,
     RouteLink,
     FileImport,
+    ServiceStopUsage,
+    service_operator_table,
 )
 from backend.tasks.import_naptan import get_stop
 from backend.transxchange import txc
 from backend.utils.bulk_upsert import bulk_upsert
-from backend.utils.download_if_modified import download_if_modified
 
 from backend.utils.time import to_datetime
 from backend.utils.time_taken import time_taken
@@ -48,73 +50,10 @@ log = get_logger(__name__)
 BAD_ORIGIN_DEST = {"Origin", "Destination", "Unknown"}
 
 
-async def import_datasource(id, folder: Path, skip_checks=False) -> "Statistics":
-    logs: list[tuple[datetime, str]] = []
-    stats = Statistics()
-    with SessionLocal() as db:
-        datasource = db.query(DataSource).filter(DataSource.id == id).first()
-        name = datasource.name if datasource else "Unknown"
-
-        if not datasource:
-            log.debug(f"No DataSource with id {id} found.")
-            logs.append((datetime.now(tz=LONDON), f"No DataSource with id {id} found."))
-            return stats
-
-        logs.append(
-            (
-                datetime.now(tz=LONDON),
-                f"Trying to import data source {name} from {datasource.url or datasource.bods_id}",
-            )
-        )
-
-        path = download_if_modified(
-            datasource, folder / f"txc_source_{id}.zip", skip_checks
-        )
-
-    if path:
-        logs.append((datetime.now(tz=LONDON), f"Importing data from {path}..."))
-        log.debug(f"Importing data from {path}")
-
-        duration, stats = await import_txc_zip(
-            folder / f"txc_source_{id}.zip", id, skip_checks
-        )
-
-        logs.append(
-            (
-                datetime.now(tz=LONDON),
-                f"Import completed for data source {name}"
-                + (f" in {duration}" if duration else ""),
-            )
-        )
-        log.debug(
-            f"Import completed for data source {name}"
-            + (f" in {duration}" if duration else "")
-        )
-        if stats:
-            for item in stats.output():
-                logs.append((datetime.now(tz=LONDON), item))
-
-    else:
-        logs.append((datetime.now(tz=LONDON), f"No updates for data source {name}"))
-        log.debug(f"No updates for data source {name}")
-
-    log_dir = folder / "logs"
-    log_dir.mkdir(parents=True, exist_ok=True)
-    log_file = log_dir / f"import_log_{id}.log"
-
-    log_file.touch()
-
-    with log_file.open("w") as f:
-        for txc_log in logs:
-            f.write(f"{txc_log[0].strftime('%d/%m/%Y, %H:%M:%S')} - {txc_log[1]}\n")
-
-    return stats
-
-
-async def import_txc_zip(zip_path, ds_id=None, skip_checks=False):
+async def import_txc_zip(zip_path, ds_id=None, dsv_id=None, skip_checks=False):
     start = time.time()
     zip_path = Path(zip_path).resolve()
-    extract_dir = zip_path.parent / f"txc_extract_{ds_id or 'zip'}"
+    extract_dir = zip_path.parent / f"txc_extract_{dsv_id or ds_id or 'zip'}"
     extract_dir.mkdir(parents=True, exist_ok=True)
     txc_importer = None
     stats = Statistics()
@@ -129,7 +68,7 @@ async def import_txc_zip(zip_path, ds_id=None, skip_checks=False):
 
             log.debug(f"Extracted {len(xml_files)} XML files to {extract_dir}")
             txc_importer = TXCImporter(
-                extract_dir, ds_id=ds_id, skip_checks=skip_checks
+                extract_dir, ds_id=ds_id, dsv_id=dsv_id, skip_checks=skip_checks
             )
             await txc_importer.import_folder()
     except Exception as e:
@@ -193,7 +132,6 @@ async def import_txc_zip(zip_path, ds_id=None, skip_checks=False):
                 ["name", "noc"],
             )
         return duration, stats
-    return None
 
 
 # def import_txc_zip(zip_path):
@@ -392,7 +330,7 @@ class Statistics:
 
 
 class TXCImporter:
-    def __init__(self, folder: Path, ds_id=None, skip_checks=False):
+    def __init__(self, folder: Path, ds_id=None, dsv_id=None, skip_checks=False):
         self.txc_data = None
         self.folder = folder
         self.filename = None
@@ -406,7 +344,7 @@ class TXCImporter:
         self.operators: dict[int, Operator] = {}
         self.calendar_cache = {}
         self.ds_id = ds_id
-        self.tds_id = None
+        self.dsv_id = dsv_id
         self.map = {}
         self.files_in_revision = 0
         self.file_idx_in_revision = 0
@@ -417,6 +355,16 @@ class TXCImporter:
         self.end_date = None
         self.processed_cache: dict[str, txc.TransXChange] = {}
         self.service_line_key: tuple[str, str] | None = None
+        self.dsv = self.get_dsv()
+
+    def get_dsv(self):
+        if self.dsv_id:
+            result = (
+                self.db.query(DataSourceVersion)
+                .filter(DataSourceVersion.id == self.dsv_id)
+                .first()
+            )
+            return result
 
     @property
     def is_repeat_revision(self):
@@ -996,19 +944,96 @@ class TXCImporter:
 
             txc_line.line_name = txc_line.line_name.replace("_", " ").strip()
 
-            existing_service = (
+            # find existing service
+            # from bustimes.org's import_transxchange.py - modified
+            service_query = (
                 self.db.query(Service)
+                .order_by(Service.current.desc(), Service.id.asc())
                 .filter(
-                    Service.line_name.ilike(txc_line.line_name),
-                    Service.service_code == txc_service.service_code,
-                    Service.data_source_id == self.ds_id,
-                    *([Service.operator_id == operator.id] if operator else []),
+                    or_(
+                        Service.line_name.ilike(txc_line.line_name),
+                        exists().where(
+                            and_(
+                                Timetable.line_name.ilike(txc_line.line_name),
+                                Timetable.service_id == Service.id,
+                            )
+                        ),
+                    )
                 )
-                .order_by(
-                    Service.current.desc(), Service.id.asc()
-                )  # speed up lookup by preferring current services
-                .first()
             )
+
+            log.debug(f"service query: {service_query}")
+
+            if self.operators:
+                op_ids = [operator.id for operator in self.operators.values()]
+
+                op_filter = Operator.id.in_(op_ids)
+
+                if self.dsv and self.dsv.name.startswith("Stagecoach"):
+                    line_name = txc_line.line_name
+                    dsv_name = str(self.dsv.name)
+
+                    if description and (
+                        (line_name == "1" and "Chester" in description)
+                        or (
+                            line_name == "59" and dsv_name == "Stagecoach East Scotland"
+                        )
+                        or (line_name == "700" and "Stagecoach" in dsv_name)
+                    ):
+                        op_filter = and_(
+                            or_(Service.data_source_id == self.ds_id, op_filter),
+                            Service.description == description,
+                        )
+
+                service_query = service_query.join(Service.operators).filter(op_filter)
+                log.debug(f"op filter: {service_query}")
+
+            if len(self.txc_data.services) == 1:
+                stop_ids = [s for s in self.stops.keys()]
+                has_stop_time = exists().where(
+                    and_(
+                        StopTime.stop_id.in_(stop_ids),
+                        StopTime.journey_id == Journey.id,
+                        Journey.timetable_id == Timetable.id,
+                        Timetable.service_id == Service.id,
+                    )
+                )
+
+                has_stop_usage = exists().where(
+                    and_(
+                        ServiceStopUsage.stop_id.in_(stop_ids),
+                        ServiceStopUsage.service_id == Service.id,
+                    )
+                )
+                has_no_route = not_(
+                    exists().where(
+                        and_(
+                            Journey.timetable_id == Timetable.id,
+                            Timetable.service_id == Service.id,
+                        )
+                    )
+                )
+                service_query = service_query.filter(
+                    or_(has_stop_time, and_(has_stop_usage, has_no_route))
+                )
+
+                log.debug(f"single service filter: {service_query}")
+
+            else:
+                condition = exists().where(
+                    and_(
+                        Timetable.service_code == txc_service.service_code,
+                        Timetable.service_id == Service.id,
+                    )
+                )
+                if description:
+                    condition = or_(condition, Service.description == description)
+                service_query = service_query.filter(condition)
+                log.debug(f"multi service filter: {service_query}")
+
+            existing_service = service_query.first()
+
+            # end from
 
             if existing_service:
                 service = existing_service
@@ -1070,8 +1095,6 @@ class TXCImporter:
             if line_brand:
                 service.line_brand = line_brand
 
-            service.operator_id = operator.id if operator else None
-
             # from bustimes.org's import_transxchange.py (modified)
             if (
                 txc_line.outbound_description != txc_line.inbound_description
@@ -1106,6 +1129,24 @@ class TXCImporter:
 
             self.db.add(service)
             self.db.flush()
+
+            if operator:
+                stmt = (
+                    pg_insert(service_operator_table)
+                    .values(
+                        service_id=service.id,
+                        operator_id=operator.id,
+                    )
+                    .on_conflict_do_nothing(
+                        index_elements=["service_id", "operator_id"]
+                    )
+                )
+                self.db.execute(stmt)
+                self.db.flush()
+            else:
+                log.warning(
+                    f"Operator not found for service {txc_service.service_code}"
+                )
 
             if end_date and end_date < txc_service.operating_period.start:
                 log.warning(
@@ -1160,8 +1201,8 @@ class TXCImporter:
             timetable = Timetable(
                 service_id=service.id,
                 line_id=txc_line.id,
-                operator_id=operator.id if operator else None,
                 data_source_id=self.ds_id,
+                data_source_version_id=self.dsv_id,
                 line_name=txc_line.line_name,
                 line_brand=line_brand,
                 outbound_description=txc_line.outbound_description or "",
@@ -1238,7 +1279,6 @@ class TXCImporter:
                     "revision_number",
                     "created_at",
                     "modified_at",
-                    "operator_id",
                     "service_code",
                 ]:
                     setattr(existing_timetable, attr, getattr(timetable, attr))
@@ -1443,6 +1483,7 @@ class TXCImporter:
     async def handle_txc_file(self, file: Path):
         start = time.time()
         try:
+            self.dsv = self.get_dsv()
             self.filename = file.name
             self.file_size_bytes = file.stat().st_size
             with open(file, "rb") as f:
@@ -1462,6 +1503,7 @@ class TXCImporter:
                     file_hash=self.file_hash,
                     size_bytes=self.file_size_bytes,
                     data_source_id=self.ds_id,
+                    data_source_version_id=self.dsv_id,
                     processed_at=datetime.now(tz=LONDON),
                 )
                 self.db.add(file_import_log)
@@ -1504,7 +1546,7 @@ class TXCImporter:
 
                 self.operators[txc_operator.id] = db_operator
 
-            self.db.commit()
+            self.db.flush()
 
             self.get_stops(self.txc_data.stops)
 

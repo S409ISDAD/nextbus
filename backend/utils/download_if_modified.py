@@ -1,7 +1,7 @@
 from datetime import datetime
 import requests
 from pathlib import Path
-from backend.models import DataSource
+from backend.models import DataSourceVersion
 from backend.db.db import SessionLocal
 from backend.config import config
 from dateutil.parser import isoparse
@@ -12,16 +12,16 @@ log = get_logger(__name__)
 
 
 def download_if_modified(
-    datasource: DataSource, file: Path, skip_checks=False
+    datasource_ver: DataSourceVersion, file: Path, skip_checks=False
 ) -> Path | None:
     try:
-        if datasource.bods_id is not None:  # is a bods source, use the api
-            log.debug(f"Checking BODS source {datasource.name}")
+        if datasource_ver.bods_id is not None:  # is a bods source, use the api
+            log.debug(f"Checking BODS source {datasource_ver.name}")
             if config.bods_api_key is None:
                 raise ValueError("BODS API key not set in config")
             url = (
                 "https://data.bus-data.dft.gov.uk/api/v1/dataset/"
-                + str(datasource.bods_id)
+                + str(datasource_ver.bods_id)
                 + "?api_key="
                 + config.bods_api_key
             )
@@ -31,11 +31,11 @@ def download_if_modified(
             modified = isoparse(data.get("modified"))
 
             if (
-                datasource.last_modified is not None
-                and modified <= datasource.last_modified
+                datasource_ver.last_modified is not None
+                and modified <= datasource_ver.last_modified
                 and not skip_checks
             ):
-                log.debug(f"data not modified: {datasource.bods_id}")
+                log.debug(f"data not modified: {datasource_ver.bods_id}")
                 return None
 
             file_data = requests.get(download_url)
@@ -45,41 +45,47 @@ def download_if_modified(
             log.debug(f"Downloaded updated file: {file}")
 
             with SessionLocal() as db:
-                datasource.last_modified = modified  # type: ignore
-                db.merge(datasource)
+                datasource_ver.last_modified = modified  # type: ignore
+                db.merge(datasource_ver)
                 db.commit()
 
             return file
 
         else:
             headers = {}
-            if datasource.last_modified is not None and not skip_checks:
-                headers["If-Modified-Since"] = datasource.last_modified.strftime(
+            if datasource_ver.last_modified is not None and not skip_checks:
+                headers["If-Modified-Since"] = datasource_ver.last_modified.strftime(
                     "%a, %d %b %Y %H:%M:%S GMT"
                 )
 
-            response = requests.get(str(datasource.url), headers=headers)
+            response = requests.get(str(datasource_ver.url), headers=headers)
 
             if response.status_code == 200:
+                etag = response.headers.get("ETag")
+                if etag is not None and datasource_ver.etag == etag and not skip_checks:
+                    log.debug(f"data not modified (etag): {datasource_ver.url}")
+                    return None
+
                 with open(file, "wb") as f:
                     f.write(response.content)
                 log.debug(f"Downloaded updated file: {file}")
 
                 with SessionLocal() as db:
-                    datasource.last_modified = datetime.strptime(  # type: ignore
+                    datasource_ver.last_modified = datetime.strptime(  # type: ignore
                         response.headers["Last-Modified"], "%a, %d %b %Y %H:%M:%S GMT"
                     )
-                    db.merge(datasource)
+                    datasource_ver.etag = etag
+                    db.merge(datasource_ver)
                     db.commit()
 
                 return file
 
             else:
                 log.debug(
-                    f"data not modified: {datasource.url}, {response.headers['Last-Modified']}"
+                    f"data not modified: {datasource_ver.url}, {response.headers['Last-Modified']}"
                 )
 
             return None
     except Exception as e:
-        log.error(f"Error downloading datasource {datasource.name}: {e}")
+        log.error(f"Error downloading datasource version {datasource_ver.id}: {e}")
         return None

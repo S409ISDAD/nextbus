@@ -17,6 +17,7 @@ from sqlalchemy import (
     PrimaryKeyConstraint,
     SmallInteger,
     String,
+    Table,
     UniqueConstraint,
     and_,
     exists,
@@ -209,10 +210,9 @@ class DataSource(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String, nullable=False, unique=True)
     description = Column(String, nullable=True)
-    url = Column(String, nullable=True, doc="URL for non-BODS like stagecoach")
-    bods_id = Column(Integer, nullable=True, doc="BODS dataset ID")
+    url = Column(String, nullable=True, doc="parent url for stagecoach/passenger etc")
     search = Column(String, nullable=True, doc="Search term for BODS")
-    last_modified = Column(DateTime(timezone=True), nullable=True)
+    noc = Column(String, nullable=True, doc="noc for searching BODS")
 
     services = relationship(
         "Service",
@@ -221,6 +221,45 @@ class DataSource(Base):
     timetables = relationship(
         "Timetable",
         back_populates="data_source",
+    )
+    versions = relationship(
+        "DataSourceVersion",
+        back_populates="data_source",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+
+
+class DataSourceVersion(Base):
+    __tablename__ = "data_source_version"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    data_source_id = Column(
+        Integer, ForeignKey("data_source.id", ondelete="CASCADE"), nullable=False
+    )
+    name = Column(String, nullable=False)
+    description = Column(String, nullable=True)
+    start_date = Column(Date, nullable=True)
+    end_date = Column(Date, nullable=True)
+    bods_id = Column(Integer, nullable=True, doc="BODS dataset ID")
+    url = Column(String, nullable=True, doc="direct download url")
+    imported_at = Column(DateTime(timezone=True), server_default=func.now())
+    last_modified = Column(DateTime(timezone=True), nullable=True)
+    etag = Column(String, nullable=True)
+    zip_hash = Column(String, nullable=True)
+
+    data_source = relationship("DataSource", back_populates="versions")
+    timetables = relationship(
+        "Timetable",
+        back_populates="data_source_version",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    file_imports = relationship(
+        "FileImport",
+        back_populates="data_source_version",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
     )
 
 
@@ -318,7 +357,7 @@ class Locality(Base, AutoSlugMixin):
                 db.query(Service)
                 .join(ServiceStopUsage, Service.id == ServiceStopUsage.service_id)
                 .join(Stop, Stop.atco_code == ServiceStopUsage.stop_id)
-                .options(joinedload(Service.operator))
+                .options(joinedload(Service.operators))
                 .filter(Stop.locality_id == self.id)
                 .distinct()
                 .all()
@@ -587,6 +626,24 @@ class StopArea(Base):
     )
 
 
+service_operator_table = Table(
+    "service_operator",
+    Base.metadata,
+    Column(
+        "service_id",
+        Integer,
+        ForeignKey("service.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    Column(
+        "operator_id",
+        Integer,
+        ForeignKey("operator.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+)
+
+
 class Operator(Base):
     __tablename__ = "operator"
 
@@ -594,12 +651,10 @@ class Operator(Base):
 
     noc = Column(String, nullable=False)
     name = Column(String, nullable=False)
-
     services = relationship(
         "Service",
-        back_populates="operator",
-        cascade="all, delete-orphan",
-        passive_deletes=True,
+        secondary=service_operator_table,
+        back_populates="operators",
     )
 
     search_vector = deferred(Column(TSVectorType("name", "noc")))
@@ -839,7 +894,6 @@ class Service(Base, AutoSlugMixin):
     __tablename__ = "service"
     id = Column(Integer, primary_key=True, autoincrement=True)
     service_code = Column(String, nullable=False, index=True)
-    operator_id = Column(Integer, ForeignKey("operator.id"), nullable=True)
     bt_service_id = Column(Integer, nullable=True, index=True)
     data_source_id = Column(
         Integer, ForeignKey("data_source.id", ondelete="SET NULL"), nullable=True
@@ -861,8 +915,9 @@ class Service(Base, AutoSlugMixin):
     )  # flag to indicate that the timetable is incorrect
     last_modified = Column(DateTime(timezone=True), server_default=func.now())
 
-    operator = relationship(
+    operators = relationship(
         "Operator",
+        secondary=service_operator_table,
         back_populates="services",
     )
     data_source = relationship("DataSource", back_populates="services")
@@ -933,6 +988,12 @@ class Service(Base, AutoSlugMixin):
 
     def with_timetable(self):
         timetable = self.get_correct_timetable()
+        operators_data = []
+        operators = self.operators
+
+        for operator in operators:
+            operators_data.append({"noc": operator.noc, "name": operator.name})
+
         if timetable:
             return {
                 "service_id": self.id,
@@ -946,8 +1007,9 @@ class Service(Base, AutoSlugMixin):
                 "origin": timetable.origin,
                 "destination": timetable.destination,
                 "vias": timetable.vias,
-                "operator_noc": self.operator.noc,
-                "operator": self.operator.name,
+                "operators": operators_data,
+                "last_modified": timetable.modified_at
+                or self.timetable.data_source_version.last_modified,
             }
 
     def get_dest_localities(self):
@@ -980,7 +1042,7 @@ class Service(Base, AutoSlugMixin):
         if self.bt_service_id is not None:
             return self.bt_service_id
 
-        noc = self.operator.noc or ""
+        noc = self.operators[0].noc or ""
 
         results = await fetch_json(
             f"{API_BASE}/services/?operator={noc}&search={self.line_name} {self.description.replace('-', '')}"
@@ -1226,8 +1288,14 @@ class FileImport(Base):
     size_bytes = Column(Integer, nullable=True)
     processed_at = Column(DateTime(timezone=True), nullable=True)
     data_source_id = Column(Integer, ForeignKey("data_source.id"), nullable=True)
+    data_source_version_id = Column(
+        Integer,
+        ForeignKey("data_source_version.id"),
+        nullable=True,
+    )
 
     data_source = relationship("DataSource")
+    data_source_version = relationship("DataSourceVersion")
 
 
 class Timetable(Base):
@@ -1239,10 +1307,14 @@ class Timetable(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     service_id = Column(Integer, ForeignKey("service.id"), nullable=False, index=True)
     line_id = Column(String, nullable=True)
-    operator_id = Column(Integer, ForeignKey("operator.id"), nullable=True)
     data_source_id = Column(
         Integer,
         ForeignKey("data_source.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    data_source_version_id = Column(
+        Integer,
+        ForeignKey("data_source_version.id"),
         nullable=True,
     )
     bt_service_id = Column(Integer, nullable=True, index=True)
@@ -1271,8 +1343,8 @@ class Timetable(Base):
     public_use = Column(Boolean)
 
     service = relationship("Service", back_populates="timetables")
-    operator = relationship("Operator")
     data_source = relationship("DataSource", back_populates="timetables")
+    data_source_version = relationship("DataSourceVersion", back_populates="timetables")
     journeys = relationship(
         "Journey",
         back_populates="timetable",
@@ -1488,7 +1560,7 @@ class Journey(Base):
                 Journey.end_time < self.start_time,
                 journey_is_valid_filter(date),
             )
-            .options(joinedload(Journey.service).joinedload(Service.operator))
+            .options(joinedload(Journey.service).joinedload(Service.operators))
         )
 
         candidate_journey = query.order_by(Journey.end_time.desc()).first()

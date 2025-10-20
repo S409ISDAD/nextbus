@@ -1,7 +1,7 @@
 import argparse
 import asyncio
 from backend.config import get_logger, setup_logging
-from backend.tasks.import_txc_new import import_datasource
+from backend.tasks.datasources import import_datasource
 from backend.deps import STATIC_DATA_DIR
 
 log = get_logger(__name__)

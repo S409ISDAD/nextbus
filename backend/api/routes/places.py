@@ -25,7 +25,7 @@ async def localities(
         stops = locality.stops
 
         for service in services:
-            service.operator = service.operator
+            service.operators = service.operators
             del service.geometry
 
         stops = [stop for stop in stops if stop.does_serve_buses]

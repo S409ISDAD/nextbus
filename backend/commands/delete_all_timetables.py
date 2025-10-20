@@ -36,9 +36,9 @@ def reset_all():
             "calendar_exception",
             "stop_time",
             "journey",
-            "timetable_data_source",
             "route_link",
             "service_stop_usage",
+            "file_import",
             "operator",
         ]
 

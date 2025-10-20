@@ -16,7 +16,7 @@ datasources = [
     # },
     {
         "name": "Cresta Coaches",
-        "bods_id": 18347,
+        "noc": "CRES",
     },
     # {
     #     "name": "Centrebus Group",
@@ -24,19 +24,23 @@ datasources = [
     # },
     {
         "name": "Bluestar",
-        "bods_id": 15872,
+        "noc": "BLUS",
+        "search": "bluestar",
     },
     {
         "name": "First Portsmouth, Fareham & Gosport",
-        "bods_id": 2349,
+        "noc": "FHAM",
+        "search": "portsmouth",
     },
     {
         "name": "AMK",
-        "bods_id": 18180,
+        "noc": "AMKC",
+        "search": "amk",
     },
     {
         "name": "Xelabus",
-        "bods_id": 18484,
+        "noc": "XLBL",
+        "search": "xelabus",
     },
     # {
     #     "name": "Bee Network",
@@ -44,11 +48,12 @@ datasources = [
     # },
     {
         "name": "Swindon Bus Company",
-        "bods_id": 15879,
+        "noc": "TDTR",
+        "search": "swindon bus company",
     },
     {
         "name": "Thames Valley Buses",
-        "url": "https://data.discoverpassenger.com/operator/courtney/dataset/current/download/txc",
+        "url": "https://data.discoverpassenger.com/operator/courtney",
     },
     {
         "name": "White Bus",
@@ -56,27 +61,27 @@ datasources = [
     },
     {
         "name": "Unilink",
-        "url": "https://data.discoverpassenger.com/operator/unilink/dataset/current/download/txc",
+        "url": "https://data.discoverpassenger.com/operator/unilink",
     },
     {
         "name": "Brighton & Hove",
-        "url": "https://data.discoverpassenger.com/operator/brightonhove/dataset/current/download/txc",
+        "url": "https://data.discoverpassenger.com/operator/brightonhove",
     },
     {
         "name": "Reading Buses",
-        "url": "https://data.discoverpassenger.com/operator/readingbuses/dataset/current/download/txc",
+        "url": "https://data.discoverpassenger.com/operator/readingbuses",
     },
     {
         "name": "Morebus",
-        "url": "https://data.discoverpassenger.com/operator/morebus/dataset/current/download/txc",
+        "url": "https://data.discoverpassenger.com/operator/morebus",
     },
     {
         "name": "Newbury & District",
-        "url": "https://data.discoverpassenger.com/operator/kennections/dataset/current/download/txc",
+        "url": "https://data.discoverpassenger.com/operator/kennections",
     },
     {
         "name": "Salisbury Reds",
-        "url": "https://data.discoverpassenger.com/operator/salisburyreds/dataset/current/download/txc",
+        "url": "https://data.discoverpassenger.com/operator/salisburyreds",
     },
 ]
 
@@ -88,7 +93,7 @@ def setup():
             DataSource,
             datasources,
             ["name"],
-            ["url", "bods_id"],
+            ["url", "noc", "search"],
         )
 
 

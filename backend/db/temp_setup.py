@@ -3,18 +3,12 @@ from backend.models import Base, DataSource
 
 
 def setup_test_db():
-    # create all tables for tests
+    # create all tables
     Base.metadata.create_all(bind=engine)
-
-    with SessionLocal() as db:
-        ds = DataSource(name="Test DataSource", description="For testing purposes")
-        db.add(ds)
-
-        db.commit()
 
 
 def teardown_test_db():
-    # drop all tables after tests
+    # drop all tables
     Base.metadata.drop_all(bind=engine)
 
 

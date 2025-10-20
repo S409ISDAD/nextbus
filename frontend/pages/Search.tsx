@@ -116,7 +116,9 @@ const SearchPage: React.FC = () => {
                                                     </div>
                                                 </div>
                                                 <span className="text-sm text-gray-400">
-                                                    {service.operator}
+                                                    {service?.operators
+                                                        .map((op) => op.name)
+                                                        .join(", ")}
                                                 </span>
                                                 {service.vias && (
                                                     <span className="text-sm text-gray-400">

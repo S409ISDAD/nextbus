@@ -15,6 +15,6 @@ export interface Service {
     line_name: string;
     line_brand?: string;
     last_modified?: string;
-    operator?: Operator;
+    operators?: Operator[];
     _user_distance?: number; // in meters, optional
 }

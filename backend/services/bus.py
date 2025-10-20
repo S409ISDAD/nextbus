@@ -113,7 +113,7 @@ async def fetch_buses(
     services, stop_id, times, r: Redis, use_db=False, is_tomorrow=False
 ) -> list[TrackedBus]:
     active = await fetch_active_buses(services, r)
-    
+
     bustimes_times = await stops.get_times(stop_id, r)
 
     active_by_trip: dict[int, list[dict]] = {}
@@ -259,7 +259,7 @@ async def build_scheduled_db(
                 joinedload(StopTime.journey).joinedload(Journey.timetable),
                 joinedload(StopTime.journey)
                 .joinedload(Journey.service)
-                .joinedload(Service.operator),
+                .joinedload(Service.operators),
                 joinedload(StopTime.journey)
                 .joinedload(Journey.destination)
                 .joinedload(Stop.locality),
@@ -460,7 +460,7 @@ async def build_bus(
                     joinedload(StopTime.journey).joinedload(Journey.timetable),
                     joinedload(StopTime.journey)
                     .joinedload(Journey.service)
-                    .joinedload(Service.operator),
+                    .joinedload(Service.operators),
                     joinedload(StopTime.journey)
                     .joinedload(Journey.destination)
                     .joinedload(Stop.locality),

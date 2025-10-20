@@ -84,7 +84,9 @@ const ServicePage: React.FC = () => {
                             )}
                             <span className="text-sm font-semibold text-center text-neutral-400">
                                 Operated by{" "}
-                                {service?.operator ? service?.operator : "N/A"}
+                                {service?.operators
+                                    .map((op) => op.name)
+                                    .join(", ")}
                             </span>
                             {service?.bt_service_id && (
                                 <div className="flex flex-wrap items-center justify-center gap-4 gap-y-1">

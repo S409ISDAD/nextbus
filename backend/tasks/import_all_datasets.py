@@ -8,7 +8,8 @@ from backend.deps import LONDON, STATIC_DATA_DIR
 from backend.models import DataSource
 from backend.services.publish_message import queue_import_message
 from backend.tasks import import_nptg, import_naptan, import_holidays
-from backend.tasks.import_txc_new import import_datasource, Statistics
+from backend.tasks.import_txc_new import Statistics
+from backend.tasks.datasources import import_datasource
 
 log = get_logger(__name__)
 

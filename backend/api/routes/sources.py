@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import distinct, func
 from backend.models import DataSource, Journey, Service, Timetable
 from backend.db.db import get_db
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import selectinload, joinedload
 
 from backend.utils.time_taken import time_taken
 from backend.deps import get_logger
@@ -46,17 +46,13 @@ async def all_sources(
     try:
         sources = (
             db.query(
-                DataSource.id,
-                DataSource.name,
-                DataSource.description,
-                DataSource.url,
-                DataSource.bods_id,
-                DataSource.last_modified,
+                DataSource,
                 func.count(distinct(Service.id)).label("service_count"),
                 func.count(distinct(Timetable.id)).label("timetable_count"),
             )
             .outerjoin(Service, Service.data_source_id == DataSource.id)
             .outerjoin(Timetable, Timetable.data_source_id == DataSource.id)
+            .options(joinedload(DataSource.versions))
             .group_by(DataSource.id)
             .order_by(DataSource.id)
             .all()
@@ -67,21 +63,36 @@ async def all_sources(
 
         data = []
 
-        for source in sources:
+        for source_obj, service_count, timetable_count in sources:
+            versions_list = [
+                {
+                    "id": v.id,
+                    "name": f"{v.start_date} to {v.end_date}"
+                    if v.start_date and v.end_date
+                    else v.name,
+                    "start_date": v.start_date,
+                    "end_date": v.end_date,
+                    "url": v.url,
+                    "bods_id": v.bods_id,
+                    "last_modified": v.last_modified,
+                }
+                for v in sorted(source_obj.versions, key=lambda x: x.start_date or "")
+            ]
             data.append(
                 {
-                    "id": source.id,
-                    "name": source.name,
-                    "description": source.description,
-                    "url": source.url,
-                    "bods_id": source.bods_id,
-                    "last_modified": source.last_modified,
-                    "service_count": source.service_count,
-                    "timetable_count": source.timetable_count,
+                    "id": source_obj.id,
+                    "name": source_obj.name,
+                    "description": source_obj.description,
+                    "service_count": service_count,
+                    "timetable_count": timetable_count,
+                    "versions": versions_list,
                 }
             )
         return data
     except Exception as e:
+        import traceback
+
+        traceback.print_exc()
         log.error(f"Unexpected error: {e}")
         raise HTTPException(500, detail="An unexpected error occurred")
 
@@ -174,7 +185,6 @@ async def source(
             "id": source.id,
             "name": source.name,
             "url": source.url,
-            "bods_id": source.bods_id,
             "services": grouped_timetables,
         }
     except Exception as e:

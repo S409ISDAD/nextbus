@@ -22,7 +22,7 @@ async def service(
             db.query(Service)
             .options(
                 joinedload(Service.timetables),
-                joinedload(Service.operator),
+                joinedload(Service.operators),
                 joinedload(Service.data_source),
             )
             .filter(Service.id == service_id)
@@ -32,27 +32,7 @@ async def service(
         if not service:
             raise HTTPException(404, detail="Service not found")
 
-        timetable = service.timetables[0] if service.timetables else None
-        operator = service.operator
-
-        if timetable:
-            return {
-                "service_id": service.id,
-                "line_name": timetable.line_name,
-                "inbound_description": timetable.inbound_description,
-                "outbound_description": timetable.outbound_description,
-                "geometry": None,
-                "bt_service_id": service.bt_service_id,
-                "service_code": service.service_code,
-                "description": service.description,
-                "origin": timetable.origin,
-                "destination": timetable.destination,
-                "vias": timetable.vias,
-                "operator_noc": operator.noc,
-                "operator": operator.name,
-                "last_modified": timetable.modified_at
-                or service.data_source.last_modified,
-            }
+        return service.with_timetable()
     except HTTPException as e:
         raise e
     except Exception as e:

@@ -21,8 +21,7 @@ export interface ServiceResult {
     origin: string | null;
     destination: string | null;
     vias: string | null;
-    operator_noc: string | null;
-    operator: string | null;
+    operators: OperatorResult[];
     line_names: string;
     last_modified?: string;
 }
