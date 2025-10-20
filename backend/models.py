@@ -1009,7 +1009,7 @@ class Service(Base, AutoSlugMixin):
                 "vias": timetable.vias,
                 "operators": operators_data,
                 "last_modified": timetable.modified_at
-                or self.timetable.data_source_version.last_modified,
+                or timetable.data_source_version.last_modified,
             }
 
     def get_dest_localities(self):
