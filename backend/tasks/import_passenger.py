@@ -126,7 +126,7 @@ async def handle_passenger(
             stats += stats
         else:
             log.debug(
-                f"No updates for Passenger data ({version.start_date} - {version.end_date})"
+                f"No updates for {version.data_source.name} Passenger data ({version.start_date} - {version.end_date})"
             )
 
     current_ids = [v.id for v in versions]

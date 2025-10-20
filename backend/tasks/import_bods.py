@@ -88,6 +88,6 @@ async def handle_bods(
             filename, datasource.id, version.id, skip_checks
         )
     else:
-        log.debug(f"No updates for BODS dataset {id}")
+        log.debug(f"No updates for BODS dataset {version.name} - {id}")
 
     return duration, stats
