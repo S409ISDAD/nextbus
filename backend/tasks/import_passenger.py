@@ -85,6 +85,10 @@ def get_version(
         db.add(version)
         db.commit()
         db.refresh(version)
+    else:
+        version.url = url
+        db.commit()
+        db.refresh(version)
 
     return version
 
