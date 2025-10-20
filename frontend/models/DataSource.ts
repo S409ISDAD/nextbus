@@ -17,6 +17,7 @@ export interface DataSourceVersion {
     bods_id: string | null;
     imported_at: string;
     last_modified: string | null;
+    timetable_count?: number;
 }
 
 export interface SimpleDataSource extends DataSource {

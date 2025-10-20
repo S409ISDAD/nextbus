@@ -147,8 +147,14 @@ const SourcesPage: React.FC = () => {
                                                     <td className="px-4 py-2 text-gray-500">
                                                         —
                                                     </td>
-                                                    <td className="px-4 py-2 text-gray-500">
-                                                        —
+                                                    <td
+                                                        className={`px-4 py-2 ${
+                                                            !version.timetable_count
+                                                                ? "text-gray-500"
+                                                                : ""
+                                                        }`}>
+                                                        {version.timetable_count ||
+                                                            "—"}
                                                     </td>
                                                 </tr>
                                             ))}

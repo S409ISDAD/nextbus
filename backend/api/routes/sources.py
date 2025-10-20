@@ -75,6 +75,7 @@ async def all_sources(
                     "url": v.url,
                     "bods_id": v.bods_id,
                     "last_modified": v.last_modified,
+                    "timetable_count": len(v.timetables),
                 }
                 for v in sorted(source_obj.versions, key=lambda x: x.start_date or "")
             ]
