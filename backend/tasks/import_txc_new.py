@@ -962,8 +962,6 @@ class TXCImporter:
                 )
             )
 
-            log.debug(f"service query: {service_query}")
-
             if self.operators:
                 op_ids = [operator.id for operator in self.operators.values()]
 
@@ -986,7 +984,6 @@ class TXCImporter:
                         )
 
                 service_query = service_query.join(Service.operators).filter(op_filter)
-                log.debug(f"op filter: {service_query}")
 
             if len(self.txc_data.services) == 1:
                 stop_ids = [s for s in self.stops.keys()]
@@ -1017,8 +1014,6 @@ class TXCImporter:
                     or_(has_stop_time, and_(has_stop_usage, has_no_route))
                 )
 
-                log.debug(f"single service filter: {service_query}")
-
             else:
                 condition = exists().where(
                     and_(
@@ -1029,7 +1024,6 @@ class TXCImporter:
                 if description:
                     condition = or_(condition, Service.description == description)
                 service_query = service_query.filter(condition)
-                log.debug(f"multi service filter: {service_query}")
 
             existing_service = service_query.first()
 
