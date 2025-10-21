@@ -61,7 +61,8 @@ datasources = [
     },
     {
         "name": "Unilink",
-        "url": "https://data.discoverpassenger.com/operator/unilink",
+        "noc": "UNIL",
+        "search": "unilink",
     },
     {
         "name": "Brighton & Hove",
@@ -73,16 +74,14 @@ datasources = [
     },
     {
         "name": "Morebus",
-        "url": "https://data.discoverpassenger.com/operator/morebus",
+        "noc": "WDBC",
+        "search": "morebus",
     },
     {
         "name": "Newbury & District",
         "url": "https://data.discoverpassenger.com/operator/kennections",
     },
-    {
-        "name": "Salisbury Reds",
-        "url": "https://data.discoverpassenger.com/operator/salisburyreds",
-    },
+    {"name": "Salisbury Reds", "noc": "SWWD", "search": "Salisbury Reds"},
 ]
 
 

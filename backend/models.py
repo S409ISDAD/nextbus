@@ -951,6 +951,9 @@ class Service(Base, AutoSlugMixin):
         )
     )
 
+    def __repr__(self):
+        return f"<Service {self.get_full_name} ({self.id})>"
+
     @property
     def get_full_name(self):
         return f"{self.line_name} {self.description}".strip()
@@ -1290,7 +1293,7 @@ class FileImport(Base):
     data_source_id = Column(Integer, ForeignKey("data_source.id"), nullable=True)
     data_source_version_id = Column(
         Integer,
-        ForeignKey("data_source_version.id"),
+        ForeignKey("data_source_version.id", ondelete="CASCADE"),
         nullable=True,
     )
 
@@ -1314,7 +1317,7 @@ class Timetable(Base):
     )
     data_source_version_id = Column(
         Integer,
-        ForeignKey("data_source_version.id"),
+        ForeignKey("data_source_version.id", ondelete="CASCADE"),
         nullable=True,
     )
     bt_service_id = Column(Integer, nullable=True, index=True)

@@ -919,13 +919,13 @@ class TXCImporter:
         if description == "Origin - Destination":
             description = ""
 
+        unique_service_code = False
+
         # from bustimes.org's import_transxchange.py
         if re.match(r"^P[BCDFGHKM]\d+:\d+.*$", txc_service.service_code) or re.match(
             r"^UZ[a-zA-Z0-9]+:.*$", txc_service.service_code
         ):
-            pass
-        else:
-            pass
+            unique_service_code = True
         # end from
 
         service = None
@@ -946,7 +946,7 @@ class TXCImporter:
 
             # find existing service
             # from bustimes.org's import_transxchange.py - modified
-            service_query = (
+            services = (
                 self.db.query(Service)
                 .order_by(Service.current.desc(), Service.id.asc())
                 .filter(
@@ -961,11 +961,24 @@ class TXCImporter:
                     )
                 )
             )
+            existing_query = None
 
             if self.operators:
                 op_ids = [operator.id for operator in self.operators.values()]
 
-                op_filter = Operator.id.in_(op_ids)
+                matches_operator = exists().where(
+                    and_(
+                        service_operator_table.c.service_id == Service.id,
+                        service_operator_table.c.operator_id.in_(op_ids),
+                    )
+                )
+
+                # services with no operators linked yet
+                no_operator_link = not_(
+                    exists().where(service_operator_table.c.service_id == Service.id)
+                )
+
+                op_filter = or_(matches_operator, no_operator_link)
 
                 if self.dsv and self.dsv.name.startswith("Stagecoach"):
                     line_name = txc_line.line_name
@@ -983,9 +996,14 @@ class TXCImporter:
                             Service.description == description,
                         )
 
-                service_query = service_query.join(Service.operators).filter(op_filter)
+                existing_query = services.join(Service.operators).filter(op_filter)
+            else:
+                existing_query = services
 
             if len(self.txc_data.services) == 1:
+                log.debug(
+                    "matching by stop usage/stop times as only one service in file"
+                )
                 stop_ids = [s for s in self.stops.keys()]
                 has_stop_time = exists().where(
                     and_(
@@ -1004,17 +1022,15 @@ class TXCImporter:
                 )
                 has_no_route = not_(
                     exists().where(
-                        and_(
-                            Journey.timetable_id == Timetable.id,
-                            Timetable.service_id == Service.id,
-                        )
+                        Journey.service_id == Service.id,
                     )
                 )
-                service_query = service_query.filter(
+                existing_query = existing_query.filter(
                     or_(has_stop_time, and_(has_stop_usage, has_no_route))
                 )
 
             else:
+                log.debug("matching by service code and description")
                 condition = exists().where(
                     and_(
                         Timetable.service_code == txc_service.service_code,
@@ -1023,16 +1039,24 @@ class TXCImporter:
                 )
                 if description:
                     condition = or_(condition, Service.description == description)
-                service_query = service_query.filter(condition)
+                existing_query = existing_query.filter(condition)
 
-            existing_service = service_query.first()
+            existing_service = existing_query.first()
+
+            if unique_service_code and not existing_service:
+                log.debug(f"Looking for unique service code {txc_service.service_code}")
+                existing_service = services.filter(
+                    Service.service_code == txc_service.service_code,
+                ).first()
 
             # end from
 
             if existing_service:
+                log.debug(f"Found existing service {existing_service.id}")
                 service = existing_service
 
             else:
+                log.debug("Creating new service")
                 service = Service(
                     line_name=txc_line.line_name,
                     service_code=txc_service.service_code,

@@ -1,4 +1,5 @@
 import pytest
+import pytest_asyncio
 from pytest_factoryboy import register
 from sqlalchemy import create_engine
 from backend.models import Base
