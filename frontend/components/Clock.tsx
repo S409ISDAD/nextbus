@@ -12,7 +12,7 @@ function Clock() {
     }, []);
 
     return (
-        <div className="p-2 px-3 rounded-2xl border-1 border-neutral-800 bg-neutral-900">
+        <div className="p-2 px-3 rounded-2xl border-1 border-bg-light bg-bg-medium">
             {now.toLocaleTimeString()}
         </div>
     );

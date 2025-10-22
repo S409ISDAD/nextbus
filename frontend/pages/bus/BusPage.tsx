@@ -70,8 +70,8 @@ const BusPage: React.FC = () => {
                 <button
                     className={`px-4 py-2 text-lg font-semibold rounded-xl transition-all duration-150 cursor-pointer ${
                         tab === "fav"
-                            ? " bg-neutral-800 text-primary-400 scale-105"
-                            : " bg-neutral-900 text-neutral-400 hover:text-primary-300"
+                            ? " bg-bg-light text-primary-400 scale-105"
+                            : " bg-bg-medium text-text-light hover:text-primary-300"
                     }`}
                     onClick={() => setTab("fav")}
                     aria-selected={tab === "fav"}>
@@ -80,8 +80,8 @@ const BusPage: React.FC = () => {
                 <button
                     className={`px-4 py-2 text-lg font-semibold rounded-xl transition-all duration-150 cursor-pointer ${
                         tab === "nearby"
-                            ? " bg-neutral-800 text-primary-400 scale-105"
-                            : " bg-neutral-900 text-neutral-400 hover:text-primary-300"
+                            ? " bg-bg-light text-primary-400 scale-105"
+                            : " bg-bg-medium text-text-light hover:text-primary-300"
                     }`}
                     onClick={() => setTab("nearby")}
                     aria-selected={tab === "nearby"}>
@@ -95,7 +95,7 @@ const BusPage: React.FC = () => {
                     <span className="text-2xl font-bold">Nearby Services</span>
                     <div className="flex flex-col flex-wrap items-center max-w-full gap-2 ">
                         {nearbyServices.length === 0 && (
-                            <span className="text-sm text-neutral-400">
+                            <span className="text-sm text-text-light">
                                 {status != "" ? (
                                     status
                                 ) : (
@@ -118,7 +118,7 @@ const BusPage: React.FC = () => {
                                         {service.line_name}
                                     </span>
                                 </div>
-                                <div className="flex flex-col justify-center px-3 bg-neutral-800/50 rounded-r-2xl">
+                                <div className="flex flex-col justify-center px-3 bg-bg-light/50 rounded-r-2xl">
                                     <span className="font-semibold text">
                                         {service.description}
                                     </span>
@@ -137,7 +137,7 @@ const BusPage: React.FC = () => {
                                     stop_id={stopId}></DepartureBoard>
                             ))
                         ) : (
-                            <span className="p-3 text-center text-neutral-400">
+                            <span className="p-3 text-center text-text-light">
                                 {status != "" ? (
                                     status
                                 ) : (
@@ -152,7 +152,7 @@ const BusPage: React.FC = () => {
                 </div>
             </div>
             <div style={{ display: tab === "fav" ? "flex" : "none" }}>
-                <Card className="flex flex-col items-center justify-center gap-2 p-2 rounded-[32px] bg-neutral-900">
+                <Card className="flex flex-col items-center justify-center gap-2 p-2 rounded-[32px] bg-bg-medium">
                     <span className="text-2xl font-bold">Favorite Stops</span>
                     <div className="flex flex-row flex-wrap items-center justify-center gap-3">
                         {Object.keys(favStops).length > 0 ? (
@@ -170,14 +170,14 @@ const BusPage: React.FC = () => {
                                         stop_id={stopId}></DepartureBoard>
                                 ))
                         ) : (
-                            <span className="text-center text-neutral-400">
+                            <span className="text-center text-text-light">
                                 No favorite stops added yet. <br></br>To add a
                                 stop, click the star icon on a stop page
                             </span>
                         )}
                     </div>
                     <button
-                        className="p-1.5 px-4 text-sm font-semibold text-white transition-all bg-primary cursor-pointer rounded-xl hover:bg-primary-700"
+                        className="p-1.5 px-4 text-sm font-semibold text-text-dark transition-all bg-primary cursor-pointer rounded-xl hover:bg-primary-700"
                         onClick={() => setFavStops({})}>
                         Clear Favorites
                     </button>

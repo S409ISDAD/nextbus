@@ -59,9 +59,9 @@ export default function Timetable({
             )}
             <div className="max-w-full overflow-auto border shadow rounded-xl border-neutral-600 w-fit">
                 <table className="text-sm border-collapse table-auto w-fit">
-                    <thead className="sticky top-0 z-10 text-white bg-neutral-800">
+                    <thead className="sticky top-0 z-10 text-text-dark bg-bg-light">
                         <tr>
-                            {/* <th className="sticky left-0 z-20 p-2 text-left bg-neutral-800">
+                            {/* <th className="sticky left-0 z-20 p-2 text-left bg-bg-light">
                     Stop
                 </th>
                 {timetable?.journeys.map((j) => (
@@ -84,8 +84,8 @@ export default function Timetable({
                                     key={stop.id || stop.name}
                                     className={
                                         i % 2 === 0
-                                            ? "bg-neutral-900"
-                                            : "bg-neutral-800"
+                                            ? "bg-bg-medium"
+                                            : "bg-bg-light"
                                     }>
                                     <td
                                         className="sticky left-0 z-10 p-2 py-1 overflow-hidden font-medium underline cursor-pointer text-link-400 cursor-poiner bg-inherit text-nowrap max-w-40 md:max-w-70 text-ellipsis"

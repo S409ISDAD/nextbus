@@ -48,7 +48,7 @@ export function StationCombobox({
     return (
         <div className="flex flex-col w-full">
             {label && (
-                <span className="mb-1 text-sm font-semibold text-neutral-400">
+                <span className="mb-1 text-sm font-semibold text-text-light">
                     {label}
                 </span>
             )}
@@ -65,12 +65,12 @@ export function StationCombobox({
                         placeholder={placeholder}
                     />
                     {results.length > 0 && (
-                        <ComboboxOptions className="absolute z-[9999999] w-full overflow-auto border shadow-lg max-h-60 rounded-xl border-neutral-700 bg-neutral-900">
+                        <ComboboxOptions className="absolute z-[9999999] w-full overflow-auto border shadow-lg max-h-60 rounded-xl border-neutral-700 bg-bg-medium">
                             {results.map((s) => (
                                 <ComboboxOption
                                     key={s.crsCode}
                                     value={s}
-                                    className="p-2 cursor-pointer hover:bg-neutral-800">
+                                    className="p-2 cursor-pointer hover:bg-bg-light">
                                     {s.stationName} ({s.crsCode})
                                 </ComboboxOption>
                             ))}

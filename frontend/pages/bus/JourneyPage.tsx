@@ -101,7 +101,7 @@ const MapView: React.FC<MapViewProps> = ({ journey, track = [] }) => {
                             setPopup({
                                 coords: [stop.coords[1], stop.coords[0]],
                                 content: (
-                                    <div className="flex flex-col text-white bg-[#222]">
+                                    <div className="flex flex-col text-text-dark bg-[#222]">
                                         <a
                                             className="font-semibold"
                                             href={`/buses/stops/${stop.stop_id}`}>
@@ -238,7 +238,7 @@ const JourneyPage: React.FC = () => {
     return (
         <div className="flex flex-col">
             <div
-                className={`flex flex-col gap-2 top-0 grow px-5 pb-1 z-12 bg-[#111111] rounded-b-2xl fixed w-full ${
+                className={`flex flex-col gap-2 top-0 grow px-5 pb-1 z-12 bg-bg-main rounded-b-2xl fixed w-full ${
                     !showAppNav ? "pt-15" : ""
                 }`}
                 ref={busInfoRef}>
@@ -249,11 +249,11 @@ const JourneyPage: React.FC = () => {
                                 !showAppNav ? "top-15" : "top-0"
                             }`}>
                             <div className="flex items-center px-3 py-1 bg-primary-700 rounded-l-2xl">
-                                <span className="flex items-center justify-center text-xl font-bold text-center">
+                                <span className="flex items-center justify-center text-xl font-bold text-center text-white">
                                     {journey.route_name}
                                 </span>
                             </div>
-                            <div className="flex flex-col justify-center px-3 py-1 bg-neutral-800 rounded-r-2xl">
+                            <div className="flex flex-col justify-center px-3 py-1 bg-bg-light rounded-r-2xl">
                                 <span className="font-semibold text">
                                     {journey.destination}
                                 </span>
@@ -292,7 +292,7 @@ const JourneyPage: React.FC = () => {
                     </div>
                 )}
                 {msg ? (
-                    <span className="text-center text-red-400">{msg}</span>
+                    <span className="text-center text-red">{msg}</span>
                 ) : (
                     <></>
                 )}
@@ -359,7 +359,7 @@ const JourneyPage: React.FC = () => {
 
                                             <div className="flex flex-row gap-6 font-bold text-">
                                                 <div className="flex items-center gap-2">
-                                                    <span className="text-green-400">
+                                                    <span className="text-green">
                                                         {toTime(stop.expt_time)}
                                                     </span>
                                                 </div>

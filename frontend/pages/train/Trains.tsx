@@ -36,7 +36,7 @@ const TrainsDashboard: React.FC = () => {
                         onChange={setSelectedStation}
                     />
                     <button
-                        className={`w-full p-2 px-5 mt-2 font-semibold text-white bg-primary transition-all rounded-xl ${
+                        className={`w-full p-2 px-5 mt-2 font-semibold text-text-dark bg-primary transition-all rounded-xl ${
                             selectedStation
                                 ? "cursor-pointer hover:bg-primary-700"
                                 : "brightness-50 cursor-not-allowed"

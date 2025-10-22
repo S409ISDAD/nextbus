@@ -32,7 +32,7 @@ type MapInfoProps = {
 const MapInfo: React.FC<MapInfoProps> = ({ text, color = "black" }) => {
     return (
         <div
-            className="absolute px-2 py-1 text-sm rounded-md shadow bottom-2 left-2 bg-neutral-900"
+            className="absolute px-2 py-1 text-sm rounded-md shadow bottom-2 left-2 bg-bg-medium"
             style={{ color }}>
             {text}
         </div>
@@ -227,7 +227,7 @@ export const BusProgress: React.FC<{
                 style={{ transform: `translateY(${translateY}px)` }}>
                 <div className="relative flex items-center justify-center">
                     <Pulse size={34} color="bg-rose-400" duration={2} />
-                    <div className="relative z-10 flex items-center justify-center p-2 rounded-full bg-rose-500 w-9 h-9">
+                    <div className="relative z-10 flex items-center justify-center p-2 text-white rounded-full bg-rose-500 w-9 h-9">
                         <FontAwesomeIcon icon={faBus} />
                         <div
                             style={{
@@ -448,7 +448,7 @@ const LiveJourneyPage: React.FC = () => {
     return (
         <div className="flex flex-col">
             <div
-                className={`flex flex-col gap-2 top-0 grow px-5 pb-1 z-12 bg-[#111111] rounded-b-2xl fixed w-full ${
+                className={`flex flex-col gap-2 top-0 grow px-5 pb-1 z-12 bg-bg-main rounded-b-2xl fixed w-full ${
                     !showAppNav ? "pt-15" : ""
                 }`}
                 ref={busInfoRef}>
@@ -459,16 +459,16 @@ const LiveJourneyPage: React.FC = () => {
                                 !showAppNav ? "top-15" : "top-0"
                             }`}>
                             <div className="flex items-center px-3 py-1 bg-primary-700 rounded-l-2xl">
-                                <span className="flex items-center justify-center text-xl font-bold text-center">
+                                <span className="flex items-center justify-center text-xl font-bold text-center text-white">
                                     {bus.service.line_name}
                                 </span>
                             </div>
-                            <div className="flex flex-col justify-center px-3 py-1 bg-neutral-800 rounded-r-2xl">
+                            <div className="flex flex-col justify-center px-3 py-1 bg-bg-light rounded-r-2xl">
                                 <span className="font-semibold text">
                                     {bus.destination}
                                 </span>
 
-                                <span className="mb-0.5 text-xs text-neutral-400">
+                                <span className="mb-0.5 text-xs text-text-light">
                                     {bus.bus_type}
                                 </span>
                             </div>
@@ -518,7 +518,7 @@ const LiveJourneyPage: React.FC = () => {
                                     }}></div>
                             </div>
 
-                            <div className="flex justify-center px-2 py-1 rounded-lg bg-neutral-800/50">
+                            <div className="flex justify-center px-2 py-1 rounded-lg bg-bg-light/50">
                                 <span className="font-bold align-middle text">
                                     {lateness(bus ? bus.delay : 0)}
                                 </span>
@@ -539,7 +539,7 @@ const LiveJourneyPage: React.FC = () => {
                     </div>
                 )}
                 {msg ? (
-                    <span className="text-center text-red-400">{msg}</span>
+                    <span className="text-center text-red">{msg}</span>
                 ) : (
                     <></>
                 )}
@@ -548,11 +548,11 @@ const LiveJourneyPage: React.FC = () => {
                     timing point (bus waits here if early)
                 </div>
                 <div className="flex justify-center gap-2">
-                    <span className="text-xs text-neutral-400">
+                    <span className="text-xs text-text-light">
                         Updated {elapsed} ago
                     </span>
-                    <span className="text-xs text-neutral-400">·</span>
-                    <span className="text-xs text-neutral-400">
+                    <span className="text-xs text-text-light">·</span>
+                    <span className="text-xs text-text-light">
                         Updates every 30s
                     </span>
                 </div>
@@ -566,7 +566,7 @@ const LiveJourneyPage: React.FC = () => {
                         <FontAwesomeIcon
                             icon={faCalendarXmark}
                             size="5x"
-                            className="text-neutral-400"></FontAwesomeIcon>
+                            className="text-text-light"></FontAwesomeIcon>
                         <span className="text-xl font-bold text-neutral-500">
                             This service has ended.
                         </span>
@@ -635,7 +635,7 @@ const LiveJourneyPage: React.FC = () => {
                                                     )}{" "}
                                                     {stop.name}
                                                 </div>
-                                                {/* <div className="flex flex-row gap-6 px-2 py-1 font-bold bg-neutral-800/50 rounded-b-2xl">
+                                                {/* <div className="flex flex-row gap-6 px-2 py-1 font-bold bg-bg-light/50 rounded-b-2xl">
                                                     <span>
                                                         {stop.aimed_time.toLocaleTimeString(
                                                             [],
@@ -669,7 +669,7 @@ const LiveJourneyPage: React.FC = () => {
                                                             )}
                                                         </span>
                                                     ) : (
-                                                        <span className="font-bold text-green-400 ">
+                                                        <span className="font-bold text-green ">
                                                             On Time
                                                         </span>
                                                     )}
@@ -682,12 +682,12 @@ const LiveJourneyPage: React.FC = () => {
                                                                     faCalendarCheck
                                                                 }
                                                             />
-                                                            <span className="text-neutral-200">
+                                                            <span className="text-text-dark">
                                                                 {toTime(
                                                                     stop.aimed_time
                                                                 )}
                                                             </span>
-                                                            <span className="font-semibold text-green-400">
+                                                            <span className="font-semibold text-green">
                                                                 departed
                                                             </span>
                                                         </div>
@@ -717,7 +717,7 @@ const LiveJourneyPage: React.FC = () => {
                                                                       return (
                                                                           <div className="flex gap-3">
                                                                               {isLate && (
-                                                                                  <span className="line-through text-neutral-500">
+                                                                                  <span className="line-through text-text-light">
                                                                                       {toTime(
                                                                                           stop.aimed_time
                                                                                       )}
@@ -726,8 +726,8 @@ const LiveJourneyPage: React.FC = () => {
                                                                               <span
                                                                                   className={
                                                                                       isLate
-                                                                                          ? "text-red-400"
-                                                                                          : "text-green-400"
+                                                                                          ? "text-red"
+                                                                                          : "text-green"
                                                                                   }>
                                                                                   {isLate
                                                                                       ? "expt: "

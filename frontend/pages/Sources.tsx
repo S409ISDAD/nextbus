@@ -41,11 +41,11 @@ const SourcesPage: React.FC = () => {
                     </span>
                     <div className="w-full mt-4 overflow-x-auto">
                         {!dataSources ? (
-                            <span className="w-full mb-5 text-sm text-center text-neutral-400">
+                            <span className="w-full mb-5 text-sm text-center text-text-light">
                                 No DataSources found.
                             </span>
                         ) : (
-                            <table className="min-w-full mb-8 border rounded border-neutral-800">
+                            <table className="min-w-full mb-8 border rounded border-bg-light">
                                 <thead>
                                     <tr>
                                         <th className="px-4 py-2 text-left border-b">
@@ -71,7 +71,7 @@ const SourcesPage: React.FC = () => {
                                 <tbody>
                                     {dataSources.map((source) => (
                                         <React.Fragment key={source.id}>
-                                            <tr className="border-t border-neutral-700 bg-neutral-900">
+                                            <tr className="border-t border-neutral-700 bg-bg-medium">
                                                 <td className="px-4 py-2 text-gray-500">
                                                     {source.id}
                                                 </td>
@@ -102,7 +102,7 @@ const SourcesPage: React.FC = () => {
                                             {source.versions.map((version) => (
                                                 <tr
                                                     key={version.id}
-                                                    className="transition border-t border-neutral-800 hover:bg-neutral-800">
+                                                    className="transition border-t border-bg-light hover:bg-bg-light">
                                                     <td className="px-4 py-2 pl-8 text-gray-500">
                                                         {version.id}
                                                     </td>

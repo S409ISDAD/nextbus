@@ -41,12 +41,12 @@ function JourneyCard({
                                         {journey.line_name}
                                     </span>
                                 </div>
-                                <div className="flex flex-col justify-center px-3 bg-neutral-800/50 rounded-r-2xl">
+                                <div className="flex flex-col justify-center px-3 bg-bg-light/50 rounded-r-2xl">
                                     <span className="font-semibold text">
                                         {journey.headsign}
                                     </span>
                                     {journey.live_bus && (
-                                        <span className="mb-0.5 text-xs text-neutral-400">
+                                        <span className="mb-0.5 text-xs text-text-light">
                                             {journey.live_bus.bus_type}
                                         </span>
                                     )}
@@ -60,7 +60,7 @@ function JourneyCard({
                             {journey.live_bus && (
                                 <div className="flex items-center gap-3">
                                     <div className="flex justify-center px-2 py-1 rounded-lg bg-amber-400">
-                                        <span className="text-xs font-bold align-middle text-neutral-950 text-nowrap">
+                                        <span className="text-xs font-bold align-middle text-bg-main text-nowrap">
                                             {journey.live_bus.reg}
                                         </span>
                                     </div>
@@ -119,7 +119,7 @@ function JourneyCard({
                             </div>
 
                             {/* Journey Steps */}
-                            <div className="flex flex-col gap-2 text-sm text-neutral-400">
+                            <div className="flex flex-col gap-2 text-sm text-text-light">
                                 {journey.wait_seconds && (
                                     <div className="flex items-center gap-2">
                                         <FontAwesomeIcon
@@ -218,12 +218,12 @@ function JourneyCard({
                 {/* RIGHT BLOCK */}
                 {/*<div className="flex flex-wrap items-center justify-center gap-2 text-sm md:gap-4 sm:text-base">*/}
                 {/*    <div className="px-1.5 py-0.5 bg-primary rounded-lg">*/}
-                {/*        <span className="text-xs font-bold text-neutral-950 whitespace-nowrap">*/}
+                {/*        <span className="text-xs font-bold text-bg-main whitespace-nowrap">*/}
                 {/*            Platform {train.fromStop?.platform ?? "-"}*/}
                 {/*        </span>*/}
                 {/*    </div>*/}
 
-                {/*    <div className="flex items-end justify-center gap-1 px-2 py-[0.2rem] w-16 sm:w-18 rounded-xl bg-neutral-800/50">*/}
+                {/*    <div className="flex items-end justify-center gap-1 px-2 py-[0.2rem] w-16 sm:w-18 rounded-xl bg-bg-light/50">*/}
                 {/*        <span className="text-base font-bold sm:text-lg">*/}
                 {/*            {train.timeTo?.split(" ")[0] ?? "--"}*/}
                 {/*        </span>*/}
@@ -356,7 +356,7 @@ const PossibleJourneysPage: React.FC = () => {
     return (
         <div className="gap-3 p-5 md:mx-20">
             <div
-                className="flex items-center gap-2 p-1.5 px-2.5 my-2 text-sm font-semibold text-white transition-all cursor-pointer bg-neutral-800 w-fit rounded-xl hover:bg-primary-700"
+                className="flex items-center gap-2 p-1.5 px-2.5 my-2 text-sm font-semibold text-text-dark transition-all cursor-pointer bg-bg-light w-fit rounded-xl hover:bg-primary-700"
                 onClick={() => {
                     navigate(-1);
                 }}>
@@ -374,11 +374,11 @@ const PossibleJourneysPage: React.FC = () => {
                 </div>
 
                 <div className="flex justify-center gap-2">
-                    <span className="text-xs text-neutral-400">
+                    <span className="text-xs text-text-light">
                         {loading ? "Loading..." : `Updated ${elapsed} ago`}
                     </span>
-                    <span className="text-xs text-neutral-400">·</span>
-                    <span className="text-xs text-neutral-400">
+                    <span className="text-xs text-text-light">·</span>
+                    <span className="text-xs text-text-light">
                         Updates every minute
                     </span>
                 </div>
@@ -386,7 +386,7 @@ const PossibleJourneysPage: React.FC = () => {
                 <div className="flex flex-col w-full gap-1">
                     {msg ? (
                         <div className="flex justify-center gap-1 p-3">
-                            <span className="text-red-400">{msg}</span>
+                            <span className="text-red">{msg}</span>
                         </div>
                     ) : (
                         <></>
@@ -456,7 +456,7 @@ const PossibleJourneysPage: React.FC = () => {
                             ))}
                             {possibleJourneys.length === 0 && (
                                 <div className="flex justify-center">
-                                    <span className="text-neutral-400">
+                                    <span className="text-text-light">
                                         No more trains!
                                     </span>
                                 </div>

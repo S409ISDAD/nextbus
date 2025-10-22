@@ -26,9 +26,7 @@ export function TimeSince({
     time: Date | string;
     className?: string;
 }) {
-    const [text, setText] = useState(() =>
-        formatTimeSince(new Date(time))
-    );
+    const [text, setText] = useState(() => formatTimeSince(new Date(time)));
 
     useEffect(() => {
         const interval = setInterval(() => {
@@ -38,5 +36,5 @@ export function TimeSince({
         return () => clearInterval(interval);
     }, [time]);
 
-    return <span className={cn("text-neutral-400", className)}>{text}</span>;
+    return <span className={cn("text-text-light", className)}>{text}</span>;
 }

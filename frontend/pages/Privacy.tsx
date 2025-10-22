@@ -68,14 +68,12 @@ const Privacy: React.FC = () => {
                     I use cookies for the stop favoriting feature. The stop code
                     and coordinates of the stop are stored in the browser's
                     localStorage under{" "}
-                    <span className="p-1 rounded-lg bg-neutral-800">
-                        favStops
-                    </span>
+                    <span className="p-1 rounded-lg bg-bg-light">favStops</span>
                     . You can delete this data at any time by pressing the
                     'Clear Favorites' button in the Bus Page or here. I also
                     store a randomly generated client ID in your browser's
                     localStorage under{" "}
-                    <span className="p-1 rounded-lg bg-neutral-800">
+                    <span className="p-1 rounded-lg bg-bg-light">
                         ws-client-id
                     </span>
                     . This ID is used to identify your WebSocket connection or
@@ -89,7 +87,7 @@ const Privacy: React.FC = () => {
                     next use the site.
                 </span>
                 <button
-                    className="p-1.5 px-4 w-fit text-sm font-semibold text-white transition-all bg-primary cursor-pointer rounded-xl hover:bg-primary-700"
+                    className="p-1.5 px-4 w-fit text-sm font-semibold text-text-dark transition-all bg-primary cursor-pointer rounded-xl hover:bg-primary-700"
                     onClick={() => setFavStops({})}>
                     Clear Favorites
                 </button>
