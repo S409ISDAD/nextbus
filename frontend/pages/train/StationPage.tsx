@@ -44,7 +44,7 @@ function TrainCard({
                                 </span>
                             )}
                         </div>
-                        <div className="flex flex-col justify-center px-3 bg-bg-light/50 rounded-r-2xl">
+                        <div className="flex flex-col justify-center px-3 bg-neutral-800/50 rounded-r-2xl">
                             <span className="font-semibold text">
                                 {train.atocCode}
                             </span>
@@ -84,7 +84,7 @@ function TrainCard({
 
                 <div className="flex flex-row flex-wrap items-center justify-end gap-2 text-sm md:gap-4 w-min md:w-auto sm:text-base">
                     <div className="flex justify-center px-2 py-1 bg-primary rounded-lg">
-                        <span className="text-xs font-bold align-middle text-bg-main text-nowrap">
+                        <span className="text-xs font-bold align-middle text-neutral-950 text-nowrap">
                             Platform{" "}
                             {train.locationDetail.platform
                                 ? train.locationDetail.platform
@@ -92,7 +92,7 @@ function TrainCard({
                         </span>
                     </div>
 
-                    <div className="flex items-center justify-center gap-1 p-[0.2rem] w-16 sm:w-18 rounded-xl bg-bg-light/50  h-fit">
+                    <div className="flex items-center justify-center gap-1 p-[0.2rem] w-16 sm:w-18 rounded-xl bg-neutral-800/50  h-fit">
                         <span className="text-base font-bold sm:text-lg ">
                             {train.timeTo?.split(" ")[0] ?? "--"}
                         </span>
@@ -244,18 +244,18 @@ const StationPage: React.FC = () => {
                         .map((service) => (
                             <span
                                 key={service.id}
-                                className="flex items-center justify-center px-3 py-1 text-lg font-bold text-center rounded-xl bg-bg-light/50">
+                                className="flex items-center justify-center px-3 py-1 text-lg font-bold text-center rounded-xl bg-neutral-800/50">
                                 {service.line_name}
                             </span>
                         ))}
                 </div> */}
 
                 <div className="flex justify-center gap-2">
-                    <span className="text-xs text-text-light">
+                    <span className="text-xs text-neutral-400">
                         {loading ? "Loading..." : `Updated ${elapsed} ago`}
                     </span>
-                    <span className="text-xs text-text-light">·</span>
-                    <span className="text-xs text-text-light">
+                    <span className="text-xs text-neutral-400">·</span>
+                    <span className="text-xs text-neutral-400">
                         Updates every 30s
                     </span>
                 </div>
@@ -264,8 +264,8 @@ const StationPage: React.FC = () => {
                     <button
                         className={`px-4 py-1 rounded-lg font-semibold cursor-pointer ${
                             type === "departures"
-                                ? "bg-primary text-text-dark"
-                                : "bg-bg-light/50 text-neutral-200"
+                                ? "bg-primary text-white"
+                                : "bg-neutral-800/50 text-neutral-200"
                         }`}
                         onClick={() => {
                             setType("departures");
@@ -278,8 +278,8 @@ const StationPage: React.FC = () => {
                     <button
                         className={`px-4 py-1 rounded-lg font-semibold cursor-pointer ${
                             type === "arrivals"
-                                ? "bg-primary text-text-dark"
-                                : "bg-bg-light/50 text-neutral-200"
+                                ? "bg-primary text-white"
+                                : "bg-neutral-800/50 text-neutral-200"
                         }`}
                         onClick={() => {
                             setType("arrivals");
@@ -294,7 +294,7 @@ const StationPage: React.FC = () => {
                 <div className="flex flex-col gap-1">
                     {msg ? (
                         <div className="flex justify-center gap-1 p-3">
-                            <span className="text-red">{msg}</span>
+                            <span className="text-red-400">{msg}</span>
                         </div>
                     ) : (
                         <></>
@@ -364,7 +364,7 @@ const StationPage: React.FC = () => {
                             ))}
                             {trains.length === 0 && (
                                 <div className="flex justify-center">
-                                    <span className="text-text-light">
+                                    <span className="text-neutral-400">
                                         No more departures!
                                     </span>
                                 </div>

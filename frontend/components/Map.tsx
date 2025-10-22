@@ -138,8 +138,8 @@ const MapView: React.FC<MapViewProps> = ({
                             setPopup({
                                 lngLat: [stop.coords[1], stop.coords[0]],
                                 content: (
-                                    <div className="flex flex-col text-text-dark bg-[#222]">
-                                        <span className="font-semibold text-text-dark">
+                                    <div className="flex flex-col text-white bg-[#222]">
+                                        <span className="font-semibold text-white">
                                             {stop.name}
                                         </span>
                                         <span className="text-xs text-gray-300">
@@ -180,7 +180,7 @@ const MapView: React.FC<MapViewProps> = ({
                             setPopup({
                                 lngLat: [bus.coords[1], bus.coords[0]],
                                 content: (
-                                    <div className="flex flex-col font-bold text-text-dark bg-[#222]">
+                                    <div className="flex flex-col font-bold text-white bg-[#222]">
                                         <span
                                             className="underline cursor-pointer text-link"
                                             onClick={() =>

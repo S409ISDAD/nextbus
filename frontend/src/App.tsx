@@ -54,7 +54,7 @@ import PossibleJourneysPage from "../pages/PossibleJourneysPage.tsx";
 //     if (location.pathname === "/" || !visible) return null;
 //     return (
 //         <div
-//             className={`fixed flex gap-2 items-center justify-center p-3 transform -translate-x-1/2 bg-bg-light shadow-lg z-[99999] ${
+//             className={`fixed flex gap-2 items-center justify-center p-3 transform -translate-x-1/2 bg-neutral-800 shadow-lg z-[99999] ${
 //                 showAppNav ? "bottom-19" : "bottom-4"
 //             } left-1/2 rounded-2xl`}>
 //             <span className="text-center text-gray-200 text-nowrap">
@@ -68,7 +68,7 @@ import PossibleJourneysPage from "../pages/PossibleJourneysPage.tsx";
 //                 </a>
 //             </span>
 //             <button
-//                 className="flex items-center justify-center px-2 cursor-pointer aspect-square bg-bg-medium/50 rounded-2xl hover:bg-bg-medium"
+//                 className="flex items-center justify-center px-2 cursor-pointer aspect-square bg-neutral-900/50 rounded-2xl hover:bg-neutral-900"
 //                 onClick={() => setVisible(false)}>
 //                 {" "}
 //                 <FontAwesomeIcon icon={faXmark} size="sm" />
@@ -130,7 +130,7 @@ function App() {
     return (
         <MotionConfig reducedMotion="user">
             <BrowserRouter>
-                <div className="flex flex-col min-h-screen text-text-dark">
+                <div className="flex flex-col min-h-screen">
                     <Toaster
                         position="top-right"
                         reverseOrder={false}
@@ -174,7 +174,7 @@ function App() {
                                     </p>
                                     <div className="mt-4">
                                         <div
-                                            className="inline-flex cursor-pointer items-center gap-2 rounded-md bg-primary px-3 py-1.5 text-sm/6 font-semibold text-text-dark  transition-all focus:not-data-focus:outline-none hover:bg-primary-700 data-focus:outline data-focus:outline-white data-hover:bg-gray-600 data-open:bg-gray-700"
+                                            className="inline-flex cursor-pointer items-center gap-2 rounded-md bg-primary px-3 py-1.5 text-sm/6 font-semibold text-white  transition-all focus:not-data-focus:outline-none hover:bg-primary-700 data-focus:outline data-focus:outline-white data-hover:bg-gray-600 data-open:bg-gray-700"
                                             onClick={() => setIsOpen(false)}>
                                             Got it, thanks!
                                         </div>

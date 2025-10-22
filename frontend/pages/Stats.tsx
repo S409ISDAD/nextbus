@@ -178,44 +178,44 @@ const StatsPage: React.FC = () => {
                     </span>
                 </div>
                 <div className="flex justify-center gap-2">
-                    <span className="text-xs text-text-light">
+                    <span className="text-xs text-neutral-400">
                         {loading ? "Loading..." : `Updated ${elapsed} ago`}
                     </span>
-                    <span className="text-xs text-text-light">·</span>
-                    <span className="text-xs text-text-light">
+                    <span className="text-xs text-neutral-400">·</span>
+                    <span className="text-xs text-neutral-400">
                         Updates every 10s
                     </span>
                 </div>
                 <div className="flex flex-wrap items-center justify-center w-full gap-4 mb-4">
-                    <div className="flex flex-col items-center p-4 shadow w-50 bg-bg-light/50 rounded-xl">
+                    <div className="flex flex-col items-center p-4 shadow w-50 bg-neutral-800/50 rounded-xl">
                         <span className="text-3xl font-bold text-link-400">
                             {stats?.unique_active ?? "--"}
                         </span>
-                        <span className="mt-1 text-sm text-text-light">
+                        <span className="mt-1 text-sm text-neutral-400">
                             Active Users
                         </span>
                     </div>
-                    <div className="flex flex-col items-center p-4 shadow w-50 bg-bg-light/50 rounded-xl">
+                    <div className="flex flex-col items-center p-4 shadow w-50 bg-neutral-800/50 rounded-xl">
                         <span className="text-3xl font-bold text-purple-400">
                             {stats?.total_users ?? "--"}
                         </span>
-                        <span className="mt-1 text-sm text-text-light">
+                        <span className="mt-1 text-sm text-neutral-400">
                             Users Today
                         </span>
                     </div>
-                    <div className="flex flex-col items-center p-4 shadow w-50 bg-bg-light/50 rounded-xl">
+                    <div className="flex flex-col items-center p-4 shadow w-50 bg-neutral-800/50 rounded-xl">
                         <span className="text-3xl font-bold text-emerald-400">
                             {stats?.total_buses ?? "--"}
                         </span>
-                        <span className="mt-1 text-sm text-text-light">
+                        <span className="mt-1 text-sm text-neutral-400">
                             Buses Tracked Today
                         </span>
                     </div>
-                    <div className="flex flex-col items-center p-4 shadow w-50 bg-bg-light/50 rounded-xl">
+                    <div className="flex flex-col items-center p-4 shadow w-50 bg-neutral-800/50 rounded-xl">
                         <span className="text-3xl font-bold text-amber-400">
                             {stats?.total_stops ?? "--"}
                         </span>
-                        <span className="mt-1 text-sm text-text-light">
+                        <span className="mt-1 text-sm text-neutral-400">
                             Stops Viewed Today
                         </span>
                     </div>
@@ -228,18 +228,18 @@ const StatsPage: React.FC = () => {
                         value={selectedTimespan}
                         onChange={setSelectedTimespan}>
                         <div className="relative">
-                            <ListboxButton className="flex items-center w-full gap-1 p-2 text-sm font-semibold border border-neutral-700 rounded-xl bg-bg-light/50">
+                            <ListboxButton className="flex items-center w-full gap-1 p-2 text-sm font-semibold border border-neutral-700 rounded-xl bg-neutral-800/50">
                                 {selectedTimespan.label}
                                 <FontAwesomeIcon icon={faCaretDown} />
                             </ListboxButton>
-                            <ListboxOptions className="absolute z-[9999999] w-full overflow-auto border shadow-lg max-h-60 rounded-xl border-neutral-700 bg-bg-medium">
+                            <ListboxOptions className="absolute z-[9999999] w-full overflow-auto border shadow-lg max-h-60 rounded-xl border-neutral-700 bg-neutral-900">
                                 {timespans.map((span) => (
                                     <ListboxOption
                                         key={span.value}
                                         value={span}
                                         className={({ active }) =>
                                             `px-2 py-1 text-sm cursor-pointer ${
-                                                active ? "bg-bg-light" : ""
+                                                active ? "bg-neutral-800" : ""
                                             }`
                                         }>
                                         {span.label}

@@ -22,7 +22,7 @@ function NavSearchBar(queryProp?: { query?: string }) {
             layout
             key={"search-bar-nav"}
             layoutId="search-bar-nav"
-            className="flex items-center rounded-full shadow-2xl w-fit border-1 border-bg-light bg-bg-medium">
+            className="flex items-center rounded-full shadow-2xl w-fit border-1 border-neutral-800 bg-neutral-900">
             <div className="ml-3 mr-2 text-gray-500">
                 <FontAwesomeIcon
                     icon={faMagnifyingGlass}
@@ -34,7 +34,7 @@ function NavSearchBar(queryProp?: { query?: string }) {
             <input
                 type="text"
                 placeholder="Search for a route or place"
-                className="flex-grow text-sm font-medium bg-transparent placeholder-text-light focus:outline-none"
+                className="flex-grow text-sm font-medium placeholder-gray-400 bg-transparent focus:outline-none"
                 onChange={(e) => setSearchQuery(e.target.value)}
                 value={searchQuery}
                 onKeyDown={(e) => {
@@ -44,7 +44,7 @@ function NavSearchBar(queryProp?: { query?: string }) {
                 }}
             />
             <button
-                className="mr-2 px-3 py-1 font-bold text-sm text-white rounded-full bg-primary-500 transition cursor-pointer shadow-[0_0_5px_1px_var(--shadow-primary)] hover:shadow-[0_0_10px_2px_var(--shadow-primary-hover)]"
+                className="mr-2 px-3 py-1 font-bold text-sm text-white rounded-full bg-primary-500  transition cursor-pointer shadow-[0_0_5px_1px_var(--shadow-primary)] hover:shadow-[0_0_10px_2px_var(--shadow-primary-hover)]"
                 onClick={() => {
                     navigate(`/search/${searchQuery}`);
                 }}>
@@ -55,8 +55,8 @@ function NavSearchBar(queryProp?: { query?: string }) {
 }
 
 const footer = (currentYear: number) => (
-    <footer className="flex flex-row flex-wrap items-start justify-center w-full gap-2 p-3 text-sm border-t-2 text-text-med max-h-fit border-bg-light">
-        <span>made by orbitix.dev</span> ·
+    <footer className="flex flex-row flex-wrap items-start justify-center w-full gap-2 p-3 text-sm text-gray-200 border-t-2 max-h-fit border-neutral-800">
+        <span>© {currentYear} nextbus</span> ·
         <a href="/data" className="underline text-link-400 max-h-fit">
             Data Sources
         </a>
@@ -98,7 +98,7 @@ export default function Layout() {
     if (!showAppNav) {
         return (
             <div className="h-full">
-                <div className="top-0 flex justify-between p-[8px] z-[99] border-b-1 border-bg-light rounded-b-[24px] fixed w-full bg-bg-semidark shadow-2xl md:shadow-xl">
+                <div className="top-0 flex justify-between p-[8px] z-[99] border-b-1 border-neutral-800 rounded-b-[24px] fixed w-full bg-[#131313] shadow-2xl md:shadow-xl">
                     <div className="flex gap-2">
                         <Link to="/">
                             <div className="flex flex-col items-center h-full mx-4 spooky-font">
@@ -112,17 +112,17 @@ export default function Layout() {
                         </Link>
 
                         <Link to="/map">
-                            <button className="p-2 px-3 transition-all cursor-pointer border-bg-light h-max rounded-2xl border-1 hover:border-primary-700 ">
+                            <button className="p-2 px-3 transition-all cursor-pointer border-neutral-800 h-max rounded-2xl border-1 hover:border-primary-700 ">
                                 map
                             </button>
                         </Link>
                         <Link to="/buses">
-                            <button className="p-2 px-3 transition-all cursor-pointer border-bg-light h-max rounded-2xl border-1 hover:border-primary-700 ">
+                            <button className="p-2 px-3 transition-all cursor-pointer border-neutral-800 h-max rounded-2xl border-1 hover:border-primary-700 ">
                                 buses
                             </button>
                         </Link>
                         {/* <Link to="/trains">
-                            <button className="p-2 px-3 transition-all cursor-pointer border-bg-light h-max rounded-2xl border-1 hover:border-primary-700 ">
+                            <button className="p-2 px-3 transition-all cursor-pointer border-neutral-800 h-max rounded-2xl border-1 hover:border-primary-700 ">
                                 trains
                             </button>
                         </Link> */}
@@ -150,19 +150,19 @@ export default function Layout() {
                     onClick={() => {
                         navigate("/search");
                     }}
-                    className="fixed z-[100] bottom-22 right-4 bg-link/30 text-text-dark rounded-full shadow-lg w-12 h-12 flex items-center justify-center transition-all"
+                    className="fixed z-[100] bottom-22 right-4 bg-link/30 text-white rounded-full shadow-lg w-12 h-12 flex items-center justify-center transition-all"
                     aria-label="Search">
                     <span className="text-lg font-bold">
                         <FontAwesomeIcon icon={faMagnifyingGlass} />
                     </span>
                 </motion.div>
                 <nav
-                    className="bottom-0 left-0 text-neutral-200 right-0 flex justify-around items-center p-3 z-[99] border-t border-bg-light rounded-t-2xl fixed w-full shadow-2xl md:shadow-xl bg-[#131313]"
+                    className="bottom-0 left-0 text-neutral-200 right-0 flex justify-around items-center p-3 z-[99] border-t border-neutral-800 rounded-t-2xl fixed w-full shadow-2xl md:shadow-xl bg-[#131313]"
                     style={isIOS() ? { paddingBottom: "20px" } : {}}>
                     {items.map((item) => (
                         <Link
                             to={item.href}
-                            className="flex flex-col items-center w-5 gap-1 transition-colors hover:text-text-dark ">
+                            className="flex flex-col items-center w-5 gap-1 transition-colors hover:text-white ">
                             <FontAwesomeIcon
                                 icon={item.icon}
                                 size="lg"

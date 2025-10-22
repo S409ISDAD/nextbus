@@ -54,8 +54,8 @@ function TrainCard({
                                                 new Date(
                                                     train.fromStop.scheduledDeparture
                                                 ).getTime()
-                                                    ? "text-red"
-                                                    : "text-green"
+                                                    ? "text-red-400"
+                                                    : "text-green-400"
                                             }>
                                             {toTime(
                                                 train.fromStop.expectedDeparture
@@ -101,8 +101,8 @@ function TrainCard({
                                                 new Date(
                                                     train.toStop.scheduledArrival
                                                 ).getTime()
-                                                    ? "text-red"
-                                                    : "text-green"
+                                                    ? "text-red-400"
+                                                    : "text-green-400"
                                             }>
                                             {toTime(
                                                 train.toStop.expectedArrival
@@ -129,7 +129,7 @@ function TrainCard({
                                 {lateness(train.fromStop?.delay ?? 0)}
                             </span> */}
                             {train.duration && (
-                                <span className="text-sm font-semibold md:text-base text-text-light">
+                                <span className="text-sm font-semibold md:text-base text-neutral-400">
                                     {generateTimeTo(train.duration)}
                                 </span>
                             )}
@@ -150,7 +150,7 @@ function TrainCard({
                     {/* DESTINATION & OPERATOR */}
                     <div className="flex flex-row items-center gap-3 text-xs md:text-sm">
                         <div className="flex mb-1">
-                            <div className="flex items-center gap-1 px-2 py-1 font-semibold md:px-2 bg-bg-light/50 rounded-l-2xl">
+                            <div className="flex items-center gap-1 px-2 py-1 font-semibold md:px-2 bg-neutral-800/50 rounded-l-2xl">
                                 <span className="md:ml-1">to</span>
                                 {train.destination.map((d, i) => (
                                     <span key={d.description}>
@@ -176,12 +176,12 @@ function TrainCard({
                 {/* RIGHT BLOCK */}
                 <div className="flex flex-wrap items-center justify-center gap-2 text-sm md:gap-4 sm:text-base">
                     <div className="px-1.5 py-0.5 bg-primary rounded-lg">
-                        <span className="text-xs font-bold text-bg-main whitespace-nowrap">
+                        <span className="text-xs font-bold text-neutral-950 whitespace-nowrap">
                             Platform {train.fromStop?.platform ?? "-"}
                         </span>
                     </div>
 
-                    <div className="flex items-end justify-center gap-1 px-2 py-[0.2rem] min-w-16 sm:min-w-18 rounded-xl bg-bg-light/50">
+                    <div className="flex items-end justify-center gap-1 px-2 py-[0.2rem] min-w-16 sm:min-w-18 rounded-xl bg-neutral-800/50">
                         <span className="text-base font-bold sm:text-lg text-nowrap">
                             in {train.timeTo?.split(" ")[0] ?? "--"}
                         </span>
@@ -302,7 +302,7 @@ const TrainSearchPage: React.FC = () => {
     return (
         <div className="gap-3 p-5 md:mx-20">
             <div
-                className="flex items-center gap-2 p-1.5 px-2.5 my-2 text-sm font-semibold text-text-dark transition-all cursor-pointer bg-bg-light w-fit rounded-xl hover:bg-primary-700"
+                className="flex items-center gap-2 p-1.5 px-2.5 my-2 text-sm font-semibold text-white transition-all cursor-pointer bg-neutral-800 w-fit rounded-xl hover:bg-primary-700"
                 onClick={() => {
                     navigate(-1);
                 }}>
@@ -343,18 +343,18 @@ const TrainSearchPage: React.FC = () => {
                         .map((service) => (
                             <span
                                 key={service.id}
-                                className="flex items-center justify-center px-3 py-1 text-lg font-bold text-center rounded-xl bg-bg-light/50">
+                                className="flex items-center justify-center px-3 py-1 text-lg font-bold text-center rounded-xl bg-neutral-800/50">
                                 {service.line_name}
                             </span>
                         ))}
                 </div> */}
 
                 <div className="flex justify-center gap-2">
-                    <span className="text-xs text-text-light">
+                    <span className="text-xs text-neutral-400">
                         {loading ? "Loading..." : `Updated ${elapsed} ago`}
                     </span>
-                    <span className="text-xs text-text-light">·</span>
-                    <span className="text-xs text-text-light">
+                    <span className="text-xs text-neutral-400">·</span>
+                    <span className="text-xs text-neutral-400">
                         Updates every 30s
                     </span>
                 </div>
@@ -362,7 +362,7 @@ const TrainSearchPage: React.FC = () => {
                 <div className="flex flex-col w-full gap-1">
                     {msg ? (
                         <div className="flex justify-center gap-1 p-3">
-                            <span className="text-red">{msg}</span>
+                            <span className="text-red-400">{msg}</span>
                         </div>
                     ) : (
                         <></>
@@ -432,7 +432,7 @@ const TrainSearchPage: React.FC = () => {
                             ))}
                             {trains.length === 0 && (
                                 <div className="flex justify-center">
-                                    <span className="text-text-light">
+                                    <span className="text-neutral-400">
                                         No more trains!
                                     </span>
                                 </div>

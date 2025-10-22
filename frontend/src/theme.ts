@@ -1,11 +1,10 @@
 (function () {
     try {
         const savedTheme = localStorage.getItem("theme");
-        if (savedTheme === "dark" || savedTheme === "halloween" || savedTheme === "light") {
+        if (savedTheme === "blue" || savedTheme === "orange") {
             document.documentElement.setAttribute("data-theme", savedTheme);
         } else {
-            localStorage.setItem("theme", "halloween");
-            document.documentElement.setAttribute("data-theme", "halloween");
+            document.documentElement.setAttribute("data-theme", "orange");
         }
     } catch (err) {
         console.warn("Unable to access localStorage for theme:", err);

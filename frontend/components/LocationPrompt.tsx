@@ -77,7 +77,7 @@ export function LocationPrompt({
     if (!isGeolocationEnabled) {
         return (
             <div className={cn("text-center flex flex-col gap-1", className)}>
-                <span className="text-text-light">
+                <span className="text-neutral-400">
                     Location is blocked. Please enable it in your browser
                     settings.
                 </span>
@@ -88,7 +88,7 @@ export function LocationPrompt({
     if (!isGeolocationAvailable) {
         return (
             <div className={cn("text-center flex flex-col gap-1", className)}>
-                <span className="text-text-light">
+                <span className="text-neutral-400">
                     We use your location to show nearby features. Your location
                     is never stored.
                 </span>

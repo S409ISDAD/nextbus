@@ -78,11 +78,11 @@ const ServicePage: React.FC = () => {
                         </span>
                         <div className="flex flex-col items-center justify-center gap-1">
                             {service?.vias && (
-                                <span className="text-xl font-semibold text-center text-text-light">
+                                <span className="text-xl font-semibold text-center text-neutral-400">
                                     Via {service?.vias}
                                 </span>
                             )}
-                            <span className="text-sm font-semibold text-center text-text-light">
+                            <span className="text-sm font-semibold text-center text-neutral-400">
                                 Operated by{" "}
                                 {service?.operators
                                     .map((op) => op.name)
@@ -127,7 +127,7 @@ const ServicePage: React.FC = () => {
                     )}
                 </div>
                 {service?.last_modified && (
-                    <span className="w-full text-sm text-text-light text-start">
+                    <span className="w-full text-sm text-neutral-400 text-start">
                         timetable data from{" "}
                         {new Date(service?.last_modified).toLocaleString(
                             "en-GB",

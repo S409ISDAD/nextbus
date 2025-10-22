@@ -133,7 +133,7 @@ const Home: React.FC = () => {
                     <div className="flex flex-col items-center justify-center p-2">
                         <div className="flex flex-col items-center w-full">
                             <button
-                                className="flex flex-row items-center justify-center gap-1 p-2 px-4 transition cursor-pointer text-text-dark border-1 rounded-2xl bg-bg-light border-amber-500 hover:border-amber-400"
+                                className="flex flex-row items-center justify-center gap-1 p-2 px-4 transition cursor-pointer border-1 rounded-2xl bg-neutral-800 border-amber-500 hover:border-amber-400"
                                 onClick={() => setShowCaution((prev) => !prev)}>
                                 <FontAwesomeIcon icon={faWarning} />
                                 <span className="ml-2 text-sm">
@@ -174,21 +174,21 @@ const Home: React.FC = () => {
                     </div>
 
                     {showStop && closestStop && (
-                        <div className="flex flex-col items-center gap-2 p-3 bg-bg-light rounded-[24px]">
+                        <div className="flex flex-col items-center gap-2 p-3 bg-neutral-800 rounded-[24px]">
                             <span className="px-5 font-semibold text-center text-neutral-300 text">
                                 It looks like you're at a bus stop!
                                 <br /> Would you like to see the departures?
                             </span>
                             <div className="flex flex-row w-full gap-2">
                                 <button
-                                    className="w-full p-2 mt-2 font-semibold transition-all cursor-pointer text-text-dark bg-neutral-600 rounded-xl hover:bg-neutral-700"
+                                    className="w-full p-2 mt-2 font-semibold text-white transition-all cursor-pointer bg-neutral-600 rounded-xl hover:bg-neutral-700"
                                     onClick={() => {
                                         setShowStop(false);
                                     }}>
                                     No, thanks.
                                 </button>
                                 <button
-                                    className="w-full p-2 mt-2 font-semibold transition-all cursor-pointer text-text-dark bg-primary text-nowrap rounded-xl hover:bg-primary-700"
+                                    className="w-full p-2 mt-2 font-semibold text-white transition-all cursor-pointer bg-primary text-nowrap rounded-xl hover:bg-primary-700"
                                     onClick={() => {
                                         setShowStop(false);
                                         navigate(`/buses/stops/${closestStop}`);
@@ -199,7 +199,7 @@ const Home: React.FC = () => {
                         </div>
                     )}
                     <div className="flex flex-wrap items-center justify-center w-full gap-4">
-                        <div className="flex flex-col items-center p-2 px-6 shadow bg-bg-light/50 rounded-xl">
+                        <div className="flex flex-col items-center p-2 px-6 shadow bg-neutral-800/50 rounded-xl">
                             <span className="text-xl font-bold text-link-400">
                                 {stats?.lines?.toLocaleString() ?? "--"}
                             </span>
@@ -207,7 +207,7 @@ const Home: React.FC = () => {
                                 Services
                             </span>
                         </div>
-                        <div className="flex flex-col items-center p-2 px-6 shadow bg-bg-light/50 rounded-xl">
+                        <div className="flex flex-col items-center p-2 px-6 shadow bg-neutral-800/50 rounded-xl">
                             <span className="text-xl font-bold text-purple-400">
                                 {stats?.stops?.toLocaleString() ?? "--"}
                             </span>
@@ -215,7 +215,7 @@ const Home: React.FC = () => {
                                 Stops
                             </span>
                         </div>
-                        <div className="flex flex-col items-center p-2 px-6 shadow bg-bg-light/50 rounded-xl">
+                        <div className="flex flex-col items-center p-2 px-6 shadow bg-neutral-800/50 rounded-xl">
                             <span className="text-xl font-bold text-emerald-400">
                                 {stats?.operators?.toLocaleString() ?? "--"}
                             </span>
@@ -306,7 +306,7 @@ const Home: React.FC = () => {
                                     {destinations.map((dest) => (
                                         <a
                                             key={dest.id}
-                                            className="flex items-center justify-center px-3 py-1 text-lg font-bold text-center cursor-pointer rounded-xl bg-bg-light/50"
+                                            className="flex items-center justify-center px-3 py-1 text-lg font-bold text-center cursor-pointer rounded-xl bg-neutral-800/50"
                                             href={`/buses/journeysearch/${dest.id}`}>
                                             {dest.name}
                                         </a>

@@ -41,8 +41,8 @@ const SearchPage: React.FC = () => {
                 <button
                     className={`px-4 py-2 text-lg font-semibold rounded-xl transition-all duration-150 cursor-pointer ${
                         tab === "services"
-                            ? " bg-bg-light text-primary-400 scale-105"
-                            : " bg-bg-medium text-text-light hover:text-primary-300"
+                            ? " bg-neutral-800 text-primary-400 scale-105"
+                            : " bg-neutral-900 text-neutral-400 hover:text-primary-300"
                     }`}
                     onClick={() => setTab("services")}
                     aria-selected={tab === "services"}>
@@ -51,8 +51,8 @@ const SearchPage: React.FC = () => {
                 {/* <button
                     className={`px-4 py-2 text-lg font-semibold rounded-xl transition-all duration-150 cursor-pointer ${
                         tab === "operators"
-                            ? " bg-bg-light text-primary-400 scale-105"
-                            : " bg-bg-medium text-text-light hover:text-primary-300"
+                            ? " bg-neutral-800 text-primary-400 scale-105"
+                            : " bg-neutral-900 text-neutral-400 hover:text-primary-300"
                     }`}
                     onClick={() => setTab("operators")}
                     aria-selected={tab === "operators"}>
@@ -61,8 +61,8 @@ const SearchPage: React.FC = () => {
                 <button
                     className={`px-4 py-2 text-lg font-semibold rounded-xl transition-all duration-150 cursor-pointer ${
                         tab === "places"
-                            ? " bg-bg-light text-primary-400 scale-105"
-                            : " bg-bg-medium text-text-light hover:text-primary-300"
+                            ? " bg-neutral-800 text-primary-400 scale-105"
+                            : " bg-neutral-900 text-neutral-400 hover:text-primary-300"
                     }`}
                     onClick={() => setTab("places")}
                     aria-selected={tab === "places"}>
@@ -107,7 +107,7 @@ const SearchPage: React.FC = () => {
                                                             {service.line_name}
                                                         </span>
                                                     </div>
-                                                    <div className="flex flex-col justify-center px-3 bg-bg-light/50 rounded-r-2xl">
+                                                    <div className="flex flex-col justify-center px-3 bg-neutral-800/50 rounded-r-2xl">
                                                         <span className="font-semibold text">
                                                             {
                                                                 service.description

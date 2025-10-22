@@ -169,18 +169,18 @@ function BusCard({
                     <div className="flex flex-col justify-around gap-1">
                         <div className="flex flex-row items-stretch mb-1">
                             <div className="flex items-center px-3 py-1 bg-primary-700 rounded-l-2xl">
-                                <span className="flex items-center justify-center text-xl font-bold text-center text-white">
+                                <span className="flex items-center justify-center text-xl font-bold text-center">
                                     {isTrackedBus(bus)
                                         ? bus.service.line_name
                                         : bus.line}
                                 </span>
                             </div>
-                            <div className="flex flex-col justify-center px-3 bg-bg-light/50 rounded-r-2xl">
+                            <div className="flex flex-col justify-center px-3 bg-neutral-800/50 rounded-r-2xl">
                                 <span className="font-semibold text">
                                     {bus.destination}
                                 </span>
                                 {isTrackedBus(bus) && (
-                                    <span className="mb-0.5 text-xs text-text-light">
+                                    <span className="mb-0.5 text-xs text-neutral-400">
                                         {bus.bus_type}
                                     </span>
                                 )}
@@ -192,7 +192,7 @@ function BusCard({
                                 <div className="flex items-center gap-1 text-xs ">
                                     <FontAwesomeIcon
                                         icon={faWarning}
-                                        className="text-red"
+                                        className="text-red-400"
                                     />
                                     This bus is quite late, it may not arrive.
                                 </div>
@@ -201,7 +201,7 @@ function BusCard({
                             <div className="flex items-center gap-1 text-xs ">
                                 <FontAwesomeIcon
                                     icon={faWarning}
-                                    className="text-red"
+                                    className="text-red-400"
                                 />
                                 This bus may not be tracking properly.
                             </div>
@@ -211,7 +211,7 @@ function BusCard({
                             <div className="flex items-center gap-1 text-xs ">
                                 <FontAwesomeIcon
                                     icon={faWarning}
-                                    className="text-red"
+                                    className="text-red-400"
                                 />
                                 This bus may have broken down or is not moving.
                             </div>
@@ -220,7 +220,7 @@ function BusCard({
                             <div className="flex items-center gap-1 text-xs ">
                                 <FontAwesomeIcon
                                     icon={faWarning}
-                                    className="text-red"
+                                    className="text-red-400"
                                 />
                                 This bus may have finished its route.
                             </div>
@@ -229,7 +229,7 @@ function BusCard({
                             <div className="flex items-center gap-1 text-xs ">
                                 <FontAwesomeIcon
                                     icon={faWarning}
-                                    className="text-red"
+                                    className="text-red-400"
                                 />
                                 This bus may be on diversion.
                             </div>
@@ -253,7 +253,7 @@ function BusCard({
                                                   {(isLate ||
                                                       bus.status ==
                                                           "cancelled") && (
-                                                      <span className="line-through text-text-light dark:text-neutral-500">
+                                                      <span className="line-through text-neutral-500">
                                                           {toTime(
                                                               bus.scheduled
                                                           )}
@@ -275,7 +275,7 @@ function BusCard({
                                     : "-"}
                             </div>
                             {bus.status === "cancelled" ? (
-                                <span className="font-bold text-red">
+                                <span className="font-bold text-red-400">
                                     Cancelled
                                 </span>
                             ) : (
@@ -292,7 +292,7 @@ function BusCard({
                                                         bus.delay >= 60
                                                             ? "red"
                                                             : "green"
-                                                    }`}>
+                                                    }-400`}>
                                                     {lateness(
                                                         bus ? bus.delay : 0
                                                     )}
@@ -365,7 +365,7 @@ function BusCard({
                             </div>
                         )}
 
-                        <div className="flex items-center justify-center gap-1 p-[0.3rem] min-w-18 rounded-xl bg-bg-light/50 h-fit">
+                        <div className="flex items-center justify-center gap-1 p-[0.3rem] min-w-18 rounded-xl bg-neutral-800/50 h-fit">
                             {bus.status == "cancelled" ? (
                                 <span className="text-lg font-bold text-nowrap">
                                     -
@@ -442,7 +442,7 @@ function BusCard({
                                                                 stiffness: 500,
                                                                 damping: 40,
                                                             }}>
-                                                            <span className="absolute text-xs translate-y-[-23px] text-nowrap text-text-light">
+                                                            <span className="absolute text-xs translate-y-[-23px] text-nowrap text-neutral-400">
                                                                 {bus.target_seq !==
                                                                     undefined &&
                                                                 sequence !==
@@ -526,7 +526,7 @@ function BusCard({
                             leave="ease-in duration-150"
                             leaveFrom="opacity-100 scale-100"
                             leaveTo="opacity-0 scale-95">
-                            <DialogPanel className="w-full max-w-sm p-4 text-center shadow-lg rounded-2xl bg-bg-medium">
+                            <DialogPanel className="w-full max-w-sm p-4 text-center shadow-lg rounded-2xl bg-neutral-900">
                                 <DialogTitle className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                                     Leaving nextbus
                                 </DialogTitle>
@@ -729,7 +729,7 @@ const DeparturePage: React.FC = () => {
                     <div className="flex flex-wrap items-center justify-center gap-2 gap-y-1">
                         {closestStop && (
                             <div
-                                className="flex items-center gap-2 p-2 cursor-pointer bg-bg-light/50 w-fit rounded-2xl"
+                                className="flex items-center gap-2 p-2 cursor-pointer bg-neutral-800/50 w-fit rounded-2xl"
                                 onClick={() => {
                                     setBuses([]);
                                     setLoading(true);
@@ -744,7 +744,7 @@ const DeparturePage: React.FC = () => {
                         )}
 
                         <div
-                            className="flex items-center gap-2 p-2 cursor-pointer bg-bg-light/50 w-fit rounded-2xl"
+                            className="flex items-center gap-2 p-2 cursor-pointer bg-neutral-800/50 w-fit rounded-2xl"
                             onClick={() => {
                                 if (!stop_id || !stop?.coords) return;
                                 if (isFav) {
@@ -776,7 +776,7 @@ const DeparturePage: React.FC = () => {
                         </a>
 
                         {/* <a
-                            className="px-2 py-1 text-text-light border-1 rounded-xl border-bg-light bg-bg-medium"
+                            className="px-2 py-1 text-neutral-400 border-1 rounded-xl border-neutral-800 bg-neutral-900"
                             href={`/departureboard/${stop?.stop_id}`}>
                             board
                         </a> */}
@@ -794,7 +794,7 @@ const DeparturePage: React.FC = () => {
                             .map((service) => (
                                 <span
                                     key={service.id}
-                                    className="flex items-center justify-center px-3 py-1 text-lg font-bold text-center rounded-xl bg-bg-light/50">
+                                    className="flex items-center justify-center px-3 py-1 text-lg font-bold text-center rounded-xl bg-neutral-800/50">
                                     {service.line_name}
                                 </span>
                             ))}
@@ -802,11 +802,11 @@ const DeparturePage: React.FC = () => {
                 </div>
 
                 <div className="flex justify-center gap-2">
-                    <span className="text-xs text-text-light">
+                    <span className="text-xs text-neutral-400">
                         {loading ? "Loading..." : `Updated ${elapsed} ago`}
                     </span>
-                    <span className="text-xs text-text-light">·</span>
-                    <span className="text-xs text-text-light">
+                    <span className="text-xs text-neutral-400">·</span>
+                    <span className="text-xs text-neutral-400">
                         Updates every 20s
                     </span>
                 </div>
@@ -814,7 +814,7 @@ const DeparturePage: React.FC = () => {
                 <div className="flex flex-col gap-1">
                     {msg ? (
                         <div className="flex justify-center gap-1 p-3">
-                            <span className="text-red">{msg}</span>
+                            <span className="text-red-400">{msg}</span>
                         </div>
                     ) : (
                         <></>
@@ -890,7 +890,7 @@ const DeparturePage: React.FC = () => {
                             ))}
                             {buses.length === 0 && (
                                 <div className="flex justify-center">
-                                    <span className="text-text-light">
+                                    <span className="text-neutral-400">
                                         No more departures!
                                     </span>
                                 </div>

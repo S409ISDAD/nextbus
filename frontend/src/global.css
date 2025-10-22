@@ -7,7 +7,7 @@
     font-weight: 400;
 
     color-scheme: light dark;
-    background-color: var(--color-bg-main);
+    background-color: #111111;
     color: rgba(255, 255, 255, 0.87);
 
     font-synthesis: none;
@@ -28,45 +28,7 @@
     font-style: normal;
 }
 
-:root[data-theme="light"] {
-    --color-bg-main: #dadada;
-    --color-bg-dark: #f0f0f0;
-    --color-bg-semidark: #e4e4e4;
-    --color-bg-medium: #ffffff;
-    --color-bg-light: #ffffff;
-
-    --color-text-light: #646464;
-    --color-text-medium: #333333;
-    --color-text-dark: #1a1a1a;
-
-    --color-red: oklch(64.415% 0.23632 26.472);
-    --color-green: #00bd3f;
-
-    --color-primary-300: #8ec5ff;
-    --color-primary-400: #51a2ff;
-    --color-primary-500: #2b7fff;
-    --color-primary: #155dfc;
-    --color-primary-700: #1447e6;
-    --color-link: #00a6f4;
-    --color-link-400: hsl(196, 100%, 40%);
-    --shadow-primary: rgba(43, 127, 255, 0.5);
-    --shadow-primary-hover: rgba(43, 127, 255, 0.6);
-}
-
-:root[data-theme="dark"] {
-    --color-bg-main: #111111;
-    --color-bg-dark: #0a0a0a;
-    --color-bg-semidark: #131313;
-    --color-bg-medium: #171717;
-    --color-bg-light: #262626;
-
-    --color-text-light: #a1a1a1;
-    --color-text-medium: #d0d0d0;
-    --color-text-dark: #f0f0f0;
-
-    --color-red: oklch(70.4% 0.191 22.216);
-    --color-green: #05df72;
-
+:root[data-theme="blue"] {
     --color-primary-300: #8ec5ff;
     --color-primary-400: #51a2ff;
     --color-primary-500: #2b7fff;
@@ -78,20 +40,7 @@
     --shadow-primary-hover: rgba(43, 127, 255, 0.6);
 }
 
-:root[data-theme="halloween"] {
-    --color-bg-main: #111111;
-    --color-bg-dark: #0a0a0a;
-    --color-bg-semidark: #131313;
-    --color-bg-medium: #171717;
-    --color-bg-light: #262626;
-
-    --color-text-light: #a1a1a1;
-    --color-text-medium: #d0d0d0;
-    --color-text-dark: #f0f0f0;
-
-    --color-red: oklch(70.4% 0.191 22.216);
-    --color-green: #05df72;
-
+:root[data-theme="orange"] {
     --color-primary-300: #ffb86a;
     --color-primary-400: #ff8904;
     --color-primary-500: #615fff;
@@ -104,19 +53,6 @@
 }
 
 @theme {
-    --color-bg-main: var(--color-bg-main);
-    --color-bg-dark: var(--color-bg-dark);
-    --color-bg-semidark: var(--color-bg-semidark);
-    --color-bg-medium: var(--color-bg-medium);
-    --color-bg-light: var(--color-bg-light);
-
-    --color-text-light: var(--color-text-light);
-    --color-text-medium: var(--color-text-medium);
-    --color-text-dark: var(--color-text-dark);
-
-    --color-red: var(--color-red);
-    --color-green: var(--color-green);
-
     --color-primary-300: var(--color-primary-300);
     --color-primary-400: var(--color-primary-400);
     --color-primary-500: var(--color-primary-500);

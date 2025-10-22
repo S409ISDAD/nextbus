@@ -46,12 +46,12 @@ const DataSourcePage: React.FC = () => {
                     </span>
                     <div className="w-full mt-4 overflow-x-auto max-h-[75vh] text-neutral-300/95">
                         {!dataSource ? (
-                            <span className="w-full mb-5 text-sm text-center text-text-light">
+                            <span className="w-full mb-5 text-sm text-center text-neutral-400">
                                 No DataSource found.
                             </span>
                         ) : (
-                            <table className="min-w-full mb-8 border rounded border-bg-light">
-                                <thead className="sticky top-0 z-10 bg-bg-medium">
+                            <table className="min-w-full mb-8 border rounded border-neutral-800">
+                                <thead className="sticky top-0 z-10 bg-neutral-900">
                                     <tr>
                                         <th className="px-4 py-2 text-left border-b">
                                             service code
@@ -97,11 +97,11 @@ const DataSourcePage: React.FC = () => {
                                                                         idx
                                                                     }`}
                                                                     className={clsx(
-                                                                        "cursor-pointer hover:bg-bg-light transition-colors",
+                                                                        "cursor-pointer hover:bg-neutral-800 transition-colors",
                                                                         idx > 0
                                                                             ? "border-t-0"
                                                                             : "border-t border-neutral-700"
-                                                                        // "border-b border-bg-light"
+                                                                        // "border-b border-neutral-800"
                                                                     )}
                                                                     onClick={() =>
                                                                         navigate(
@@ -110,7 +110,7 @@ const DataSourcePage: React.FC = () => {
                                                                     }>
                                                                     <td
                                                                         className={clsx(
-                                                                            "px-4 py-2 text-text-light align-top",
+                                                                            "px-4 py-2 text-neutral-400 align-top",
                                                                             idx >
                                                                                 0
                                                                                 ? "border-t-0 text-transparent select-none"
@@ -183,7 +183,7 @@ const DataSourcePage: React.FC = () => {
                                                     ) : (
                                                         <tr
                                                             key={`${serviceCode}-${lineName}-no-timetable`}
-                                                            className="border-b cursor-pointer hover:bg-bg-light border-bg-light"
+                                                            className="border-b cursor-pointer hover:bg-neutral-800 border-neutral-800"
                                                             onClick={() =>
                                                                 navigate(
                                                                     `/buses/services/${service.id}`

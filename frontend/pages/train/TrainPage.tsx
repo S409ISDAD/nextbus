@@ -56,7 +56,7 @@ const BoardAlightLabel: React.FC<{
 }> = ({ idx, startIdx, endIdx }) => {
     if (idx === startIdx) {
         return (
-            <div className="text-sm font-semibold text-text-light text-nowrap md:hidden">
+            <div className="text-sm font-semibold text-neutral-400 text-nowrap md:hidden">
                 <span className="z-10 flex items-center justify-center">
                     board at
                 </span>
@@ -65,7 +65,7 @@ const BoardAlightLabel: React.FC<{
     }
     if (idx === endIdx) {
         return (
-            <div className="text-sm font-semibold text-text-light text-nowrap md:hidden">
+            <div className="text-sm font-semibold text-neutral-400 text-nowrap md:hidden">
                 <span className="z-10 flex items-center justify-center">
                     alight at
                 </span>
@@ -337,7 +337,7 @@ const TrainPage: React.FC = () => {
                                 </span>
                             </div>
 
-                            <div className="flex justify-center px-2 py-1 rounded-lg bg-bg-light/50">
+                            <div className="flex justify-center px-2 py-1 rounded-lg bg-neutral-800/50">
                                 <span className="font-bold align-middle text-nowrap">
                                     {lateness(train.delay ? train.delay : 0)}
                                 </span>
@@ -368,7 +368,7 @@ const TrainPage: React.FC = () => {
                     </div>
                 )}
                 {msg ? (
-                    <span className="text-center text-red">{msg}</span>
+                    <span className="text-center text-red-400">{msg}</span>
                 ) : (
                     <></>
                 )}
@@ -390,11 +390,11 @@ const TrainPage: React.FC = () => {
                 </div>
 
                 <div className="flex justify-center gap-2">
-                    <span className="text-xs text-text-light">
+                    <span className="text-xs text-neutral-400">
                         Updated {elapsed} ago
                     </span>
-                    <span className="text-xs text-text-light">·</span>
-                    <span className="text-xs text-text-light">
+                    <span className="text-xs text-neutral-400">·</span>
+                    <span className="text-xs text-neutral-400">
                         Updates every 30s
                     </span>
                 </div>
@@ -430,13 +430,13 @@ const TrainPage: React.FC = () => {
                                             }`}></div>
                                         {idx == startIdx && showRoute && (
                                             <>
-                                                <span className="absolute z-10 font-semibold text-text-light text-nowrap translate-y-[-45%] translate-x-[-80%] items-center justify-center hidden md:flex">
+                                                <span className="absolute z-10 font-semibold text-neutral-400 text-nowrap translate-y-[-45%] translate-x-[-80%] items-center justify-center hidden md:flex">
                                                     board here
                                                 </span>
                                                 <div className="absolute z-10 w-6 h-6 translate-y-[-40%] rounded-full bg-slate-400 flex items-center justify-center">
                                                     <FontAwesomeIcon
                                                         icon={faRightToBracket}
-                                                        className="text-bg-medium"
+                                                        className="text-neutral-900"
                                                     />
                                                 </div>
                                             </>
@@ -444,7 +444,7 @@ const TrainPage: React.FC = () => {
 
                                         {idx == endIdx && showRoute && (
                                             <>
-                                                <span className="absolute z-10 font-semibold text-text-light text-nowrap translate-y-[-45%] translate-x-[-80%] items-center justify-center hidden md:flex">
+                                                <span className="absolute z-10 font-semibold text-neutral-400 text-nowrap translate-y-[-45%] translate-x-[-80%] items-center justify-center hidden md:flex">
                                                     alight here
                                                 </span>
                                                 <div className="absolute z-10 w-6 h-6 translate-y-[-40%] rounded-full bg-slate-400 flex items-center justify-center">
@@ -452,7 +452,7 @@ const TrainPage: React.FC = () => {
                                                         icon={
                                                             faRightFromBracket
                                                         }
-                                                        className="text-bg-medium"
+                                                        className="text-neutral-900"
                                                     />
                                                 </div>
                                             </>
@@ -518,11 +518,11 @@ const TrainPage: React.FC = () => {
                                                     <span className="block overflow-hidden font-bold truncate text-nowrap max-w-55 md:max-w-full">
                                                         {stop.description}
                                                     </span>
-                                                    <span className="font-bold text-text-light min-h-fit">
+                                                    <span className="font-bold text-neutral-400 min-h-fit">
                                                         ·
                                                     </span>
 
-                                                    <span className="text-xs font-bold text-text-light text-nowrap">
+                                                    <span className="text-xs font-bold text-neutral-400 text-nowrap">
                                                         Plat.{" "}
                                                         {stop.platform || "-"}
                                                     </span>
@@ -557,7 +557,7 @@ const TrainPage: React.FC = () => {
                                                             )}
                                                             {stop.serviceLocation ===
                                                                 "DEP_READY" && (
-                                                                <span className="px-2 py-1 text-xs font-bold text-green rounded-full bg-green-500/20">
+                                                                <span className="px-2 py-1 text-xs font-bold text-green-400 rounded-full bg-green-500/20">
                                                                     Ready to
                                                                     depart
                                                                 </span>
@@ -623,8 +623,8 @@ const TrainPage: React.FC = () => {
                                                                                         new Date(
                                                                                             stop.scheduledDeparture
                                                                                         ).getTime()
-                                                                                            ? "text-red"
-                                                                                            : "text-green"
+                                                                                            ? "text-red-400"
+                                                                                            : "text-green-400"
                                                                                     }>
                                                                                     {toTime(
                                                                                         stop.expectedDeparture
@@ -688,8 +688,8 @@ const TrainPage: React.FC = () => {
                                                                                                     new Date(
                                                                                                         stop.scheduledArrival
                                                                                                     ).getTime()
-                                                                                                        ? "text-red"
-                                                                                                        : "text-green"
+                                                                                                        ? "text-red-400"
+                                                                                                        : "text-green-400"
                                                                                                 }>
                                                                                                 {toTime(
                                                                                                     stop.expectedArrival
@@ -753,8 +753,8 @@ const TrainPage: React.FC = () => {
                                                                                             new Date(
                                                                                                 stop.scheduledArrival
                                                                                             ).getTime()
-                                                                                                ? "text-red"
-                                                                                                : "text-green"
+                                                                                                ? "text-red-400"
+                                                                                                : "text-green-400"
                                                                                         }>
                                                                                         {toTime(
                                                                                             stop.expectedArrival
@@ -805,8 +805,8 @@ const TrainPage: React.FC = () => {
                                                                                             new Date(
                                                                                                 stop.scheduledDeparture
                                                                                             ).getTime()
-                                                                                                ? "text-red"
-                                                                                                : "text-green"
+                                                                                                ? "text-red-400"
+                                                                                                : "text-green-400"
                                                                                         }>
                                                                                         {toTime(
                                                                                             stop.expectedDeparture

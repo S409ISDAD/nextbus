@@ -78,7 +78,7 @@ const LocalityPage: React.FC = () => {
                                                             {service.line_name}
                                                         </span>
                                                     </div>
-                                                    <div className="flex flex-col justify-center px-3 bg-bg-light/50 rounded-r-2xl ">
+                                                    <div className="flex flex-col justify-center px-3 bg-neutral-800/50 rounded-r-2xl ">
                                                         <span className="font-semibold text ">
                                                             {
                                                                 service.description
