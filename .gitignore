@@ -187,5 +187,7 @@ cython_debug/
 
 dump.sql
 *.xml
+!/static_data/test/*/*.xml
+!/static_data/test/*.xml
 *.key
 *.crt
