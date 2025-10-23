@@ -8,7 +8,6 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
     faBus,
     faCaretRight,
-    faDownload,
     faMap,
     // faRotateRight,
     faTrainSubway,
