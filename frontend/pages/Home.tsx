@@ -8,6 +8,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
     faBus,
     faCaretRight,
+    faDownload,
     faMap,
     // faRotateRight,
     faTrainSubway,
@@ -23,6 +24,7 @@ import SearchBar from "../components/SearchBar";
 import { useGeolocated } from "react-geolocated";
 import type { DBStats } from "../models/Stats.ts";
 import { getDBStats } from "../utils/getStats.ts";
+import { faDiscord } from "@fortawesome/free-brands-svg-icons";
 // import type { Locality } from "../models/Locality.ts";
 // import { getDestinations } from "../utils/JourneyPlanning.ts";
 
@@ -172,7 +174,6 @@ const Home: React.FC = () => {
                             </span>
                         </div>
                     </div>
-
                     {showStop && closestStop && (
                         <div className="flex flex-col items-center gap-2 p-3 bg-neutral-800 rounded-[24px]">
                             <span className="px-5 font-semibold text-center text-neutral-300 text">
@@ -229,17 +230,14 @@ const Home: React.FC = () => {
                         className="text-sm underline text-link-400">
                         See more stats <FontAwesomeIcon icon={faCaretRight} />
                     </a>
-
                     <SearchBar />
-
                     <a
                         href="/tutorials/install"
                         className="underline text-link-400">
                         Want nextbus as an app?{" "}
                         <FontAwesomeIcon icon={faCaretRight} />
                     </a>
-
-                    <div className="flex flex-row flex-wrap items-start justify-center w-full gap-5 p-5">
+                    <div className="flex flex-row flex-wrap items-start justify-center w-full gap-5">
                         <Card className="max-w-[90vw] flex flex-col items-center gap-2">
                             <div className="flex flex-col items-center justify-center">
                                 <span className="text-xl font-bold text-center">
@@ -322,6 +320,31 @@ const Home: React.FC = () => {
                             </div>
                         </Card> */}
                     </div>
+
+                    <Card className="max-w-[90vw] flex flex-col items-center gap-2">
+                        <div className="flex flex-col items-center justify-center">
+                            <span className="text-xl font-bold text-center">
+                                Get Involved
+                            </span>
+                        </div>
+
+                        <span className="mb-2 text-sm text-center text-neutral-400">
+                            Join our Discord to give feedback, report issues,
+                            and suggest features!
+                        </span>
+
+                        <button
+                            className="button max-w-fit"
+                            onClick={() => {
+                                window.open(
+                                    "https://discord.gg/dyEmZSkwge",
+                                    "_blank"
+                                );
+                            }}>
+                            Join the Discord!{" "}
+                            <FontAwesomeIcon icon={faDiscord} />
+                        </button>
+                    </Card>
                 </div>
             </div>
         </div>
