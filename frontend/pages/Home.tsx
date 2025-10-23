@@ -232,6 +232,13 @@ const Home: React.FC = () => {
 
                     <SearchBar />
 
+                    <a
+                        href="/tutorials/install"
+                        className="underline text-link-400">
+                        Want nextbus as an app?{" "}
+                        <FontAwesomeIcon icon={faCaretRight} />
+                    </a>
+
                     <div className="flex flex-row flex-wrap items-start justify-center w-full gap-5 p-5">
                         <Card className="max-w-[90vw] flex flex-col items-center gap-2">
                             <div className="flex flex-col items-center justify-center">

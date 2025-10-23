@@ -31,6 +31,7 @@ import DistrictPage from "../pages/places/District.tsx";
 import LocalityPage from "../pages/places/Locality.tsx";
 import SourcesPage from "../pages/Sources.tsx";
 import DataSourcePage from "../pages/DataSource.tsx";
+import InstallHelp from "../pages/InstallHelp.tsx";
 
 import { useEffect, useState } from "react";
 import {
@@ -188,6 +189,10 @@ function App() {
                         <Route element={<Layout />}>
                             <Route path="*" element={<NotFound />} />
                             <Route path="/" element={<Home />} />
+                            <Route
+                                path="tutorials/install"
+                                element={<InstallHelp />}
+                            />
                             <Route
                                 path="/privacy"
                                 element={<PrivacyPolicy />}
