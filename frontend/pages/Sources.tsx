@@ -106,11 +106,17 @@ const SourcesPage: React.FC = () => {
                                                     <td className="px-4 py-2 pl-8 text-gray-500">
                                                         {version.id}
                                                     </td>
-                                                    <td className="px-4 py-2 text-ellipsis">
+                                                    <td
+                                                        className="px-4 py-2 cursor-pointer text-ellipsis"
+                                                        onClick={() =>
+                                                            navigate(
+                                                                `/sources/${source.id}`
+                                                            )
+                                                        }>
                                                         {version.name}
                                                     </td>
                                                     <td
-                                                        className="px-4 py-2 underline cursor-pointer text-link text-ellipsis"
+                                                        className="px-4 py-2 underline cursor-pointer text-link wrap-anywhere max-w-[20rem]"
                                                         onClick={() =>
                                                             window.open(
                                                                 version.url ||
@@ -136,10 +142,6 @@ const SourcesPage: React.FC = () => {
                                                                       day: "numeric",
                                                                       month: "long",
                                                                       year: "numeric",
-                                                                      hour: "2-digit",
-                                                                      minute: "2-digit",
-                                                                      timeZoneName:
-                                                                          "short",
                                                                   }
                                                               )
                                                             : "N/A"}

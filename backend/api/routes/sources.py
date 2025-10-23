@@ -8,6 +8,10 @@ from sqlalchemy.orm import selectinload, joinedload
 
 from backend.utils.time_taken import time_taken
 from backend.deps import get_logger
+import re
+import locale
+
+locale.setlocale(locale.LC_ALL, "")  # enable locale-aware sorting
 
 router = APIRouter()
 
@@ -22,20 +26,17 @@ def natural_sort_key(text: str):
     - then alphanumeric lines naturally
     """
     if not text:
-        return (float("inf"),)  # empty lines go last
+        return (float("inf"),)
 
-    if text.isdigit():
-        return (int(text),)  # purely numeric: sort by number
-
-    # alphanumeric: split letters/numbers
-    chunks = re.split(r"(\d+)", text)
+    # split into digit and non-digit chunks
+    parts = re.split(r"(\d+)", text)
     key = []
-    for c in chunks:
-        if c.isdigit():
-            key.append(int(c))
+    for p in parts:
+        if p.isdigit():
+            key.append(int(p))
         else:
-            key.append(c.lower())
-    return (float("inf"),) + tuple(key)  # put after pure numbers
+            key.append(locale.strxfrm(p.lower()))
+    return tuple(key)
 
 
 @router.get("/")
