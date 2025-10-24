@@ -905,6 +905,8 @@ class Service(Base, AutoSlugMixin):
     vias = Column(String, nullable=True)
     # slug = AutoSlug(source="get_full_name", max_length=100, unique=True, nullable=False)
 
+    mode = Column(String, nullable=True, index=True)
+
     public_use = Column(Boolean)
     current = Column(Boolean, nullable=False, default=True, index=True)
     geometry = Column(

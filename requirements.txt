@@ -20,6 +20,7 @@ shapely
 isodate
 geopandas
 partridge
+gtfs_kit
 SQLAlchemy-Searchable
 lxml
 govuk-bank-holidays

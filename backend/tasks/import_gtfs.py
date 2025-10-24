@@ -2,31 +2,44 @@ import partridge as ptg
 import pandas as pd
 from geoalchemy2.shape import from_shape
 from shapely.geometry import Point, LineString
+import gtfs_kit
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from backend.config import get_logger
-from backend.core.db import SessionLocal
+from backend.db.db import SessionLocal
 from backend.models import (
-    Agency,
-    FeedInfo,
-    Frequency,
+    Operator,
     Timetable,
     Calendar,
-    CalendarDate,
+    CalendarException,
     Service,
-    Shape,
-    Trip,
+    Timetable,
+    Journey,
     StopTime,
     RouteType,
+    service_operator_table,
     ExceptionType,
     WheelchairAccessible,
     PickupDropOffType,
 )
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 import sys
 
 from shapely.wkb import loads as wkb_loads
+from sqlalchemy import or_, and_
+from sqlalchemy.sql import exists
 
 log = get_logger(__name__)
+
+
+MODES = {
+    0: "tram",
+    2: "rail",
+    3: "bus",
+    4: "ferry",
+    6: "cable car",
+    200: "coach",
+    1100: "air",
+}
 
 
 def safe_int(value):
@@ -160,267 +173,293 @@ def generate_point(lat, lon):
     return from_shape(Point(lon, lat), srid=4326)
 
 
-def import_feed_info(db: Session, feed_info: pd.DataFrame):
-    log.debug("Importing feed info...")
-    if feed_info is None or feed_info.empty:
-        log.debug("No feed info available in GTFS feed.")
-        return
+class GTFSImporter:
+    """Class to handle GTFS data import."""
 
-    feed_info = feed_info.where(pd.notnull(feed_info), None)
+    def __init__(self):
+        self.operators = {}
+        self.routes = {}
+        self.services = {}
+        self.db = SessionLocal()
+        self.ds_id = None
+        self.dsv_id = None
 
-    mapping = {
-        "publisher_name": "feed_publisher_name",
-        "publisher_url": "feed_publisher_url",
-        "lang": "feed_lang",
-        "start_date": "feed_start_date",
-        "end_date": "feed_end_date",
-        "version": "feed_version",
-    }
+    def import_feed_info(self, feed_info: pd.DataFrame):
+        log.debug("Importing feed info...")
+        if feed_info is None or feed_info.empty:
+            log.debug("No feed info available in GTFS feed.")
+            return
 
-    upsert(db, FeedInfo, feed_info, ["publisher_name"], mapping)
-    log.debug(f"Imported {len(feed_info)} feed info entries.")
+        feed_info = feed_info.where(pd.notnull(feed_info), None)
 
+        mapping = {
+            "publisher_name": "feed_publisher_name",
+            "publisher_url": "feed_publisher_url",
+            "lang": "feed_lang",
+            "start_date": "feed_start_date",
+            "end_date": "feed_end_date",
+            "version": "feed_version",
+        }
 
-def import_agencies(db: Session, agencies: pd.DataFrame):
-    log.debug("Importing agencies...")
-    if agencies is None or agencies.empty:
-        log.debug("No agencies available in GTFS feed.")
-        return
+        upsert(db, FeedInfo, feed_info, ["publisher_name"], mapping)
+        log.debug(f"Imported {len(feed_info)} feed info entries.")
 
-    agencies = agencies.where(pd.notnull(agencies), None)
+    def handle_operator(self, agency):
+        operator_id = agency.agency_id
 
-    mapping = {
-        "id": "agency_id",
-        "name": "agency_name",
-        "url": "agency_url",
-        "timezone": "agency_timezone",
-        "lang": "agency_lang",
-        "phone": "agency_phone",
-        "noc": "agency_noc",
-    }
+        name = agency.agency_name if agency.agency_name else ""
 
-    upsert(db, Agency, agencies, ["id"], mapping)
-    log.debug(f"Imported {len(agencies)} agencies.")
+        operator = (
+            self.db.query(Operator)
+            .filter_by(noc=operator_id)
+            .filter(Operator.name.ilike(name))
+            .first()
+        )
+        if not operator:
+            operator = Operator(
+                noc=operator_id,
+                name=name,
+            )
+            self.db.add(operator)
+            self.db.flush()
+            log.debug(f"Added new operator: {name} ({operator_id})")
 
+        return operator
 
-def import_routes(db: Session, routes: pd.DataFrame):
-    log.debug("Importing routes...")
-    if routes is None or routes.empty:
-        log.debug("No routes available in GTFS feed.")
-        return
+    def handle_route(self, route):
+        line_name = (
+            route.route_short_name if type(route.route_short_name) is str else ""
+        )
+        description = (
+            route.route_long_name if type(route.route_long_name) is str else ""
+        )
+        if not line_name and " " not in description:
+            line_name = description
+            if len(line_name) < 5:
+                description = ""
 
-    routes = routes.where(pd.notnull(routes), None)
+        operator = self.operators.get(route.agency_id)
+        op_id = operator.id if operator else None
 
-    routes["route_type"] = routes["route_type"].map(
-        lambda x: RouteType(x) if not pd.isnull(x) else None
-    )
-    routes["route_long_name"] = routes["route_long_name"].fillna("")
+        services = (
+            self.db.query(Service).join(Service.operators).filter(Operator.id == op_id)
+        )
 
-    mapping = {
-        "id": "route_id",
-        "agency_id": "route_agency_id",
-        "short_name": "route_short_name",
-        "long_name": "route_long_name",
-        "type": "route_type",
-    }
+        query = services.join(Service.timetables).filter(
+            Timetable.line_id == route.route_id,
+            Service.service_code == route.route_id,
+        )
 
-    upsert(db, Timetable, routes, ["id"], mapping)
-    log.debug(f"Imported {len(routes)} routes.")
+        if line_name and line_name not in ("rail", "InterCity"):
+            query = query.filter(Timetable.line_name.ilike(line_name))
+        elif description:
+            query = query.filter(Timetable.description == description)
 
+        service = query.order_by(Service.id).first()
+        if not service:
+            service = Service(
+                data_source_id=self.ds_id,
+            )
 
-def import_calendar(db: Session, calendar_df: pd.DataFrame):
-    log.debug(f"Importing {len(calendar_df)} calendar entries...")
+        service.service_code = route.route_id
+        service.line_name = line_name
+        service.description = description
+        if route.route_type in MODES:
+            service.mode = MODES[route.route_type]
+        else:
+            log.warning(
+                f"Unknown route type {route.route_type} for route {route.route_id}"
+            )
 
-    calendar_df = calendar_df.where(pd.notnull(calendar_df), None)
-    calendar_df["start_date"] = pd.to_datetime(
-        calendar_df["start_date"], format="%Y%m%d"
-    )
-    calendar_df["end_date"] = pd.to_datetime(calendar_df["end_date"], format="%Y%m%d")
+        service.current = True
 
-    mapping = {
-        "service_id": "service_id",
-        "monday": "monday",
-        "tuesday": "tuesday",
-        "wednesday": "wednesday",
-        "thursday": "thursday",
-        "friday": "friday",
-        "saturday": "saturday",
-        "sunday": "sunday",
-        "start_date": "start_date",
-        "end_date": "end_date",
-    }
+        self.db.add(service)
+        self.db.flush()
 
-    upsert(db, Calendar, calendar_df, ["service_id"], mapping)
-    log.debug(f"Imported {len(calendar_df)} calendar entries.")
+        if operator:
+            stmt = (
+                pg_insert(service_operator_table)
+                .values(
+                    service_id=service.id,
+                    operator_id=operator.id,
+                )
+                .on_conflict_do_nothing(index_elements=["service_id", "operator_id"])
+            )
+            self.db.execute(stmt)
+            self.db.flush()
+        else:
+            log.warning(
+                f"Operator not found for service {route.route_id} with agency_id {route.agency_id}"
+            )
 
+    def import_calendar(self, db: Session, calendar_df: pd.DataFrame):
+        log.debug(f"Importing {len(calendar_df)} calendar entries...")
 
-def import_calendar_dates(db: Session, calendar_dates_df: pd.DataFrame):
-    log.debug(f"Importing {len(calendar_dates_df)} calendar dates...")
+        calendar_df = calendar_df.where(pd.notnull(calendar_df), None)
+        calendar_df["start_date"] = pd.to_datetime(
+            calendar_df["start_date"], format="%Y%m%d"
+        )
+        calendar_df["end_date"] = pd.to_datetime(
+            calendar_df["end_date"], format="%Y%m%d"
+        )
 
-    calendar_dates_df = calendar_dates_df.where(pd.notnull(calendar_dates_df), None)
-    calendar_dates_df["date"] = pd.to_datetime(
-        calendar_dates_df["date"], format="%Y%m%d"
-    )
-    calendar_dates_df["exception_type"] = calendar_dates_df["exception_type"].map(
-        ExceptionType
-    )
+        mapping = {
+            "service_id": "service_id",
+            "monday": "monday",
+            "tuesday": "tuesday",
+            "wednesday": "wednesday",
+            "thursday": "thursday",
+            "friday": "friday",
+            "saturday": "saturday",
+            "sunday": "sunday",
+            "start_date": "start_date",
+            "end_date": "end_date",
+        }
 
-    mapping = {
-        "service_id": "service_id",
-        "date": "date",
-        "exception_type": "exception_type",
-    }
+        upsert(db, Calendar, calendar_df, ["service_id"], mapping)
+        log.debug(f"Imported {len(calendar_df)} calendar entries.")
 
-    upsert(db, CalendarDate, calendar_dates_df, ["service_id", "date"], mapping)
-    log.debug(f"Imported {len(calendar_dates_df)} calendar date entries.")
+    def import_calendar_dates(self, db: Session, calendar_dates_df: pd.DataFrame):
+        log.debug(f"Importing {len(calendar_dates_df)} calendar dates...")
 
+        calendar_dates_df = calendar_dates_df.where(pd.notnull(calendar_dates_df), None)
+        calendar_dates_df["date"] = pd.to_datetime(
+            calendar_dates_df["date"], format="%Y%m%d"
+        )
+        calendar_dates_df["exception_type"] = calendar_dates_df["exception_type"].map(
+            ExceptionType
+        )
 
-def import_shapes(db: Session, shapes: pd.DataFrame):
-    log.debug(f"Importing {len(shapes)} shapes...")
+        mapping = {
+            "service_id": "service_id",
+            "date": "date",
+            "exception_type": "exception_type",
+        }
 
-    shapes = shapes.where(pd.notnull(shapes), None)
+        upsert(db, CalendarDate, calendar_dates_df, ["service_id", "date"], mapping)
+        log.debug(f"Imported {len(calendar_dates_df)} calendar date entries.")
 
-    mapping = {
-        "id": "shape_id",
-        "geometry": "geometry",
-    }
+    def import_shapes(self, db: Session, shapes: pd.DataFrame):
+        log.debug(f"Importing {len(shapes)} shapes...")
 
-    upsert(db, Shape, shapes, ["shape_id"], mapping)
-    log.debug(f"Imported {len(shapes)} shapes.")
+        shapes = shapes.where(pd.notnull(shapes), None)
 
+        mapping = {
+            "id": "shape_id",
+            "geometry": "geometry",
+        }
 
-def import_trips(db: Session, trips: pd.DataFrame, shapes: pd.DataFrame):
-    log.debug(f"Importing {len(trips)} trips...")
+        upsert(db, Shape, shapes, ["shape_id"], mapping)
+        log.debug(f"Imported {len(shapes)} shapes.")
 
-    trips = trips.where(pd.notnull(trips), None)
+    def import_trips(self, db: Session, trips: pd.DataFrame, shapes: pd.DataFrame):
+        log.debug(f"Importing {len(trips)} trips...")
 
-    trips["wheelchair_accessible"] = trips["wheelchair_accessible"].map(
-        lambda x: WheelchairAccessible(x) if not pd.isna(x) else None
-    )
+        trips = trips.where(pd.notnull(trips), None)
 
-    # Only keep shape_ids present in trips to reduce memory usage
-    relevant_shape_ids = set(trips["shape_id"].dropna().unique())
-    filtered_shapes = shapes[shapes["shape_id"].isin(relevant_shape_ids)]
-    shape_map = pd.Series(
-        filtered_shapes["geometry"].values, index=filtered_shapes["shape_id"]
-    )
+        trips["wheelchair_accessible"] = trips["wheelchair_accessible"].map(
+            lambda x: WheelchairAccessible(x) if not pd.isna(x) else None
+        )
 
-    # Use .map with fillna(None) to avoid double mapping and keep dtype=object
-    def to_shapely_line(geom):
-        if geom is None or pd.isnull(geom):
+        # Only keep shape_ids present in trips to reduce memory usage
+        relevant_shape_ids = set(trips["shape_id"].dropna().unique())
+        filtered_shapes = shapes[shapes["shape_id"].isin(relevant_shape_ids)]
+        shape_map = pd.Series(
+            filtered_shapes["geometry"].values, index=filtered_shapes["shape_id"]
+        )
+
+        # Use .map with fillna(None) to avoid double mapping and keep dtype=object
+        def to_shapely_line(geom):
+            if geom is None or pd.isnull(geom):
+                return None
+            # If already a LineString, return as is
+            if isinstance(geom, LineString):
+                return from_shape(geom)
+            # If WKB hex or bytes, convert to LineString
+            try:
+                if isinstance(geom, (bytes, memoryview)):
+                    return from_shape(wkb_loads(bytes(geom)))
+                if isinstance(geom, str):
+                    return from_shape(wkb_loads(bytes.fromhex(geom)))
+            except Exception:
+                return None
             return None
-        # If already a LineString, return as is
-        if isinstance(geom, LineString):
-            return from_shape(geom)
-        # If WKB hex or bytes, convert to LineString
-        try:
-            if isinstance(geom, (bytes, memoryview)):
-                return from_shape(wkb_loads(bytes(geom)))
-            if isinstance(geom, str):
-                return from_shape(wkb_loads(bytes.fromhex(geom)))
-        except Exception:
-            return None
-        return None
 
-    trips["shape"] = (
-        trips["shape_id"].map(shape_map).where(pd.notnull(trips["shape_id"]), None)
-    )
-    trips["shape"] = trips["shape"].map(to_shapely_line)
+        trips["shape"] = (
+            trips["shape_id"].map(shape_map).where(pd.notnull(trips["shape_id"]), None)
+        )
+        trips["shape"] = trips["shape"].map(to_shapely_line)
 
-    mapping = {
-        "id": "trip_id",
-        "route_id": "route_id",
-        "service_id": "service_id",
-        "headsign": "trip_headsign",
-        "direction": "direction_id",
-        "block_id": "block_id",
-        "geometry": "shape",
-        "wheelchair_accessible": "wheelchair_accessible",
-        "vehicle_journey_code": "vehicle_journey_code",
-    }
+        mapping = {
+            "id": "trip_id",
+            "route_id": "route_id",
+            "service_id": "service_id",
+            "headsign": "trip_headsign",
+            "direction": "direction_id",
+            "block_id": "block_id",
+            "geometry": "shape",
+            "wheelchair_accessible": "wheelchair_accessible",
+            "vehicle_journey_code": "vehicle_journey_code",
+        }
 
-    upsert(db, Trip, trips, ["id"], mapping)
-    log.debug(f"Imported {len(trips)} trips.")
+        upsert(db, Trip, trips, ["id"], mapping)
+        log.debug(f"Imported {len(trips)} trips.")
 
+    def import_stop_times(self, db: Session, stop_times: pd.DataFrame):
+        log.debug(f"Importing {len(stop_times)} stop times...")
 
-def import_stop_times(db: Session, stop_times: pd.DataFrame):
-    log.debug(f"Importing {len(stop_times)} stop times...")
+        stop_times = stop_times.where(pd.notnull(stop_times), None)
 
-    stop_times = stop_times.where(pd.notnull(stop_times), None)
+        stop_times["pickup_type"] = stop_times["pickup_type"].map(
+            lambda x: PickupDropOffType(int(x)) if not pd.isnull(x) else None
+        )
+        stop_times["drop_off_type"] = stop_times["drop_off_type"].map(
+            lambda x: PickupDropOffType(int(x)) if not pd.isnull(x) else None
+        )
 
-    stop_times["pickup_type"] = stop_times["pickup_type"].map(
-        lambda x: PickupDropOffType(int(x)) if not pd.isnull(x) else None
-    )
-    stop_times["drop_off_type"] = stop_times["drop_off_type"].map(
-        lambda x: PickupDropOffType(int(x)) if not pd.isnull(x) else None
-    )
+        mapping = {
+            "trip_id": "trip_id",
+            "stop_id": "stop_id",
+            "arrival_time": "arrival_time",
+            "departure_time": "departure_time",
+            "stop_sequence": "stop_sequence",
+            "stop_headsign": "stop_headsign",
+            "pickup_type": "pickup_type",
+            "drop_off_type": "drop_off_type",
+            "shape_dist_traveled": "shape_dist_traveled",
+            "timepoint": "timepoint",
+        }
 
-    mapping = {
-        "trip_id": "trip_id",
-        "stop_id": "stop_id",
-        "arrival_time": "arrival_time",
-        "departure_time": "departure_time",
-        "stop_sequence": "stop_sequence",
-        "stop_headsign": "stop_headsign",
-        "pickup_type": "pickup_type",
-        "drop_off_type": "drop_off_type",
-        "shape_dist_traveled": "shape_dist_traveled",
-        "timepoint": "timepoint",
-    }
+        log.debug("Removing duplicates...")
+        # Remove duplicates within the batch based on (trip_id, stop_id) using DataFrame
+        unique_stop_times = stop_times.drop_duplicates(subset=["trip_id", "stop_id"])
+        log.debug(f"Total stop times to import: {len(stop_times)}")
 
-    log.debug("Removing duplicates...")
-    # Remove duplicates within the batch based on (trip_id, stop_id) using DataFrame
-    unique_stop_times = stop_times.drop_duplicates(subset=["trip_id", "stop_id"])
-    log.debug(f"Total stop times to import: {len(stop_times)}")
+        upsert(db, StopTime, unique_stop_times, ["trip_id", "stop_id"], mapping)
+        log.debug(f"Imported {len(unique_stop_times)} stop times.")
 
-    upsert(db, StopTime, unique_stop_times, ["trip_id", "stop_id"], mapping)
-    log.debug(f"Imported {len(unique_stop_times)} stop times.")
+    def import_gtfs(self, zip_file_path: str):
+        log.debug("Starting GTFS import...")
 
+        feed = gtfs_kit.read_feed(zip_file_path, dist_units="km")
 
-def import_frequencies(db: Session, frequencies_df: pd.DataFrame):
-    log.debug(f"Importing {len(frequencies_df)} frequencies...")
+        if not feed:
+            log.debug("No GTFS feed found or feed is empty.")
+            return
 
-    frequencies_df = frequencies_df.where(pd.notnull(frequencies_df), None)
+        log.debug(f"GTFS feed loaded from {zip_file_path}")
 
-    mapping = {
-        "trip_id": "trip_id",
-        "start_time": "start_time",
-        "end_time": "end_time",
-        "headway_secs": "headway_secs",
-        "exact_times": "exact_times",
-    }
-
-    upsert(db, Frequency, frequencies_df, ["trip_id"], mapping)
-    log.debug(f"Imported {len(frequencies_df)} frequencies.")
-
-
-def import_gtfs(zip_file_path: str):
-    log.debug("Starting GTFS import...")
-
-    config = ptg.config.geo_config()
-    config.remove_edges_from(list(config.out_edges("stops.txt")))
-
-    feed = ptg.load_feed(zip_file_path, config=config)
-
-    # feed = ptg.load_geo_feed(zip_file_path)
-
-    if not feed:
-        log.debug("No GTFS feed found or feed is empty.")
-        return
-
-    log.debug(f"GTFS feed loaded from {zip_file_path}")
-
-    # log.debug(
-    #     f"GTFS feed contains {len(feed.agency)} agencies, {len(feed.routes)} routes, and {len(feed.trips)} trips."
-    # )
-
-    with SessionLocal() as db:
+        self.operators = {}
+        self.routes = {}
+        self.services = {}
         try:
             import_feed_info(db, feed.feed_info)
 
-            import_agencies(db, feed.agency)
+            for agency in feed.agency.itertuples():
+                self.operators[agency.agency_id] = self.handle_operator(agency)
 
-            import_routes(db, feed.routes)
+            for route in feed.routes.itertuples():
+                self.handle_route(route)
 
             existing_service_ids = {service.id for service in db.query(Service).all()}
             service_ids = set(feed.trips.service_id)

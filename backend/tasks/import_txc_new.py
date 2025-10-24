@@ -1145,6 +1145,9 @@ class TXCImporter:
                 # remove "via"  from description
                 service.description = service.description.split("via")[0].strip()
 
+            if txc_service.mode:
+                service.mode = txc_service.mode
+
             self.db.add(service)
             self.db.flush()
 
