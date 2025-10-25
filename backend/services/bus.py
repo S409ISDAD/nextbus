@@ -186,6 +186,9 @@ async def fetch_buses(
             log.warning("Timeout fetching buses")
             buses = []
     final_buses = [bus for bus in buses if bus is not None]
+    for b in final_buses:
+        if isinstance(b, TrackedBus):
+            b.journey = None  # to save data transfer
     return final_buses
 
 
@@ -406,9 +409,9 @@ async def build_bus_candidates(
                 journey_id,
                 get_journey=False,
                 source=source,
-                bus_seen_count=bus_seen_counts.get(bus["id"], 1)
-                if bus_seen_counts
-                else 1,
+                bus_seen_count=(
+                    bus_seen_counts.get(bus["id"], 1) if bus_seen_counts else 1
+                ),
                 pick_up_only=True,
             )
             for bus in buses
@@ -633,6 +636,10 @@ async def build_bus(
     if db_stoptime:
         destination = db_stoptime.headsign or destination
         service_info.line_name = db_stoptime.journey.service.line_name
+
+    if stop_id:
+        journey = None
+
     return TrackedBus(
         type="tracked",
         id=bus_id,
@@ -653,9 +660,11 @@ async def build_bus(
         started=times.started,
         finished=times.finished,
         target_seq=target_seq,
-        progress=progress
-        if progress
-        else Progress(sequence=0, next_stop="", prev_stop="", progress=0),
+        progress=(
+            progress
+            if progress
+            else Progress(sequence=0, next_stop="", prev_stop="", progress=0)
+        ),
         predictions=predictions,
         journey=journey,
         livery=livery,

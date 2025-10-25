@@ -49,7 +49,7 @@ class TrackedBus(BaseModel):
     progress: Progress
     predictions: list[Prediction]
     livery: Optional[Livery]
-    journey: Journey
+    journey: Optional[Journey]
     confidence: Confidence
     coords: list[float]
     status: str
