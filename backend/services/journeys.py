@@ -246,7 +246,7 @@ async def get_live_journey(journey_id, r) -> LiveJourney | None:
     )
 
 
-async def get_trip(trip_id, delay, r) -> Trip:
+async def get_trip(trip_id, delay, r) -> Trip | None:
     async def fetch(trip_id):
         data = await fetch_json(
             API_BASE + f"/trips/{trip_id}/",
@@ -303,6 +303,10 @@ async def get_trip(trip_id, delay, r) -> Trip:
         exp=JOURNEY_CACHE,
         r=r,
     )
+
+    if not trip:
+        log.warning(f"Trip with ID {trip_id} not found.")
+        return None
 
     json_stops = trip.get("times")
     stops: list[StopTime] = []

@@ -161,7 +161,6 @@ async def calculate_expected(
     if not journey:
         log.warning(f"no journey found for journey_id {journey_id}")
         return None, None, None
-    
 
     current_time = dt.now(tz=UTC)
 
@@ -212,7 +211,6 @@ async def calculate_expected(
                 include = False
                 break
             scheduled_time = aimed
-        
 
             if not_started:
                 delay = 0
@@ -226,7 +224,6 @@ async def calculate_expected(
                 finished = True
 
         stop_idx += 1
-    
 
     return (
         target_seq,
@@ -269,6 +266,9 @@ async def calculate_expected_difference(timestamp: str, expected: dt, scheduled:
 
 async def get_started_finished(trip_id, r):
     trip = await get_trip(trip_id, 0, r)
+
+    if not trip:
+        return False, False
 
     current_time = dt.now(tz=UTC)
 
