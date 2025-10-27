@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback, type JSX } from "react";
+import { useRef, useState, useCallback, type JSX, useEffect } from "react";
 import {
     Map as MapGL,
     Marker,
@@ -363,6 +363,8 @@ const Map: React.FC = () => {
             );
         }
     }, [fetchStops, fetchBuses, stops.length]);
+
+    document.title = "map | nextbus";
 
     return (
         <MapView
