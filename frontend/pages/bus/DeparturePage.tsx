@@ -262,7 +262,7 @@ function BusCard({
                                           ).getTime();
                                           const diff = Math.abs(expt - aimed);
                                           const isLate =
-                                              expt > aimed && diff > 60000;
+                                              expt > aimed && diff > 60000; // more than 1 min late
                                           return (
                                               <div className="flex gap-2">
                                                   {(isLate ||

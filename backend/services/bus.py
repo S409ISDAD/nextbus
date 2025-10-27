@@ -38,6 +38,19 @@ from backend.deps import get_logger
 log = get_logger(__name__)
 
 
+MANUFACTURERS = [
+    "DAF ",
+    "ADL ",
+    "Volvo ",
+    "Wright ",
+    "Scania ",
+    "VDL ",
+    "Optare ",
+    "ADL/TransBus ",
+    "Dennis Trident Alexander ",  # wtf
+]
+
+
 # from bustimes.org
 def format_reg(reg):
     if "-" not in reg:
@@ -54,6 +67,13 @@ def format_reg(reg):
 
 
 # end from bustimes.org
+
+
+def get_bus_type(btype):
+    for manu in MANUFACTURERS:
+        btype = btype.replace(manu, "")
+
+    return btype
 
 
 async def fetch_vehicle(bus_id, r: Redis) -> Vehicle | None:
@@ -77,7 +97,17 @@ async def fetch_vehicle(bus_id, r: Redis) -> Vehicle | None:
         reg=format_reg(data["reg"]),
         fleet_num=str(data.get("fleet_number", data.get("fleet_code", "Unknown"))),
         vehicle_type=(
-            VehicleType(**data["vehicle_type"]) if data.get("vehicle_type") else None
+            VehicleType(
+                id=data["vehicle_type"]["id"],
+                name=get_bus_type(data["vehicle_type"]["name"]),
+                style=data["vehicle_type"].get("style", None),
+                fuel=data["vehicle_type"].get("fuel", "Unknown"),
+                double_decker=data["vehicle_type"].get("double_decker", False),
+                coach=data["vehicle_type"].get("coach", False),
+                electric=data["vehicle_type"].get("electric", False),
+            )
+            if data.get("vehicle_type")
+            else None
         ),
         livery=Livery(
             name=data["livery"]["name"],
@@ -676,6 +706,16 @@ async def build_bus(
         min_expected, max_expected = await calculate_expected_difference(
             timestamp, times.expected, times.scheduled
         )  # type: ignore
+
+    if min_expected and times.scheduled and times.expected:
+        delay = int((min_expected - times.scheduled).total_seconds())
+        if (
+            min_expected > times.expected and min_expected > times.scheduled
+        ):  # only adjust if min_expected is later than both
+            log.debug(
+                f"Adjusting expected from {times.expected} to {min_expected}. new delay {delay}"
+            )
+            times.expected = min_expected
 
     if db_stoptime:
         destination = db_stoptime.headsign or destination

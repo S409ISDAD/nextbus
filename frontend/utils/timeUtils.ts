@@ -1,4 +1,4 @@
-import type {Departure} from "../models/Bus";
+import type { Departure } from "../models/Bus";
 
 export default function timeTo(bus: Departure) {
     const now = new Date()
@@ -70,7 +70,7 @@ export function timedeltaDisplay(seconds: number) {
 }
 
 export const toTime = (iso: string | undefined) =>
-    iso ? new Date(iso).toLocaleTimeString([], {hour: "2-digit", minute: "2-digit"}) : "";
+    iso ? new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
 
 export function lateness(delay: number) {
     const n_delay = Math.abs(delay)
