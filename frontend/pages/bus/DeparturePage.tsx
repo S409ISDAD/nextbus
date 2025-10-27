@@ -41,6 +41,18 @@ const getBusDetail = async (bus: Departure) => {
         return bus_response;
     }
 };
+
+function formatBusType(bus: any, vegMode: boolean) {
+    if (!vegMode) return bus.bus_type;
+
+    const types = [bus.vehicle?.vehicle_type?.name, bus.bus_type]
+        .filter(Boolean)
+        .map((t) => t.replace(/(Double decker|Single decker),?/gi, "").trim())
+        .filter(Boolean);
+
+    return types.join(", ");
+}
+
 function BusCard({
     bus,
     gettingLiveData,
@@ -184,13 +196,7 @@ function BusCard({
                                 </span>
                                 {isTrackedBus(bus) && (
                                     <span className="mb-0.5 text-xs text-neutral-400">
-                                        {vegMode && (
-                                            <>
-                                                {bus.vehicle.vehicle_type?.name}
-                                                {", "}
-                                            </>
-                                        )}
-                                        {bus.bus_type}
+                                        {formatBusType(bus, vegMode)}
                                     </span>
                                 )}
                             </div>
