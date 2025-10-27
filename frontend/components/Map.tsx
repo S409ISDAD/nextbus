@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback, type JSX, useEffect } from "react";
+import { useRef, useState, useCallback, type JSX } from "react";
 import {
     Map as MapGL,
     Marker,
