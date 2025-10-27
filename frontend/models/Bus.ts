@@ -3,6 +3,27 @@ import type { ProgressInfo } from "./ProgressInfo";
 import type { LiveJourney } from "./Journey";
 import type { Livery } from "./Livery";
 
+
+export interface VehicleType {
+    id: number;
+    name: string;
+    style?: string;
+    fuel: string;
+    double_decker: boolean;
+    coach: boolean;
+    electric: boolean;
+}
+
+export interface Vehicle {
+    id: number;
+    reg: string;
+    fleet_num: string;
+    vehicle_type?: VehicleType;
+    livery?: Livery;
+    name?: string;
+    special_features?: string[];
+}
+
 export interface ScheduledBus {
     type: string;
     line: string;
@@ -24,9 +45,8 @@ export interface Bus {
     timestamp: string;
     service: ServiceInfo;
     destination: string;
-    reg: string;
     bus_type: string;
-    fleet_num: string;
+    vehicle: Vehicle;
     journey_id: number;
     delay: number;
     expected: string;
@@ -39,7 +59,6 @@ export interface Bus {
     progress?: ProgressInfo;
     coords?: number[];
     predictions: Prediction[];
-    livery?: Livery
     journey: LiveJourney
     confidence: Confidence;
     timeTo: string;
@@ -70,11 +89,11 @@ export interface MapBus {
     trip_id: number;
     service_id: string;
     service: MapService;
-    vehicle: Vehicle;
+    vehicle: MapVehicle;
     livery?: Livery;
 }
 
-interface Vehicle {
+interface MapVehicle {
     name: string;
     features: string;
     livery: string;

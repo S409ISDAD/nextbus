@@ -34,7 +34,7 @@ function JourneyCard({
                 {/* LEFT BLOCK */}
                 <div className="flex flex-col gap-3">
                     <div className="flex flex-col items-start gap-4">
-                        <div className="flex flex-col items-start gap-2 justify-between w-full">
+                        <div className="flex flex-col items-start justify-between w-full gap-2">
                             <div className="flex mb-1">
                                 <div className="flex items-center px-3 py-1 bg-primary-700 rounded-l-2xl">
                                     <span className="flex items-center justify-center text-xl font-bold text-center">
@@ -52,7 +52,7 @@ function JourneyCard({
                                     )}
                                 </div>
                                 {idx === 0 && (
-                                    <span className="px-2 py-1 align-self-center h-fit ml-2 text-xs font-bold text-primary-400 rounded-full bg-primary/20">
+                                    <span className="px-2 py-1 ml-2 text-xs font-bold rounded-full align-self-center h-fit text-primary-400 bg-primary/20">
                                         arrives first
                                     </span>
                                 )}
@@ -61,7 +61,7 @@ function JourneyCard({
                                 <div className="flex items-center gap-3">
                                     <div className="flex justify-center px-2 py-1 rounded-lg bg-amber-400">
                                         <span className="text-xs font-bold align-middle text-neutral-950 text-nowrap">
-                                            {journey.live_bus.reg}
+                                            {journey.live_bus.vehicle.reg}
                                         </span>
                                     </div>
                                     <span
@@ -140,7 +140,7 @@ function JourneyCard({
                                         {timedeltaDisplay(journey.walk_seconds)}
                                     </div>
                                 )}
-                                <div className="flex items-start gap-2 flex-col">
+                                <div className="flex flex-col items-start gap-2">
                                     <div className="flex items-center gap-2">
                                         <FontAwesomeIcon
                                             icon={faBus}

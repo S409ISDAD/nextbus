@@ -10,6 +10,26 @@ from .confidence import Confidence
 from .progress import Progress
 
 
+class VehicleType(BaseModel):
+    id: int
+    name: str
+    style: Optional[str]
+    fuel: str
+    double_decker: bool
+    coach: bool
+    electric: bool
+
+
+class Vehicle(BaseModel):
+    id: int
+    reg: str  # vehicle license plate
+    fleet_num: str
+    vehicle_type: Optional[VehicleType]
+    livery: Optional[Livery]
+    name: Optional[str]
+    special_features: Optional[list[str]]
+
+
 class ScheduledBus(BaseModel):
     type: str = "scheduled"
     destination: str
@@ -31,9 +51,8 @@ class TrackedBus(BaseModel):
     timestamp: Optional[datetime]
     service: Optional[Service]
     destination: str
-    reg: str  # vehicle license plate
-    fleet_num: str
-    bus_type: str  # double decker
+    vehicle: Optional[Vehicle]
+    bus_type: str
     journey_id: int
     delay: int  # how many seconds behind/ahead e.g. 120 = 2 min late, -60 = 1 min early
     expected: Optional[datetime]  # expected arrival time at stop (iso string)
@@ -48,7 +67,6 @@ class TrackedBus(BaseModel):
     speed: Optional[float]  # how fast the bus is going
     progress: Progress
     predictions: list[Prediction]
-    livery: Optional[Livery]
     journey: Optional[Journey]
     confidence: Confidence
     coords: list[float]

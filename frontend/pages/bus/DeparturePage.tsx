@@ -24,6 +24,8 @@ import { WebSocketManager } from "../../websockets/ws_manager";
 import getBus from "../../utils/getBus";
 import type { Bus } from "../../models/Bus";
 import useLocalStorageState from "use-local-storage-state";
+import { useLocalSetting } from "../../src/settings";
+
 // import {
 //     Description,
 //     Dialog,
@@ -57,6 +59,7 @@ function BusCard({
     // const [showExternalDialog, setShowExternalDialog] = useState(false);
     // const [externalUrl, setExternalUrl] = useState<string | null>(null);
     const navigate = useNavigate();
+    const [vegMode] = useLocalSetting("veg", false);
 
     useEffect(() => {
         let interval: ReturnType<typeof setInterval> | null = null;
@@ -181,6 +184,12 @@ function BusCard({
                                 </span>
                                 {isTrackedBus(bus) && (
                                     <span className="mb-0.5 text-xs text-neutral-400">
+                                        {vegMode && (
+                                            <>
+                                                {bus.vehicle.vehicle_type?.name}
+                                                {", "}
+                                            </>
+                                        )}
                                         {bus.bus_type}
                                     </span>
                                 )}
@@ -357,10 +366,10 @@ function BusCard({
                     </div>
 
                     <div className="flex flex-row flex-wrap items-center justify-end gap-2 md:gap-4 w-min md:w-auto">
-                        {isTrackedBus(bus) && (
+                        {isTrackedBus(bus) && vegMode && (
                             <div className="flex justify-center px-2 py-1 rounded-lg bg-amber-400">
                                 <span className="text-xs font-bold align-middle text-neutral-950 text-nowrap">
-                                    {bus.reg}
+                                    {bus.vehicle.reg}
                                 </span>
                             </div>
                         )}

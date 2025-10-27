@@ -6,7 +6,7 @@ from redis.asyncio import Redis
 import sentry_sdk
 from sqlalchemy.orm import joinedload
 
-from backend.config import VEHICLES_BASE
+from backend.config import VEHICLES_BASE, API_BASE
 from backend.db.db import SessionLocal
 from backend.deps import LONDON
 from backend.models import (
@@ -15,11 +15,11 @@ from backend.models import (
     StopTime,
     Stop,
 )
-from backend.schemas.bus import ScheduledBus, TrackedBus
+from backend.schemas.bus import ScheduledBus, TrackedBus, Vehicle, VehicleType
 from backend.schemas.livery import Livery
 from backend.schemas.progress import Progress
 from backend.services import stops
-from backend.services.caching import BUS_CACHE, get_cached
+from backend.services.caching import BUS_CACHE, get_cached, DAY
 from backend.services.livery import get_livery
 from backend.services.prediction import (
     calculate_expected,
@@ -38,7 +38,63 @@ from backend.deps import get_logger
 log = get_logger(__name__)
 
 
-async def fetch_bus(bus_id, r: Redis):
+# from bustimes.org
+def format_reg(reg):
+    if "-" not in reg:
+        if reg[-3:].isalpha():
+            return reg[:-3] + " " + reg[-3:]
+        if reg[:3].isalpha():
+            return reg[:3] + " " + reg[3:]
+        if reg[-2:].isalpha():
+            return reg[:-2] + " " + reg[-2:]
+        if reg[:2].isalpha():
+            return reg[:2] + " " + reg[2:]
+
+    return reg
+
+
+# end from bustimes.org
+
+
+async def fetch_vehicle(bus_id, r: Redis) -> Vehicle | None:
+    """Fetches specific vehicle from the api"""
+
+    async def fetch(bus_id):
+        data = await fetch_json(API_BASE + f"/vehicles/{bus_id}")
+
+        return data
+
+    data = await get_cached(
+        f"bus:{bus_id}",
+        fetch,
+        (bus_id,),
+        DAY,
+        r,
+    )
+
+    this_bus = Vehicle(
+        id=data["id"],
+        reg=format_reg(data["reg"]),
+        fleet_num=str(data.get("fleet_number", data.get("fleet_code", "Unknown"))),
+        vehicle_type=(
+            VehicleType(**data["vehicle_type"]) if data.get("vehicle_type") else None
+        ),
+        livery=Livery(
+            name=data["livery"]["name"],
+            left_css=data["livery"].get("left", None),
+            right_css=data["livery"].get("right", None),
+        ),
+        name=data.get("name", None),
+        special_features=data.get("special_features", None),
+    )
+
+    try:
+        return this_bus
+    except:  # noqa: E722
+        return None
+
+
+async def fetch_active_bus(bus_id, r: Redis):
     """Fetches specific bus"""
 
     async def fetch(bus_id):
@@ -47,7 +103,7 @@ async def fetch_bus(bus_id, r: Redis):
         return data
 
     this_bus = await get_cached(
-        f"bus:{bus_id}",
+        f"livebus:{bus_id}",
         fetch,
         (bus_id,),
         BUS_CACHE,
@@ -443,9 +499,10 @@ async def build_bus(
     bus_seen_count: int = 1,
     pick_up_only: bool = False,
 ) -> TrackedBus | None:
-    this_bus = await fetch_bus(bus_id, r)
+    this_bus = await fetch_active_bus(bus_id, r)
+    vehicle_data = await fetch_vehicle(bus_id, r)
 
-    if not this_bus:
+    if not this_bus or not vehicle_data:
         return None
 
     delay = this_bus.get("delay")
@@ -481,14 +538,11 @@ async def build_bus(
     timestamp = this_bus.get("datetime")
 
     coords = this_bus.get("coordinates", [0, 0])
-    vehicle = this_bus.get("vehicle", {})
     journey_id = this_bus.get("journey_id")
     destination = this_bus.get("destination")
     progress = this_bus.get("progress", {})
 
-    vehicle_name = vehicle.get("name", "").split(" - ")
-    fleet_num = vehicle_name[0] if len(vehicle_name) > 1 else "Unknown"
-    reg = vehicle_name[-1]
+    reg = vehicle_data.reg if vehicle_data else "Unknown"
 
     # Ignore buses with a delay of over 2 hours, they are likely broken down or similar
     if delay > 2 * 60 * 60:
@@ -511,24 +565,14 @@ async def build_bus(
 
     await r.sadd("total_buses", bus_id)
 
-    bus_type = vehicle.get("features", "")
-    if not bus_type:
+    bus_type = vehicle_data.vehicle_type
+    if not bus_type.double_decker:
         bus_type = "Single decker"
-    elif "double" not in bus_type.lower():
-        bus_type = f"Single decker, {bus_type}"
-    if bus_type:
-        bus_type = bus_type.replace("<br>", ", ")
-    livery_id = vehicle.get("livery")
-
-    if livery_id:
-        livery = await get_livery(livery_id, r)
     else:
-        css = vehicle.get("css")
-        if css:
-            livery = Livery(name="Livery:", right_css=css, left_css=css)
-        else:
-            livery = None
+        bus_type = "Double decker"
 
+    if vehicle_data.special_features:
+        bus_type += f", {", ".join(vehicle_data.special_features)}"
     # journey = await get_vehicle_journey(bus_id, journey_id, r)
 
     delay += 10  # account for stopping and various other things that increase delay
@@ -648,9 +692,8 @@ async def build_bus(
         db_journey=db_journey_id,
         timestamp=timestamp,
         destination=destination,
-        reg=reg,
         bus_type=bus_type,
-        fleet_num=fleet_num,
+        vehicle=vehicle_data,
         journey_id=journey_id,
         delay=delay,
         expected=times.expected,
@@ -667,7 +710,6 @@ async def build_bus(
         ),
         predictions=predictions,
         journey=journey,
-        livery=livery,
         speed=None,
         confidence=confidence,
         coords=coords,

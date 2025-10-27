@@ -76,5 +76,8 @@ async def departures(request: Request, stop_id: str, redis=Depends(get_redis)):
 
         return {"buses": buses, "timestamp": current_time}
     except Exception as e:
+        import traceback
+
+        traceback.print_exc()
         log.error(f"Unexpected error: {e}")
         raise HTTPException(500, detail="An unexpected error occured")

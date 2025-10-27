@@ -86,6 +86,7 @@ function App() {
             defaultValue: false,
         }
     );
+
     const showAppNav = useShowAppNav();
     const reset = async () => {
         if (!haveReset) {

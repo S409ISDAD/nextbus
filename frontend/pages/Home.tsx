@@ -16,6 +16,7 @@ import {
 import { getClosestStops } from "../utils/closestStop";
 import { useNavigate } from "react-router";
 import SearchBar from "../components/SearchBar";
+import { Switch } from "@headlessui/react";
 // import {
 //     LocationPrompt,
 //     useIsLocationGranted,
@@ -24,6 +25,7 @@ import { useGeolocated } from "react-geolocated";
 import type { DBStats } from "../models/Stats.ts";
 import { getDBStats } from "../utils/getStats.ts";
 import { faDiscord } from "@fortawesome/free-brands-svg-icons";
+import { useLocalSetting } from "../src/settings.ts";
 // import type { Locality } from "../models/Locality.ts";
 // import { getDestinations } from "../utils/JourneyPlanning.ts";
 
@@ -51,6 +53,7 @@ const Home: React.FC = () => {
     const [showCaution, setShowCaution] = useState(false);
 
     const navigate = useNavigate();
+    const [vegMode, setVegMode] = useLocalSetting("veg", false);
 
     useEffect(() => {
         document.title = "nextbus";
@@ -343,6 +346,32 @@ const Home: React.FC = () => {
                             Join the Discord!{" "}
                             <FontAwesomeIcon icon={faDiscord} />
                         </button>
+                    </Card>
+                    <Card className="max-w-[90vw] flex flex-col items-center gap-2">
+                        <div className="flex flex-col items-center justify-center">
+                            <span className="text-xl font-bold text-center">
+                                Settings
+                            </span>
+                        </div>
+                        <div className="flex flex-row items-center justify-center gap-2">
+                            <span className="text-center text-neutral-400">
+                                veg mode
+                            </span>
+
+                            <Switch
+                                checked={vegMode}
+                                onChange={setVegMode}
+                                className="relative flex p-1 ease-in-out rounded-full cursor-pointer group h-7 w-14 bg-white/10 focus:not-data-focus:outline-none data-checked:bg-primary data-focus:outline data-focus:outline-white">
+                                <span
+                                    aria-hidden="true"
+                                    className="inline-block transition duration-200 ease-in-out translate-x-0 bg-white rounded-full shadow-lg pointer-events-none size-5 ring-0 group-data-checked:translate-x-7"
+                                />
+                            </Switch>
+                        </div>
+                        <span className="text-xs text-center text-neutral-400">
+                            (for bus enthusiasts, shows bus details like reg,
+                            fleet number, and vehicle type)
+                        </span>
                     </Card>
                 </div>
             </div>

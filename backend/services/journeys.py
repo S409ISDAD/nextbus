@@ -253,7 +253,7 @@ async def get_trip(trip_id, delay, r) -> Trip | None:
         )
 
         if not data:
-            return
+            return None
 
         prev_time = 0
         total_delay = 0

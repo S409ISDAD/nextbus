@@ -48,6 +48,7 @@ type MapViewProps = {
 };
 import React from "react";
 import { Pulse } from "../../components/ui/Pulse";
+import { useLocalSetting } from "../../src/settings";
 
 const MapView: React.FC<MapViewProps> = ({
     lat,
@@ -268,6 +269,7 @@ const LiveJourneyPage: React.FC = () => {
     const [busInfoHeight, setBusInfoHeight] = useState(0);
     const busInfoRef = useRef<HTMLDivElement>(null);
     const showAppNav = useShowAppNav();
+    const [vegMode] = useLocalSetting("veg", false);
 
     useEffect(() => {
         if (busInfoRef.current) {
@@ -401,7 +403,7 @@ const LiveJourneyPage: React.FC = () => {
                     setBus(bus_response);
                     setPredictions(bus_response.predictions);
                     setLiveJourney(bus_response.journey);
-                    document.title = `${bus_response.journey.route_name} to ${bus_response.journey.destination} - ${bus_response.reg}`;
+                    document.title = `${bus_response.journey.route_name} to ${bus_response.journey.destination} - ${bus_response.vehicle.reg}`;
                     setMsg("");
                     setRefreshed(now);
                     setTimeout(() => {
@@ -493,27 +495,29 @@ const LiveJourneyPage: React.FC = () => {
                             </span>
                         </div>
                         <div className="flex items-center gap-3">
-                            <div className="flex flex-col items-center gap-1">
-                                <span className="font-bold align-middle">
-                                    {bus?.fleet_num}
-                                </span>
-                                <div className="flex justify-center px-2 py-1 rounded-lg bg-amber-400">
-                                    <span className="text-xs font-bold align-middle text-neutral-950">
-                                        {bus?.reg}
+                            {vegMode && (
+                                <div className="flex flex-col items-center gap-1">
+                                    <span className="font-bold align-middle">
+                                        {bus?.vehicle.fleet_num}
                                     </span>
+                                    <div className="flex justify-center px-2 py-1 rounded-lg bg-amber-400">
+                                        <span className="text-xs font-bold align-middle text-neutral-950">
+                                            {bus?.vehicle.reg}
+                                        </span>
+                                    </div>
                                 </div>
-                            </div>
+                            )}
                             <div className="flex flex-col items-center gap-1">
                                 <span className="text-xs font-bold text-center">
-                                    {bus.livery
-                                        ? bus?.livery.name
+                                    {bus.vehicle.livery
+                                        ? bus?.vehicle.livery.name
                                         : "No livery"}
                                 </span>
                                 <div
                                     className="rounded shadow-2xl w-15 aspect-3/2"
                                     style={{
                                         background:
-                                            bus?.livery?.right_css ||
+                                            bus?.vehicle.livery?.right_css ||
                                             "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 200' fill='none' xmlns:xlink='http://www.w3.org/1999/xlink'><rect width='300' height='200' fill='%23222222'/><text x='150' y='110' text-anchor='middle' fill='%23999999' font-size='80' font-family='sans-serif' dy='.35em'>?</text></svg>\")",
                                     }}></div>
                             </div>
