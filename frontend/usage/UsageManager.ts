@@ -89,6 +89,9 @@ export default class UsageManager {
             stops[stop.id] = stop;
         });
 
+        routesArray.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+        stopsArray.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+
         return { routes, stops };
     }
 
