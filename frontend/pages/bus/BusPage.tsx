@@ -182,7 +182,7 @@ const BusPage: React.FC = () => {
                     <span className="text-sm text-center text-neutral-400 max-w-110">
                         predicts the stop and bus route that you might take
                         based on your previous activity, time of day, weekday,
-                        and location.{" "}
+                        and location. It gets better the more you use nextbus.{" "}
                         <a
                             href="/buses/predictions"
                             className="text-sm underline text-link-400">
