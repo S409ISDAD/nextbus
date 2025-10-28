@@ -1,4 +1,4 @@
-import { Link, Outlet, useNavigate } from "react-router";
+import { Link, Outlet, useLocation, useNavigate } from "react-router";
 import { isIOS, useShowAppNav, whereAmI } from "../utils/AppNav";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -11,12 +11,14 @@ import {
 import { faDiscord } from "@fortawesome/free-brands-svg-icons";
 import version from "../utils/version";
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import ThemeToggle from "./ThemeToggle";
+import { useLocalSetting } from "../src/settings";
 
 function NavSearchBar(queryProp?: { query?: string }) {
     const [searchQuery, setSearchQuery] = useState(queryProp?.query || "");
     const navigate = useNavigate();
+
     return (
         <motion.div
             layout
@@ -95,6 +97,39 @@ export default function Layout() {
     const currentYear = new Date().getFullYear();
     const showAppNav = useShowAppNav();
     const navigate = useNavigate();
+    const location = useLocation();
+
+    const [lastBusPage, setLastBusPage] = useLocalSetting(
+        "lastBusPage",
+        "/buses"
+    );
+    const [lastTrainPage, setLastTrainPage] = useLocalSetting(
+        "lastTrainPage",
+        "/trains"
+    );
+
+    useEffect(() => {
+        // update last visited bus/train page, even if its the root
+        if (location.pathname.startsWith("/buses")) {
+            setLastBusPage(location.pathname);
+        }
+        if (location.pathname.startsWith("/trains")) {
+            setLastTrainPage(location.pathname);
+        }
+    }, [location.pathname]);
+
+    function handleNavClick(target: "buses" | "trains") {
+        const root = `/${target}`;
+        const last = target === "buses" ? lastBusPage : lastTrainPage;
+
+        // if already inside the section, go to root
+        if (location.pathname.startsWith(root)) {
+            navigate(root);
+        } else {
+            navigate(last);
+        }
+    }
+
     if (!showAppNav) {
         return (
             <div className="h-full">
@@ -159,29 +194,40 @@ export default function Layout() {
                 <nav
                     className="bottom-0 left-0 text-neutral-200 right-0 flex justify-around items-center p-3 z-[99] border-t border-neutral-800 rounded-t-2xl fixed w-full shadow-2xl md:shadow-xl bg-[#131313]"
                     style={isIOS() ? { paddingBottom: "20px" } : {}}>
-                    {items.map((item) => (
-                        <Link
-                            to={item.href}
-                            className="flex flex-col items-center w-5 gap-1 transition-colors hover:text-white ">
-                            <FontAwesomeIcon
-                                icon={item.icon}
-                                size="lg"
-                                className={`${
-                                    whereAmI() == item.name
-                                        ? "px-4 rounded-full bg-link/30"
-                                        : ""
-                                } transition-all p-1`}
-                            />
-                            <span
-                                className={`${
-                                    whereAmI() == item.name
-                                        ? "text-primary-300 font-bold"
-                                        : ""
-                                } px-2 text-xs font-semibold`}>
-                                {item.name}
-                            </span>
-                        </Link>
-                    ))}
+                    {items.map((item) => {
+                        const isBus = item.name === "buses";
+                        const isTrain = item.name === "trains";
+                        const onClick = isBus
+                            ? () => handleNavClick("buses")
+                            : isTrain
+                            ? () => handleNavClick("trains")
+                            : () => navigate(item.href);
+
+                        return (
+                            <button
+                                key={item.name}
+                                onClick={onClick}
+                                className="flex flex-col items-center w-5 gap-1 transition-colors hover:text-white ">
+                                <FontAwesomeIcon
+                                    icon={item.icon}
+                                    size="lg"
+                                    className={`${
+                                        whereAmI() == item.name
+                                            ? "px-4 rounded-full bg-link/30"
+                                            : ""
+                                    } transition-all p-1`}
+                                />
+                                <span
+                                    className={`${
+                                        whereAmI() == item.name
+                                            ? "text-primary-300 font-bold"
+                                            : ""
+                                    } px-2 text-xs font-semibold`}>
+                                    {item.name}
+                                </span>
+                            </button>
+                        );
+                    })}
                 </nav>
                 <main>
                     <Outlet />

@@ -29,7 +29,7 @@ type MapViewProps = {
     stops: Stop[];
     buses: MapBus[];
     loading?: boolean;
-    onBoundsChange: (bounds: L.LatLngBounds, zoom: number) => void;
+    onBoundsChange: () => void;
 };
 
 const MapView: React.FC<MapViewProps> = ({
@@ -56,8 +56,7 @@ const MapView: React.FC<MapViewProps> = ({
             const { viewState } = e;
             setZoom(viewState.zoom);
 
-            const bounds = e.target.getBounds();
-            onBoundsChange(bounds, viewState.zoom);
+            onBoundsChange();
         },
         [onBoundsChange]
     );
