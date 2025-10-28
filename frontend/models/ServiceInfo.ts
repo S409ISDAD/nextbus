@@ -3,6 +3,7 @@ import type { Operator } from "./Operator";
 export interface ServiceInfo {
     id: number;
     line_name: string;
+    description?: string;
     detail?: string;
 }
 

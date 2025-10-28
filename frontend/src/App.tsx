@@ -42,6 +42,7 @@ import {
 } from "@headlessui/react";
 import Map from "../components/Map";
 import PossibleJourneysPage from "../pages/PossibleJourneysPage.tsx";
+import PredictionsPage from "../pages/bus/Predictions.tsx";
 
 // function UsefulBanner() {
 //     const location = useLocation();
@@ -236,6 +237,10 @@ function App() {
                             <Route
                                 path="/buses/stops/:stop_id"
                                 element={<DeparturePage />}
+                            />
+                            <Route
+                                path="/buses/predictions"
+                                element={<PredictionsPage />}
                             />
                             <Route
                                 path="/buses/:bus_id"

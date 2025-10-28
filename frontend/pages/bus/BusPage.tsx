@@ -12,6 +12,10 @@ import { Card } from "../../components/ui/Card";
 import { getClosestStops } from "../../utils/closestStop";
 import type { Service } from "../../models/ServiceInfo";
 import { useNavigate } from "react-router";
+import UsageManager from "../../usage/UsageManager";
+import type { PredictedStop } from "../../usage/usageModels";
+// import { faCaretRight } from "@fortawesome/free-solid-svg-icons";
+// import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 const BusPage: React.FC = () => {
     useEffect(() => {
@@ -29,6 +33,8 @@ const BusPage: React.FC = () => {
         defaultValue: {},
     });
     const [userCoords, setUserCoords] = useState<[number, number] | null>(null);
+    const usageManager = UsageManager.getInstance();
+    const [predictedStops, setPredictedStops] = useState<PredictedStop[]>([]);
 
     const navigate = useNavigate();
     // const isGranted = useIsLocationGranted();
@@ -36,30 +42,47 @@ const BusPage: React.FC = () => {
     useEffect(() => {
         const getUserCoords = async () => {
             // if (!isGranted) return;
-            const userCoords = await getCurrentPosition();
-            setUserCoords([
-                userCoords.coords.latitude,
-                userCoords.coords.longitude,
-            ]);
-            setStatus("Getting closest stop...");
-            const closestStops = await getClosestStops(
-                [userCoords.coords.latitude, userCoords.coords.longitude],
-                "",
-                1
-            );
-            setStatus("");
-            const stopIDs = closestStops
-                .filter((stop) => stop.active_now)
-                .map((stop) => stop.stop_id);
-            setClosestStops(stopIDs);
+            let userCoords: GeolocationPosition | null = null;
+            try {
+                userCoords = await getCurrentPosition();
+                setUserCoords([
+                    userCoords.coords.latitude,
+                    userCoords.coords.longitude,
+                ]);
+                setStatus("Getting closest stop...");
 
-            const services = await getNearby([
-                userCoords.coords.latitude,
-                userCoords.coords.longitude,
-            ]);
-            if (services) {
-                setNearbyServices(services);
+                const closestStops = await getClosestStops(
+                    [userCoords.coords.latitude, userCoords.coords.longitude],
+                    "",
+                    1
+                );
+                setStatus("");
+                const stopIDs = closestStops
+                    .filter((stop) => stop.active_now)
+                    .map((stop) => stop.stop_id);
+                setClosestStops(stopIDs);
+
+                const services = await getNearby([
+                    userCoords.coords.latitude,
+                    userCoords.coords.longitude,
+                ]);
+                if (services) {
+                    setNearbyServices(services);
+                }
+            } catch (e) {
+                setStatus(
+                    "Unable to get location. Make sure location services are enabled."
+                );
             }
+
+            const stops = userCoords
+                ? (await usageManager).predictStopAndRoutes(
+                      userCoords.coords.latitude,
+                      userCoords.coords.longitude
+                  )
+                : (await usageManager).predictStopAndRoutes();
+
+            setPredictedStops(await stops);
         };
         getUserCoords();
     }, []);
@@ -151,7 +174,89 @@ const BusPage: React.FC = () => {
                     </div>
                 </div>
             </div>
-            <div style={{ display: tab === "fav" ? "flex" : "none" }}>
+            <div
+                style={{ display: tab === "fav" ? "flex" : "none" }}
+                className="flex flex-col items-center justify-center gap-10">
+                <div className="flex flex-col items-center justify-center gap-3">
+                    <span className="text-2xl font-bold">Smart Stops</span>
+                    <span className="text-sm text-center text-neutral-400 max-w-110">
+                        predicts the stop and bus route that you might take
+                        based on your previous activity, time of day, weekday,
+                        and location.{" "}
+                        <a
+                            href="/buses/predictions"
+                            className="text-sm underline text-link-400">
+                            more info
+                        </a>
+                    </span>
+                    <div className="flex flex-row flex-wrap items-center justify-center gap-3">
+                        {Object.keys(predictedStops).length > 0 ? (
+                            predictedStops.map((predictedStop) => (
+                                <Card
+                                    key={predictedStop.stopId}
+                                    className="flex flex-col items-center justify-center">
+                                    <div
+                                        className="mb-4 text-xl font-bold cursor-pointer"
+                                        onClick={() =>
+                                            navigate(
+                                                `/buses/stops/${predictedStop.stopId}`
+                                            )
+                                        }>
+                                        {predictedStop.stopName}
+                                    </div>
+                                    <div className="flex flex-row flex-wrap gap-2">
+                                        {predictedStop.topRoutes.map(
+                                            (route) => (
+                                                <div
+                                                    key={route.lineName}
+                                                    className="flex flex-row items-stretch justify-center cursor-pointer"
+                                                    onClick={() =>
+                                                        navigate(
+                                                            `/buses/stops/${predictedStop.stopId}?filter=${route.lineName}`
+                                                        )
+                                                    }>
+                                                    <div className="flex items-center px-3 py-1 bg-primary-700 rounded-l-2xl">
+                                                        <span className="flex items-center justify-center text-lg font-bold text-center">
+                                                            {route.lineName}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex flex-col justify-center px-3 bg-neutral-800/50 rounded-r-2xl">
+                                                        <span className="font-semibold text">
+                                                            {route.destination.includes(
+                                                                "-"
+                                                            )
+                                                                ? ""
+                                                                : "to "}
+                                                            {route.destination}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            )
+                                        )}
+                                    </div>
+                                </Card>
+                            ))
+                        ) : (
+                            <Card>
+                                <span className="text-center text-neutral-300">
+                                    No predicted stops. <br></br> Try using
+                                    nextbus for a few more days in this area to
+                                    improve predictions.
+                                </span>
+                            </Card>
+                        )}
+                    </div>
+                    {/* <span className="text-sm text-neutral-400">
+                        wrong?{" "}
+                        <a
+                            href="/buses/predictions"
+                            className="text-sm underline text-link-400">
+                            edit your predictions{" "}
+                            <FontAwesomeIcon icon={faCaretRight} />
+                        </a>
+                    </span> */}
+                </div>
+
                 <Card className="flex flex-col items-center justify-center gap-2 p-2 rounded-[32px] bg-neutral-900">
                     <span className="text-2xl font-bold">Favorite Stops</span>
                     <div className="flex flex-row flex-wrap items-center justify-center gap-3">

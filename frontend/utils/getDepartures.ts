@@ -1,5 +1,5 @@
 import api from "../src/api"
-import type { Bus, ScheduledBus } from "../models/Bus"
+import { isTrackedBus, type Bus, type Departure, type ScheduledBus } from "../models/Bus"
 import { timeToDiff } from "./timeUtils";
 
 
@@ -60,6 +60,42 @@ export const parseDepartures = async (departures: Departures, filter?: string) =
         return null;
     }
 };
+
+export const mostCommonDest = (departures: Departure[], lineName?: string) => {
+
+    const destCount: { [dest: string]: number } = {};
+
+    departures.forEach((bus) => {
+        let busLineName = '';
+        let busDest = '';
+
+        if (isTrackedBus(bus)) {
+            busLineName = bus.service.line_name;
+        } else {
+            busLineName = bus.line;
+        }
+        busDest = bus.destination;
+
+        if (lineName && busLineName !== lineName) return;
+
+        if (destCount[busDest]) {
+            destCount[busDest] += 1;
+        } else {
+            destCount[busDest] = 1;
+        }
+    });
+
+    let mostCommon = '';
+    let highestCount = 0;
+    for (const dest in destCount) {
+        if (destCount[dest] > highestCount) {
+            highestCount = destCount[dest];
+            mostCommon = dest;
+        }
+    }
+    console.log(`Most common destination for line ${lineName || 'all lines'} is ${mostCommon} with count ${highestCount}`);
+    return mostCommon;
+}
 
 const fetchDepartures = async (stop_id: string, type: string, filter?: string) => {
     try {

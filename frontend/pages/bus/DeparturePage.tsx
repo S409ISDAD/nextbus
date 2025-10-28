@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { isTrackedBus, type Departure } from "../../models/Bus";
 import type { BTStop } from "../../models/Stop";
-import fetchDepartures, { parseDepartures } from "../../utils/getDepartures";
+import fetchDepartures, {
+    mostCommonDest,
+    parseDepartures,
+} from "../../utils/getDepartures";
 import getStopData from "../../utils/getStopData";
 import { useNavigate, useParams } from "react-router";
 import { Skeleton } from "@radix-ui/themes";
@@ -10,6 +13,7 @@ import timeTo, { lateness, toTime } from "../../utils/timeUtils";
 import { getClosestStops } from "../../utils/closestStop";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { motion, AnimatePresence } from "framer-motion";
+import UsageManager from "../../usage/UsageManager";
 import {
     faBus,
     faSatelliteDish,
@@ -55,10 +59,20 @@ function formatBusType(bus: any, vegMode: boolean) {
 
 function BusCard({
     bus,
+    stop_id,
+    stop_name,
+    stop_lat,
+    stop_lon,
+    usageManager,
     gettingLiveData,
     idx,
 }: {
     bus: Departure;
+    stop_id: string;
+    stop_name: string;
+    stop_lat: number;
+    stop_lon: number;
+    usageManager: Promise<UsageManager>;
     gettingLiveData: boolean;
     idx: number;
 }) {
@@ -96,12 +110,23 @@ function BusCard({
         };
     }, [idx === 0 && isTrackedBus(bus) ? bus.id : null]);
 
-    const handleClick = () => {
+    const handleClick = async () => {
         if (
             isTrackedBus(bus) &&
             bus.status !== "on_prev_trip" &&
             bus.status !== "cancelled"
         ) {
+            (await usageManager).logRoute(
+                stop_id,
+                stop_name,
+                stop_lat,
+                stop_lon,
+                bus.service.id,
+                bus.service.line_name,
+                bus.service.description || "",
+                bus.destination,
+                "tracked"
+            );
             navigate(`/buses/${bus.id}`);
         } else if (bus.db_journey) {
             navigate(`/buses/dbjourneys/${bus.db_journey}`);
@@ -586,6 +611,8 @@ function BusCard({
 
 const DeparturePage: React.FC = () => {
     const { stop_id } = useParams();
+    const params = new URLSearchParams(window.location.search);
+    var filter = params.get("filter");
 
     const navigate = useNavigate();
 
@@ -600,6 +627,7 @@ const DeparturePage: React.FC = () => {
     const [lastRefreshed, setRefreshed] = useState(new Date());
     const [elapsed, setElapsed] = useState<string>("0s");
     const [msg, setMsg] = useState<string>("");
+    const usageManager = UsageManager.getInstance();
 
     const [favStops, setFavStops] = useLocalStorageState<
         Record<string, [number, number]>
@@ -631,7 +659,6 @@ const DeparturePage: React.FC = () => {
                         new Date(new Date(bus.expected).getTime() + 60 * 1000) >
                         now
                 );
-
             setBuses(newBuses);
         }, 1000);
         return () => clearInterval(interval);
@@ -657,6 +684,16 @@ const DeparturePage: React.FC = () => {
                     if (stopData) {
                         setStop(stopData);
                         document.title = stopData.name;
+
+                        (await usageManager).logStop(
+                            stopData.stop_id,
+                            stopData.name,
+                            stopData.coords[0],
+                            stopData.coords[1],
+                            isFav,
+                            "tapped"
+                        );
+
                         const closestStop = await getClosestStops(
                             stopData.coords,
                             stop_id
@@ -806,13 +843,48 @@ const DeparturePage: React.FC = () => {
                                     sensitivity: "base",
                                 }).compare(a.line_name, b.line_name)
                             )
-                            .map((service) => (
-                                <span
-                                    key={service.id}
-                                    className="flex items-center justify-center px-3 py-1 text-lg font-bold text-center rounded-xl bg-neutral-800/50">
-                                    {service.line_name}
-                                </span>
-                            ))}
+                            .map((service) =>
+                                service.line_name === filter ? (
+                                    <span
+                                        key={service.id}
+                                        className="flex items-center justify-center px-3 py-1 text-lg font-bold text-center border-2 cursor-pointer rounded-xl bg-emerald-900/50 border-emerald-800"
+                                        onClick={() => {
+                                            filter = null;
+                                            navigate(`/buses/stops/${stop_id}`);
+                                        }}>
+                                        {service.line_name}
+                                    </span>
+                                ) : (
+                                    <span
+                                        key={service.id}
+                                        className="flex items-center justify-center px-3 py-1 text-lg font-bold text-center cursor-pointer rounded-xl bg-neutral-800/50"
+                                        onClick={async () => {
+                                            filter = service.line_name;
+                                            if (stop && buses.length > 0) {
+                                                const dest = mostCommonDest(
+                                                    buses,
+                                                    filter
+                                                );
+                                                (await usageManager).logRoute(
+                                                    stop.stop_id,
+                                                    stop.name,
+                                                    stop.coords[0],
+                                                    stop.coords[1],
+                                                    service.id,
+                                                    service.line_name,
+                                                    service.description || "",
+                                                    dest,
+                                                    "filter"
+                                                );
+                                            }
+                                            navigate(
+                                                `/buses/stops/${stop_id}?filter=${service.line_name}`
+                                            );
+                                        }}>
+                                        {service.line_name}
+                                    </span>
+                                )
+                            )}
                     </div>
                 </div>
 
@@ -867,32 +939,26 @@ const DeparturePage: React.FC = () => {
                         </>
                     ) : (
                         <AnimatePresence>
-                            {buses.map((bus, idx) => (
-                                <motion.div
-                                    key={bus.trip}
-                                    layout // enables smooth reordering animations
-                                    initial={{ opacity: 0, y: 20 }} // entry animation
-                                    animate={{ opacity: 1, y: 0 }} // while present
-                                    exit={{ opacity: 0, y: -20 }} // exit animation
-                                    transition={{
-                                        type: "spring",
-                                        stiffness: 500,
-                                        damping: 40,
-                                    }}>
-                                    <div className="flex items-center gap-2 mb-0.5">
-                                        <div className="flex-grow border-t border-dashed border-neutral-600"></div>
-                                        <span className="text-[10px] text-neutral-600">
-                                            nextbus
-                                        </span>
-                                        <div className="flex-grow border-t border-dashed border-neutral-600"></div>
-                                    </div>
-
-                                    <BusCard
-                                        bus={bus}
-                                        gettingLiveData={gettingLiveData}
-                                        idx={idx}
-                                    />
-                                    {idx === buses.length - 1 && (
+                            {buses
+                                .filter(
+                                    (bus) =>
+                                        !filter || // no filter
+                                        (isTrackedBus(bus)
+                                            ? bus.service.line_name === filter
+                                            : bus.line === filter)
+                                )
+                                .map((bus, idx) => (
+                                    <motion.div
+                                        key={bus.trip}
+                                        layout // enables smooth reordering animations
+                                        initial={{ opacity: 0, y: 20 }} // entry animation
+                                        animate={{ opacity: 1, y: 0 }} // while present
+                                        exit={{ opacity: 0, y: -20 }} // exit animation
+                                        transition={{
+                                            type: "spring",
+                                            stiffness: 500,
+                                            damping: 40,
+                                        }}>
                                         <div className="flex items-center gap-2 mb-0.5">
                                             <div className="flex-grow border-t border-dashed border-neutral-600"></div>
                                             <span className="text-[10px] text-neutral-600">
@@ -900,10 +966,35 @@ const DeparturePage: React.FC = () => {
                                             </span>
                                             <div className="flex-grow border-t border-dashed border-neutral-600"></div>
                                         </div>
-                                    )}
-                                </motion.div>
-                            ))}
-                            {buses.length === 0 && (
+
+                                        <BusCard
+                                            bus={bus}
+                                            stop_id={stop_id!}
+                                            stop_name={stop?.name || ""}
+                                            stop_lat={stop?.coords[0] || 0}
+                                            stop_lon={stop?.coords[1] || 0}
+                                            usageManager={usageManager}
+                                            gettingLiveData={gettingLiveData}
+                                            idx={idx}
+                                        />
+                                        {idx === buses.length - 1 && (
+                                            <div className="flex items-center gap-2 mb-0.5">
+                                                <div className="flex-grow border-t border-dashed border-neutral-600"></div>
+                                                <span className="text-[10px] text-neutral-600">
+                                                    nextbus
+                                                </span>
+                                                <div className="flex-grow border-t border-dashed border-neutral-600"></div>
+                                            </div>
+                                        )}
+                                    </motion.div>
+                                ))}
+                            {buses.filter(
+                                (bus) =>
+                                    !filter ||
+                                    (isTrackedBus(bus)
+                                        ? bus.service.line_name === filter
+                                        : bus.line === filter)
+                            ).length === 0 && (
                                 <div className="flex justify-center">
                                     <span className="text-neutral-400">
                                         No more departures!
