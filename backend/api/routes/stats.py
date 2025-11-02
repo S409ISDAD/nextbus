@@ -52,7 +52,7 @@ async def db_stats(request: Request, db=Depends(get_db), redis=Depends(get_redis
             "db_stats",
             get_stats,
             (db,),
-            1,  # 5 minutes
+            300,  # 5 minutes
             redis,
         )
         return cached_stats
