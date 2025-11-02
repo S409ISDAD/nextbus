@@ -4,7 +4,7 @@ import { useNavigate } from "react-router";
 import UsageManager from "../../usage/UsageManager";
 import type {
     DayBucket,
-    InteractionStats,
+    Interaction,
     TimeBucket,
     Usage,
 } from "../../usage/usageModels";
@@ -12,13 +12,8 @@ import { useLocalSetting } from "../../src/settings";
 import { Switch } from "@headlessui/react";
 
 const DAYMAP = {
-    Sun: "sunday",
-    Mon: "monday",
-    Tue: "tuesday",
-    Wed: "wednesday",
-    Thu: "thursday",
-    Fri: "friday",
-    Sat: "saturday",
+    weekday: "weekday",
+    weekend: "weekend",
 };
 
 const PredictionsPage: React.FC = () => {
@@ -43,57 +38,41 @@ const PredictionsPage: React.FC = () => {
         getUsageData();
     }, []);
 
-    const highestDay = (interactions: InteractionStats) => {
-        let highestCount = 0;
-        let highestDay: string | null = null;
-        for (const day in interactions) {
-            if (interactions[day as DayBucket]) {
-                let dayTotal = 0;
-                for (const time in interactions[day as DayBucket]!) {
-                    const stats =
-                        interactions[day as DayBucket]![time as TimeBucket];
-                    if (stats) {
-                        dayTotal += stats.filter + stats.tracked + stats.tapped;
-                    }
-                }
-                if (dayTotal > highestCount) {
-                    highestCount = dayTotal;
-                    highestDay = day;
-                }
-            }
-        }
-        return DAYMAP[highestDay as keyof typeof DAYMAP] || null;
-    };
+    function highestDay(interactions: Interaction[]): string | null {
+        if (!interactions || interactions.length === 0) return null;
 
-    const highestTime = (interactions: InteractionStats) => {
-        let highestCount = 0;
-        let highestTime: string | null = null;
-        const timeBuckets: { [key: string]: number } = {};
-        for (const day in interactions) {
-            if (interactions[day as DayBucket]) {
-                for (const time in interactions[day as DayBucket]!) {
-                    const stats =
-                        interactions[day as DayBucket]![time as TimeBucket];
-                    if (stats) {
-                        timeBuckets[time] =
-                            (timeBuckets[time] || 0) +
-                            stats.filter +
-                            stats.tracked +
-                            stats.tapped;
-                    }
-                }
-            }
+        const dayCounts: Record<DayBucket, number> = { weekday: 0, weekend: 0 };
+        for (const i of interactions) {
+            dayCounts[i.dayType]++;
         }
-        for (const time in timeBuckets) {
-            if (timeBuckets[time] > highestCount) {
-                highestCount = timeBuckets[time];
-                highestTime = time;
-            }
+
+        const highestDay = Object.entries(dayCounts).sort(
+            (a, b) => b[1] - a[1]
+        )[0][0] as DayBucket;
+        return DAYMAP[highestDay] || null;
+    }
+
+    function highestTime(interactions: Interaction[]): string {
+        if (!interactions || interactions.length === 0)
+            return "at various times";
+
+        const timeCounts: Record<TimeBucket, number> = {
+            morning: 0,
+            midday: 0,
+            afternoon: 0,
+            evening: 0,
+            night: 0,
+        };
+
+        for (const i of interactions) {
+            timeCounts[i.timeBucket]++;
         }
-        return `${highestTime ? "in the" : "at"} ${
-            highestTime || "various times"
-        }`;
-    };
+
+        const highestTime = Object.entries(timeCounts).sort(
+            (a, b) => b[1] - a[1]
+        )[0][0];
+        return `in the ${highestTime}`;
+    }
 
     return (
         <div className="flex flex-col items-center justify-center gap-3 p-4">

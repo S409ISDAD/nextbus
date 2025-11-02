@@ -391,6 +391,9 @@ async def build_scheduled_db(
         #     log.debug("Scheduled too far in future")
         #     return None
 
+        # if not trip_id or trip_id == 0:
+        #     trip_id = await stop_time.journey.get_bt_trip_id(db)
+
         dest = headsign
 
         scheduled_bus = ScheduledBus(

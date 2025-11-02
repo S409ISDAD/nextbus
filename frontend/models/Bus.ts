@@ -107,4 +107,12 @@ export function isTrackedBus(bus: Departure): bus is Bus {
     return bus.type === "tracked";
 }
 
+export function getKey(bus: Departure): string {
+    if (isTrackedBus(bus)) {
+        return `${bus.scheduled}-${bus.service.line_name}-${bus.destination}`;
+    } else {
+        return `${bus.scheduled}-${bus.line}-${bus.destination}`;
+    }
+}
+
 export type Departure = Bus | ScheduledBus;

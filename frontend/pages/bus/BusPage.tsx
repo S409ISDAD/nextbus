@@ -14,7 +14,7 @@ import type { Service } from "../../models/ServiceInfo";
 import { useNavigate } from "react-router";
 import UsageManager from "../../usage/UsageManager";
 import type { PredictedStop } from "../../usage/usageModels";
-import { useLocalSetting } from "../../src/settings";
+import { USAGE_TRACKING, useLocalSetting } from "../../src/settings";
 // import { faCaretRight } from "@fortawesome/free-solid-svg-icons";
 // import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
@@ -179,83 +179,87 @@ const BusPage: React.FC = () => {
             <div
                 style={{ display: tab === "fav" ? "flex" : "none" }}
                 className="flex flex-col items-center justify-center gap-10">
-                <div className="flex flex-col items-center justify-center gap-3">
-                    <span className="text-2xl font-bold">Smart Stops</span>
-                    {usageToggle ? (
-                        <>
-                            <span className="text-sm text-center text-neutral-400 max-w-110">
-                                predicts the stop and bus route that you might
-                                take based on your previous activity, time of
-                                day, weekday, and location. It gets better the
-                                more you use nextbus.{" "}
-                                <a
-                                    href="/buses/predictions"
-                                    className="text-sm underline text-link-400">
-                                    more info
-                                </a>
-                            </span>
-                            <div className="flex flex-row flex-wrap items-center justify-center gap-3">
-                                {Object.keys(predictedStops).length > 0 ? (
-                                    predictedStops.map((predictedStop) => (
-                                        <Card
-                                            key={predictedStop.stopId}
-                                            className="flex flex-col items-center justify-center">
-                                            <div
-                                                className="mb-4 text-xl font-bold cursor-pointer"
-                                                onClick={() =>
-                                                    navigate(
-                                                        `/buses/stops/${predictedStop.stopId}`
-                                                    )
-                                                }>
-                                                {predictedStop.stopName}
-                                            </div>
-                                            <div className="flex flex-row flex-wrap gap-2">
-                                                {predictedStop.topRoutes.map(
-                                                    (route) => (
-                                                        <div
-                                                            key={route.lineName}
-                                                            className="flex flex-row items-stretch justify-center cursor-pointer"
-                                                            onClick={() =>
-                                                                navigate(
-                                                                    `/buses/stops/${predictedStop.stopId}?filter=${route.lineName}`
-                                                                )
-                                                            }>
-                                                            <div className="flex items-center px-3 py-1 bg-primary-700 rounded-l-2xl">
-                                                                <span className="flex items-center justify-center text-lg font-bold text-center">
-                                                                    {
-                                                                        route.lineName
-                                                                    }
-                                                                </span>
-                                                            </div>
-                                                            <div className="flex flex-col justify-center px-3 bg-neutral-800/50 rounded-r-2xl">
-                                                                <span className="font-semibold text">
-                                                                    {route.destination.includes(
-                                                                        "-"
+                {USAGE_TRACKING && (
+                    <div className="flex flex-col items-center justify-center gap-3">
+                        <span className="text-2xl font-bold">Smart Stops</span>
+                        {usageToggle ? (
+                            <>
+                                <span className="text-sm text-center text-neutral-400 max-w-110">
+                                    predicts the stop and bus route that you
+                                    might take based on your previous activity,
+                                    time of day, weekday, and location. It gets
+                                    better the more you use nextbus.{" "}
+                                    <a
+                                        href="/buses/predictions"
+                                        className="text-sm underline text-link-400">
+                                        more info
+                                    </a>
+                                </span>
+                                <div className="flex flex-row flex-wrap items-center justify-center gap-3">
+                                    {Object.keys(predictedStops).length > 0 ? (
+                                        predictedStops.map((predictedStop) => (
+                                            <Card
+                                                key={predictedStop.stopId}
+                                                className="flex flex-col items-center justify-center">
+                                                <div
+                                                    className="mb-4 text-xl font-bold cursor-pointer"
+                                                    onClick={() =>
+                                                        navigate(
+                                                            `/buses/stops/${predictedStop.stopId}`
+                                                        )
+                                                    }>
+                                                    {predictedStop.stopName}
+                                                </div>
+                                                <div className="flex flex-row flex-wrap gap-2">
+                                                    {predictedStop.topRoutes.map(
+                                                        (route) => (
+                                                            <div
+                                                                key={
+                                                                    route.lineName
+                                                                }
+                                                                className="flex flex-row items-stretch justify-center cursor-pointer"
+                                                                onClick={() =>
+                                                                    navigate(
+                                                                        `/buses/stops/${predictedStop.stopId}?filter=${route.lineName}`
                                                                     )
-                                                                        ? ""
-                                                                        : "to "}
-                                                                    {
-                                                                        route.destination
-                                                                    }
-                                                                </span>
+                                                                }>
+                                                                <div className="flex items-center px-3 py-1 bg-primary-700 rounded-l-2xl">
+                                                                    <span className="flex items-center justify-center text-lg font-bold text-center">
+                                                                        {
+                                                                            route.lineName
+                                                                        }
+                                                                    </span>
+                                                                </div>
+                                                                <div className="flex flex-col justify-center px-3 bg-neutral-800/50 rounded-r-2xl">
+                                                                    <span className="font-semibold text">
+                                                                        {route.destination.includes(
+                                                                            "-"
+                                                                        )
+                                                                            ? ""
+                                                                            : "to "}
+                                                                        {
+                                                                            route.destination
+                                                                        }
+                                                                    </span>
+                                                                </div>
                                                             </div>
-                                                        </div>
-                                                    )
-                                                )}
-                                            </div>
+                                                        )
+                                                    )}
+                                                </div>
+                                            </Card>
+                                        ))
+                                    ) : (
+                                        <Card>
+                                            <span className="text-center text-neutral-300">
+                                                No predicted stops. <br></br>{" "}
+                                                Try using nextbus for a few more
+                                                days in this area to improve
+                                                predictions.
+                                            </span>
                                         </Card>
-                                    ))
-                                ) : (
-                                    <Card>
-                                        <span className="text-center text-neutral-300">
-                                            No predicted stops. <br></br> Try
-                                            using nextbus for a few more days in
-                                            this area to improve predictions.
-                                        </span>
-                                    </Card>
-                                )}
-                            </div>
-                            {/* <span className="text-sm text-neutral-400">
+                                    )}
+                                </div>
+                                {/* <span className="text-sm text-neutral-400">
                         wrong?{" "}
                         <a
                             href="/buses/predictions"
@@ -264,18 +268,19 @@ const BusPage: React.FC = () => {
                             <FontAwesomeIcon icon={faCaretRight} />
                         </a>
                     </span> */}
-                        </>
-                    ) : (
-                        <span className="text-sm text-center text-neutral-400 max-w-110">
-                            usage tracking is off.{" "}
-                            <a
-                                href="/buses/predictions"
-                                className="text-sm underline text-link-400">
-                                turn it on here
-                            </a>
-                        </span>
-                    )}
-                </div>
+                            </>
+                        ) : (
+                            <span className="text-sm text-center text-neutral-400 max-w-110">
+                                usage tracking is off.{" "}
+                                <a
+                                    href="/buses/predictions"
+                                    className="text-sm underline text-link-400">
+                                    turn it on here
+                                </a>
+                            </span>
+                        )}
+                    </div>
+                )}
 
                 <Card className="flex flex-col items-center justify-center gap-2 p-2 rounded-[32px] bg-neutral-900">
                     <span className="text-2xl font-bold">Favorite Stops</span>

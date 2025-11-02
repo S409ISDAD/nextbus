@@ -58,7 +58,9 @@ def times_from_stop(stop_id: str, db: Session, limit: int = 10):
         longest_dest = max(len(dest or "") for _, dest, _, _ in results)
         longest_line = max(len(line or "") for line, _, _, _ in results)
         for line_name, dest, dep, id in results:
-            print(f"{line_name:<{longest_line + 1}}to {dest:<{longest_dest + 2}} {dep}")
+            print(
+                f"{line_name:<{longest_line + 1}}to {dest:<{longest_dest + 2}} {dep} (id: {id})"
+            )
     else:
         print("No departures found.")
 

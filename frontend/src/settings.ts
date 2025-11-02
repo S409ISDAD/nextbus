@@ -1,4 +1,5 @@
 export const SHOW_BUSES = true;
+export const USAGE_TRACKING = false;
 
 export const SETTINGS_KEYS = {
     veg: "veg_mode",

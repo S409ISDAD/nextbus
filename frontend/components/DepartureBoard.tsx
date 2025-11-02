@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { isTrackedBus, type Departure } from "../models/Bus";
+import { getKey, isTrackedBus, type Departure } from "../models/Bus";
 import fetchDepartures, { parseDepartures } from "../utils/getDepartures";
 import { useNavigate } from "react-router";
 import timeTo, { lateness, toTime } from "../utils/timeUtils";
@@ -96,7 +96,7 @@ function BusCard({
                             bus.status == "cancelled") &&
                         "opacity-75"
                 )}
-                key={bus.trip}
+                key={getKey(bus)}
                 onClick={handleClick}>
                 <div className="flex flex-row items-center justify-between gap-2">
                     <div className="flex flex-col justify-around">
@@ -523,7 +523,7 @@ function DepartureBoard({ stop_id, closest, filter }: Props) {
                                         <AnimatePresence>
                                             {buses.map((bus, idx) => (
                                                 <motion.div
-                                                    key={bus.trip}
+                                                    key={getKey(bus)}
                                                     layout
                                                     initial={{
                                                         opacity: 0,

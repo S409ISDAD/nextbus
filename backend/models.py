@@ -562,6 +562,17 @@ class Stop(Base):
                 .filter(Service.line_name.in_(line_names))
             )
 
+        valid_tt_ids = []
+        for st in (
+            db.query(Stop).filter(Stop.atco_code == self.atco_code).first().services
+        ):
+            valid_tt_ids += [tt.id for tt in st.get_correct_timetables(now)]
+
+        if valid_tt_ids:
+            stop_times_q = stop_times_q.filter(
+                StopTime.journey.has(Journey.timetable_id.in_(valid_tt_ids))
+            )
+
         stop_times = stop_times_q.all()
 
         day_offsets = [0]
@@ -960,9 +971,24 @@ class Service(Base, AutoSlugMixin):
     def get_full_name(self):
         return f"{self.line_name} {self.description}".strip()
 
-    def get_correct_timetable(self):
-        if len(self.timetables) == 1:
-            return self.timetables[0]
+    def get_correct_timetables(
+        self, now_dt: datetime | None = None
+    ) -> list["Timetable"]:
+        """gets the timetables that should be active
+
+        returns the highest revision that is valid
+        if multiple with same revision, returns all
+        falls back to first valid if no revisions
+        """
+
+        now = (now_dt or datetime.now(tz=LONDON)).date()
+
+        valid_tts = [tt for tt in self.timetables if tt.is_valid(now)]
+        if not valid_tts:
+            return []
+
+        if len(valid_tts) == 1:
+            return valid_tts
 
         revisions = [
             tt.revision_number
@@ -970,29 +996,21 @@ class Service(Base, AutoSlugMixin):
             if tt.revision_number is not None
         ]
 
-        if revisions and all(r == revisions[0] for r in revisions):
-            log.warning(
-                f"Service {self.id} has multiple timetables with the same revision number {revisions[0]}"
-            )
-            return next((tt for tt in self.timetables if tt.is_valid()), None)
+        if revisions:
+            highest_rev = max(revisions)
+            same_rev_tts = [tt for tt in valid_tts if tt.revision_number == highest_rev]
 
-        highest_revison = -1
-        correct_tt = None
-        for tt in self.timetables:
-            if (
-                tt.revision_number is not None
-                and tt.revision_number > highest_revison
-                and tt.is_valid()
-            ):
-                highest_revison = tt.revision_number
-                correct_tt = tt
+            if len(same_rev_tts) > 1:
+                log.debug(
+                    f"Service {self.id} has {len(same_rev_tts)} timetables at revision {highest_rev}"
+                )
 
-        if not correct_tt:
-            return next((tt for tt in self.timetables if tt.is_valid()), None)
-        return correct_tt
+            return same_rev_tts
+
+        return valid_tts
 
     def with_timetable(self):
-        timetable = self.get_correct_timetable()
+        timetable = self.get_correct_timetables()[0]
         operators_data = []
         operators = self.operators
 

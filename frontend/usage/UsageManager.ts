@@ -1,6 +1,7 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
-import type { DayBucket, InteractionStats, StopRouteUsage, StopUsage, TimeBucket, Usage, PredictedStop } from './usageModels';
+import type { DayBucket, Interaction, StopUsage, TimeBucket, Usage, PredictedStop } from './usageModels';
 import haversine from "haversine-distance";
+import { USAGE_TRACKING } from '../src/settings';
 
 
 function getTimeBucket(date: Date): TimeBucket {
@@ -13,8 +14,7 @@ function getTimeBucket(date: Date): TimeBucket {
 }
 
 function getDayBucket(date: Date): DayBucket {
-    const days: DayBucket[] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-    return days[date.getDay()];
+    return [0, 6].includes(date.getDay()) ? "weekend" : "weekday";
 }
 
 
@@ -100,38 +100,49 @@ export default class UsageManager {
         await this.db.clear('stops');
     }
 
-    private computeScore(stats: InteractionStats): number {
+    private computeScore(interactions: Interaction[], now: number = Date.now()): number {
+        const WEIGHTS = { tracked: 5, filter: 3, tapped: 1 };
+        const DECAY_HALF_LIFE = 7 * 24 * 60 * 60 * 1000; // 7 days
+        const decay = (t: number) => Math.exp(-t / DECAY_HALF_LIFE);
+
         let score = 0;
-        for (const day in stats) {
-            const times = stats[day as DayBucket]!;
-            for (const time in times) {
-                const s = times[time as TimeBucket]!;
-                score += s.tracked * 5 + s.filter * 3 + s.tapped;
-            }
+        for (const i of interactions) {
+            const age = now - i.timestamp;
+            const w = WEIGHTS[i.action] ?? 1;
+            score += w * decay(age);
         }
         return score;
     }
 
-    async logStop(stopId: string, stopName: string, stopLat: number, stopLon: number, favourite: boolean, interactionType: 'filter' | 'tracked' | 'tapped', date: Date = new Date()) {
-        if (!(this.isUsageEnabled())) {
+    async logStop(
+        stopId: string,
+        stopName: string,
+        stopLat: number,
+        stopLon: number,
+        favourite: boolean,
+        interactionType: 'filter' | 'tracked' | 'tapped',
+        date: Date = new Date(),
+    ) {
+        if (!(this.isUsageEnabled() && USAGE_TRACKING)) {
             console.log("Usage tracking is disabled; not logging stop interaction");
             return;
         }
+
         const day = getDayBucket(date);
         const time = getTimeBucket(date);
 
         console.log(`Logging stop ${stopId} (${stopName}) fav ${favourite} interaction ${interactionType} at ${day} ${time}`);
 
-        const stop = await this.db.get('stops', stopId) || {
+        const stop = (await this.db.get('stops', stopId)) || {
             id: stopId,
             name: stopName,
             lat: stopLat,
             lon: stopLon,
-            favourite: favourite,
-            lastActive: date.getTime(),
-            routes: {} as { [routeId: string]: StopRouteUsage },
+            favourite,
+            lastActive: 0,
+            routes: {},
+            interactions: [],
             score: 0,
-            interactions: {} as InteractionStats
         };
 
         const timeSinceLastActive = date.getTime() - stop.lastActive;
@@ -142,14 +153,16 @@ export default class UsageManager {
             return;
         }
 
+        const interaction: Interaction = {
+            timestamp: date.getTime(),
+            action: interactionType,
+            timeBucket: time,
+            dayType: day,
+        };
 
+        stop.interactions.push(interaction);
         stop.lastActive = date.getTime();
         stop.favourite = favourite;
-
-        if (!stop.interactions[day]) stop.interactions[day] = {};
-        if (!stop.interactions[day]![time]) stop.interactions[day]![time] = { filter: 0, tracked: 0, tapped: 0 };
-        stop.interactions[day]![time][interactionType] += 1;
-
         stop.score = this.computeScore(stop.interactions);
 
         await this.db.put('stops', stop, stopId);
@@ -166,46 +179,52 @@ export default class UsageManager {
         interactionType: 'filter' | 'tracked' | 'tapped',
         date: Date = new Date()
     ) {
-        if (!(this.isUsageEnabled())) {
+
+        if (!(this.isUsageEnabled() && USAGE_TRACKING)) {
             console.log("Usage tracking is disabled; not logging route interaction");
             return;
         }
-        const day = getDayBucket(date);
-        const time = getTimeBucket(date);
+        const dayType = getDayBucket(date);
+        const timeBucket = getTimeBucket(date);
 
-        console.log(`Logging route interaction: stop ${stopId} (${stopName}), route ${routeId} (${lineName}), destination ${destination}, interaction ${interactionType} at ${day} ${time}`);
+        console.log(`Logging route interaction: stop ${stopId} (${stopName}), route ${routeId} (${lineName}), destination ${destination}, interaction ${interactionType} at ${dayType} ${timeBucket}`);
 
-        const stop = await this.db.get('stops', stopId) || {
+        const interaction: Interaction = {
+            timestamp: date.getTime(),
+            action: interactionType,
+            timeBucket,
+            dayType,
+        };
+
+        const stop = (await this.db.get('stops', stopId)) || {
             id: stopId,
             name: stopName,
             lat: stopLat,
             lon: stopLon,
             favourite: false,
             lastActive: 0,
-            routes: {} as { [lineName: string]: StopRouteUsage },
-            interactions: {} as InteractionStats,
-            score: 0
+            routes: {},
+            interactions: [],
+            score: 0,
         };
 
+
         stop.lastActive = date.getTime();
+        stop.interactions.push(interaction);
 
-        if (!destination) {
-            destination = description;
-        }
+        if (!destination) destination = description;
         if (!stop.routes[lineName]) stop.routes[lineName] = { destinations: {} };
-        const dests = stop.routes[lineName].destinations;
-        if (!dests[destination]) dests[destination] = { score: 0, interactions: {} };
+        if (!stop.routes[lineName].destinations[destination])
+            stop.routes[lineName].destinations[destination] = { score: 0, interactions: [] };
 
-        const stats = dests[destination].interactions;
-        if (!stats[day]) stats[day] = {};
-        if (!stats[day]![time]) stats[day]![time] = { filter: 0, tracked: 0, tapped: 0 };
-        stats[day]![time][interactionType] += 1;
-
-        dests[destination].score = this.computeScore(stats);
+        const dest = stop.routes[lineName].destinations[destination];
+        dest.interactions.push(interaction);
+        dest.score = this.computeScore(dest.interactions);
+        stop.score = this.computeScore(stop.interactions);
 
         await this.db.put('stops', stop, stopId);
 
-        const route = await this.db.get('routes', routeId) || {
+        const route = (await this.db.get('routes', routeId)) || {
             id: routeId,
             lineName,
             description,
@@ -213,7 +232,7 @@ export default class UsageManager {
             favourite: false,
             lastActive: 0,
             score: 0,
-            interactions: {} as InteractionStats,
+            interactions: [],
         };
 
         const timeSinceLastActive = date.getTime() - route.lastActive;
@@ -224,52 +243,42 @@ export default class UsageManager {
             return;
         }
 
+
         route.lastActive = date.getTime();
-        if (!route.interactions) route.interactions = {};
-        if (!route.interactions[day]) route.interactions[day] = {};
-        if (!route.interactions[day]![time]) route.interactions[day]![time] = { filter: 0, tracked: 0, tapped: 0 };
-        route.interactions[day]![time][interactionType] += 1;
-
+        if (!route.interactions) route.interactions = [];
+        route.interactions.push(interaction);
         route.score = this.computeScore(route.interactions);
-
         if (!route.stops.includes(stopId)) route.stops.push(stopId);
 
         await this.db.put('routes', route, routeId);
     }
 
     scoreStop(stop: StopUsage, date: Date, distance: number): number {
-        const day = getDayBucket(date);
-        const time = getTimeBucket(date);
+        const recencyScore = this.computeScore(stop.interactions, date.getTime());
+        let effectiveScore = stop.score * 0.6 + recencyScore * 0.4;
 
-        const interactions = stop.interactions?.[day as DayBucket]?.[time as TimeBucket];
-        let dayTimeScore = 0;
-        if (interactions) {
-            dayTimeScore += interactions.tracked * 5 + interactions.filter * 3 + interactions.tapped;
-        }
+        effectiveScore *= 1 / (1 + distance / 500); // distance decay
+        if (stop.favourite) effectiveScore *= 1.2;
 
-        let effectiveScore = stop.score / 5 + dayTimeScore; // base score plus day/time score
-
-        effectiveScore *= 1 / (1 + distance / 500); // distance decay: half score at 500m
-
-        if (stop.favourite) effectiveScore *= 1.2; // favourite boost
-        const decayFactor = 0.5 + 0.5 * (stop.lastActive / date.getTime()); // simple 0.5–1 scaling
+        // mild recency scaling
+        const decayFactor = 0.5 + 0.5 * (stop.lastActive / date.getTime());
         effectiveScore *= decayFactor;
 
         return effectiveScore;
     }
 
+
     async predictStopAndRoutes(
         lat?: number,
         lon?: number,
         date: Date = new Date()
-    ): Promise<Array<
-        PredictedStop
-    >> {
+    ): Promise<PredictedStop[]> {
         // gets the top 3 stops and the most likely routes for the given location and time
 
-        const day = getDayBucket(date);
-        const time = getTimeBucket(date);
+        const dayType = getDayBucket(date);
+        const timeBucket = getTimeBucket(date);
 
+        const now = date.getTime();
 
         const allStops = await this.db.getAll('stops') as StopUsage[];
 
@@ -278,44 +287,60 @@ export default class UsageManager {
             if (lat !== undefined && lon !== undefined) {
                 distance = haversine([lat, lon], [stop.lat, stop.lon]);
             }
+
             const effectiveScore = this.scoreStop(stop, date, distance);
 
             return { stopId: stop.id, stop, stopName: stop.name, score: effectiveScore };
         });
 
         scoredStops.sort((a, b) => b.score - a.score);
-
         const topStops = scoredStops.slice(0, 3);
 
-        const results = topStops.map(({ stopId, stop, stopName, score }) => {
+        let results = topStops.map(({ stopId, stop, stopName, score }) => {
             const routes: { lineName: string; destination: string; score: number }[] = [];
-
             let maxRouteScore = 0;
 
             for (const [lineName, routeUsage] of Object.entries(stop.routes)) {
                 for (const [destination, destUsage] of Object.entries(routeUsage.destinations)) {
-                    const interactions = destUsage.interactions?.[day]?.[time];
-                    let dayTimeScore = 0;
-                    if (interactions) {
-                        dayTimeScore = interactions.filter * 5 + interactions.tracked * 3 + interactions.tapped;
+                    const relevant = destUsage.interactions.filter(
+                        i => i.dayType === dayType && i.timeBucket === timeBucket
+                    );
+
+                    // if there are relevant interactions, compute score based on them
+                    let routeTemporalScore = 0;
+                    if (relevant.length > 0) {
+                        routeTemporalScore = this.computeScore(relevant, now);
+                    } else {
+                        // no relevant interactions, fall back to overall interactions
+                        // use a small fraction of full dest score to avoid 0
+                        routeTemporalScore = this.computeScore(destUsage.interactions, now) * 0.25;
                     }
-                    let routeScore = destUsage.score / 5 + dayTimeScore;
-                    if (routeScore > 0) routes.push({ lineName, destination, score: routeScore });
-                    if (routeScore > maxRouteScore) maxRouteScore = routeScore;
+
+                    if (routeTemporalScore > 0) {
+                        routes.push({ lineName, destination, score: routeTemporalScore });
+                        if (routeTemporalScore > maxRouteScore) maxRouteScore = routeTemporalScore;
+                    }
                 }
             }
 
-            routes.sort((a, b) => b.score - a.score);
+            if (routes.length === 0) {
+                // no route data, return empty
+                return null;
+            }
 
+            routes.sort((a, b) => b.score - a.score);
             const topRoutes = routes.slice(0, 2);
 
-            const routeBoostFactor = 0.3; // 30% of top route score
+            // 3) Boost stop by top route(s)
+            const routeBoostFactor = 0.3; // tuneable
             const boostedScore = score + maxRouteScore * routeBoostFactor;
 
             return { stopId, stopName, score: boostedScore, topRoutes };
         });
 
-        return results;
+        results = results.filter((r): r is PredictedStop => r !== null);
+
+        return results as PredictedStop[];
 
     }
 }

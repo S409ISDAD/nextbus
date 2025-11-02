@@ -1,21 +1,18 @@
 export type TimeBucket = "morning" | "midday" | "afternoon" | "evening" | "night";
-export type DayBucket = "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat" | "Sun";
+export type DayBucket = "weekday" | "weekend";
 
 
-export type InteractionStats = {
-    [day in DayBucket]?: {
-        [time in TimeBucket]?: {
-            filter: number;
-            tracked: number;
-            tapped: number;
-        }
-    }
+export type Interaction = {
+    timestamp: number;            // unix ms
+    action: 'tracked' | 'tapped' | 'filter';
+    timeBucket: TimeBucket;       // morning, midday, etc.
+    dayType: DayBucket;         // weekday or weekend
 };
 
 
 export interface DestinationUsage {
     score: number;               // weighted sum of interactions for quick ranking
-    interactions: InteractionStats;
+    interactions: Interaction[];
 }
 
 export interface StopRouteUsage {
@@ -29,7 +26,7 @@ export interface StopUsage {
     name: string;
     lat: number;
     lon: number;
-    interactions: InteractionStats;
+    interactions: Interaction[];
     favourite: boolean;
     score: number;                    // weighted sum for ranking
     lastActive: number;               // unix timestamp
@@ -46,7 +43,7 @@ export interface RouteUsage {
     favourite: boolean;
     lastActive: number;               // unix timestamp
     score: number;                    // weighted sum for ranking
-    interactions?: InteractionStats;  // optional aggregated across stops
+    interactions?: Interaction[];  // optional aggregated across stops
 }
 
 export interface Usage {

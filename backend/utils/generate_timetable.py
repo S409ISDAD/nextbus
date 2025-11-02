@@ -32,7 +32,7 @@ def generate_timetable(
     )
     stop_ordered = [su.stop_id for su in stops]
 
-    current_timetable = service.get_correct_timetable()
+    current_timetables = service.get_correct_timetables()
 
     # Get valid inbound trips
     journey_filters = [
@@ -40,8 +40,9 @@ def generate_timetable(
         Journey.inbound.is_(inbound),
         journey_is_valid_filter(today.date()),
     ]
-    if current_timetable:
-        journey_filters.append(Journey.timetable_id == current_timetable.id)
+    if current_timetables:
+        for current_timetable in current_timetables:
+            journey_filters.append(Journey.timetable_id == current_timetable.id)
 
     journeys = (
         db.query(Journey)

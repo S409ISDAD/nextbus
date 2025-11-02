@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { isTrackedBus, type Departure } from "../../models/Bus";
+import { getKey, isTrackedBus, type Departure } from "../../models/Bus";
 import type { BTStop } from "../../models/Stop";
 import fetchDepartures, {
     mostCommonDest,
@@ -193,7 +193,7 @@ function BusCard({
     return (
         <>
             <div
-                key={bus.trip}
+                key={getKey(bus)}
                 onClick={handleClick}
                 className={clsx(
                     "cursor-pointer",
@@ -949,7 +949,7 @@ const DeparturePage: React.FC = () => {
                                 )
                                 .map((bus, idx) => (
                                     <motion.div
-                                        key={bus.trip}
+                                        key={getKey(bus)}
                                         layout // enables smooth reordering animations
                                         initial={{ opacity: 0, y: 20 }} // entry animation
                                         animate={{ opacity: 1, y: 0 }} // while present
