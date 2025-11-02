@@ -12,7 +12,7 @@ import { faDiscord } from "@fortawesome/free-brands-svg-icons";
 import version from "../utils/version";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
-import ThemeToggle from "./ThemeToggle";
+// import ThemeToggle from "./ThemeToggle";
 import { useLocalSetting } from "../src/settings";
 
 function NavSearchBar(queryProp?: { query?: string }) {
@@ -74,8 +74,7 @@ const footer = (currentYear: number) => (
         <a href="/stats" className="underline text-link-400 max-h-fit">
             Stats
         </a>
-        ·
-        <ThemeToggle /> ·
+        ·{/* <ThemeToggle /> · */}
         <a
             href="https://discord.gg/dyEmZSkwge"
             target="_blank"
@@ -136,11 +135,11 @@ export default function Layout() {
                 <div className="top-0 flex justify-between p-[8px] z-[99] border-b-1 border-neutral-800 rounded-b-[24px] fixed w-full bg-[#131313] shadow-2xl md:shadow-xl">
                     <div className="flex gap-2">
                         <Link to="/">
-                            <div className="flex flex-col items-center h-full mx-4 spooky-font">
-                                <span className="font-bold text-xl/6 ">
+                            <div className="flex flex-col items-center h-full mx-4">
+                                <span className="font-bold text-lg/6 ">
                                     nextbus
                                 </span>
-                                <span className="font-semibold text-sm/2 text-link ">
+                                <span className="font-semibold text-xs/2 text-link ">
                                     beta
                                 </span>
                             </div>

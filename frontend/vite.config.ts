@@ -19,20 +19,19 @@ export default defineConfig({
       "start_url": "/",
       "icons": [
         {
-          "src": "/favicon-themed/web-app-manifest-192x192.png",
+          "src": "/favicon/web-app-manifest-192x192.png?v=2",
           "sizes": "192x192",
           "type": "image/png",
           "purpose": "maskable"
         },
         {
-          "src": "/favicon-themed/web-app-manifest-512x512.png",
+          "src": "/favicon/web-app-manifest-512x512.png?v=2",
           "sizes": "512x512",
           "type": "image/png",
           "purpose": "maskable"
         }
       ],
-      "theme_color": "#F54900",
-      // "theme_color": "#00A0EB",
+      "theme_color": "#00A0EB",
       "background_color": "#131313",
       "display": "standalone"
     },

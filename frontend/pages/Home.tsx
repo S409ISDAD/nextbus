@@ -166,12 +166,11 @@ const Home: React.FC = () => {
                                 </div>
                             )}
                         </div>
-                        <div className="flex flex-row items-center gap-1 spooky-font">
-                            {/* TODO: remember to go down a size when changing back to normal font */}
-                            <span className="text-6xl font-black text-center pt-7">
+                        <div className="flex flex-row items-center gap-1">
+                            <span className="text-5xl font-black text-center pt-7">
                                 nextbus
                             </span>
-                            <span className="text-2xl font-bold h-fit text-link">
+                            <span className="text-xl font-bold h-fit text-link">
                                 beta
                             </span>
                         </div>
