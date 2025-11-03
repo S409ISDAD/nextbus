@@ -612,8 +612,9 @@ async def build_bus(
     confidence = await calculate_confidence(
         delay, coords, journey_id, this_bus.get("trip_id"), r
     )
-    if reg == "YX67 VCD" or bus_id == 34196:  # known tracking broken
-        confidence.broken_tracking_confidence = 1.0
+
+    # if reg == "YX67 VCD" or bus_id == 34196:  # known tracking broken
+    #     confidence.broken_tracking_confidence = 1.0
 
     log.debug(
         f"final={round(confidence.final_confidence, 5)}, brokendown={round(confidence.broken_down_confidence, 5)}, logoff={round(confidence.log_off_confidence, 5)}, diversion={round(confidence.diversion_confidence, 5)}, brokentracking={round(confidence.broken_tracking_confidence, 5)} id={bus_id}, reg={reg}"
