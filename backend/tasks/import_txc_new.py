@@ -436,7 +436,8 @@ class TXCImporter:
             self.service_line_key = line_key
 
             sorted_revisions = sorted(
-                self.map[line_key].items(), key=lambda x: x[1]["start"]
+                self.map[line_key].items(),
+                key=lambda x: x[0],  # sort by (revision_num, start_date)
             )
 
             for i, ((revision, start_date), rev_data) in enumerate(sorted_revisions):
@@ -901,11 +902,13 @@ class TXCImporter:
 
         operator = self.operators.get(txc_service.operator)
 
-        if operator and "first" in operator.name.lower():
-            # use the artificial end date for first bus
-            end_date = self.end_date or txc_service.operating_period.end or None
-        else:
-            end_date = txc_service.operating_period.end or None
+        # if operator and "first" in operator.name.lower():
+        #     # use the artificial end date for first bus
+        #     end_date = self.end_date or txc_service.operating_period.end or None
+        # else:
+        #     end_date = txc_service.operating_period.end or None
+
+        end_date = self.end_date or txc_service.operating_period.end or None
 
         if end_date and end_date < self.today.date():
             log.debug(
