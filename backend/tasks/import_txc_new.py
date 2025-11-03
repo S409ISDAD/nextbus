@@ -447,7 +447,18 @@ class TXCImporter:
                 # determine end date based on next revision's start date
                 if i < len(sorted_revisions) - 1:
                     next_start = sorted_revisions[i + 1][1]["start"]
-                    rev_data["end"] = next_start - timedelta(days=1)
+                    log.debug(
+                        f"Revision {revision} for {line_name} ends {rev_data['end']} "
+                        f"(next revision {sorted_revisions[i+1][0]} starts {next_start})"
+                    )
+                    if next_start > start_date:
+                        rev_data["end"] = next_start - timedelta(days=1)
+                    else:
+                        # same start date or earlier (patch or reissue)
+                        log.warning(
+                            "Next revision start date is not after current revision start date"
+                        )
+                        rev_data["end"] = start_date
 
                 self.files_in_revision = len(rev_data["files"])
                 self.file_idx_in_revision = 0
