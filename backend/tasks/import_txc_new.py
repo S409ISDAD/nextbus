@@ -8,11 +8,11 @@ import zipfile
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
-
 from geoalchemy2.shape import from_shape
 from shapely import Point
 from shapely.geometry import LineString
 from sqlalchemy import and_, exists, func, not_, or_, select
+from sqlalchemy.orm import aliased
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy_searchable import sync_trigger
 
@@ -431,7 +431,6 @@ class TXCImporter:
         log.debug(f"Total file appearances to process: {total_passes}")
         for line_key in self.map.keys():
             service_id, line_name = line_key
-            self.clear_old_timetables(service_id)
 
             self.service_line_key = line_key
 
@@ -478,20 +477,50 @@ class TXCImporter:
                 log.debug("Finalising services...")
                 self.finish_services()
 
+            self.clear_old_timetables(service_id)
             self.clear_old_services(service_id)
 
     def clear_old_timetables(self, service_code):
+        today = self.today.date()
+
+        T1 = Timetable
+        T2 = aliased(Timetable)
+
+        higher_revision_started = exists().where(
+            and_(
+                T2.service_code == T1.service_code,
+                T2.data_source_id == self.ds_id,
+                T2.start_date <= today,
+                or_(
+                    # T2 has higher revision number
+                    and_(
+                        T2.revision_number > T1.revision_number,
+                        T2.revision_number > 0,
+                    ),
+                    # fallback: revision 0 case
+                    and_(
+                        T1.revision_number == 0,
+                        T2.revision_number == 0,
+                        T2.start_date > T1.start_date,
+                    ),
+                ),
+            )
+        )
+
         timetables_to_go = (
-            self.db.query(Timetable)
+            self.db.query(T1)
             .filter(
-                Timetable.service_code == service_code,
-                Timetable.data_source_id == self.ds_id,
-                Timetable.end_date is not None,
-                Timetable.end_date
-                < self.today.date(),  # route is inactive if end_date is in the past (inclusive)
+                T1.service_code == service_code,
+                T1.data_source_id == self.ds_id,
+                or_(
+                    and_(T1.end_date is not None, T1.end_date < today),
+                    T1.id.notin_(self.timetables),  # not in the current dataset
+                ),
+                higher_revision_started,  # only delete if a higher revision has started
             )
             .all()
         )
+
         if timetables_to_go:
             log.info(f"Deleting {len(timetables_to_go)} stale timetables...")
             self.stats.timetables_deleted += len(timetables_to_go)
@@ -913,13 +942,13 @@ class TXCImporter:
 
         operator = self.operators.get(txc_service.operator)
 
-        # if operator and "first" in operator.name.lower():
-        #     # use the artificial end date for first bus
-        #     end_date = self.end_date or txc_service.operating_period.end or None
-        # else:
-        #     end_date = txc_service.operating_period.end or None
+        if operator and "first" in operator.name.lower():
+            # use the artificial end date for first bus
+            end_date = self.end_date or txc_service.operating_period.end or None
+        else:
+            end_date = txc_service.operating_period.end or None
 
-        end_date = self.end_date or txc_service.operating_period.end or None
+        # end_date = self.end_date or txc_service.operating_period.end or None
 
         if end_date and end_date < self.today.date():
             log.debug(
