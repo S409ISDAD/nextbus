@@ -68,9 +68,11 @@ async def all_sources(
             versions_list = [
                 {
                     "id": v.id,
-                    "name": f"{v.start_date} to {v.end_date}"
-                    if v.start_date and v.end_date
-                    else v.name,
+                    "name": (
+                        f"{v.start_date} to {v.end_date}"
+                        if v.start_date and v.end_date
+                        else v.name
+                    ),
                     "start_date": v.start_date,
                     "end_date": v.end_date,
                     "url": v.url,
@@ -85,6 +87,7 @@ async def all_sources(
                     "id": source_obj.id,
                     "name": source_obj.name,
                     "description": source_obj.description,
+                    "url": source_obj.url,
                     "service_count": service_count,
                     "timetable_count": timetable_count,
                     "versions": versions_list,

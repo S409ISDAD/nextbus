@@ -23,6 +23,7 @@ export interface DataSourceVersion {
 export interface SimpleDataSource extends DataSource {
     service_count: number;
     timetable_count: number;
+    url: string | null;
     versions: DataSourceVersion[];
 }
 

@@ -66,7 +66,7 @@ datasources = [
     },
     {
         "name": "Brighton & Hove",
-        "url": "https://data.discoverpassenger.com/operator/brightonhove",
+        "url": "https://www.buses.co.uk/open-data",
     },
     {
         "name": "Reading Buses",

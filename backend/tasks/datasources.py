@@ -32,7 +32,9 @@ async def import_datasource(id, folder: Path, skip_checks=False) -> "Statistics"
             )
         )
 
-        if datasource.url and "data.discoverpassenger" in datasource.url:
+        if datasource.url and (
+            "data.discoverpassenger" in datasource.url or "open-data" in datasource.url
+        ):
             log.debug(f"Handling Passenger datasource {datasource.name}")
             duration, stats = await handle_passenger(
                 db, datasource, folder, skip_checks

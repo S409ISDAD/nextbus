@@ -84,8 +84,23 @@ const SourcesPage: React.FC = () => {
                                                     }>
                                                     {source.name}
                                                 </td>
-                                                <td className="px-4 py-2 text-gray-500">
-                                                    —
+                                                <td
+                                                    className={`px-4 py-2 ${
+                                                        source.url
+                                                            ? "underline cursor-pointer text-link wrap-anywhere max-w-[20rem]"
+                                                            : "text-gray-500"
+                                                    }`}
+                                                    onClick={() => {
+                                                        if (source.url) {
+                                                            window.open(
+                                                                source.url,
+
+                                                                "_blank",
+                                                                "noreferrer"
+                                                            );
+                                                        }
+                                                    }}>
+                                                    {source.url || "—"}
                                                 </td>
                                                 <td className="px-4 py-2 text-gray-500">
                                                     —
