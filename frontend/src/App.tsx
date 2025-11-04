@@ -62,7 +62,7 @@ import PredictionsPage from "../pages/bus/Predictions.tsx";
 //             <span className="text-center text-gray-200 text-nowrap">
 //                 Finding this useful?{" "}
 //                 <a
-//                     href="https://forms.gle/SxrFyLQ1HedQcLLC7"
+//                     href="https://forms.`gl`e/SxrFyLQ1HedQcLLC7"
 //                     className="underline text-link"
 //                     target="_blank"
 //                     rel="noopener noreferrer">

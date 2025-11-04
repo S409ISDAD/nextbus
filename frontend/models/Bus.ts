@@ -90,7 +90,7 @@ export interface MapBus {
     service_id: string;
     service: MapService;
     vehicle: MapVehicle;
-    livery?: Livery;
+    livery_id?: number;
 }
 
 interface MapVehicle {

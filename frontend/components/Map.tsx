@@ -10,7 +10,6 @@ import {
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useShowAppNav } from "../utils/AppNav";
 import type { MapBus } from "../models/Bus";
-import getLivery from "../utils/getLivery";
 import { SHOW_BUSES } from "../src/settings";
 import { useNavigate } from "react-router";
 import { TimeSince } from "./ui/TimeSince.tsx";
@@ -23,6 +22,73 @@ type Stop = {
     services: string[];
     bearing?: number;
 };
+
+function BusMarker({ bus, setPopup }: { bus: MapBus; setPopup: any }) {
+    const navigate = useNavigate();
+
+    let className = "bus-marker";
+
+    let angle = bus.heading;
+
+    if (angle != null) {
+        if (angle < 180) {
+            angle -= 90;
+            className += " right";
+            // if (bus.vehicle?.right_css) {
+            //     background = bus.vehicle.right_css;
+            // }
+        } else {
+            angle -= 270;
+        }
+    }
+
+    const liveryId = bus.vehicle?.livery;
+
+    if (liveryId) {
+        className += ` livery-${liveryId}`;
+    }
+
+    return (
+        <Marker
+            key={bus.trip_id}
+            longitude={bus.coords[1]}
+            latitude={bus.coords[0]}
+            rotation={angle}
+            anchor="center"
+            onClick={(e) => {
+                e.originalEvent.stopPropagation();
+                setPopup({
+                    lngLat: [bus.coords[1], bus.coords[0]],
+                    content: (
+                        <div className="flex flex-col font-bold text-white bg-[#222]">
+                            <span
+                                className="underline cursor-pointer text-link"
+                                onClick={() => navigate(`/buses/${bus.id}`)}>
+                                {bus.service.line_name} to {bus.destination}
+                            </span>
+                            <span className="text-xs text-gray-300">
+                                {bus.vehicle.name}
+                            </span>
+                            <span className="text-xs font-normal text-gray-400">
+                                {parse(bus.vehicle.features)}
+                            </span>
+                            <TimeSince
+                                className="text-xs text-gray-300"
+                                time={bus.updated}
+                            />
+                        </div>
+                    ),
+                });
+            }}>
+            <svg width="24" height="16" className={className}>
+                <text x="12" y="12">
+                    {bus.service ? bus.service.line_name : "�"}
+                </text>
+            </svg>
+            {angle == null ? null : <div className="arrow" />}
+        </Marker>
+    );
+}
 
 type MapViewProps = {
     mapRef: React.Ref<MapRef>;
@@ -43,8 +109,6 @@ const MapView: React.FC<MapViewProps> = ({
     const geoLocateRef = useRef<any>(null);
 
     const showAppNav = useShowAppNav();
-
-    const navigate = useNavigate();
 
     const [popup, setPopup] = useState<{
         lngLat: [number, number];
@@ -87,6 +151,7 @@ const MapView: React.FC<MapViewProps> = ({
                 maxPitch={0}
                 maxZoom={18}
                 minZoom={4}
+                // mapStyle="https://tiles.stadiamaps.com/styles/osm_bright.json"
                 mapStyle="https://tiles.stadiamaps.com/styles/alidade_smooth_dark.json"
                 // mapStyle={{
                 //     version: 8,
@@ -169,54 +234,7 @@ const MapView: React.FC<MapViewProps> = ({
                 ))}
 
                 {buses.map((bus) => (
-                    <Marker
-                        key={bus.trip_id}
-                        longitude={bus.coords[1]}
-                        latitude={bus.coords[0]}
-                        anchor="center"
-                        onClick={(e) => {
-                            e.originalEvent.stopPropagation();
-                            setPopup({
-                                lngLat: [bus.coords[1], bus.coords[0]],
-                                content: (
-                                    <div className="flex flex-col font-bold text-white bg-[#222]">
-                                        <span
-                                            className="underline cursor-pointer text-link"
-                                            onClick={() =>
-                                                navigate(`/buses/${bus.id}`)
-                                            }>
-                                            {bus.service.line_name} to{" "}
-                                            {bus.destination}
-                                        </span>
-                                        <span className="text-xs text-gray-300">
-                                            {bus.vehicle.name}
-                                        </span>
-                                        <span className="text-xs font-normal text-gray-400">
-                                            {parse(bus.vehicle.features)}
-                                        </span>
-                                        <TimeSince
-                                            className="text-xs text-gray-300"
-                                            time={bus.updated}
-                                        />
-                                    </div>
-                                ),
-                            });
-                        }}>
-                        <div
-                            style={{
-                                width: 24,
-                                height: 16,
-                                background: bus?.livery?.left_css ?? "#222",
-                                transform: `rotate(${bus.heading - 90}deg)`,
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                            }}>
-                            <span className="text-xs font-bold text-black">
-                                {bus.service.line_name}
-                            </span>
-                        </div>
-                    </Marker>
+                    <BusMarker key={bus.id} bus={bus} setPopup={setPopup} />
                 ))}
 
                 {popup && (
@@ -316,20 +334,20 @@ const Map: React.FC = () => {
             const url = `https://bustimes.org/vehicles.json?ymax=${ymax}&xmax=${xmax}&ymin=${ymin}&xmin=${xmin}`;
             const res = await fetch(url);
             const geojson = await res.json();
-            const busesData: MapBus[] = await Promise.all(
-                geojson.map(async (feature: any) => ({
-                    id: feature.id,
-                    coords: [feature.coordinates[1], feature.coordinates[0]],
-                    heading: feature.heading,
-                    updated: new Date(feature.datetime),
-                    destination: feature.destination,
-                    trip_id: feature.trip_id,
-                    service_id: feature.service_id,
-                    service: feature.service,
-                    vehicle: feature.vehicle,
-                    livery: await getLivery(feature.vehicle.livery),
-                }))
-            );
+            geojson.splice(1000);
+            const busesData: MapBus[] = geojson.map((feature: any) => ({
+                id: feature.id,
+                coords: [feature.coordinates[1], feature.coordinates[0]],
+                heading: feature.heading,
+                updated: new Date(feature.datetime),
+                destination: feature.destination,
+                trip_id: feature.trip_id,
+                service_id: feature.service_id,
+                service: feature.service,
+                vehicle: feature.vehicle,
+                livery_id: feature.vehicle.livery,
+            }));
+
             console.log(busesData);
             setBuses(busesData);
         } catch (err) {
@@ -346,20 +364,29 @@ const Map: React.FC = () => {
         const bounds = map.getBounds();
         const zoom = map.getZoom();
 
-        if (zoom < 13) {
+        const STOPS_ZOOM = 13;
+        const BUSES_ZOOM = 9;
+
+        if (zoom < STOPS_ZOOM) {
             if (stops.length > 0) setStops([]);
-            return;
+        } else {
+            if (stopsTimeout.current) clearTimeout(stopsTimeout.current);
+            stopsTimeout.current = window.setTimeout(
+                () => fetchStops(bounds),
+                400
+            );
         }
 
-        if (stopsTimeout.current) clearTimeout(stopsTimeout.current);
-        stopsTimeout.current = window.setTimeout(() => fetchStops(bounds), 400);
-
-        if (SHOW_BUSES) {
-            if (busesTimeout.current) clearTimeout(busesTimeout.current);
-            busesTimeout.current = window.setTimeout(
-                () => fetchBuses(bounds),
-                1000
-            );
+        if (zoom < BUSES_ZOOM) {
+            if (buses.length > 0) setBuses([]);
+        } else {
+            if (SHOW_BUSES) {
+                if (busesTimeout.current) clearTimeout(busesTimeout.current);
+                busesTimeout.current = window.setTimeout(
+                    () => fetchBuses(bounds),
+                    1000
+                );
+            }
         }
     }, [fetchStops, fetchBuses, stops.length]);
 
