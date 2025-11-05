@@ -477,10 +477,10 @@ class TXCImporter:
                 log.debug("Finalising services...")
                 self.finish_services()
 
-            self.clear_old_timetables(service_id)
-            self.clear_old_services(service_id)
+            self.clear_old_timetables(service_id, line_name)
+            self.clear_old_services(service_id, line_name)
 
-    def clear_old_timetables(self, service_code):
+    def clear_old_timetables(self, service_code, line_name):
         today = self.today.date()
 
         T1 = Timetable
@@ -489,6 +489,7 @@ class TXCImporter:
         higher_revision_started = exists().where(
             and_(
                 T2.service_code == T1.service_code,
+                T2.line_name == T1.line_name,
                 T2.data_source_id == self.ds_id,
                 T2.start_date <= today,
                 or_(
@@ -511,6 +512,7 @@ class TXCImporter:
             self.db.query(T1)
             .filter(
                 T1.service_code == service_code,
+                T1.line_name == line_name,
                 T1.data_source_id == self.ds_id,
                 or_(
                     and_(T1.end_date is not None, T1.end_date < today),
@@ -530,11 +532,13 @@ class TXCImporter:
         else:
             log.debug("No old timetables to clear.")
 
-    def clear_old_services(self, service_id):
+    def clear_old_services(self, service_id, line_name):
         # flag services that have no timetables, after importing timetables incase they have been replaced
         services_to_go = (
             self.db.query(Service)
-            .filter_by(service_code=service_id, data_source_id=self.ds_id)
+            .filter_by(
+                service_code=service_id, data_source_id=self.ds_id, line_name=line_name
+            )
             .filter(
                 ~self.db.query(Timetable)  # ~ = not
                 .filter(
