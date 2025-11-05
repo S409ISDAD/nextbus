@@ -10,10 +10,7 @@ const getBus = async (bus_id: string) => {
 
         const bus = response.data;
 
-        return {
-            ...bus,
-            timeTo: ""
-        };
+        return bus;
 
     } catch (error) {
         console.error("failed to get bus", error);
