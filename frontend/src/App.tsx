@@ -80,6 +80,13 @@ import PredictionsPage from "../pages/bus/Predictions.tsx";
 // }
 
 function App() {
+    useEffect(() => {
+        const link = document.createElement("link");
+        link.rel = "stylesheet";
+        link.href = "https://bustimes.org/liveries.1.css";
+        document.head.appendChild(link);
+    }, []);
+
     const [isOpen, setIsOpen] = useState(false);
     const [haveReset, setHaveReset] = useLocalStorageState<boolean>(
         "haveResetSW",
