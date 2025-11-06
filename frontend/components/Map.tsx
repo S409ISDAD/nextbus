@@ -183,6 +183,7 @@ const MapView: React.FC<MapViewProps> = ({
                     if (geoLocateRef.current) {
                         geoLocateRef.current.trigger();
                     }
+                    onBoundsChange();
                 }}>
                 <NavigationControl position="top-right" />
 
@@ -367,16 +368,6 @@ const Map: React.FC = () => {
         const STOPS_ZOOM = 13;
         const BUSES_ZOOM = 9;
 
-        if (zoom < STOPS_ZOOM) {
-            if (stops.length > 0) setStops([]);
-        } else {
-            if (stopsTimeout.current) clearTimeout(stopsTimeout.current);
-            stopsTimeout.current = window.setTimeout(
-                () => fetchStops(bounds),
-                400
-            );
-        }
-
         if (zoom < BUSES_ZOOM) {
             if (buses.length > 0) setBuses([]);
         } else {
@@ -387,6 +378,16 @@ const Map: React.FC = () => {
                     1000
                 );
             }
+        }
+
+        if (zoom < STOPS_ZOOM) {
+            if (stops.length > 0) setStops([]);
+        } else {
+            if (stopsTimeout.current) clearTimeout(stopsTimeout.current);
+            stopsTimeout.current = window.setTimeout(
+                () => fetchStops(bounds),
+                400
+            );
         }
     }, [fetchStops, fetchBuses, stops.length]);
 
