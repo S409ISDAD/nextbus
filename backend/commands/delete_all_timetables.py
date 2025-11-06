@@ -16,15 +16,18 @@ def reset_all():
         file_import_count = db.query(FileImport).count()
 
         log.info(f"Deleting {timetable_count} Timetable rows")
-        log.info(f"Deleting {calendar_count} Calendar rows")
-        log.info(f"Deleting {service_count} Service rows")
-        log.info(f"Deleting {operator_count} Operator rows")
-        log.info(f"Deleting {file_import_count} FileImport rows")
-
         db.query(Timetable).delete()
+
+        log.info(f"Deleting {calendar_count} Calendar rows")
         db.query(Calendar).delete()
+
+        log.info(f"Deleting {service_count} Service rows")
         db.query(Service).delete()
+
+        log.info(f"Deleting {operator_count} Operator rows")
         db.query(Operator).delete()
+
+        log.info(f"Deleting {file_import_count} FileImport rows")
         db.query(FileImport).delete()
 
         db.commit()

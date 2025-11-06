@@ -282,7 +282,7 @@ const BusPage: React.FC = () => {
                     </div>
                 )}
 
-                <Card className="flex flex-col items-center justify-center gap-2 p-2 rounded-[32px] bg-neutral-900">
+                <div className="flex flex-col items-center justify-center gap-3">
                     <span className="text-2xl font-bold">Favorite Stops</span>
                     <div className="flex flex-row flex-wrap items-center justify-center gap-3">
                         {Object.keys(favStops).length > 0 ? (
@@ -311,7 +311,7 @@ const BusPage: React.FC = () => {
                         onClick={() => setFavStops({})}>
                         Clear Favorites
                     </button>
-                </Card>
+                </div>
             </div>
         </div>
     );

@@ -10,6 +10,7 @@ import type {
 } from "../../usage/usageModels";
 import { useLocalSetting } from "../../src/settings";
 import { Switch } from "@headlessui/react";
+import { testUsageLearningSimulation } from "../../usage/fakeUsage";
 
 const DAYMAP = {
     weekday: "weekday",
@@ -71,7 +72,9 @@ const PredictionsPage: React.FC = () => {
         const highestTime = Object.entries(timeCounts).sort(
             (a, b) => b[1] - a[1]
         )[0][0];
-        return `in the ${highestTime}`;
+        return highestTime == "midday"
+            ? `at ${highestTime}`
+            : `in the ${highestTime}`;
     }
 
     return (
@@ -120,6 +123,14 @@ const PredictionsPage: React.FC = () => {
                         Clear Usage Data
                     </button>
                 </div>
+
+                <button
+                    className="button max-w-fit"
+                    onClick={async () => {
+                        await testUsageLearningSimulation();
+                    }}>
+                    test
+                </button>
 
                 <div className="flex flex-row justify-center gap-4 mb-4">
                     <button

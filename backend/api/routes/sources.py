@@ -82,12 +82,15 @@ async def all_sources(
                 }
                 for v in sorted(source_obj.versions, key=lambda x: x.start_date or "")
             ]
+            show_url = not (
+                source_obj.url == versions_list[0]["url"] and len(versions_list) == 1
+            )
             data.append(
                 {
                     "id": source_obj.id,
                     "name": source_obj.name,
                     "description": source_obj.description,
-                    "url": source_obj.url,
+                    "url": source_obj.url if show_url else None,
                     "service_count": service_count,
                     "timetable_count": timetable_count,
                     "versions": versions_list,
