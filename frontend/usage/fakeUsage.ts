@@ -61,7 +61,6 @@ async function simulateUsageLogs(startDate: Date, days: number) {
             const time = new Date(date);
             time.setUTCHours(pattern.typicalHour);
             time.setUTCMinutes(randomBetween(-pattern.variance, pattern.variance) + 30);
-            const action: 'tapped' | 'tracked' | 'filter' = randomChoice(['tapped', 'tracked', 'filter']);
 
             await (await usageManager).logStop(
                 pattern.stop.id,
