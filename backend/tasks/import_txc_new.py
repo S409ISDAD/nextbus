@@ -862,8 +862,10 @@ class TXCImporter:
             ):
                 journey.block_id = txc_journey.journey_pattern.block.code
 
-            for cell in txc_journey.get_times():
+            for i, cell in enumerate(txc_journey.get_times()):
                 stop_time = self.get_stop_time(journey, cell)
+                if stop_time.stop_sequence is None:
+                    stop_time.stop_sequence = i
                 stop_times_to_add.append(stop_time)
 
             # last stop cant have a departure time
