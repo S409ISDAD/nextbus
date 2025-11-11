@@ -3,6 +3,7 @@ import doSearch from "../utils/doSearch";
 import SearchBar from "../components/SearchBar";
 import type { Search } from "../models/Search";
 import { useNavigate, useParams } from "react-router";
+import { Card } from "../components/ui/Card";
 
 const SearchPage: React.FC = () => {
     const navigate = useNavigate();
@@ -36,6 +37,20 @@ const SearchPage: React.FC = () => {
     return (
         <div className="flex flex-col items-center justify-center w-full p-8 pb-0">
             <span className="text-4xl font-bold">Search nextbus</span>
+            <Card className="max-w-5xl p-2 mt-5 text-sm rounded-2xl border-amber-600 ">
+                <span>
+                    Search is limited to imported data; you may not find what
+                    you are looking for. Departure times are unaffected. Please{" "}
+                    <a
+                        href="https://discord.gg/dyEmZSkwge"
+                        className="underline text-link-400 h-fit"
+                        target="_blank"
+                        rel="noopener noreferrer">
+                        Join the Discord
+                    </a>{" "}
+                    to request your local data.
+                </span>
+            </Card>
             <SearchBar query={query} className="my-6" />
             <div className="flex flex-row justify-center gap-4 mb-4">
                 <button
