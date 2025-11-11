@@ -77,6 +77,20 @@ def test_valid(db_session, journey_factory, calendar_factory):
             end_date=date(2025, 10, 20),
             operating=False,
         ),  # do not operate on this monday
+        CalendarException(
+            calendar_id=cal.id,
+            start_date=date(2025, 11, 1),
+            end_date=date(2025, 11, 1),
+            operating=True,
+            special=True,
+        ),  # operate on this saturday only
+        CalendarException(
+            calendar_id=cal.id,
+            start_date=date(2025, 12, 25),
+            end_date=date(2025, 12, 25),
+            operating=True,
+            special=False,
+        ),  # operate on BH as normal service
     ]
     db_session.add_all(cal_exceptions)
     db_session.flush()
@@ -95,6 +109,7 @@ def test_valid(db_session, journey_factory, calendar_factory):
         date(2025, 10, 2),  # thursday
         date(2025, 10, 18),  # exception saturday
         date(2025, 10, 19),  # exception sunday
+        date(2025, 11, 1),  # exception saturday
     ]
 
     invalid_dates = [
@@ -104,6 +119,7 @@ def test_valid(db_session, journey_factory, calendar_factory):
         date(2025, 10, 20),  # exception monday
         date(2024, 10, 7),  # wrong year
         date(2025, 10, 5),  # sunday
+        date(2025, 12, 25),  # bank holiday wins over normal inclusion
     ]
 
     for d in valid_dates:
@@ -112,11 +128,15 @@ def test_valid(db_session, journey_factory, calendar_factory):
             for c in db_session.query(Calendar).filter(journey_is_valid_filter(d)).all()
         ]
         assert j1.is_valid(d), f"Journey should be valid on {d}"
-        assert cal.id in valid_cal_ids  # make sure both functions agree
+        assert (
+            cal.id in valid_cal_ids
+        ), f"Journey should be valid on {d}"  # make sure both functions agree
     for d in invalid_dates:
         valid_cal_ids = [
             c.id
             for c in db_session.query(Calendar).filter(journey_is_valid_filter(d)).all()
         ]
         assert not j1.is_valid(d), f"Journey should be invalid on {d}"
-        assert cal.id not in valid_cal_ids  # make sure both functions agree
+        assert (
+            cal.id not in valid_cal_ids
+        ), f"Journey should be valid on {d}"  # make sure both functions agree

@@ -1666,7 +1666,7 @@ def journey_is_valid_filter(date: date | None = None):
         and_(
             CE.calendar_id == Calendar.id,
             CE.start_date <= date,
-            CE.end_date >= date,
+            or_(CE.end_date == None, CE.end_date >= date),
             CE.operating.is_(False),
         )
     )
@@ -1690,20 +1690,20 @@ def journey_is_valid_filter(date: date | None = None):
         and_(
             CE.calendar_id == Calendar.id,
             CE.start_date <= date,
-            CE.end_date >= date,
+            or_(CE.end_date == None, CE.end_date >= date),
             CE.operating.is_(True),
             CE.special.is_(True),
         )
     )
 
     # exceptions that respect weekday, special = false
-    exc_weekday = exists().where(
+    exc_normal = exists().where(
         and_(
             CE.calendar_id == Calendar.id,
-            CE.start_date <= date,
-            CE.end_date >= date,
             CE.operating.is_(True),
             CE.special.is_(False),
+            CE.start_date <= date,
+            or_(CE.end_date == None, CE.end_date >= date),
         )
     )
 
@@ -1721,18 +1721,33 @@ def journey_is_valid_filter(date: date | None = None):
         )
     )
 
-    # final filter
+    # check if there are any non-special inclusions at all for this calendar
+    has_non_special_inc = exists().where(
+        and_(
+            CE.calendar_id == Calendar.id,
+            CE.operating.is_(True),
+            CE.special.is_(False),
+            CE.start_date <= date,
+            or_(CE.end_date == None, CE.end_date >= date),
+        )
+    )
+
+    weekday_ok = and_(
+        getattr(Calendar, weekday),
+        or_(
+            not_(has_non_special_inc),  # no normal inclusions at all
+            exc_normal,  # there is a normal inclusion today
+        ),
+    )
+
     final_filter = and_(
         base_filter,
         not_(exc_off),
         not_(bh_off),
         or_(
-            exc_special,  # special exceptions override weekday
-            bh_on,  # bank holidays override weekday
-            and_(
-                getattr(Calendar, weekday), exc_weekday
-            ),  # respect weekday for normal exceptions
-            getattr(Calendar, weekday),  # fallback weekday
+            exc_special,  # special inclusions override everything
+            bh_on,  # bank holiday inclusions
+            weekday_ok,  # weekday logic gated by normal inclusions
         ),
     )
 
