@@ -30,7 +30,7 @@ datasources = [
     {
         "name": "First Portsmouth, Fareham & Gosport",
         "noc": "FHAM",
-        "search": "hoeford",
+        "search": "portsmouth",
     },
     {
         "name": "AMK",

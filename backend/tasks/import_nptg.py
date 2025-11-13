@@ -101,8 +101,6 @@ def import_nptg_data():
                         if type(item) is Region:
                             if item.id not in regions.keys():
                                 db.add(item)
-                            elif regions[item.id].modified_at != item.modified_at:
-                                db.merge(item)
 
                         if type(item) is AdminArea:
                             if item.id not in admin_areas.keys():
@@ -117,10 +115,37 @@ def import_nptg_data():
                                 db.merge(item)
                     element.clear()
 
+                    db.commit()
+
+                    # re build lookup dicts
+                    regions = {reg.id: reg for reg in db.query(Region).all()}
+                    admin_areas = {adm.id: adm for adm in db.query(AdminArea).all()}
+                    districts = {d.id: d for d in db.query(District).all()}
+                    print(
+                        f"Imported {len(regions)} regions, {len(admin_areas)} admin areas, {len(districts)} districts"
+                    )
+
                 elif element.tag == "NptgLocalities":
                     log.debug("Importing localities")
                     l_with_parents = []
+                    skipped = 0
                     for item in handle_locality(element):
+                        if (
+                            item.district_id
+                            and int(item.district_id) not in districts.keys()
+                        ):
+                            print(
+                                f"Skipping locality {item.id} due to missing district {item.district_id}"
+                            )
+                            skipped += 1
+                            continue
+                        if (
+                            item.admin_area_id
+                            and int(item.admin_area_id) not in admin_areas.keys()
+                        ):
+                            skipped += 1
+                            continue
+
                         if item.parent_id and item.parent_id not in localities.keys():
                             l_with_parents.append(item)
                         else:
@@ -138,6 +163,10 @@ def import_nptg_data():
                     for locality in l_with_parents:
                         if locality.parent_id not in localities.keys():
                             db.add(locality)
+                    if skipped:
+                        log.warning(
+                            f"Skipped {skipped} localities with missing FK references"
+                        )
             log.debug("Committing...")
             db.commit()
             log.debug("Import complete")

@@ -1,5 +1,6 @@
 from datetime import datetime
 from pathlib import Path
+import time
 from backend.config import get_logger, config
 from backend.deps import LONDON
 from backend.models import DataSource, DataSourceVersion
@@ -24,7 +25,7 @@ async def handle_bods(
         log.error("BODS API key not configured.")
         return
 
-    bods_api = "https://data.bus-data.dft.gov.uk/api/v1/dataset?limit=1&offset=0"
+    bods_api = "https://data.bus-data.dft.gov.uk/api/v1/dataset?offset=0"
 
     if datasource.noc:
         bods_api += f"&noc={datasource.noc}"
@@ -38,56 +39,77 @@ async def handle_bods(
     if data["count"] == 0:
         log.debug(f"No BODS dataset found for datasource {datasource.name}")
         return
-    dataset = data["results"][0]
 
-    id = dataset["id"]
-    name = dataset["name"]
-    description = dataset.get("description", "")
-    modified = dataset["modified"]
+    duration = 0
+    stats = Statistics()
 
-    start_date = (
-        isoparse(dataset.get("firstStartDate")).date()
-        if dataset.get("firstStartDate")
-        else None
-    )
-    end_date = (
-        isoparse(dataset.get("lastEndDate")).date()
-        if dataset.get("lastEndDate")
-        else None
-    )
+    start = time.time()
 
-    version = (
-        db.query(DataSourceVersion).filter(DataSourceVersion.bods_id == id).first()
-    )
+    log.info(f"Found {data['count']} BODS datasets for datasource {datasource.name}")
+    for dataset in data["results"]:
+        id = dataset["id"]
+        name = dataset["name"]
+        description = dataset.get("description", "")
+        # modified = dataset["modified"]
 
-    if not version:
-        version = DataSourceVersion(
-            data_source_id=datasource.id,
-            name=name,
-            description=description,
-            start_date=start_date or datetime.now(tz=LONDON).date(),
-            end_date=end_date,
-            bods_id=id,
+        start_date = (
+            isoparse(dataset.get("firstStartDate")).date()
+            if dataset.get("firstStartDate")
+            else None
         )
-        db.add(version)
-        db.commit()
-        db.refresh(version)
-
-    version.imported_at = datetime.now(tz=LONDON)
-
-    bods_folder = folder / "bods"
-    bods_folder.mkdir(parents=True, exist_ok=True)
-
-    filename = bods_folder / f"bods_{id}.zip"
-
-    path = download_if_modified(version, filename, skip_checks)
-
-    if path:
-        log.info(f"Importing BODS {id} data from {path}...")
-        duration, stats = await import_txc_zip(
-            filename, datasource.id, version.id, skip_checks
+        end_date = (
+            isoparse(dataset.get("lastEndDate")).date()
+            if dataset.get("lastEndDate")
+            else None
         )
+
+        version = (
+            db.query(DataSourceVersion).filter(DataSourceVersion.bods_id == id).first()
+        )
+
+        if not version:
+            version = DataSourceVersion(
+                data_source_id=datasource.id,
+                name=name,
+                description=description,
+                start_date=start_date or datetime.now(tz=LONDON).date(),
+                end_date=end_date,
+                bods_id=id,
+            )
+            db.add(version)
+            db.commit()
+            db.refresh(version)
+
+        version.imported_at = datetime.now(tz=LONDON)
+
+        bods_folder = folder / "bods"
+        bods_folder.mkdir(parents=True, exist_ok=True)
+
+        filename = bods_folder / f"bods_{id}.zip"
+
+        path = download_if_modified(version, filename, skip_checks)
+
+        if path:
+            log.info(f"Importing BODS {id} data from {path}...")
+            _, _stats = await import_txc_zip(
+                filename, datasource.id, version.id, skip_checks
+            )
+            stats += _stats
+        else:
+            log.debug(f"No updates for BODS dataset {version.name} - {id}")
+
+    time_taken = time.time() - start
+
+    duration = ""
+    if time_taken >= 3600:
+        hours = int(time_taken // 3600)
+        minutes = int((time_taken % 3600) // 60)
+        duration = f"{hours}h {minutes}m"
+    elif time_taken >= 60:
+        minutes = int(time_taken // 60)
+        seconds = int(time_taken % 60)
+        duration = f"{minutes}m {seconds}s"
     else:
-        log.debug(f"No updates for BODS dataset {version.name} - {id}")
+        duration = f"{int(time_taken)}s"
 
     return duration, stats
