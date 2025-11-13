@@ -90,7 +90,7 @@ const MapView: React.FC<MapViewProps> = ({
             ? "darkorange"
             : "red";
     return (
-        <div className="relative w-[100vw] h-[200px]">
+        <div className="relative w-screen h-[200px]">
             <MapGL
                 ref={mapRef}
                 initialViewState={{
@@ -100,6 +100,7 @@ const MapView: React.FC<MapViewProps> = ({
                 }}
                 attributionControl={false}
                 mapStyle="https://tiles.stadiamaps.com/styles/alidade_smooth_dark.json"
+                // mapStyle="https://tiles.stadiamaps.com/styles/osm_bright.json"
                 // mapStyle={{
                 //     version: 8,
                 //     sources: {
