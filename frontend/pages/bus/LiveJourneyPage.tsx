@@ -114,7 +114,7 @@ const MapView: React.FC<MapViewProps> = ({
                 initialViewState={{
                     longitude: lon,
                     latitude: lat,
-                    zoom: 12,
+                    zoom: 13,
                 }}
                 attributionControl={false}
                 // mapStyle="https://tiles.stadiamaps.com/styles/alidade_smooth_dark.json"
