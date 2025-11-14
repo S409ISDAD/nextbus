@@ -110,6 +110,7 @@ async def fetch_vehicle(bus_id, r: Redis) -> Vehicle | None:
             else None
         ),
         livery=Livery(
+            id=data["livery"]["id"],
             name=data["livery"].get("name", None),
             left_css=data["livery"].get("left", None),
             right_css=data["livery"].get("right", None),
@@ -757,6 +758,7 @@ async def build_bus(
         speed=None,
         confidence=confidence,
         coords=coords,
+        heading=this_bus.get("heading", 0),
         status=status,
         source=source,
     )

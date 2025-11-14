@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type JSX } from "react";
 import type { LiveJourney } from "../../models/Journey";
 import getBus from "../../utils/getBus";
 import { useNavigate, useParams } from "react-router";
@@ -11,7 +11,7 @@ import {
     faCalendarXmark,
     faWarning,
 } from "@fortawesome/free-solid-svg-icons";
-import type { Bus, Prediction } from "../../models/Bus";
+import type { Bus, MapBus, MapVehicle, Prediction } from "../../models/Bus";
 import {
     Map as MapGL,
     Marker,
@@ -32,7 +32,7 @@ type MapInfoProps = {
 const MapInfo: React.FC<MapInfoProps> = ({ text, color = "black" }) => {
     return (
         <div
-            className="absolute px-2 py-1 text-sm rounded-md shadow bottom-2 left-2 bg-neutral-900"
+            className="absolute px-2 py-1 text-sm font-bold rounded-md shadow bottom-2 left-2 bg-neutral-900"
             style={{ color }}>
             {text}
         </div>
@@ -42,24 +42,28 @@ const MapInfo: React.FC<MapInfoProps> = ({ text, color = "black" }) => {
 type MapViewProps = {
     lat: number;
     lon: number;
+    heading: number;
     bus: Bus;
-    accuracy: "high" | "med" | "low" | "unknown";
+    timestamp: number;
     track: Latlon[];
 };
 import React from "react";
 import { Pulse } from "../../components/ui/Pulse";
 import { useLocalSetting } from "../../src/settings";
+import { timeSince } from "../../components/ui/TimeSince";
+import { BusMarker } from "../../components/ui/BusMarker";
 
 const MapView: React.FC<MapViewProps> = ({
     lat,
     lon,
+    heading,
     bus,
-    accuracy,
+    timestamp,
     track = [],
 }) => {
-    const [popup, setPopup] = React.useState<{
-        coords: Latlon;
-        content: React.ReactNode;
+    const [popup, setPopup] = useState<{
+        lngLat: [number, number];
+        content: JSX.Element;
     } | null>(null);
 
     const mapRef = React.useRef<MapRef | null>(null);
@@ -83,12 +87,26 @@ const MapView: React.FC<MapViewProps> = ({
         }
     }, [lat, lon]);
 
+    const mapVehicle: MapVehicle = {
+        name: bus.vehicle.name || "",
+        features: bus.vehicle.special_features?.join(", ") || "",
+        livery: String(bus.vehicle.livery?.id) || "",
+    };
+
+    const mapBus: MapBus = {
+        id: bus.id,
+        trip_id: bus.trip || 0,
+        service: bus.service,
+        destination: bus.destination,
+        coords: [lat, lon],
+        heading: heading || bus.heading || 0,
+        vehicle: mapVehicle,
+        updated: new Date(bus.timestamp || ""),
+        service_id: String(bus.service.id) || "",
+    };
+
     const accuracyColor =
-        accuracy === "high"
-            ? "limegreen"
-            : accuracy === "med"
-            ? "darkorange"
-            : "red";
+        timestamp < 30 ? "#00ff00" : timestamp < 45 ? "#ffaa00" : "#FF522BFF";
     return (
         <div className="relative w-screen h-[200px]">
             <MapGL
@@ -96,7 +114,7 @@ const MapView: React.FC<MapViewProps> = ({
                 initialViewState={{
                     longitude: lon,
                     latitude: lat,
-                    zoom: 14,
+                    zoom: 12,
                 }}
                 attributionControl={false}
                 // mapStyle="https://tiles.stadiamaps.com/styles/alidade_smooth_dark.json"
@@ -129,11 +147,13 @@ const MapView: React.FC<MapViewProps> = ({
                 style={{ width: "100%", height: "100%" }}>
                 <NavigationControl position="top-right" />
 
-                <Marker longitude={lon} latitude={lat} anchor="center">
+                <BusMarker bus={mapBus} setPopup={setPopup} />
+
+                {/* <Marker longitude={lon} latitude={lat} anchor="center">
                     <div className="flex items-center justify-center w-6 h-6 rounded-full shadow-lg bg-rose-600">
                         <i className="text-xs text-white fas fa-bus" />
                     </div>
-                </Marker>
+                </Marker> */}
                 {bus.journey.stops.map((stop) => (
                     <Marker
                         key={stop.stop_id}
@@ -143,7 +163,7 @@ const MapView: React.FC<MapViewProps> = ({
                         onClick={(e) => {
                             e.originalEvent.stopPropagation();
                             setPopup({
-                                coords: [stop.coords[1], stop.coords[0]],
+                                lngLat: [stop.coords[1], stop.coords[0]],
                                 content: (
                                     <div className="flex flex-col text-white bg-[#222]">
                                         <a
@@ -188,7 +208,7 @@ const MapView: React.FC<MapViewProps> = ({
                             id="track-line"
                             type="line"
                             paint={{
-                                "line-color": "white",
+                                "line-color": "black",
                                 "line-width": 4,
                                 "line-opacity": 0.7,
                             }}
@@ -198,8 +218,8 @@ const MapView: React.FC<MapViewProps> = ({
 
                 {popup && (
                     <Popup
-                        longitude={popup.coords[0]}
-                        latitude={popup.coords[1]}
+                        longitude={popup.lngLat[0]}
+                        latitude={popup.lngLat[1]}
                         closeOnClick={true}
                         anchor="top"
                         onClose={() => setPopup(null)}>
@@ -208,7 +228,10 @@ const MapView: React.FC<MapViewProps> = ({
                 )}
             </MapGL>
 
-            <MapInfo text={`Accuracy: ${accuracy}`} color={accuracyColor} />
+            <MapInfo
+                text={`last seen: ${timeSince(timestamp)} `}
+                color={accuracyColor}
+            />
         </div>
     );
 };
@@ -258,9 +281,8 @@ const LiveJourneyPage: React.FC = () => {
     const [sequence, setSeq] = useState<number>(0);
     const [progress, setProg] = useState<number>(0);
     const [location, setLoc] = useState<number[]>([0, 0]);
-    const [accuracy, setAccuracy] = useState<
-        "high" | "med" | "low" | "unknown"
-    >("unknown");
+    const [heading, setHeading] = useState<number>(0);
+    const [timestamp, setTimestamp] = useState<number>(0);
     const [liveJourney, setLiveJourney] = useState<LiveJourney>();
     const [loading, setLoading] = useState(true);
     const [fetching, setFetching] = useState(false);
@@ -293,85 +315,83 @@ const LiveJourneyPage: React.FC = () => {
                 const age = Math.floor(
                     (now.getTime() - new Date(bus?.timestamp).getTime()) / 1000
                 );
-                let accuracy: "high" | "med" | "low" | "unknown" = "unknown";
-
-                if (age <= 45) {
-                    accuracy = "high";
-                } else if (age <= 90) {
-                    accuracy = "med";
-                } else {
-                    accuracy = "low";
-                }
-
-                setAccuracy(accuracy);
+                setTimestamp(age);
             }
         }, 1000);
         return () => clearInterval(interval);
     }, [lastRefreshed]);
 
-    useEffect(() => {
-        const interval = setInterval(() => {
-            const now = new Date();
+    const updateLocation = () => {
+        const now = new Date();
 
-            if (!predictions || predictions.length < 2) {
-                if (bus?.started) {
-                    setSeq(bus?.progress ? bus.progress.sequence : 0);
-                    setProg(bus?.progress ? bus.progress.progress : 0);
-                } else {
-                    setSeq(0);
-                    setProg(0);
-                }
-                const lat = bus?.coords?.[1] ?? 0;
-                const lon = bus?.coords?.[0] ?? 0;
-                setLoc([lat, lon]);
-                return;
+        // predictions?.slice(0, 0);
+
+        if (!predictions || predictions.length < 2) {
+            if (bus?.started) {
+                setSeq(bus?.progress ? bus.progress.sequence : 0);
+                setProg(bus?.progress ? bus.progress.progress : 0);
+                setHeading(bus?.heading || 0);
+            } else {
+                setSeq(0);
+                setProg(0);
+                setHeading(0);
             }
-
-            const upcoming = predictions.find((pred) => {
-                const nextTime = new Date(pred.timestamp);
-                return nextTime > now;
-            });
-
-            if (!upcoming) return;
-
-            const idx = predictions.indexOf(upcoming);
-
-            const prev = predictions[idx - 1];
-
-            const newProgress = upcoming.progress;
-            const prevProgress = prev.progress;
-
-            const newCoords = upcoming.location;
-            const prevCoords = prev.location;
-
-            const progressDelta = newProgress - prevProgress;
-
-            const timeDelta =
-                new Date(upcoming.timestamp).getTime() - now.getTime();
-            const predictionDuration =
-                (new Date(upcoming.timestamp).getTime() -
-                    new Date(prev.timestamp).getTime()) *
-                1000;
-
-            const interpolatedProgress =
-                prevProgress +
-                -Math.abs(progressDelta * -(timeDelta / predictionDuration));
-
-            setProg(interpolatedProgress);
-
-            setSeq(upcoming.sequence);
-
-            const latDelta = newCoords[0] - prevCoords[0];
-            const lonDelta = newCoords[1] - prevCoords[1];
-
-            const lat =
-                prevCoords[0] + latDelta * (-timeDelta / predictionDuration);
-
-            const lon =
-                prevCoords[1] + lonDelta * (-timeDelta / predictionDuration);
-
+            const lat = bus?.coords?.[1] ?? 0;
+            const lon = bus?.coords?.[0] ?? 0;
             setLoc([lat, lon]);
-        }, 200);
+            return;
+        }
+
+        const upcoming = predictions.find((pred) => {
+            const nextTime = new Date(pred.timestamp);
+            return nextTime > now;
+        });
+
+        if (!upcoming) return;
+
+        const idx = predictions.indexOf(upcoming);
+
+        const prev = predictions[idx - 1];
+
+        const newProgress = upcoming.progress;
+        const prevProgress = prev.progress;
+
+        const newCoords = upcoming.location;
+        const prevCoords = prev.location;
+
+        const progressDelta = newProgress - prevProgress;
+
+        const timeDelta =
+            new Date(upcoming.timestamp).getTime() - now.getTime();
+        const predictionDuration =
+            (new Date(upcoming.timestamp).getTime() -
+                new Date(prev.timestamp).getTime()) *
+            1000;
+
+        const interpolatedProgress =
+            prevProgress +
+            -Math.abs(progressDelta * -(timeDelta / predictionDuration));
+
+        setProg(interpolatedProgress);
+
+        setSeq(upcoming.sequence);
+
+        const latDelta = newCoords[0] - prevCoords[0];
+        const lonDelta = newCoords[1] - prevCoords[1];
+
+        const lat =
+            prevCoords[0] + latDelta * (-timeDelta / predictionDuration);
+
+        const lon =
+            prevCoords[1] + lonDelta * (-timeDelta / predictionDuration);
+
+        setLoc([lat, lon]);
+        setHeading(upcoming.heading);
+    };
+
+    useEffect(() => {
+        setTimeout(updateLocation, 200);
+        const interval = setInterval(updateLocation, 5000); // every 5 seconds
         return () => clearInterval(interval);
     }, [predictions]);
 
@@ -402,6 +422,7 @@ const LiveJourneyPage: React.FC = () => {
 
                 if (bus_response) {
                     setBus(bus_response);
+                    // setPredictions([]);
                     setPredictions(bus_response.predictions);
                     setLiveJourney(bus_response.journey);
                     document.title = `${bus_response.journey.route_name} to ${bus_response.journey.destination} - ${bus_response.vehicle.reg}`;
@@ -480,7 +501,8 @@ const LiveJourneyPage: React.FC = () => {
                             lat={location[0]}
                             lon={location[1]}
                             bus={bus}
-                            accuracy={accuracy}
+                            heading={heading}
+                            timestamp={timestamp}
                             track={generateWholeTrack(
                                 bus.journey?.stops
                             )}></MapView>

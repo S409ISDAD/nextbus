@@ -145,7 +145,7 @@ const MapView: React.FC<MapViewProps> = ({ journey, track = [] }) => {
                             id="track-line"
                             type="line"
                             paint={{
-                                "line-color": "white",
+                                "line-color": "black",
                                 "line-width": 4,
                                 "line-opacity": 0.7,
                             }}

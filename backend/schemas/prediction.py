@@ -7,3 +7,4 @@ class Prediction(BaseModel):
     sequence: int
     progress: float
     location: list[float]
+    heading: int

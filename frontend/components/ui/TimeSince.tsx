@@ -1,10 +1,7 @@
 import { useEffect, useState } from "react";
 import { cn } from "../../utils/cn";
 
-function formatTimeSince(time: Date) {
-    const now = new Date();
-    const seconds = Math.floor((now.getTime() - time.getTime()) / 1000);
-
+export function timeSince(seconds: number) {
     if (seconds < 60) {
         return `${seconds}s ago`;
     } else if (seconds < 3600) {
@@ -19,6 +16,13 @@ function formatTimeSince(time: Date) {
     }
 }
 
+function formatTimeSince(time: Date) {
+    const now = new Date();
+    const seconds = Math.floor((now.getTime() - time.getTime()) / 1000);
+
+    return timeSince(seconds);
+}
+
 export function TimeSince({
     time,
     className,
@@ -26,9 +30,7 @@ export function TimeSince({
     time: Date | string;
     className?: string;
 }) {
-    const [text, setText] = useState(() =>
-        formatTimeSince(new Date(time))
-    );
+    const [text, setText] = useState(() => formatTimeSince(new Date(time)));
 
     useEffect(() => {
         const interval = setInterval(() => {

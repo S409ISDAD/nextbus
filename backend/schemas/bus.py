@@ -70,5 +70,6 @@ class TrackedBus(BaseModel):
     journey: Optional[Journey]
     confidence: Confidence
     coords: list[float]
+    heading: int
     status: str
     source: str  # "api" or "db"

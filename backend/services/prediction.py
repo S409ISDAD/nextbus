@@ -31,9 +31,9 @@ async def calculate_sequence(stops: list[StopTime], future_time: dt, extra: int)
 
 
 async def calculate_progress(prev_expt: dt, next_expt: dt, future_time: dt) -> float:
-    stops_diff = abs(next_expt - prev_expt - timedelta(seconds=5))
+    stops_diff = abs(next_expt - prev_expt)
 
-    current_diff = abs(future_time - prev_expt + timedelta(seconds=5))
+    current_diff = abs(future_time - prev_expt)
 
     if stops_diff == 0:
         return 0
@@ -78,6 +78,42 @@ async def calculate_loc(progress: float, track: list[list[float]]) -> list[float
             return [interp_lat, interp_lon]
 
     return full_track[-1]
+
+
+async def calculate_heading(progress: float, track: list[list[float]]) -> int:
+    progress = max(0.0, min(progress, 1.0))
+
+    full_track = track
+    if len(full_track) < 2:
+        return 0
+
+    distances = []
+    cumulative = [0.0]
+
+    for i in range(len(full_track) - 1):
+        d = geodesic(full_track[i], full_track[i + 1]).m
+        distances.append(d)
+        cumulative.append(cumulative[-1] + d)
+
+    total_dist = cumulative[-1]
+    target_dist = total_dist * progress
+
+    for i in range(len(distances)):
+        if cumulative[i + 1] >= target_dist:
+            lat1, lon1 = full_track[i]
+            lat2, lon2 = full_track[i + 1]
+
+            delta_lon = lon2 - lon1
+            x = math.sin(math.radians(delta_lon)) * math.cos(math.radians(lat2))
+            y = math.cos(math.radians(lat1)) * math.sin(math.radians(lat2)) - (
+                math.sin(math.radians(lat1))
+                * math.cos(math.radians(lat2))
+                * math.cos(math.radians(delta_lon))
+            )
+            initial_bearing = math.atan2(x, y)
+            initial_bearing = math.degrees(initial_bearing)
+            compass_bearing = (initial_bearing + 360) % 360
+            return int(compass_bearing)
 
 
 async def predict_future(
@@ -134,12 +170,14 @@ async def predict_future(
 
             if track:
                 loc = await calculate_loc(progress, track)
+                heading = await calculate_heading(progress, track)
 
                 prediction = Prediction(
                     timestamp=future_time,
                     sequence=sequence,
                     progress=progress,
                     location=loc,
+                    heading=heading,
                 )
 
                 predictions.append(prediction)

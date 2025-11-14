@@ -11,9 +11,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import { useShowAppNav } from "../utils/AppNav";
 import type { MapBus } from "../models/Bus";
 import { SHOW_BUSES } from "../src/settings";
-import { useNavigate } from "react-router";
-import { TimeSince } from "./ui/TimeSince.tsx";
-import parse from "html-react-parser";
+import { BusMarker } from "./ui/BusMarker.tsx";
 
 type Stop = {
     stop_id: string;
@@ -22,73 +20,6 @@ type Stop = {
     services: string[];
     bearing?: number;
 };
-
-function BusMarker({ bus, setPopup }: { bus: MapBus; setPopup: any }) {
-    const navigate = useNavigate();
-
-    let className = "bus-marker";
-
-    let angle = bus.heading;
-
-    if (angle != null) {
-        if (angle < 180) {
-            angle -= 90;
-            className += " right";
-            // if (bus.vehicle?.right_css) {
-            //     background = bus.vehicle.right_css;
-            // }
-        } else {
-            angle -= 270;
-        }
-    }
-
-    const liveryId = bus.vehicle?.livery;
-
-    if (liveryId) {
-        className += ` livery-${liveryId}`;
-    }
-
-    return (
-        <Marker
-            key={bus.trip_id}
-            longitude={bus.coords[1]}
-            latitude={bus.coords[0]}
-            rotation={angle}
-            anchor="center"
-            onClick={(e) => {
-                e.originalEvent.stopPropagation();
-                setPopup({
-                    lngLat: [bus.coords[1], bus.coords[0]],
-                    content: (
-                        <div className="flex flex-col font-bold text-white bg-[#222]">
-                            <span
-                                className="underline cursor-pointer text-link"
-                                onClick={() => navigate(`/buses/${bus.id}`)}>
-                                {bus.service.line_name} to {bus.destination}
-                            </span>
-                            <span className="text-xs text-gray-300">
-                                {bus.vehicle.name}
-                            </span>
-                            <span className="text-xs font-normal text-gray-400">
-                                {parse(bus.vehicle.features)}
-                            </span>
-                            <TimeSince
-                                className="text-xs text-gray-300"
-                                time={bus.updated}
-                            />
-                        </div>
-                    ),
-                });
-            }}>
-            <svg width="24" height="16" className={className}>
-                <text x="12" y="12">
-                    {bus.service ? bus.service.line_name : "�"}
-                </text>
-            </svg>
-            {angle == null ? null : <div className="arrow" />}
-        </Marker>
-    );
-}
 
 type MapViewProps = {
     mapRef: React.Ref<MapRef>;

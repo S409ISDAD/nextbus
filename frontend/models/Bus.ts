@@ -58,6 +58,7 @@ export interface Bus {
     target_seq?: number;
     progress?: ProgressInfo;
     coords?: number[];
+    heading?: number;
     predictions: Prediction[];
     journey: LiveJourney
     confidence: Confidence;
@@ -70,6 +71,7 @@ export interface Prediction {
     sequence: number;
     progress: number;
     location: number[];
+    heading: number;
 }
 
 export interface Confidence {
@@ -93,7 +95,7 @@ export interface MapBus {
     livery_id?: number;
 }
 
-interface MapVehicle {
+export interface MapVehicle {
     name: string;
     features: string;
     livery: string;
