@@ -61,8 +61,8 @@ const MapView: React.FC<MapViewProps> = ({ journey, track = [] }) => {
                 }}
                 onLoad={handleMapLoad}
                 attributionControl={false}
-                mapStyle="https://tiles.stadiamaps.com/styles/alidade_smooth_dark.json"
-                // mapStyle="https://tiles.stadiamaps.com/styles/osm_bright.json"
+                // mapStyle="https://tiles.stadiamaps.com/styles/alidade_smooth_dark.json"
+                mapStyle="https://tiles.stadiamaps.com/styles/osm_bright.json"
                 // mapStyle={{
                 //     version: 8,
                 //     sources: {

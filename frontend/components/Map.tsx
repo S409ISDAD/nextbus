@@ -151,8 +151,8 @@ const MapView: React.FC<MapViewProps> = ({
                 maxPitch={0}
                 maxZoom={18}
                 minZoom={4}
-                // mapStyle="https://tiles.stadiamaps.com/styles/osm_bright.json"
-                mapStyle="https://tiles.stadiamaps.com/styles/alidade_smooth_dark.json"
+                mapStyle="https://tiles.stadiamaps.com/styles/osm_bright.json"
+                // mapStyle="https://tiles.stadiamaps.com/styles/alidade_smooth_dark.json"
                 // mapStyle={{
                 //     version: 8,
                 //     sources: {
