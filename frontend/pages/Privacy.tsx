@@ -14,7 +14,7 @@ const Privacy: React.FC = () => {
         <div className="flex flex-col max-w-3xl gap-5 p-6 mx-auto">
             <span className="text-4xl font-bold">Privacy Policy</span>
             <span>
-                <strong>Last updated:</strong> October 2nd, 2025
+                <strong>Last updated:</strong> November 14th, 2025
             </span>
 
             <span>
@@ -72,21 +72,12 @@ const Privacy: React.FC = () => {
                         favStops
                     </span>
                     . You can delete this data at any time by pressing the
-                    'Clear Favorites' button in the Bus Page or here. I also
-                    store a randomly generated client ID in your browser's
-                    localStorage under{" "}
-                    <span className="p-1 rounded-lg bg-neutral-800">
-                        ws-client-id
-                    </span>
-                    . This ID is used to identify your WebSocket connection or
-                    API request and is not linked to any personal information.
-                    This data is used to generate the statistics on the{" "}
-                    <a href="/stats" className="underline text-link">
-                        Stats Page.
-                    </a>{" "}
-                    You can delete the ID at any time by clearing your browser's
-                    localStorage, however a new one will be generated when you
-                    next use the site.
+                    'Clear Favorites' button in the Bus Page or here. <br />
+                    <br />I use Plausible Analytics to collect anonymous usage
+                    data to help improve the website. No personal data is
+                    collected. The Plausible server is hosted locally by me (on
+                    my own hardware), so analytics data never goes to
+                    third-party services.
                 </span>
                 <button
                     className="p-1.5 px-4 w-fit text-sm font-semibold text-white transition-all bg-primary cursor-pointer rounded-xl hover:bg-primary-700"

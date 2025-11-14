@@ -1,7 +1,5 @@
-import asyncio
 import time
 from contextlib import asynccontextmanager
-from datetime import timedelta, timezone, datetime
 
 import sentry_sdk
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -32,15 +30,13 @@ from backend.api.routes import (
     journeys,
 )
 from backend.config import config, setup_logging
-from backend.db.db import SessionLocal, get_db
+from backend.db.db import get_db
 from backend.deps import (
-    floor_to_30s,
     get_redis_client,
     get_redis,
     limiter,
     VERSION,
 )
-from backend.models import ActiveUsersSnapshot
 from backend.websockets.routes import ws_router
 from backend.deps import get_logger
 
@@ -53,43 +49,6 @@ async def clear_redis_stats(redis):
     log.debug("Clearing Redis stats...")
     await redis.delete("total_buses")
     await redis.delete("total_stops")
-    await redis.delete("total_users")
-
-
-async def record_snapshot(redis):
-    try:
-        async with asyncio.timeout(5):
-            with SessionLocal() as db:
-                total = int(await redis.get("total_ws_connections") or 0)
-                unique = int(await redis.scard("total_clients") or 0)
-
-                await redis.delete("total_clients")
-                clients = await redis.smembers("clients")
-                if clients:
-                    await redis.sadd("total_clients", *clients)
-
-                timestamp = floor_to_30s(datetime.now(timezone.utc))
-
-                exists = (
-                    db.query(ActiveUsersSnapshot).filter_by(timestamp=timestamp).first()
-                )
-                if not exists:
-                    log.debug(f"Logging {unique} active users")
-                    db.add(
-                        ActiveUsersSnapshot(
-                            total_connections=total,
-                            unique_connections=unique,
-                            timestamp=timestamp,
-                        )
-                    )
-
-                cutoff = datetime.now(tz=timezone.utc) - timedelta(days=7)
-                db.query(ActiveUsersSnapshot).filter(
-                    ActiveUsersSnapshot.timestamp < cutoff
-                ).delete()
-                db.commit()
-    except Exception as e:
-        log.error("Error recording active users:", e)
 
 
 @asynccontextmanager
@@ -103,23 +62,11 @@ async def lifespan(app: FastAPI):
     is_leader = await redis.set("app:leader", "1", nx=True, ex=60)
     if is_leader:
         log.debug("This instance is the leader.")
-        await redis.delete("total_clients")
-        redis.sadd("total_clients", *[])
-        await redis.delete("clients")
-        redis.sadd("clients", *[])
-        await redis.set("total_ws_connections", "0")
     else:
         log.debug("This instance is not the leader.")
 
     if is_leader:
         scheduler = AsyncIOScheduler()
-        scheduler.add_job(
-            record_snapshot,
-            CronTrigger(second="0,30"),  # run every 30 seconds
-            id="record_active_users",
-            replace_existing=True,
-            args=[redis],
-        )
         scheduler.add_job(
             clear_redis_stats,
             CronTrigger(hour="0", minute="0", second="0"),  # daily at midnight
@@ -186,12 +133,7 @@ app.add_exception_handler(
 
 @app.middleware("http")
 async def timing_middleware(request: Request, call_next):
-    redis = await get_redis()
     start = time.time()
-    client_id = request.headers.get("X-Client-ID")
-    if client_id:
-        await redis.sadd("total_clients", client_id)  # type: ignore
-        await redis.sadd("total_users", client_id)  # type: ignore
     response = await call_next(request)
     duration = time.time() - start
     log.debug(f"{request.method} {request.url} completed in {duration:.3f}s")

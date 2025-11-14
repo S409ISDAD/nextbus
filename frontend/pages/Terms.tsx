@@ -8,7 +8,7 @@ const Terms: React.FC = () => {
         <div className="flex flex-col max-w-3xl gap-5 p-6 mx-auto">
             <span className="text-4xl font-bold">Terms of Service</span>
             <span>
-                <strong>Last updated:</strong> 01/09/2025
+                <strong>Last updated:</strong> September 1st, 2025
             </span>
 
             <span>By using nextbus, you agree to these terms:</span>

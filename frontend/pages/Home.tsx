@@ -22,8 +22,8 @@ import { Switch } from "@headlessui/react";
 //     useIsLocationGranted,
 // } from "../components/LocationPrompt";
 import { useGeolocated } from "react-geolocated";
-import type { DBStats } from "../models/Stats.ts";
-import { getDBStats } from "../utils/getStats.ts";
+import type { Stats } from "../models/Stats.ts";
+import getStats from "../utils/getStats.ts";
 import { faDiscord } from "@fortawesome/free-brands-svg-icons";
 import { useLocalSetting } from "../src/settings.ts";
 // import type { Locality } from "../models/Locality.ts";
@@ -34,7 +34,7 @@ const Home: React.FC = () => {
 
     const [closestStop, setClosestStop] = React.useState<string | null>(null);
     const [showStop, setShowStop] = React.useState(false);
-    const [stats, setStats] = useState<DBStats>();
+    const [stats, setStats] = useState<Stats>();
     // const [destinations, setDestinations] = useState<Locality[]>([]);
     // const [loadingDestinations, setLoadingDestinations] = useState(false);
     const {
@@ -116,9 +116,9 @@ const Home: React.FC = () => {
         };
         const fetchStats = async () => {
             try {
-                const stats = await getDBStats();
+                const stats = await getStats();
                 if (stats) {
-                    setStats(stats.dbStats);
+                    setStats(stats);
                 }
             } catch {
                 console.log("uh oh");
@@ -137,7 +137,7 @@ const Home: React.FC = () => {
                     <div className="flex flex-col items-center justify-center p-2">
                         <div className="flex flex-col items-center w-full">
                             <button
-                                className="flex flex-row items-center justify-center gap-1 p-2 px-4 transition cursor-pointer border-1 rounded-2xl bg-neutral-800 border-amber-500 hover:border-amber-400"
+                                className="flex flex-row items-center justify-center gap-1 p-2 px-4 transition border cursor-pointer rounded-2xl bg-neutral-800 border-amber-500 hover:border-amber-400"
                                 onClick={() => setShowCaution((prev) => !prev)}>
                                 <FontAwesomeIcon icon={faWarning} />
                                 <span className="ml-2 text-sm">
@@ -176,7 +176,7 @@ const Home: React.FC = () => {
                         </div>
                     </div>
                     {showStop && closestStop && (
-                        <div className="flex flex-col items-center gap-2 p-3 bg-neutral-800 rounded-[24px]">
+                        <div className="flex flex-col items-center gap-2 p-3 bg-neutral-800 rounded-3xl">
                             <span className="px-5 font-semibold text-center text-neutral-300 text">
                                 It looks like you're at a bus stop!
                                 <br /> Would you like to see the departures?
@@ -203,28 +203,28 @@ const Home: React.FC = () => {
                     <div className="flex flex-wrap items-center justify-center w-full gap-4">
                         <div className="flex flex-col items-center p-2 px-6 shadow bg-neutral-800/50 rounded-xl">
                             <span className="text-xl font-bold text-link-400">
-                                {stats?.lines?.toLocaleString() ?? "--"}
+                                {stats?.total_buses?.toLocaleString() ?? "--"}
                             </span>
                             <span className="mt-1 text-sm text-neutral-400">
-                                Services
+                                Buses Tracked
                             </span>
                         </div>
                         <div className="flex flex-col items-center p-2 px-6 shadow bg-neutral-800/50 rounded-xl">
                             <span className="text-xl font-bold text-purple-400">
-                                {stats?.stops?.toLocaleString() ?? "--"}
+                                {stats?.total_stops?.toLocaleString() ?? "--"}
                             </span>
                             <span className="mt-1 text-sm text-neutral-400">
-                                Stops
+                                Stops Viewed
                             </span>
                         </div>
-                        <div className="flex flex-col items-center p-2 px-6 shadow bg-neutral-800/50 rounded-xl">
+                        {/* <div className="flex flex-col items-center p-2 px-6 shadow bg-neutral-800/50 rounded-xl">
                             <span className="text-xl font-bold text-emerald-400">
                                 {stats?.operators?.toLocaleString() ?? "--"}
                             </span>
                             <span className="mt-1 text-sm text-neutral-400">
                                 Operators
                             </span>
-                        </div>
+                        </div> */}
                     </div>
                     <a
                         href="/stats"

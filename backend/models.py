@@ -194,16 +194,6 @@ class BotConfig(Base):
     message_id = Column(String, nullable=True)
 
 
-class ActiveUsersSnapshot(Base):
-    __tablename__ = "active_users_snapshot"
-
-    timestamp = Column(
-        DateTime(timezone=True), server_default=func.now(), index=True, primary_key=True
-    )
-    total_connections = Column(Integer, nullable=False)
-    unique_connections = Column(Integer, nullable=False)
-
-
 class DataSource(Base):
     __tablename__ = "data_source"
 
