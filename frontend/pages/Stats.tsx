@@ -75,7 +75,7 @@ const StatsPage: React.FC = () => {
                     </span>
                 </div>
 
-                <div className="flex items-center justify-center w-full gap-4 flssssssex-wrap">
+                <div className="flex flex-wrap items-center justify-center w-full gap-4 flssssssex-wrap">
                     <div className="flex flex-col items-center p-2 px-6 shadow bg-neutral-800/50 rounded-xl">
                         <span className="text-xl font-bold text-yellow-400">
                             {dbstats?.lines?.toLocaleString() ?? "--"}
