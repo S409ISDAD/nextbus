@@ -176,6 +176,9 @@ const MapView: React.FC<MapViewProps> = ({
                         closeOnClick={true}
                         anchor="bottom"
                         maxWidth="250px"
+                        style={{
+                            zIndex: 3,
+                        }}
                         onClose={() => setPopup(null)}>
                         {popup.content}
                     </Popup>

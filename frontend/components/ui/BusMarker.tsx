@@ -37,7 +37,7 @@ export function BusMarker({ bus, setPopup }: { bus: MapBus; setPopup: any }) {
             rotation={angle}
             anchor="center"
             style={{
-                zIndex: 999,
+                zIndex: 2,
             }}
             onClick={(e) => {
                 e.originalEvent.stopPropagation();
