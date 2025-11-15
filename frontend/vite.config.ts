@@ -37,7 +37,11 @@ export default defineConfig({
     },
     scope: '/',
     workbox: {
-      navigateFallbackDenylist: [/^\/api(\/.*)?$/, /^\/ws(\/.*)?$/],
+      navigateFallbackDenylist: [
+        /^\/api(\/.*)?$/,
+        /^\/ws(\/.*)?$/,
+        /^\/robots\.txt$/,
+      ],
       clientsClaim: true,
       skipWaiting: true,
     },
