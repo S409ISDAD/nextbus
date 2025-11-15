@@ -132,6 +132,9 @@ async def get_vehicle_journey(journey_id, delay, r) -> Journey:
         if expt < current_time:
             departed = True
 
+        if stop.get("timing_status") == "":
+            stop["timing_status"] = "OTH"
+
         stops.append(
             StopTime(
                 stop_id=stop["stop"].get("atco_code"),
@@ -355,6 +358,9 @@ async def get_trip(trip_id, delay, r) -> Trip | None:
         departed = False
         if expt < current_time:
             departed = True
+
+        if stop.get("timing_status") == "":
+            stop["timing_status"] = "OTH"
 
         stops.append(
             StopTime(
