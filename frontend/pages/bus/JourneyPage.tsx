@@ -30,7 +30,7 @@ type MapViewProps = {
     track: Latlon[];
 };
 import React from "react";
-import { Bus } from "../../models/Bus";
+import type { Bus } from "../../models/Bus";
 import { useLocalSetting } from "../../src/settings";
 
 const MapView: React.FC<MapViewProps> = ({ journey, track = [] }) => {

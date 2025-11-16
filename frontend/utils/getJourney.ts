@@ -1,7 +1,7 @@
 import api from "../src/api"
 
 import type { Trip } from "../models/Journey";
-import { Bus } from "../models/Bus";
+import type { Bus } from "../models/Bus";
 
 
 export const getDBJourney = async (journey_id: number) => {
