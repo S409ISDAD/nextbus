@@ -1,23 +1,9 @@
 import axios from "axios";
 import toast from "react-hot-toast";
-import { v4 as uuidv4 } from "uuid";
-
-// const API_PORT = 8000;
-let storedClientId = localStorage.getItem("ws-client-id");
-if (!storedClientId) {
-    storedClientId = uuidv4();
-    localStorage.setItem("ws-client-id", storedClientId);
-}
 
 const api = axios.create({
     baseURL: '/api/v1',
     timeout: 20000,
-});
-
-api.interceptors.request.use((config) => {
-    config.headers = config.headers || {};
-    config.headers['X-Client-Id'] = storedClientId;
-    return config;
 });
 
 api.interceptors.response.use(
@@ -48,7 +34,7 @@ api.interceptors.response.use(
                     id: 'server-error-toast',
                     duration: 3000,
                 });
-            } else if (status >= 400) {
+            } else if (status >= 400 && status != 404) {
                 toast.error(`An error occurred: ${status}`, {
                     id: 'client-error-toast',
                     duration: 3000,
