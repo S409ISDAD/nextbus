@@ -248,7 +248,7 @@ export const BusProgress: React.FC<{
     return (
         <div className="absolute top-0 left-0 h-full mt-[15px] z-11 w-9">
             <div
-                className="absolute transition-all duration-500 ease-in-out translate-x-[-16px]"
+                className="absolute transition-all duration-500 ease-in-out -translate-x-4"
                 style={{ transform: `translateY(${translateY}px)` }}>
                 <div className="relative flex items-center justify-center">
                     <Pulse size={34} color="bg-rose-400" duration={2} />
@@ -624,7 +624,7 @@ const LiveJourneyPage: React.FC = () => {
                                             <div className="absolute z-10 w-3 h-3 translate-y-[-30%] rounded-full bg-neutral-700 flex items-center justify-center"></div>
                                         )} */}
                                         {idx < liveJourney.stops.length - 1 && (
-                                            <div className="w-[4px] bg-neutral-700 flex-1 min-h-[68px]"></div>
+                                            <div className="w-1 bg-neutral-700 flex-1 min-h-[68px]"></div>
                                         )}
                                     </div>
                                 ))}
@@ -635,7 +635,7 @@ const LiveJourneyPage: React.FC = () => {
                                         key={stop.stop_id}
                                         className="flex flex-row items-center">
                                         <div
-                                            className={`w-4 bg-neutral-700 rounded-r-full h-[4px]`}></div>
+                                            className={`w-4 bg-neutral-700 rounded-r-full h-1`}></div>
                                         <div
                                             className="p-2 w-fit h-17"
                                             onClick={() =>

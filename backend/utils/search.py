@@ -144,6 +144,7 @@ if __name__ == "__main__":
                 if isinstance(item, Operator):
                     print(f"- {item.name} (NOC: {item.noc})")
                 elif isinstance(item, dict):
+                    print(item)
                     print(
                         f"- {item['line_name']} | {item['description']} (rank: {item['rank']})"
                     )

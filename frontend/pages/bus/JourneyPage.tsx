@@ -3,7 +3,11 @@ import type { Trip } from "../../models/Journey";
 import { useNavigate, useParams } from "react-router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { toTime } from "../../utils/timeUtils";
-import { getTrip, getDBJourney } from "../../utils/getJourney";
+import {
+    getTrip,
+    getDBJourney,
+    getBusOnPrevJourney,
+} from "../../utils/getJourney";
 import { generateWholeTrack, type Latlon } from "../../utils/locations";
 import { faWarning } from "@fortawesome/free-solid-svg-icons";
 import * as turf from "@turf/turf";
@@ -18,12 +22,16 @@ import {
 } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useShowAppNav } from "../../utils/AppNav";
+import { Card } from "../../components/ui/Card";
+import { formatBusType } from "./DeparturePage";
 
 type MapViewProps = {
     journey: Trip;
     track: Latlon[];
 };
 import React from "react";
+import { Bus } from "../../models/Bus";
+import { useLocalSetting } from "../../src/settings";
 
 const MapView: React.FC<MapViewProps> = ({ journey, track = [] }) => {
     const [popup, setPopup] = React.useState<{
@@ -51,7 +59,7 @@ const MapView: React.FC<MapViewProps> = ({ journey, track = [] }) => {
     };
 
     return (
-        <div className="relative w-[100vw] h-[200px]">
+        <div className="relative w-screen h-[200px]">
             <MapGL
                 ref={mapRef}
                 initialViewState={{
@@ -176,18 +184,23 @@ const JourneyPage: React.FC = () => {
     const navigate = useNavigate();
 
     const [journey, setJourney] = useState<Trip>();
+    const [potentialBus, setPotentialBus] = useState<null | {
+        away: number;
+        bus: Bus;
+    }>(null);
     const [loading, setLoading] = useState(true);
     const [fetching, setFetching] = useState(false);
     const [msg, setMsg] = useState<string>("");
     const [busInfoHeight, setBusInfoHeight] = useState(0);
     const busInfoRef = useRef<HTMLDivElement>(null);
     const showAppNav = useShowAppNav();
+    const [vegMode] = useLocalSetting("veg", false);
 
     useEffect(() => {
         if (busInfoRef.current) {
             setBusInfoHeight(busInfoRef.current.clientHeight);
         }
-    }, [busInfoRef, loading]);
+    }, [busInfoRef, loading, potentialBus, msg]);
     useEffect(() => {
         const getData = async (journey_id: number) => {
             if (fetching) {
@@ -277,7 +290,82 @@ const JourneyPage: React.FC = () => {
                                 {journey?.stops.length} stops
                             </span>
                         </div>
-                        <div className="flex items-center gap-3"></div>
+                        {isDBJourney && (
+                            <div className="flex flex-col items-center gap-3">
+                                <button
+                                    className="text-sm button max-w-fit"
+                                    onClick={async () => {
+                                        if (potentialBus) {
+                                            setPotentialBus(null);
+                                        } else {
+                                            const bus =
+                                                await getBusOnPrevJourney(
+                                                    Number(journey_id)
+                                                );
+                                            if (!bus) {
+                                                setMsg(
+                                                    "No bus found on previous journey"
+                                                );
+                                                return;
+                                            }
+                                            setPotentialBus(bus);
+                                        }
+                                    }}>
+                                    {potentialBus
+                                        ? "hide bus info"
+                                        : "what bus will i get?"}
+                                </button>
+
+                                {potentialBus && (
+                                    <Card className="flex flex-col items-center gap-2 text-center">
+                                        <div className="flex flex-row items-center gap-4 text-center">
+                                            <div className="flex flex-col items-center gap-1">
+                                                <span className="text-xs font-bold text-center">
+                                                    {potentialBus.bus.vehicle
+                                                        .livery
+                                                        ? potentialBus.bus
+                                                              ?.vehicle.livery
+                                                              .name
+                                                        : "No livery"}
+                                                </span>
+                                                <div
+                                                    className="rounded shadow-2xl w-15 aspect-3/2"
+                                                    style={{
+                                                        background:
+                                                            potentialBus.bus
+                                                                ?.vehicle.livery
+                                                                ?.right_css ||
+                                                            "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 200' fill='none' xmlns:xlink='http://www.w3.org/1999/xlink'><rect width='300' height='200' fill='%23222222'/><text x='150' y='110' text-anchor='middle' fill='%23999999' font-size='80' font-family='sans-serif' dy='.35em'>?</text></svg>\")",
+                                                    }}></div>
+                                            </div>
+                                            <div className="flex flex-col items-center gap-2">
+                                                <span className="text-sm font-bold text-center text-neutral-400">
+                                                    {formatBusType(
+                                                        potentialBus.bus,
+                                                        vegMode
+                                                    )}
+                                                </span>
+                                                <div className="flex justify-center px-2 py-1 rounded-lg w-fit bg-amber-400">
+                                                    <span className="text-xs font-bold align-middle text-neutral-950">
+                                                        {
+                                                            potentialBus.bus
+                                                                .vehicle.reg
+                                                        }
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <span className="text-sm text-neutral-400">
+                                            {potentialBus.away === 0
+                                                ? "on this journey"
+                                                : potentialBus.away === 1
+                                                ? "next journey"
+                                                : `${potentialBus.away} journeys away`}
+                                        </span>
+                                    </Card>
+                                )}
+                            </div>
+                        )}
                     </div>
                 ) : (
                     <div className="flex flex-row items-center justify-center h-30">
@@ -326,7 +414,7 @@ const JourneyPage: React.FC = () => {
                                             <div className="absolute z-10 w-3 h-3 translate-y-[-30%] rounded-full bg-neutral-700 flex items-center justify-center"></div>
                                         )} */}
                                     {idx < journey.stops.length - 1 && (
-                                        <div className="w-[4px] bg-neutral-700 flex-1 min-h-[68px]"></div>
+                                        <div className="w-1 bg-neutral-700 flex-1 min-h-[68px]"></div>
                                     )}
                                 </div>
                             ))}
@@ -337,7 +425,7 @@ const JourneyPage: React.FC = () => {
                                     key={stop.stop_id}
                                     className="flex flex-row items-center">
                                     <div
-                                        className={`w-4 bg-neutral-700 rounded-r-full h-[4px]`}></div>
+                                        className={`w-4 bg-neutral-700 rounded-r-full h-1`}></div>
                                     <div
                                         className="p-2 w-fit h-17"
                                         onClick={() =>

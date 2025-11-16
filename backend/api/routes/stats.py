@@ -31,7 +31,13 @@ async def db_stats(request: Request, db=Depends(get_db), redis=Depends(get_redis
     async def get_stats(db):
         total_services = db.query(Service).filter(Service.current).count()
         total_stops = db.query(Stop).filter(Stop.active).count()
-        total_operators = db.query(Operator).count()
+        total_operators = (
+            db.query(Operator)
+            .join(Service.operators)
+            .filter(Service.current)
+            .distinct(Operator.id)
+            .count()
+        )
         return {
             "lines": total_services,
             "stops": total_stops,

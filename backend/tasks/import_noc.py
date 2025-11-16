@@ -5,6 +5,8 @@ from sqlalchemy_searchable import sync_trigger
 
 from backend.config import get_logger, setup_logging
 from backend.db.db import SessionLocal, engine
+from backend.models import Operator
+from backend.utils.bulk_upsert import bulk_upsert
 
 log = get_logger(__name__)
 
@@ -35,6 +37,8 @@ def import_noc_data():
 
             element = ET.fromstring(file.text)
 
+            operators_to_add = []
+
             public_names = {}
             for e in element.find("PublicName"):
                 e_id = e.findtext("PubNmId")
@@ -46,7 +50,6 @@ def import_noc_data():
                 for line in element.find("NOCLines")
             }
 
-
             for e in element.find("NOCTable"):
                 noc = e.findtext("NOCCODE").removeprefix("=")
 
@@ -56,15 +59,30 @@ def import_noc_data():
                     continue
 
                 vehicle_mode = get_mode(noc_line.findtext("Mode"))
-                if vehicle_mode == "airline":
-                    log.debug(f"Skipping airline NOC {noc}")
-                    continue
 
                 public_name = public_names[e.findtext("PubNmId")]
 
                 name = public_name.findtext("OperatorPublicName")
+                if vehicle_mode == "airline":
+                    log.debug(f"Skipping airline NOC {noc} - {name}")
+                    continue
 
                 log.debug(f"Processing NOC {noc} - {name} ({vehicle_mode})")
+
+                operator = {
+                    "noc": noc,
+                    "name": name,
+                    "mode": vehicle_mode,
+                }
+                operators_to_add.append(operator)
+
+            bulk_upsert(
+                db,
+                Operator,
+                operators_to_add,
+                ["noc"],
+                ["name", "mode"],
+            )
 
             log.debug("Committing...")
             db.commit()

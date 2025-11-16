@@ -46,7 +46,7 @@ const getBusDetail = async (bus: Departure) => {
     }
 };
 
-function formatBusType(bus: any, vegMode: boolean) {
+export function formatBusType(bus: any, vegMode: boolean) {
     if (!vegMode) return bus.bus_type;
 
     const types = [bus.vehicle?.vehicle_type?.name, bus.bus_type]

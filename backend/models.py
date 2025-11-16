@@ -650,8 +650,9 @@ class Operator(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
 
-    noc = Column(String, nullable=False)
+    noc = Column(String, nullable=False, unique=True)
     name = Column(String, nullable=False)
+    mode = Column(String, nullable=True)
     services = relationship(
         "Service",
         secondary=service_operator_table,

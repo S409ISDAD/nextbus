@@ -6,11 +6,13 @@ from backend.schemas.journey import Trip
 from backend.models import Journey, StopTime, Stop, Service
 from backend.schemas.stop import StopTime as StopTimeSchema
 from backend.services import journeys
+from backend.services.bus import build_bus
 from backend.deps import LONDON, get_redis
 from sqlalchemy.orm import selectinload, load_only
 
 from backend.deps import limiter
 from backend.deps import get_logger
+from backend.utils import blocks
 
 router = APIRouter()
 
@@ -85,6 +87,34 @@ async def get_db_journey(
 
         return trip
 
+    except Exception as e:
+        log.error(f"Unexpected error: {e}")
+        raise HTTPException(500, detail="An unexpected error occured")
+
+
+@router.get("/dbjourney/{journey_id}/whatbus")
+@limiter.limit("20/minute")
+async def get_bus_on_prev_journey(
+    request: Request, journey_id: int, redis=Depends(get_redis), db=Depends(get_db)
+):
+    try:
+        bus, away = await blocks.find_bus_on_block(
+            db,
+            journey_id=journey_id,
+        )
+
+        if bus is None:
+            raise HTTPException(404, detail="No bus found on previous journey")
+
+        bus_id = bus.get("id")
+        bus_data = await build_bus(bus_id, redis, get_journey=False)
+
+        return {
+            "away": away,
+            "bus": bus_data,
+        }
+    except HTTPException as he:
+        raise he
     except Exception as e:
         log.error(f"Unexpected error: {e}")
         raise HTTPException(500, detail="An unexpected error occured")
