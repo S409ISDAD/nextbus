@@ -15,7 +15,6 @@ from backend.utils.fetch_json import fetch_rtt_json
 from backend.utils.trains import operator_map
 from datetime import datetime
 from datetime import timezone, timedelta
-import asyncio
 from backend.deps import LONDON, UTC
 
 from backend.deps import get_logger

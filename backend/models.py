@@ -1649,7 +1649,7 @@ def journey_is_valid_filter(date: date | None = None):
     # base calendar date range
     base_filter = and_(
         Calendar.start_date <= date,
-        or_(Calendar.end_date == None, Calendar.end_date >= date),
+        or_(Calendar.end_date is None, Calendar.end_date >= date),
     )
 
     # any exceptions turning off this date?
@@ -1657,7 +1657,7 @@ def journey_is_valid_filter(date: date | None = None):
         and_(
             CE.calendar_id == Calendar.id,
             CE.start_date <= date,
-            or_(CE.end_date == None, CE.end_date >= date),
+            or_(CE.end_date is None, CE.end_date >= date),
             CE.operating.is_(False),
         )
     )
@@ -1681,7 +1681,7 @@ def journey_is_valid_filter(date: date | None = None):
         and_(
             CE.calendar_id == Calendar.id,
             CE.start_date <= date,
-            or_(CE.end_date == None, CE.end_date >= date),
+            or_(CE.end_date is None, CE.end_date >= date),
             CE.operating.is_(True),
             CE.special.is_(True),
         )
@@ -1694,7 +1694,7 @@ def journey_is_valid_filter(date: date | None = None):
             CE.operating.is_(True),
             CE.special.is_(False),
             CE.start_date <= date,
-            or_(CE.end_date == None, CE.end_date >= date),
+            or_(CE.end_date is None, CE.end_date >= date),
         )
     )
 
@@ -1719,7 +1719,7 @@ def journey_is_valid_filter(date: date | None = None):
             CE.operating.is_(True),
             CE.special.is_(False),
             CE.start_date <= date,
-            or_(CE.end_date == None, CE.end_date >= date),
+            or_(CE.end_date is None, CE.end_date >= date),
         )
     )
 

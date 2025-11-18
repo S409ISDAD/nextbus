@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 from geopy.distance import geodesic
 from redis import Redis
 

@@ -1,9 +1,7 @@
-import asyncio
 from datetime import datetime, timedelta
 
 from dateutil import parser
 from redis import Redis
-import sentry_sdk
 from sqlalchemy.orm import joinedload
 
 from backend.config import VEHICLES_BASE, API_BASE
@@ -20,7 +18,6 @@ from backend.schemas.livery import Livery
 from backend.schemas.progress import Progress
 from backend.services import stops
 from backend.services.caching import BUS_CACHE, get_cached, DAY
-from backend.services.livery import get_livery
 from backend.services.prediction import (
     calculate_expected,
     calculate_expected_difference,

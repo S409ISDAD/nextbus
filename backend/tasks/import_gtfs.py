@@ -1,4 +1,3 @@
-import partridge as ptg
 import pandas as pd
 from geoalchemy2.shape import from_shape
 from shapely.geometry import Point, LineString
@@ -8,25 +7,19 @@ from backend.config import get_logger
 from backend.db.db import SessionLocal
 from backend.models import (
     Operator,
-    Timetable,
     Calendar,
-    CalendarException,
     Service,
     Timetable,
-    Journey,
     StopTime,
-    RouteType,
     service_operator_table,
     ExceptionType,
     WheelchairAccessible,
     PickupDropOffType,
 )
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session
 import sys
 
 from shapely.wkb import loads as wkb_loads
-from sqlalchemy import or_, and_
-from sqlalchemy.sql import exists
 
 log = get_logger(__name__)
 

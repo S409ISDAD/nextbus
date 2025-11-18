@@ -12,7 +12,7 @@ export class WebSocketManager {
     private url: string;
     private autoReconnect: boolean = true;
     private reconnectDelay: number = 2000;
-    private reconnectTimer: number | null = null;
+    private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
     private onMessageCallbacks: Callback[] = [];
     private onOpenCallbacks: (() => void)[] = [];

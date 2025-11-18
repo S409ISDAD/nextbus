@@ -8,7 +8,6 @@ from sqlalchemy.orm import selectinload, joinedload
 
 from backend.utils.time_taken import time_taken
 from backend.deps import get_logger
-import re
 import locale
 
 locale.setlocale(locale.LC_ALL, "")  # enable locale-aware sorting

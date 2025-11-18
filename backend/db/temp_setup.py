@@ -1,5 +1,5 @@
-from backend.db.db import engine, SessionLocal
-from backend.models import Base, DataSource
+from backend.db.db import engine
+from backend.models import Base
 
 
 def setup_test_db():

@@ -1,7 +1,6 @@
 import asyncio
 from fastapi import WebSocket
 from typing import Callable, Dict, List
-import json
 
 from backend.deps import get_logger
 

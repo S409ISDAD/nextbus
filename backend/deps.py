@@ -1,6 +1,5 @@
 from datetime import datetime, timedelta, timezone
 import json
-from typing import Optional
 from backend.config import get_logger
 import pathlib
 import os
@@ -11,7 +10,6 @@ from pathlib import Path
 
 from redis import Redis as SyncRedis
 from redis.asyncio import Redis as AsyncRedis
-from redis.connection import ConnectionPool
 
 UTC = timezone.utc
 LONDON = ZoneInfo("Europe/London")
