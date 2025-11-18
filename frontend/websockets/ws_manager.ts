@@ -12,6 +12,7 @@ export class WebSocketManager {
     private url: string;
     private autoReconnect: boolean = true;
     private reconnectDelay: number = 2000;
+    private reconnectTimer: number | null = null;
 
     private onMessageCallbacks: Callback[] = [];
     private onOpenCallbacks: (() => void)[] = [];
@@ -23,9 +24,7 @@ export class WebSocketManager {
 
     public static getInstance(url: string): WebSocketManager {
         if (!this.instances.has(url)) {
-            const instance = new WebSocketManager(url);
-            this.instances.set(url, instance);
-            instance.connect();
+            this.instances.set(url, new WebSocketManager(url));
         }
         return this.instances.get(url)!;
     }
@@ -53,7 +52,7 @@ export class WebSocketManager {
         this.socket.onclose = () => {
             this.onCloseCallbacks.forEach(cb => cb());
             if (this.autoReconnect) {
-                setTimeout(() => this.connect(), this.reconnectDelay);
+                this.reconnectTimer = setTimeout(() => this.connect(), this.reconnectDelay);
             }
         };
 
@@ -83,8 +82,13 @@ export class WebSocketManager {
 
     close() {
         this.autoReconnect = false;
+        if (this.reconnectTimer) {
+            clearTimeout(this.reconnectTimer);
+            this.reconnectTimer = null;
+        }
         this.socket?.close();
         this.socket = null;
+        this.clearCallbacks();
     }
 
     clearCallbacks() {

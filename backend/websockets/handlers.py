@@ -35,6 +35,8 @@ async def stop_subscribe(stop_id: str, redis: redis.asyncio.Redis):
             if message["type"] != "message":
                 continue
 
+            log.debug(f"stop_subscribe received message for stop {stop_id}")
+
             try:
                 data = json.loads(message["data"], object_hook=datetime_decoder)
             except Exception:
@@ -53,7 +55,9 @@ async def stop_subscribe(stop_id: str, redis: redis.asyncio.Redis):
 
 
 async def handle_departures(channel: str, key: str, websocket: WebSocket, redis):
-    await manager.connect(channel, key, websocket)
+    await manager.connect(
+        channel, key, websocket, redis, background_func=stop_subscribe
+    )
 
     await start_publishing(channel, key, redis)
 

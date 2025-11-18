@@ -14,9 +14,6 @@ from backend.deps import get_logger
 
 log = get_logger(__name__)
 
-active: dict[str, Set[str]] = {}
-publish_tasks: dict[str, asyncio.Task] = {}
-
 sync_redis = get_redis(sync=True)
 
 REDIS_LOCK_EXPIRE = 60  # seconds
@@ -75,18 +72,18 @@ async def publish_loop(channel: str, key: str, redis: Redis):
     finally:
         await release_publish_lock(redis, channel, key)
         await redis.srem(redis_active_key(channel), key)
+        log.debug(f"Publish loop ended for {channel}:{key}")
 
 
 async def start_publishing(channel: str, key: str, redis: Redis):
-    active_set = redis_active_key(channel)
-    await redis.sadd(active_set, key)
+    await redis.sadd(redis_active_key(channel), key)
+    log.debug(f"Starting publish task for {key}")
 
     got_lock = await acquire_publish_lock(redis, channel, key)
     if not got_lock:
         log.debug(f"Publishing already active for {key}")
         return
 
-    log.debug(f"starting pub task for {key}")
     asyncio.create_task(publish_loop(channel, key, redis))
 
 
