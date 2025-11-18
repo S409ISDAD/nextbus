@@ -15,9 +15,9 @@ log = get_logger(__name__)
 
 @router.get("/", response_model=Optional[TrackedBus])
 @limiter.limit("30/minute")
-async def get_bus(request: Request, bus_id: int, redis=Depends(get_redis)):
+def get_bus(request: Request, bus_id: int, redis=Depends(get_redis)):
     try:
-        this_bus = await bus.build_bus(bus_id, redis)
+        this_bus = bus.build_bus(bus_id, redis)
 
         return this_bus
     except Exception as e:

@@ -58,7 +58,7 @@ def search_services(query, db: Session, limit: int = 10):
     return results
 
 
-async def search_db(query: str, db: Session, limit: int = 20):
+def search_db(query: str, db: Session, limit: int = 20):
     results = defaultdict(list)
 
     operators_query = search(select(Operator), query, sort=True).limit(limit)

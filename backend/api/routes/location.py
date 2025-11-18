@@ -13,7 +13,7 @@ log = get_logger(__name__)
 
 @router.post("/closest")
 @limiter.limit("30/minute")
-async def closest_stop(
+def closest_stop(
     request: Request,
     body: LocationRequest,
     dist: float,
@@ -22,7 +22,7 @@ async def closest_stop(
     redis=Depends(get_redis),
 ):
     try:
-        # stop = await get_cached(
+        # stop = get_cached(
         #     f"closest_stop:{round(lat * 1000)}:{round(lon * 1000)}",
         #     lambda *args: bustimes.get_closest_stop(*args),
         #     (lat, lon),
@@ -30,7 +30,7 @@ async def closest_stop(
         #     redis,
         # )
 
-        return await stops.get_closest_stop(body.lat, body.lon, ignore, dist, limit)
+        return stops.get_closest_stop(body.lat, body.lon, ignore, dist, limit)
     except Exception as e:
         log.error(f"Unexpected error: {e}")
         raise HTTPException(500, detail="An unexpected error occurred")
@@ -38,7 +38,7 @@ async def closest_stop(
 
 @router.post("/closestforservice")
 @limiter.limit("15/minute")
-async def closest_stop_for_service(
+def closest_stop_for_service(
     request: Request,
     body: LocationRequest,
     dist: float,
@@ -46,7 +46,7 @@ async def closest_stop_for_service(
     redis=Depends(get_redis),
 ):
     try:
-        # stop = await get_cached(
+        # stop = get_cached(
         #     f"closest_stop:{round(lat * 1000)}:{round(lon * 1000)}",
         #     lambda *args: bustimes.get_closest_stop(*args),
         #     (lat, lon),
@@ -54,7 +54,7 @@ async def closest_stop_for_service(
         #     redis,
         # )
 
-        return await stops.get_closest_stop_for_service(
+        return stops.get_closest_stop_for_service(
             body.lat, body.lon, service_id, redis, dist
         )
     except Exception as e:
@@ -66,7 +66,7 @@ async def closest_stop_for_service(
 
 @router.post("/nearby")
 @limiter.limit("20/minute")
-async def nearby_services(
+def nearby_services(
     request: Request,
     body: LocationRequest,
     dist: int = 200,

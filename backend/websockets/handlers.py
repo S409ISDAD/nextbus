@@ -2,11 +2,11 @@ import asyncio
 import datetime
 import json
 
-import redis.asyncio as redis
+import redis.asyncio
 from fastapi import WebSocket, WebSocketDisconnect
 
 from backend.deps import datetime_decoder
-from backend.tasks.publisher import start_publishing, stop_publishing
+from backend.websockets.publisher import start_publishing, stop_publishing
 from backend.websockets.manager import manager
 
 from backend.deps import get_logger
@@ -24,12 +24,11 @@ def convert(obj):
     return obj
 
 
-async def stop_subscribe(stop_id: str, redis: redis.Redis):
-    pubsub = None
-    try:
-        pubsub = redis.pubsub()
-        await pubsub.subscribe(f"stop:departures:{stop_id}")
+async def stop_subscribe(stop_id: str, redis: redis.asyncio.Redis):
+    pubsub = redis.pubsub()
+    await pubsub.subscribe(f"stop:departures:{stop_id}")
 
+    try:
         async for message in pubsub.listen():
             if message is None:
                 continue
@@ -47,33 +46,31 @@ async def stop_subscribe(stop_id: str, redis: redis.Redis):
                 try:
                     await ws.send_json(data_serializable)
                 except Exception:
-                    await manager.disconnect("stop", stop_id, ws, redis)
-    except asyncio.CancelledError:
-        if pubsub:
-            await pubsub.unsubscribe(f"stop:departures:{stop_id}")
-    except Exception as e:
-        log.debug(f"[Redis subscriber error] {e}")
+                    manager.disconnect("stop", stop_id, ws)
+
+    finally:
+        await pubsub.unsubscribe(f"stop:departures:{stop_id}")
 
 
 async def handle_departures(channel: str, key: str, websocket: WebSocket, redis):
-    await manager.connect(
-        channel, key, websocket, redis, background_func=stop_subscribe
-    )
+    await manager.connect(channel, key, websocket)
+
     await start_publishing(channel, key, redis)
 
+    cached = await redis.get(f"stop:departures:{key}")
+
+    if cached:
+        log.debug(f"sending cached on first conn {key}")
+        data = json.loads(cached, object_hook=datetime_decoder)
+        data_serializable = convert(data)
+
+        await websocket.send_json(data_serializable)
+
     try:
-        cached = await redis.get(f"stop:departures:{key}")
-
-        if cached:
-            log.debug(f"sending cached on first conn {key}")
-            data = json.loads(cached, object_hook=datetime_decoder)
-            data_serializable = convert(data)
-
-            await websocket.send_json(data_serializable)
         while True:
             await websocket.receive_text()
 
     except WebSocketDisconnect:
-        await manager.disconnect(channel, key, websocket, redis)
+        manager.disconnect(channel, key, websocket)
         if not manager.get_connections(channel, key):
-            await stop_publishing(key)
+            await stop_publishing(channel, key, redis)

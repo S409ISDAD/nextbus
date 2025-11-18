@@ -8,9 +8,9 @@ from backend.deps import get_logger
 log = get_logger(__name__)
 
 
-async def get_livery(id: int, r):
-    async def fetch(id: int):
-        data = await fetch_json(
+def get_livery(id: int, r):
+    def fetch(id: int):
+        data = fetch_json(
             API_BASE + f"/liveries/{id}",
         )
 
@@ -21,7 +21,7 @@ async def get_livery(id: int, r):
                 "right_css": data.get("right_css"),
             }
 
-    livery = await get_cached(
+    livery = get_cached(
         key=f"liveries:{id}",
         func=fetch,
         args=(id,),

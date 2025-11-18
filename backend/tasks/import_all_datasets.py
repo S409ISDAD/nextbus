@@ -14,7 +14,7 @@ from backend.tasks.datasources import import_datasource
 log = get_logger(__name__)
 
 
-async def import_weekly_data():
+def import_weekly_data():
     log.debug("importing holidays")
     import_holidays.import_bank_holidays()
 
@@ -25,14 +25,14 @@ async def import_weekly_data():
     import_naptan.main()
 
 
-async def import_datasets():
+def import_datasets():
     log.debug("running dataset import...")
     start = time.time()
     full_stats = Statistics()
     with SessionLocal() as db:
         datasource_ids = [id[0] for id in db.query(DataSource.id).all()]
     for id in datasource_ids:
-        stats = await import_datasource(id, STATIC_DATA_DIR)
+        stats = import_datasource(id, STATIC_DATA_DIR)
 
         if stats:
             full_stats += stats
@@ -48,13 +48,11 @@ async def import_datasets():
     time_str = (
         f"{int(hours)}h {int(mins)}m {secs:.2f}s"
         if hours
-        else f"{int(mins)}m {secs:.2f}s"
-        if mins
-        else f"{secs:.2f}s"
+        else f"{int(mins)}m {secs:.2f}s" if mins else f"{secs:.2f}s"
     )
     log.debug(f"Total import time: {time_str}")
 
-    await queue_import_message(import_time, full_stats)
+    queue_import_message(import_time, full_stats)
 
     log_dir = STATIC_DATA_DIR / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
@@ -73,4 +71,4 @@ async def import_datasets():
 if __name__ == "__main__":
     setup_logging()
     # asyncio.run(import_weekly_data())
-    asyncio.run(import_datasets())
+    import_datasets()

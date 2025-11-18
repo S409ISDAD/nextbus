@@ -29,14 +29,14 @@ def fuzzy_search_service(query, db, limit=10, threshold=0.2):
     )
 
 
-async def match_service(db: Session, service_id: int, r) -> Service | None:
+def match_service(db: Session, service_id: int, r) -> Service | None:
     # try to find a matching Line in our DB for this service_id
     db_service = db.query(Service).filter(Service.bt_service_id == service_id).first()
     if db_service:
         return db_service
 
     # if no match by bt_service_id, try to match with other parameters
-    service = await get_service_info(service_id, r)
+    service = get_service_info(service_id, r)
 
     if service:
         db_service = fuzzy_search_service(
@@ -63,7 +63,7 @@ async def match_service(db: Session, service_id: int, r) -> Service | None:
     return None
 
 
-async def match_trip_journey(db: Session, trip_id: int, r) -> Journey | None:
+def match_trip_journey(db: Session, trip_id: int, r) -> Journey | None:
     # try to find a matching journey in our DB for this trip_id
     if not trip_id:
         return None
@@ -72,7 +72,7 @@ async def match_trip_journey(db: Session, trip_id: int, r) -> Journey | None:
         return journey
 
     # if no match by bt_service_id, try to match with other parameters
-    trip = await get_trip(trip_id, 0, r)
+    trip = get_trip(trip_id, 0, r)
 
     if trip:
         query = (

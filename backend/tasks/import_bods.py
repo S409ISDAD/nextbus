@@ -13,7 +13,7 @@ import requests
 log = get_logger(__name__)
 
 
-async def handle_bods(
+def handle_bods(
     db: Session,
     datasource: DataSource,
     folder: Path,
@@ -91,9 +91,7 @@ async def handle_bods(
 
         if path:
             log.info(f"Importing BODS {id} data from {path}...")
-            _, _stats = await import_txc_zip(
-                filename, datasource.id, version.id, skip_checks
-            )
+            _, _stats = import_txc_zip(filename, datasource.id, version.id, skip_checks)
             stats += _stats
         else:
             log.debug(f"No updates for BODS dataset {version.name} - {id}")

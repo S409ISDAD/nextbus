@@ -12,9 +12,9 @@ log = get_logger(__name__)
 
 @router.get("/", response_model=Service)
 @limiter.limit("45/minute")
-async def service_details(request: Request, service_id: int, redis=Depends(get_redis)):
+def service_details(request: Request, service_id: int, redis=Depends(get_redis)):
     try:
-        service_details = await services.get_service_info(service_id, redis)
+        service_details = services.get_service_info(service_id, redis)
 
         return service_details
     except Exception as e:

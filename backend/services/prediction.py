@@ -19,7 +19,7 @@ from backend.deps import get_logger
 log = get_logger(__name__)
 
 
-async def calculate_sequence(stops: list[StopTime], future_time: dt, extra: int) -> int:
+def calculate_sequence(stops: list[StopTime], future_time: dt, extra: int) -> int:
     sequence = 0
     for stop in stops:
         if stop.expt_time and stop.expt_time + timedelta(seconds=extra) > future_time:
@@ -30,7 +30,7 @@ async def calculate_sequence(stops: list[StopTime], future_time: dt, extra: int)
     return max(0, sequence)
 
 
-async def calculate_progress(prev_expt: dt, next_expt: dt, future_time: dt) -> float:
+def calculate_progress(prev_expt: dt, next_expt: dt, future_time: dt) -> float:
     stops_diff = abs(next_expt - prev_expt)
 
     current_diff = abs(future_time - prev_expt)
@@ -44,7 +44,7 @@ async def calculate_progress(prev_expt: dt, next_expt: dt, future_time: dt) -> f
     return min(progress, 1)
 
 
-async def calculate_loc(progress: float, track: list[list[float]]) -> list[float]:
+def calculate_loc(progress: float, track: list[list[float]]) -> list[float]:
     progress = max(0.0, min(progress, 1.0))
 
     full_track = track
@@ -80,7 +80,7 @@ async def calculate_loc(progress: float, track: list[list[float]]) -> list[float
     return full_track[-1]
 
 
-async def calculate_heading(progress: float, track: list[list[float]]) -> int:
+def calculate_heading(progress: float, track: list[list[float]]) -> int:
     progress = max(0.0, min(progress, 1.0))
 
     full_track = track
@@ -116,7 +116,7 @@ async def calculate_heading(progress: float, track: list[list[float]]) -> int:
             return int(compass_bearing)
 
 
-async def predict_future(
+def predict_future(
     journey: Journey,
     delay: int,
     timestamp: int | None,
@@ -155,7 +155,7 @@ async def predict_future(
         else:
             extra = 0
 
-        sequence = await calculate_sequence(stops, future_time, extra)
+        sequence = calculate_sequence(stops, future_time, extra)
 
         if sequence >= len(stops) - 1:
             break
@@ -164,13 +164,13 @@ async def predict_future(
         next_expt = stops[sequence + 1].expt_time + timedelta(seconds=extra)
 
         if prev_expt and next_expt:
-            progress = await calculate_progress(prev_expt, next_expt, future_time)
+            progress = calculate_progress(prev_expt, next_expt, future_time)
 
             track = stops[sequence + 1].track
 
             if track:
-                loc = await calculate_loc(progress, track)
-                heading = await calculate_heading(progress, track)
+                loc = calculate_loc(progress, track)
+                heading = calculate_heading(progress, track)
 
                 prediction = Prediction(
                     timestamp=future_time,
@@ -185,7 +185,7 @@ async def predict_future(
     return predictions
 
 
-async def calculate_expected(
+def calculate_expected(
     delay,
     sequence,
     stop_id,
@@ -194,7 +194,7 @@ async def calculate_expected(
     bus_seen_count: int = 1,
     pick_up_only: bool = False,
 ):
-    journey: Journey | None = await get_vehicle_journey(journey_id, delay, r)
+    journey: Journey | None = get_vehicle_journey(journey_id, delay, r)
 
     if not journey:
         log.warning(f"no journey found for journey_id {journey_id}")
@@ -277,7 +277,7 @@ async def calculate_expected(
     )
 
 
-async def calculate_expected_difference(timestamp: str, expected: dt, scheduled: dt):
+def calculate_expected_difference(timestamp: str, expected: dt, scheduled: dt):
     def func(x):
         return 5 + math.sqrt(x) * 7
 
@@ -302,8 +302,8 @@ async def calculate_expected_difference(timestamp: str, expected: dt, scheduled:
     return min_expected, max_expected
 
 
-async def get_started_finished(trip_id, r):
-    trip = await get_trip(trip_id, 0, r)
+def get_started_finished(trip_id, r):
+    trip = get_trip(trip_id, 0, r)
 
     if not trip:
         return False, False

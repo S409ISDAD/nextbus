@@ -14,10 +14,10 @@ log = get_logger(__name__)
 
 
 @router.get("/")
-async def stats(redis=Depends(get_redis)):
+def stats(redis=Depends(get_redis)):
     try:
-        total_buses = await redis.scard("total_buses")
-        total_stops = await redis.scard("total_stops")
+        total_buses = redis.scard("total_buses")
+        total_stops = redis.scard("total_stops")
         return {
             "total_buses": total_buses,
             "total_stops": total_stops,
@@ -27,8 +27,8 @@ async def stats(redis=Depends(get_redis)):
 
 
 @router.get("/db")
-async def db_stats(request: Request, db=Depends(get_db), redis=Depends(get_redis)):
-    async def get_stats(db):
+def db_stats(request: Request, db=Depends(get_db), redis=Depends(get_redis)):
+    def get_stats(db):
         total_services = db.query(Service).filter(Service.current).count()
         total_stops = db.query(Stop).filter(Stop.active).count()
         total_operators = (
@@ -45,7 +45,7 @@ async def db_stats(request: Request, db=Depends(get_db), redis=Depends(get_redis
         }
 
     try:
-        cached_stats = await get_cached(
+        cached_stats = get_cached(
             "db_stats",
             get_stats,
             (db,),

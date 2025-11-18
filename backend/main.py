@@ -2,7 +2,7 @@ import time
 from contextlib import asynccontextmanager
 
 import sentry_sdk
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -32,7 +32,6 @@ from backend.api.routes import (
 from backend.config import config, setup_logging
 from backend.db.db import get_db
 from backend.deps import (
-    get_redis_client,
     get_redis,
     limiter,
     VERSION,
@@ -45,28 +44,29 @@ setup_logging()
 log = get_logger(__name__)
 
 
-async def clear_redis_stats(redis):
+def clear_redis_stats(redis):
     log.debug("Clearing Redis stats...")
-    await redis.delete("total_buses")
-    await redis.delete("total_stops")
+    redis.delete("total_buses")
+    redis.delete("total_stops")
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    redis = get_redis_client()
-    if await redis.ping():
+    redis = get_redis()
+    if redis.ping():
         log.info("Redis Connected.")
     else:
         log.warning("Redis did not respond.")
-    await redis.close()
-    is_leader = await redis.set("app:leader", "1", nx=True, ex=60)
+
+    is_leader = redis.set("app:leader", "1", nx=True, ex=60)
     if is_leader:
         log.debug("This instance is the leader.")
     else:
         log.debug("This instance is not the leader.")
 
+    scheduler = None
     if is_leader:
-        scheduler = AsyncIOScheduler()
+        scheduler = BackgroundScheduler()
         scheduler.add_job(
             clear_redis_stats,
             CronTrigger(hour="0", minute="0", second="0"),  # daily at midnight
@@ -83,9 +83,10 @@ async def lifespan(app: FastAPI):
         yield
     finally:
         if is_leader:
-            await redis.delete("app:leader")
+            redis.delete("app:leader")
         if scheduler:
             scheduler.shutdown(wait=False)
+        redis.close()
 
 
 # if config.env != "development":
@@ -142,13 +143,13 @@ async def timing_middleware(request: Request, call_next):
 
 
 @app.get("/api/v1/health/")
-async def health_check(db: Session = Depends(get_db), redis=Depends(get_redis)):
+def health_check(db: Session = Depends(get_db), redis=Depends(get_redis)):
     try:
         # Simple test query
         from sqlalchemy import text
 
         db.execute(text("SELECT 1"))
-        await redis.ping()
+        redis.ping()
         return {"status": "healthy"}
     except Exception:
         return {"status": "degraded"}

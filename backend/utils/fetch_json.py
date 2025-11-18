@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from backend.config import config
 
 from backend.deps import get_logger
+import requests
 
 log = get_logger(__name__)
 
@@ -26,31 +27,39 @@ auth = aiohttp.BasicAuth(RTT_USERNAME, RTT_PASSWORD)
 timeout = aiohttp.ClientTimeout(total=20)
 
 
-async def fetch_json(url) -> dict | None:
-    async with aiohttp.ClientSession() as session:
-        async with session.get(
+def fetch_json(url) -> dict | None:
+    try:
+        response = requests.get(
             url,
             headers={"Accept": "application/json", "User-Agent": "nextbus/1.0"},
-            ssl=ssl_context,
-            timeout=timeout,
-        ) as response:
-            if response.status != 200:
-                log.error(f"API failed: {response.status} for URL {url}")
-                return None
-            return await response.json()
+            timeout=timeout.total,
+            verify=certifi.where(),
+        )
+        if response.status_code != 200:
+            log.error(f"API failed: {response.status_code} for URL {url}")
+            return None
+        return response.json()
+    except Exception as e:
+        log.error(f"Exception during fetch_json: {e}")
+        return None
 
 
-async def fetch_rtt_json(url: str) -> dict | None:
-    async with aiohttp.ClientSession(auth=auth) as session:
-        async with session.get(
+def fetch_rtt_json(url: str) -> dict | None:
+    try:
+        response = requests.get(
             url,
             headers={"Accept": "application/json", "User-Agent": "nextbus/1.0"},
-            ssl=ssl_context,
-            timeout=timeout,
-        ) as response:
-            if response.status != 200 or "error" in (await response.json()):
-                log.error(f"RTT API failed: {response.status}")
-                log.error(url)
-                log.error(await response.json())
-                return None
-            return await response.json()
+            auth=(RTT_USERNAME, RTT_PASSWORD),
+            timeout=timeout.total,
+            verify=certifi.where(),
+        )
+        json_data = response.json()
+        if response.status_code != 200 or "error" in json_data:
+            log.error(f"RTT API failed: {response.status_code}")
+            log.error(url)
+            log.error(json_data)
+            return None
+        return json_data
+    except Exception as e:
+        log.error(f"Exception during fetch_rtt_json: {e}")
+        return None

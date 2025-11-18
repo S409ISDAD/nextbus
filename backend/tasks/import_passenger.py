@@ -93,7 +93,7 @@ def get_version(
     return version
 
 
-async def handle_passenger(
+def handle_passenger(
     db: Session,
     datasource: DataSource,
     folder: Path,
@@ -120,7 +120,7 @@ async def handle_passenger(
             log.debug(
                 f"Importing Passenger data ({version.start_date} - {version.end_date}) from {path}..."
             )
-            _, stats = await import_txc_zip(
+            _, stats = import_txc_zip(
                 filename, datasource.id, version.id, skip_checks=skip_checks
             )
             stats += stats

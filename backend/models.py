@@ -1049,7 +1049,7 @@ class Service(Base, AutoSlugMixin):
 
         return result_localities
 
-    async def get_bt_service_id(self, db: Session) -> int | None:
+    def get_bt_service_id(self, db: Session) -> int | None:
         """
         Returns the bustimes service ID if available, otherwise finds it.
         """
@@ -1058,7 +1058,7 @@ class Service(Base, AutoSlugMixin):
 
         noc = self.operators[0].noc or ""
 
-        results = await fetch_json(
+        results = fetch_json(
             f"{API_BASE}/services/?operator={noc}&search={self.line_name} {self.description.replace('-', '')}"
         )
 
@@ -1588,7 +1588,7 @@ class Journey(Base):
         )
         return prev_journey
 
-    async def get_bt_trip_id(self, db: Session) -> int | None:
+    def get_bt_trip_id(self, db: Session) -> int | None:
         """
         Returns the bustimes trip ID if available, otherwise finds it.
         """
@@ -1600,7 +1600,7 @@ class Journey(Base):
             tmc = self.ticket_machine_code
             block = self.block_id
 
-            results = await fetch_json(
+            results = fetch_json(
                 f"{API_BASE}/trips/?vehicle_journey_code={vjc}&ticket_machine_code={tmc}&block={block or ''}"
             )
 

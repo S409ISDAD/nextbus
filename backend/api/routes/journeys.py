@@ -22,9 +22,9 @@ log = get_logger(__name__)
 
 @router.get("/trip/{trip_id}", response_model=Optional[Trip])
 @limiter.limit("30/minute")
-async def get_trip(request: Request, trip_id: int, redis=Depends(get_redis)):
+def get_trip(request: Request, trip_id: int, redis=Depends(get_redis)):
     try:
-        trip = await journeys.get_trip(trip_id, 0, redis)
+        trip = journeys.get_trip(trip_id, 0, redis)
 
         return trip
     except Exception as e:
@@ -34,7 +34,7 @@ async def get_trip(request: Request, trip_id: int, redis=Depends(get_redis)):
 
 @router.get("/dbjourney/{journey_id}", response_model=Optional[Trip])
 @limiter.limit("30/minute")
-async def get_db_journey(
+def get_db_journey(
     request: Request, journey_id: int, redis=Depends(get_redis), db=Depends(get_db)
 ):
     try:
@@ -94,11 +94,11 @@ async def get_db_journey(
 
 @router.get("/dbjourney/{journey_id}/whatbus")
 @limiter.limit("20/minute")
-async def get_bus_on_prev_journey(
+def get_bus_on_prev_journey(
     request: Request, journey_id: int, redis=Depends(get_redis), db=Depends(get_db)
 ):
     try:
-        bus, away = await blocks.find_bus_on_block(
+        bus, away = blocks.find_bus_on_block(
             db,
             journey_id=journey_id,
         )
@@ -107,7 +107,7 @@ async def get_bus_on_prev_journey(
             raise HTTPException(404, detail="No bus found on previous journey")
 
         bus_id = bus.get("id")
-        bus_data = await build_bus(bus_id, redis, get_journey=False)
+        bus_data = build_bus(bus_id, redis, get_journey=False)
 
         return {
             "away": away,

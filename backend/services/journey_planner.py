@@ -16,9 +16,7 @@ from backend.deps import get_logger
 log = get_logger(__name__)
 
 
-async def get_possible_journeys(
-    lat: float, lon: float, locality: str, r, now: dt = None
-):
+def get_possible_journeys(lat: float, lon: float, locality: str, r, now: dt = None):
     if not now:
         now = dt.now(LONDON)
 
@@ -29,7 +27,7 @@ async def get_possible_journeys(
 
     services = set()
 
-    stops: list[StopSchema] = await get_nearby_stops(lat, lon, dist=0.01)
+    stops: list[StopSchema] = get_nearby_stops(lat, lon, dist=0.01)
     stops_by_id = {s.stop_id: s for s in stops}
     closest_stop_for_service = {}
     nearby_stop_ids = [s.stop_id for s in stops]
@@ -147,13 +145,13 @@ async def get_possible_journeys(
                     if wait < 0 or in_vehicle <= 0:
                         continue
 
-                    trip_id = await journey.get_bt_trip_id(db)
-                    service_id = await journey.service.get_bt_service_id(db)
-                    trip_bus = await fetch_bus_trip(service_id, trip_id, r)
+                    trip_id = journey.get_bt_trip_id(db)
+                    service_id = journey.service.get_bt_service_id(db)
+                    trip_bus = fetch_bus_trip(service_id, trip_id, r)
                     live_bus = None
 
                     if trip_bus:
-                        live_bus = await build_bus(
+                        live_bus = build_bus(
                             trip_bus["id"], r, s_curr.atco_code, journey.id
                         )
 
@@ -205,14 +203,14 @@ async def get_possible_journeys(
         return results
 
 
-async def possible_destinations(lat: float, lon: float, time: dt = None):
+def possible_destinations(lat: float, lon: float, time: dt = None):
     if not time:
         time = dt.now(LONDON)
 
     seconds_since_midnight = time.hour * 3600 + time.minute * 60 + time.second
     current_timedelta = timedelta(seconds=seconds_since_midnight)
 
-    stops: list[StopSchema] = await get_nearby_stops(lat, lon, dist=0.01)
+    stops: list[StopSchema] = get_nearby_stops(lat, lon, dist=0.01)
 
     services = set()
     localities = set()

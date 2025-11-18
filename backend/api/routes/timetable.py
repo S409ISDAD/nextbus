@@ -15,7 +15,7 @@ log = get_logger(__name__)
 
 @router.get("/{service_id}")
 @limiter.limit("45/minute")
-async def service_timetable(
+def service_timetable(
     request: Request,
     service_id: int,
     inbound: bool = True,
@@ -24,7 +24,7 @@ async def service_timetable(
 ):
     try:
 
-        async def fetch(service_id, inbound):
+        def fetch(service_id, inbound):
             today = datetime.now(tz=LONDON)
 
             service = db.query(Service).filter(Service.id == service_id).first()
@@ -36,7 +36,7 @@ async def service_timetable(
             timetable = generate_timetable(service, today, db, inbound=inbound)
             return timetable
 
-        timetable = await get_cached(
+        timetable = get_cached(
             f"timetable:{service_id}:{'in' if inbound else 'out'}",
             fetch,
             (service_id, inbound),

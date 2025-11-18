@@ -9,7 +9,7 @@ from backend.deps import get_logger
 log = get_logger(__name__)
 
 
-async def calculate_sequence(
+def calculate_sequence(
     stops: list[ServiceLocation],
     future_time: dt,
 ) -> int:
@@ -25,7 +25,7 @@ async def calculate_sequence(
     return max(0, sequence)
 
 
-async def calculate_progress(prev_dep: dt, next_arr: dt, future_time: dt) -> float:
+def calculate_progress(prev_dep: dt, next_arr: dt, future_time: dt) -> float:
     stops_diff = abs(next_arr - prev_dep)
 
     current_diff = abs(future_time - prev_dep)
@@ -39,7 +39,7 @@ async def calculate_progress(prev_dep: dt, next_arr: dt, future_time: dt) -> flo
     return min(progress, 1)
 
 
-async def predict_future(
+def predict_future(
     service: TrainService,
     timestamp: int | None,
     started: bool,
@@ -58,7 +58,7 @@ async def predict_future(
     for seconds_ahead in range(ahead + 1):
         future_time = current_time + timedelta(seconds=seconds_ahead)
 
-        sequence = await calculate_sequence(stops, future_time)
+        sequence = calculate_sequence(stops, future_time)
 
         if sequence >= len(stops) - 1:
             break
@@ -72,7 +72,7 @@ async def predict_future(
             if not stops[sequence].departed:
                 progress = 0
             else:
-                progress = await calculate_progress(prev_dep, next_arr, future_time)
+                progress = calculate_progress(prev_dep, next_arr, future_time)
 
             prediction = Prediction(
                 timestamp=future_time,
@@ -85,7 +85,7 @@ async def predict_future(
     return predictions
 
 
-async def get_started_finished(service: TrainService, r):
+def get_started_finished(service: TrainService, r):
     current_time = dt.now(tz=UTC)
 
     not_started = False

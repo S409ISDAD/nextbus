@@ -34,7 +34,7 @@ MACHINE_NAME = os.getenv("MACHINE_NAME", "unknown-machine")
 
 
 async def redis_listener():
-    redis = await get_redis()
+    redis = get_redis(sync=False)
     pubsub = redis.pubsub()
     await pubsub.subscribe("discord_messages")
     log.debug("Subscribed to Redis channel 'discord_messages'")
@@ -59,8 +59,8 @@ async def redis_listener():
                 continue
 
 
-def is_admin():
-    def predicate(interaction: discord.Interaction) -> bool:
+async def is_admin():
+    async def predicate(interaction: discord.Interaction) -> bool:
         member = interaction.user
         if hasattr(member, "roles"):
             return any(role.name == "owner" for role in member.roles)
@@ -100,9 +100,7 @@ async def send_import_message(data: ImportMessage):
         time_str = (
             f"{int(hours)}h {int(mins)}m {secs:.2f}s"
             if hours
-            else f"{int(mins)}m {secs:.2f}s"
-            if mins
-            else f"{secs:.2f}s"
+            else f"{int(mins)}m {secs:.2f}s" if mins else f"{secs:.2f}s"
         )
         embed = discord.Embed(
             title="TXC Import Completed",
@@ -142,7 +140,7 @@ async def send_import_message(data: ImportMessage):
 
 
 async def get_status():
-    health = await fetch_json("https://nextbus.orbitix.dev/api/v1/health/")
+    health = fetch_json("https://nextbus.orbitix.dev/api/v1/health/")
     status = "up"
     if not health:
         return "down"

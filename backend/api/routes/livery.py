@@ -12,9 +12,9 @@ log = get_logger(__name__)
 
 
 @router.get("/", response_model=Livery | None)
-async def livery(request: Request, id: int, redis=Depends(get_redis)):
+def livery(request: Request, id: int, redis=Depends(get_redis)):
     try:
-        livery = await get_livery(id, redis)
+        livery = get_livery(id, redis)
 
         return livery
     except Exception as e:

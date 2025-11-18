@@ -1,6 +1,7 @@
 import inspect
 import asyncio
-import redis.asyncio as redis
+import redis
+import redis.asyncio
 import json
 
 from backend.deps import DateTimeEncoder, datetime_decoder
@@ -21,7 +22,32 @@ LIVERY_CACHE = DAY
 TRAIN_CACHE = 29
 
 
-async def get_cached(key: str, func, args: tuple, exp: int, r: redis.Redis):
+def get_cached(key: str, func, args: tuple, exp: int, r: redis.Redis):
+    cached = r.get(key)
+
+    if cached:
+        time_left = r.ttl(key)
+        if time_left < 15:
+            func(*args)
+        return json.loads(cached, object_hook=datetime_decoder)["data"]
+
+    result = func(*args)
+    if result:
+        r.set(
+            key,
+            value=json.dumps(
+                {"data": result},
+                cls=DateTimeEncoder,
+                default=lambda o: o.__dict__ if hasattr(o, "__dict__") else str(o),
+            ),
+            ex=exp if exp > 0 else None,
+        )
+    return result
+
+
+async def get_cached_async(
+    key: str, func, args: tuple, exp: int, r: redis.asyncio.Redis
+):
     cached = await r.get(key)
 
     if cached:

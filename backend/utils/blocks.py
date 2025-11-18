@@ -12,7 +12,7 @@ from sqlalchemy.orm import aliased
 log = get_logger(__name__)
 
 
-async def find_bus_on_block(
+def find_bus_on_block(
     db: Session,
     block_id: Optional[str] = None,
     journey_id: Optional[int] = None,
@@ -54,17 +54,17 @@ async def find_bus_on_block(
 
     reversed_journeys = list(reversed(journeys_on_block))
 
-    r = await get_redis()
+    r = get_redis()
 
     away = 0
 
     for journey in reversed_journeys:
-        trip_id = await journey.get_bt_trip_id(db)
-        service_id = await journey.service.get_bt_service_id(db)
+        trip_id = journey.get_bt_trip_id(db)
+        service_id = journey.service.get_bt_service_id(db)
         print(
             f"Fetching trip for Journey ID: {journey.id} (Trip ID: {trip_id}, Service ID: {service_id})"
         )
-        bus = await fetch_bus_trip(service_id, trip_id, r)
+        bus = fetch_bus_trip(service_id, trip_id, r)
         if bus is not None:
             log.debug(
                 f"Found bus for journey {journey.id}, block {block_id}: {bus.get("vehicle").get("name")}"

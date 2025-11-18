@@ -2,7 +2,7 @@ import asyncio
 from datetime import datetime, timedelta
 
 from dateutil import parser
-from redis.asyncio import Redis
+from redis import Redis
 import sentry_sdk
 from sqlalchemy.orm import joinedload
 
@@ -76,21 +76,24 @@ def get_bus_type(btype):
     return btype
 
 
-async def fetch_vehicle(bus_id, r: Redis) -> Vehicle | None:
+def fetch_vehicle(bus_id, r: Redis) -> Vehicle | None:
     """Fetches specific vehicle from the api"""
 
-    async def fetch(bus_id):
-        data = await fetch_json(API_BASE + f"/vehicles/{bus_id}")
+    def fetch(bus_id):
+        data = fetch_json(API_BASE + f"/vehicles/{bus_id}")
 
         return data
 
-    data = await get_cached(
+    data = get_cached(
         f"bus:{bus_id}",
         fetch,
         (bus_id,),
         DAY,
         r,
     )
+
+    if not data:
+        return None
 
     this_bus = Vehicle(
         id=data["id"],
@@ -125,15 +128,15 @@ async def fetch_vehicle(bus_id, r: Redis) -> Vehicle | None:
         return None
 
 
-async def fetch_active_bus(bus_id, r: Redis):
+def fetch_active_bus(bus_id, r: Redis):
     """Fetches specific bus"""
 
-    async def fetch(bus_id):
-        data = await fetch_json(VEHICLES_BASE + f"?id={bus_id}")
+    def fetch(bus_id):
+        data = fetch_json(VEHICLES_BASE + f"?id={bus_id}")
 
         return data
 
-    this_bus = await get_cached(
+    this_bus = get_cached(
         f"livebus:{bus_id}",
         fetch,
         (bus_id,),
@@ -141,17 +144,20 @@ async def fetch_active_bus(bus_id, r: Redis):
         r,
     )
 
+    if not this_bus:
+        return None
+
     try:
         return this_bus[0]
     except:  # noqa: E722
         return None
 
 
-async def fetch_bus_trip(service_id, trip_id, r: Redis):
+def fetch_bus_trip(service_id, trip_id, r: Redis):
     """Fetches specific bus by service and trip"""
 
-    async def fetch(service_id, trip_id):
-        data = await fetch_json(VEHICLES_BASE + f"?service={service_id}&trip={trip_id}")
+    def fetch(service_id, trip_id):
+        data = fetch_json(VEHICLES_BASE + f"?service={service_id}&trip={trip_id}")
         if not data:
             return None
 
@@ -159,7 +165,7 @@ async def fetch_bus_trip(service_id, trip_id, r: Redis):
 
         return exact_bus[0] if exact_bus else None
 
-    this_bus = await get_cached(
+    this_bus = get_cached(
         f"bus:{service_id}:{trip_id}",
         fetch,
         (service_id, trip_id),
@@ -168,7 +174,7 @@ async def fetch_bus_trip(service_id, trip_id, r: Redis):
     )
 
     # if this_bus:
-    #     await r.set(
+    #     r.set(
     #         f"bus:{this_bus.get('id')}",
     #         value=json.dumps(
     #             {"data": this_bus},
@@ -196,12 +202,12 @@ def best_bus(buses: list[dict]) -> dict | None:
     return max(valid, key=lambda b: b["progress"]["sequence"])
 
 
-async def fetch_buses(
+def fetch_buses(
     services, stop_id, times, r: Redis, use_db=False, is_tomorrow=False
 ) -> list[TrackedBus]:
-    active = await fetch_active_buses(services, r)
+    active = fetch_active_buses(services, r)
 
-    bustimes_times = await stops.get_times(stop_id, r)
+    bustimes_times = stops.get_times(stop_id, r)
 
     active_by_trip: dict[int, list[dict]] = {}
     if active:
@@ -214,7 +220,7 @@ async def fetch_buses(
 
     bus_seen_counts = {bus["id"]: 0 for bus in active} if active else {}
 
-    tasks = []
+    final_buses = []
 
     scheduled_trip_ids = {t["trip_id"] for t in times if t.get("trip_id")}
     not_included = [
@@ -225,9 +231,9 @@ async def fetch_buses(
         # add buses that are late, and the scheduled departure time has passed
         buses = active_by_trip.get(time.get("trip_id"), [])
         with SessionLocal() as db:
-            journey = await match_trip_journey(db, time.get("trip_id"), r)
+            journey = match_trip_journey(db, time.get("trip_id"), r)
             journey_id = journey.id if journey else None
-        tasks.append(
+        final_buses.append(
             build_bus_candidates(
                 buses,
                 r,
@@ -246,7 +252,7 @@ async def fetch_buses(
         if matched_buses:
             for bus in matched_buses:
                 bus_seen_counts[bus["id"]] += 1
-            tasks.append(
+            final_buses.append(
                 build_bus_candidates(
                     matched_buses,
                     r,
@@ -258,29 +264,23 @@ async def fetch_buses(
             )
         else:
             if time.get("source") == "db":
-                tasks.append(
+                final_buses.append(
                     build_scheduled_db(
                         time=time, trip_id=trip_id, st=time.get("st", None), r=r
                     )
                 )
             else:
-                tasks.append(build_scheduled(time, r))
+                final_buses.append(build_scheduled(time, r))
 
-    with sentry_sdk.start_span(op="fetching_buses", description="fetching buses"):
-        try:
-            buses = await asyncio.wait_for(asyncio.gather(*tasks), timeout=30.0)
-        except asyncio.TimeoutError:
-            log.warning("Timeout fetching buses")
-            buses = []
-    final_buses = [bus for bus in buses if bus is not None]
+    final_buses = [bus for bus in final_buses if bus is not None]
     for b in final_buses:
         if isinstance(b, TrackedBus):
             b.journey = None  # to save data transfer
     return final_buses
 
 
-async def fetch_buses_live(services, stop_id, r: Redis) -> list[TrackedBus]:
-    active = await fetch_active_buses(services, r)
+def fetch_buses_live(services, stop_id, r: Redis) -> list[TrackedBus]:
+    active = fetch_active_buses(services, r)
 
     if not active:
         return []
@@ -292,16 +292,15 @@ async def fetch_buses_live(services, stop_id, r: Redis) -> list[TrackedBus]:
         if trip_id:
             active_by_trip.setdefault(trip_id, []).append(bus)
 
-    tasks = []
+    final_buses = []
 
     for trip, buses in active_by_trip.items():
-        tasks.append(build_bus_candidates(buses, r, stop_id))
+        final_buses.append(build_bus_candidates(buses, r, stop_id))
 
-    buses = await asyncio.gather(*tasks)
-    return [bus for bus in buses if bus is not None]
+    return [bus for bus in final_buses if bus is not None]
 
 
-async def build_scheduled(time, r, include_started=True):
+def build_scheduled(time, r, include_started=True):
     scheduled = parser.isoparse(time.get("aimed_departure_time"))
 
     if time.get("expected_departure_time"):
@@ -316,7 +315,7 @@ async def build_scheduled(time, r, include_started=True):
     trip_id = time.get("trip_id")
 
     if include_started:
-        started, finished = await get_started_finished(trip_id, r)
+        started, finished = get_started_finished(trip_id, r)
     else:
         started = False
 
@@ -333,7 +332,7 @@ async def build_scheduled(time, r, include_started=True):
     )
 
 
-async def build_scheduled_db(
+def build_scheduled_db(
     time,
     trip_id,
     st: StopTime,
@@ -377,7 +376,7 @@ async def build_scheduled_db(
         line_name = stop_time.journey.service.line_name
 
         if include_started and trip_id:
-            started, finished = await get_started_finished(trip_id, r)
+            started, finished = get_started_finished(trip_id, r)
         else:
             started = False
 
@@ -393,7 +392,7 @@ async def build_scheduled_db(
         #     return None
 
         # if not trip_id or trip_id == 0:
-        #     trip_id = await stop_time.journey.get_bt_trip_id(db)
+        #     trip_id = stop_time.journey.get_bt_trip_id(db)
 
         dest = headsign
 
@@ -423,10 +422,10 @@ async def build_scheduled_db(
                 else timedelta(0)
             )
 
-            prev_trip = await prev_journey.get_bt_trip_id(db)
+            prev_trip = prev_journey.get_bt_trip_id(db)
 
-            prev_service_id = await prev_journey.service.get_bt_service_id(db)
-            this_service_id = await stop_time.journey.service.get_bt_service_id(db)
+            prev_service_id = prev_journey.service.get_bt_service_id(db)
+            this_service_id = stop_time.journey.service.get_bt_service_id(db)
 
             if not prev_trip or not prev_service_id or not this_service_id:
                 log.warning(
@@ -435,16 +434,16 @@ async def build_scheduled_db(
                 return scheduled_bus
 
             with time_taken("getting service info", threshold=5):
-                service_info = await get_service_info(this_service_id, r)
+                service_info = get_service_info(this_service_id, r)
 
-            potential_bus = await fetch_bus_trip(prev_service_id, prev_trip, r)
+            potential_bus = fetch_bus_trip(prev_service_id, prev_trip, r)
 
             if potential_bus:
                 log.debug(
                     f"Found bus from previous trip: {service_info.line_name} {potential_bus['id']}"
                 )
 
-                bus = await build_bus(potential_bus["id"], r, get_journey=False)
+                bus = build_bus(potential_bus["id"], r, get_journey=False)
                 if not bus:
                     log.warning("Failed to build bus")
                 else:
@@ -482,7 +481,7 @@ async def build_scheduled_db(
         return scheduled_bus
 
 
-async def build_bus_candidates(
+def build_bus_candidates(
     buses: list[dict],
     r: Redis,
     stop_id: str,
@@ -490,23 +489,21 @@ async def build_bus_candidates(
     source: str = "api",
     bus_seen_counts: dict[int, int] | None = None,
 ) -> TrackedBus | None:
-    results = await asyncio.gather(
-        *[
-            build_bus(
-                bus["id"],
-                r,
-                stop_id,
-                journey_id,
-                get_journey=False,
-                source=source,
-                bus_seen_count=(
-                    bus_seen_counts.get(bus["id"], 1) if bus_seen_counts else 1
-                ),
-                pick_up_only=True,
-            )
-            for bus in buses
-        ]
-    )
+    results = [
+        build_bus(
+            bus["id"],
+            r,
+            stop_id,
+            journey_id,
+            get_journey=False,
+            source=source,
+            bus_seen_count=(
+                bus_seen_counts.get(bus["id"], 1) if bus_seen_counts else 1
+            ),
+            pick_up_only=True,
+        )
+        for bus in buses
+    ]
 
     valid = [
         bus
@@ -523,7 +520,7 @@ async def build_bus_candidates(
     return max(valid, key=lambda b: b.progress.sequence)
 
 
-async def build_bus(
+def build_bus(
     bus_id: int,
     r: Redis,
     stop_id: str = "",
@@ -533,8 +530,8 @@ async def build_bus(
     bus_seen_count: int = 1,
     pick_up_only: bool = False,
 ) -> TrackedBus | None:
-    this_bus = await fetch_active_bus(bus_id, r)
-    vehicle_data = await fetch_vehicle(bus_id, r)
+    this_bus = fetch_active_bus(bus_id, r)
+    vehicle_data = fetch_vehicle(bus_id, r)
 
     if not this_bus or not vehicle_data:
         return None
@@ -597,7 +594,7 @@ async def build_bus(
         log.warning(f"resetting delay, too early. id: {bus_id}, reg: {reg}")
         delay = 0
 
-    await r.sadd("total_buses", bus_id)
+    r.sadd("total_buses", bus_id)
 
     bus_type = vehicle_data.vehicle_type
     if not bus_type.double_decker:
@@ -607,10 +604,10 @@ async def build_bus(
 
     if vehicle_data.special_features:
         bus_type += f", {", ".join(vehicle_data.special_features)}"
-    # journey = await get_vehicle_journey(bus_id, journey_id, r)
+    # journey = get_vehicle_journey(bus_id, journey_id, r)
 
     delay += 10  # account for stopping and various other things that increase delay
-    confidence = await calculate_confidence(
+    confidence = calculate_confidence(
         delay, coords, journey_id, this_bus.get("trip_id"), r
     )
 
@@ -639,7 +636,7 @@ async def build_bus(
         )
         delay = 0
 
-    target_seq, times, journey = await calculate_expected(
+    target_seq, times, journey = calculate_expected(
         delay,
         progress.get("sequence", 0),
         stop_id,
@@ -662,7 +659,7 @@ async def build_bus(
             log.info(f"bus has likely passed the stop. id: {bus_id}, reg: {reg}")
             return None  # bus has likely passed the stop
 
-    service_info = await get_service_info(journey.service_id, r)
+    service_info = get_service_info(journey.service_id, r)
 
     if not times:
         log.warning(f"no times object. id: {bus_id}, reg: {reg}")
@@ -681,9 +678,7 @@ async def build_bus(
         delay = 0
 
     if get_journey:
-        predictions = await predict_future(
-            journey, delay, timestamp, times.started, 35, r
-        )
+        predictions = predict_future(journey, delay, timestamp, times.started, 35, r)
     else:
         predictions = []
 
@@ -708,7 +703,7 @@ async def build_bus(
     max_expected = None
 
     if times.started:
-        min_expected, max_expected = await calculate_expected_difference(
+        min_expected, max_expected = calculate_expected_difference(
             timestamp, times.expected, times.scheduled
         )  # type: ignore
 

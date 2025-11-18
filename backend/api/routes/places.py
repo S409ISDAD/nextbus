@@ -11,7 +11,7 @@ log = get_logger(__name__)
 
 
 @router.get("/localities/{id}/")
-async def localities(
+def localities(
     request: Request,
     id: str,
     db=Depends(get_db),
@@ -51,7 +51,7 @@ async def localities(
 
 
 @router.get("/districts/{id}/")
-async def districts(
+def districts(
     request: Request,
     id: str,
     db=Depends(get_db),
@@ -89,7 +89,7 @@ async def districts(
 
 
 @router.get("/admin_areas/{id}/")
-async def admin_areas(
+def admin_areas(
     request: Request,
     id: str,
     db=Depends(get_db),
@@ -118,7 +118,7 @@ async def admin_areas(
 
 
 @router.get("/regions/")
-async def regions_all(
+def regions_all(
     request: Request,
     db=Depends(get_db),
 ):
@@ -140,7 +140,7 @@ async def regions_all(
 
 
 @router.get("/regions/{id}/")
-async def regions(
+def regions(
     request: Request,
     id: str,
     db=Depends(get_db),

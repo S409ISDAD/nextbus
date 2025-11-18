@@ -14,7 +14,7 @@ log = get_logger(__name__)
 
 @router.get("/{service_id}")
 @limiter.limit("45/minute")
-async def service(
+def service(
     request: Request, service_id: str, redis=Depends(get_redis), db=Depends(get_db)
 ):
     try:

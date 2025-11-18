@@ -20,9 +20,9 @@ from backend.deps import get_logger
 log = get_logger(__name__)
 
 
-async def get_vehicle_journey(journey_id, delay, r) -> Journey:
-    async def fetch(journey_id):
-        data = await fetch_json(
+def get_vehicle_journey(journey_id, delay, r) -> Journey:
+    def fetch(journey_id):
+        data = fetch_json(
             API_BASE + f"/vehiclejourneys/{journey_id}/",
         )
 
@@ -63,14 +63,14 @@ async def get_vehicle_journey(journey_id, delay, r) -> Journey:
                 stop["aimed_time"] = scheduled_time.total_seconds()
                 stop["expt_time"] = expt_time.total_seconds()
 
-        # data["stops"] = await recalculate_timetable(data["stops"], journey_id, r)
+        # data["stops"] = recalculate_timetable(data["stops"], journey_id, r)
 
         # for i, stop in enumerate(data["stops"]):
         #     data["stops"][i]["expt_time"] = data["stops"][i]["aimed_time"] + delay
 
         return data
 
-    journey = await get_cached(
+    journey = get_cached(
         key=f"journeys:{journey_id}",
         func=fetch,
         args=(journey_id,),
@@ -159,9 +159,9 @@ async def get_vehicle_journey(journey_id, delay, r) -> Journey:
     )
 
 
-async def get_live_journey(journey_id, r) -> LiveJourney | None:
-    async def fetch(journey_id):
-        data = await fetch_json(
+def get_live_journey(journey_id, r) -> LiveJourney | None:
+    def fetch(journey_id):
+        data = fetch_json(
             BASE + f"/journeys/{journey_id}.json",
         )
 
@@ -192,7 +192,7 @@ async def get_live_journey(journey_id, r) -> LiveJourney | None:
 
         return data
 
-    live_journey = await get_cached(
+    live_journey = get_cached(
         key=f"live_journeys:{journey_id}",
         func=fetch,
         args=(journey_id,),
@@ -249,9 +249,9 @@ async def get_live_journey(journey_id, r) -> LiveJourney | None:
     )
 
 
-async def get_trip(trip_id, delay, r) -> Trip | None:
-    async def fetch(trip_id):
-        data = await fetch_json(
+def get_trip(trip_id, delay, r) -> Trip | None:
+    def fetch(trip_id):
+        data = fetch_json(
             API_BASE + f"/trips/{trip_id}/",
         )
 
@@ -292,14 +292,14 @@ async def get_trip(trip_id, delay, r) -> Trip | None:
                 stop["aimed_time"] = scheduled_time.total_seconds()
                 stop["expt_time"] = expt_time.total_seconds()
 
-        # data["stops"] = await recalculate_timetable(data["stops"], journey_id, r)
+        # data["stops"] = recalculate_timetable(data["stops"], journey_id, r)
 
         # for i, stop in enumerate(data["stops"]):
         #     data["stops"][i]["expt_time"] = data["stops"][i]["aimed_time"] + delay
 
         return data
 
-    trip = await get_cached(
+    trip = get_cached(
         key=f"trips:{trip_id}",
         func=fetch,
         args=(trip_id,),

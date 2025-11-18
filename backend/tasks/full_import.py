@@ -10,7 +10,7 @@ from backend.deps import get_logger
 log = get_logger(__name__)
 
 
-async def do_import():
+def do_import():
     # Always resolve static_data relative to this script
 
     # import_naptan_data(static_data_dir / "NaPTAN.xml")
@@ -32,7 +32,7 @@ async def do_import():
             db.commit()
         datasource_id = datasource.id
 
-    await import_datasource(datasource_id, STATIC_DATA_DIR)
+    import_datasource(datasource_id, STATIC_DATA_DIR)
     log.debug("✔ TXC data imported successfully")
 
     import_bank_holidays()

@@ -12,7 +12,7 @@ from backend.utils.download_if_modified import download_if_modified
 log = get_logger(__name__)
 
 
-async def import_datasource(id, folder: Path, skip_checks=False) -> "Statistics":
+def import_datasource(id, folder: Path, skip_checks=False) -> "Statistics":
     logs: list[tuple[datetime, str]] = []
     stats = Statistics()
     duration = None
@@ -36,13 +36,11 @@ async def import_datasource(id, folder: Path, skip_checks=False) -> "Statistics"
             "data.discoverpassenger" in datasource.url or "open-data" in datasource.url
         ):
             log.debug(f"Handling Passenger datasource {datasource.name}")
-            duration, stats = await handle_passenger(
-                db, datasource, folder, skip_checks
-            )
+            duration, stats = handle_passenger(db, datasource, folder, skip_checks)
 
         elif datasource.search or datasource.noc:
             log.debug(f"Handling BODS datasource {datasource.name}")
-            duration, stats = await handle_bods(db, datasource, folder, skip_checks)
+            duration, stats = handle_bods(db, datasource, folder, skip_checks)
             if not duration:
                 logs.append(
                     (datetime.now(tz=LONDON), f"No updates for data source {name}")
@@ -76,7 +74,7 @@ async def import_datasource(id, folder: Path, skip_checks=False) -> "Statistics"
                 logs.append((datetime.now(tz=LONDON), f"Importing data from {path}..."))
                 log.debug(f"Importing data from {path}")
 
-                duration, stats = await import_txc_zip(
+                duration, stats = import_txc_zip(
                     folder / f"txc_source_{id}.zip",
                     id,
                     datasource_version.id,

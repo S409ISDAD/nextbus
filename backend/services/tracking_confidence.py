@@ -3,7 +3,7 @@ from datetime import datetime as dt, timedelta
 
 from geopy.distance import geodesic
 from pyproj import Geod
-from redis.asyncio import Redis
+from redis import Redis
 from shapely.geometry import LineString, Point
 
 from backend.deps import LONDON
@@ -23,11 +23,11 @@ diversion_weight = 0.1
 broken_tracking_weight = 0.1
 
 
-async def calculate_confidence(
+def calculate_confidence(
     delay: int, location: list[float], journey_id: int, trip_id: int, redis: Redis
 ):
-    trip = await get_trip(trip_id, delay, redis)
-    live_journey = await get_live_journey(journey_id, redis)
+    trip = get_trip(trip_id, delay, redis)
+    live_journey = get_live_journey(journey_id, redis)
     if not trip or not live_journey:
         return Confidence(
             final_confidence=0,

@@ -11,14 +11,14 @@ from backend.deps import get_logger
 log = get_logger(__name__)
 
 
-async def get_scheduled(stop_id: str, redis, services=None):
+def get_scheduled(stop_id: str, redis, services=None):
     # if not services:
-    #     services = await stops.get_services_from_stop(stop_id, redis)
+    #     services = stops.get_services_from_stop(stop_id, redis)
 
     # line_names = {service.get("line_name") for service in services}
 
-    async def fetch_times(stop_id, redis):
-        times = await stops.get_times(stop_id, redis)
+    def fetch_times(stop_id, redis):
+        times = stops.get_times(stop_id, redis)
 
         if not times:
             log.error("times is none")
@@ -53,7 +53,7 @@ async def get_scheduled(stop_id: str, redis, services=None):
 
                     for st in filtered_st:
                         journey = st.journey
-                        trip_id = await journey.get_bt_trip_id(db)
+                        trip_id = journey.get_bt_trip_id(db)
                         if not trip_id:
                             log.warning(
                                 f"No trip ID for journey {journey.id}, stop {stop_id}"
@@ -83,7 +83,7 @@ async def get_scheduled(stop_id: str, redis, services=None):
                         scheduled_times.append({**t, "source": "api"})
         return scheduled_times
 
-    scheduled_times = await get_cached(
+    scheduled_times = get_cached(
         key=f"scheduled_times:{stop_id}",
         func=fetch_times,
         args=(stop_id, redis),
@@ -108,14 +108,14 @@ async def get_scheduled(stop_id: str, redis, services=None):
     return scheduled_times
 
 
-async def get_departures(stop_id: str, redis):
-    services = await stops.get_services_from_stop(stop_id, redis)
+def get_departures(stop_id: str, redis):
+    services = stops.get_services_from_stop(stop_id, redis)
 
     service_ids = [service.get("id") for service in services]
 
-    times = await get_scheduled(stop_id, redis, services)
+    times = get_scheduled(stop_id, redis, services)
 
-    buses = await bus.fetch_buses(
+    buses = bus.fetch_buses(
         service_ids,
         stop_id,
         times,

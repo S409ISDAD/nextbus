@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from geopy.distance import geodesic
-from redis.asyncio import Redis
+from redis import Redis
 
 from backend.config import API_BASE, BASE, STOPS_BASE
 from backend.deps import LONDON
@@ -20,9 +20,9 @@ from backend.deps import get_logger
 log = get_logger(__name__)
 
 
-async def get_stop_details(stop_id, r: Redis):
-    async def fetch(stop_id):
-        data = await fetch_json(
+def get_stop_details(stop_id, r: Redis):
+    def fetch(stop_id):
+        data = fetch_json(
             API_BASE + f"/stops/{stop_id}",
         )
 
@@ -31,7 +31,7 @@ async def get_stop_details(stop_id, r: Redis):
 
         return data
 
-    stop_details = await get_cached(
+    stop_details = get_cached(
         f"stops:{stop_id}",
         fetch,
         (stop_id,),
@@ -42,11 +42,11 @@ async def get_stop_details(stop_id, r: Redis):
     return stop_details
 
 
-async def get_services_from_stop(stop_id, r: Redis):
+def get_services_from_stop(stop_id, r: Redis):
     """Fetches all services from a stop."""
 
-    async def fetch(stop_id):
-        data = await fetch_json(API_BASE + f"/services/?stops={stop_id}")
+    def fetch(stop_id):
+        data = fetch_json(API_BASE + f"/services/?stops={stop_id}")
 
         if not data:
             return
@@ -79,7 +79,7 @@ async def get_services_from_stop(stop_id, r: Redis):
 
         return services
 
-    services = await get_cached(
+    services = get_cached(
         key=f"services:{stop_id}",
         func=fetch,
         args=(stop_id,),
@@ -90,19 +90,18 @@ async def get_services_from_stop(stop_id, r: Redis):
     return services
 
 
-async def get_times(stop_id, r: Redis):
+def get_times(stop_id, r: Redis):
     """Fetches departures from a stop."""
 
-    async def fetch(stop_id):
+    def fetch(stop_id):
         now = datetime.now(tz=LONDON)
-    
-        data = await fetch_json(BASE + f"/stops/{stop_id}/times.json")
+
+        data = fetch_json(BASE + f"/stops/{stop_id}/times.json")
 
         if not data:
             return
 
         times = data.get("times", [])
-
 
         for time in times:
             dep = time.get("expected_departure_time")
@@ -115,7 +114,7 @@ async def get_times(stop_id, r: Redis):
 
         return times
 
-    times = await get_cached(
+    times = get_cached(
         key=f"times:{stop_id}",
         func=fetch,
         args=(stop_id,),
@@ -126,15 +125,13 @@ async def get_times(stop_id, r: Redis):
     return times
 
 
-async def get_nearby_stops(lat, lon, dist=0.005):
+def get_nearby_stops(lat, lon, dist=0.005):
     xmin = lon - dist
     xmax = lon + dist
     ymin = lat - dist
     ymax = lat + dist
 
-    stops = await fetch_json(
-        STOPS_BASE + f"?ymax={ymax}&ymin={ymin}&xmax={xmax}&xmin={xmin}"
-    )
+    stops = fetch_json(STOPS_BASE + f"?ymax={ymax}&ymin={ymin}&xmax={xmax}&xmin={xmin}")
 
     if not stops:
         return []
@@ -166,8 +163,8 @@ async def get_nearby_stops(lat, lon, dist=0.005):
     return nearby_stops
 
 
-async def get_closest_stop(lat, lon, ignore, dist=0.005, limit=1):
-    stops = await get_nearby_stops(lat, lon, dist)
+def get_closest_stop(lat, lon, ignore, dist=0.005, limit=1):
+    stops = get_nearby_stops(lat, lon, dist)
 
     closest_stops = []
 
@@ -191,20 +188,20 @@ async def get_closest_stop(lat, lon, ignore, dist=0.005, limit=1):
     if closest_stops is None:
         return {"stop_id": "", "dist": 0, "lat": 0, "lon": 0}
 
-    # r = await get_redis()
+    # r = get_redis()
 
     closest_stops.sort(key=lambda x: x["dist"])
     closest_stops = closest_stops[:limit]
 
     # for stop in closest_stops:
-    #     times, _ = await get_scheduled(stop["stop_id"], r)
+    #     times, _ = get_scheduled(stop["stop_id"], r)
     #     if not times or len(times) == 0:
     #         stop["active_now"] = False  # no upcoming departures
     return closest_stops
 
 
-async def get_nearby_services(lat, lon, r, dist=0.005):
-    stops = await get_nearby_stops(lat, lon, dist)
+def get_nearby_services(lat, lon, r, dist=0.005):
+    stops = get_nearby_stops(lat, lon, dist)
 
     nearby_services = []
     seen_services = set()
@@ -217,7 +214,7 @@ async def get_nearby_services(lat, lon, r, dist=0.005):
 
         stop_id = stop.stop_id
 
-        services = await get_services_from_stop(stop_id, r=r)
+        services = get_services_from_stop(stop_id, r=r)
 
         if not services:
             continue
@@ -242,8 +239,8 @@ async def get_nearby_services(lat, lon, r, dist=0.005):
     return nearby_services
 
 
-async def get_closest_stop_for_service(lat, lon, service_id, r, dist=0.005):
-    stops = await get_nearby_stops(lat, lon, dist)
+def get_closest_stop_for_service(lat, lon, service_id, r, dist=0.005):
+    stops = get_nearby_stops(lat, lon, dist)
 
     closest_stop = None
     min_dist = float("inf")
@@ -256,7 +253,7 @@ async def get_closest_stop_for_service(lat, lon, service_id, r, dist=0.005):
 
         stop_id = stop.stop_id
 
-        services = await get_services_from_stop(stop_id, r=r)
+        services = get_services_from_stop(stop_id, r=r)
 
         if not services:
             continue

@@ -5,8 +5,8 @@ from backend.schemas.discord_bot import ImportMessage, SimpleStatistics
 from datetime import datetime
 
 
-async def queue_import_message(time_taken: float, stats: Statistics):
-    redis = await get_redis()
+def queue_import_message(time_taken: float, stats: Statistics):
+    redis = get_redis()
 
     timestamp = datetime.now(tz=LONDON)
 
@@ -31,4 +31,4 @@ async def queue_import_message(time_taken: float, stats: Statistics):
         "data": msg.model_dump(),
     }
 
-    await redis.publish("discord_messages", json.dumps(payload, cls=DateTimeEncoder))
+    redis.publish("discord_messages", json.dumps(payload, cls=DateTimeEncoder))

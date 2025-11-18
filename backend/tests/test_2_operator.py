@@ -9,7 +9,7 @@ log = get_logger(__name__)
 
 
 @pytest.mark.asyncio
-async def test_2_operators(db_session):
+def test_2_operators(db_session):
     setup_logging()
     ds1 = DataSource(name="MoreBus")
     ds2 = DataSource(name="Salisbury Reds")
@@ -36,7 +36,7 @@ async def test_2_operators(db_session):
         mb_dir, ds_id=ds1_id, dsv_id=dsv1_id, skip_checks=False
     )
     txc_importer_mb.db = db_session
-    await txc_importer_mb.import_folder()
+    txc_importer_mb.import_folder()
 
     services = db_session.query(Service).all()
     assert len(services) > 0
@@ -47,7 +47,7 @@ async def test_2_operators(db_session):
         sr_dir, ds_id=ds2_id, dsv_id=dsv2_id, skip_checks=False
     )
     txc_importer_sr.db = db_session
-    await txc_importer_sr.import_folder()
+    txc_importer_sr.import_folder()
 
     services = db_session.query(Service).all()
 

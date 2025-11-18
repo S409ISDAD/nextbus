@@ -20,14 +20,14 @@ log = get_logger(__name__)
 
 @router.post("/destinations")
 @limiter.limit("20/minute")
-async def destinations(
+def destinations(
     request: Request,
     body: LocationRequest,
     datetime: dt | None = None,
     redis=Depends(get_redis),
 ):
     try:
-        localities = await possible_destinations(body.lat, body.lon, datetime)
+        localities = possible_destinations(body.lat, body.lon, datetime)
         return localities
     except Exception as e:
         log.error(f"Unexpected error: {e}")
@@ -36,7 +36,7 @@ async def destinations(
 
 @router.post("/journeys")
 @limiter.limit("10/minute")
-async def journeys(
+def journeys(
     request: Request,
     body: LocationRequest,
     locality: str,
@@ -44,9 +44,7 @@ async def journeys(
     redis=Depends(get_redis),
 ):
     try:
-        journeys = await get_possible_journeys(
-            body.lat, body.lon, locality, redis, datetime
-        )
+        journeys = get_possible_journeys(body.lat, body.lon, locality, redis, datetime)
         return journeys
     except Exception as e:
         log.error(f"Unexpected error: {e}")
@@ -54,7 +52,7 @@ async def journeys(
 
 
 @router.get("/locality/{id}")
-async def locality(request: Request, id: str):
+def locality(request: Request, id: str):
     try:
         with SessionLocal() as db:
             db_locality = db.query(Locality).filter(Locality.id == id).first()

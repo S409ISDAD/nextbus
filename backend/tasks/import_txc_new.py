@@ -50,7 +50,7 @@ log = get_logger(__name__)
 BAD_ORIGIN_DEST = {"Origin", "Destination", "Unknown"}
 
 
-async def import_txc_zip(zip_path, ds_id=None, dsv_id=None, skip_checks=False):
+def import_txc_zip(zip_path, ds_id=None, dsv_id=None, skip_checks=False):
     start = time.time()
     zip_path = Path(zip_path).resolve()
     extract_dir = zip_path.parent / f"txc_extract_{dsv_id or ds_id or 'zip'}"
@@ -70,7 +70,7 @@ async def import_txc_zip(zip_path, ds_id=None, dsv_id=None, skip_checks=False):
             txc_importer = TXCImporter(
                 extract_dir, ds_id=ds_id, dsv_id=dsv_id, skip_checks=skip_checks
             )
-            await txc_importer.import_folder()
+            txc_importer.import_folder()
     except Exception as e:
         import traceback
 
@@ -370,10 +370,10 @@ class TXCImporter:
     def is_repeat_revision(self):
         return self.files_in_revision > 1 and self.file_idx_in_revision != 0
 
-    async def import_folder(self):
+    def import_folder(self):
         with time_taken("Generating TXC map"):
             self.generate_txc_map()
-        await self.import_from_map()
+        self.import_from_map()
 
     def generate_txc_map(self):
         try:
@@ -420,7 +420,7 @@ class TXCImporter:
             traceback.print_exc()
             log.debug(f"Error generating TXC map: {e}")
 
-    async def import_from_map(self):
+    def import_from_map(self):
         log.debug(f"Importing {len(self.map.keys())} services...")
         idx = 0
         total_passes = sum(
@@ -469,7 +469,7 @@ class TXCImporter:
                     )
                     self.end_date = rev_data["end"]
                     self.timetables.clear()
-                    await self.handle_txc_file(Path(file))
+                    self.handle_txc_file(Path(file))
                     self.file_idx_in_revision += 1
                     self.end_date = None  # reset just in case
                     idx += 1
@@ -1550,7 +1550,7 @@ class TXCImporter:
             self.db.add(service)
         self.db.commit()
 
-    async def handle_txc_file(self, file: Path):
+    def handle_txc_file(self, file: Path):
         start = time.time()
         try:
             self.dsv = self.get_dsv()
@@ -1629,7 +1629,7 @@ class TXCImporter:
                 self.handle_service(txc_service)
 
             self.db.commit()
-            # await update_dashboard()
+            # update_dashboard()
 
         except Exception as e:
             log.error("An error occurred during txc import:")
@@ -1664,12 +1664,12 @@ if __name__ == "__main__":
     skip_checks = args.skip_checks
     ds_id = int(args.ds_id) if args.ds_id else None
     if input_path.lower().endswith(".zip"):
-        asyncio.run(import_txc_zip(input_path, ds_id=ds_id, skip_checks=skip_checks))
+        import_txc_zip(input_path, ds_id=ds_id, skip_checks=skip_checks)
     elif input_path.lower().endswith(".xml"):
         txc_importer = TXCImporter(
             Path(input_path), ds_id=ds_id, skip_checks=skip_checks
         )
-        asyncio.run(txc_importer.handle_txc_file(Path(input_path)))
+        txc_importer.handle_txc_file(Path(input_path))
         txc_importer.finish_services()
     else:
         log.debug("Error: Input must be a .zip or .xml file")

@@ -2,16 +2,16 @@ from backend.config import API_BASE, VEHICLES_BASE
 from backend.schemas.service import Service
 from backend.services.caching import SERVICE_CACHE, TRIPS_CACHE, get_cached
 from backend.utils.fetch_json import fetch_json
-from redis.asyncio import Redis
+from redis import Redis
 
 from backend.deps import get_logger
 
 log = get_logger(__name__)
 
 
-async def get_service_info(service, r: Redis):
-    async def fetch(service):
-        data = await fetch_json(API_BASE + f"/services/{service}")
+def get_service_info(service, r: Redis):
+    def fetch(service):
+        data = fetch_json(API_BASE + f"/services/{service}")
 
         if not data:
             return None
@@ -32,7 +32,7 @@ async def get_service_info(service, r: Redis):
             "detail": detail,
         }
 
-    service_info = await get_cached(
+    service_info = get_cached(
         f"service_info:{service}",
         fetch,
         (service,),
@@ -48,20 +48,20 @@ async def get_service_info(service, r: Redis):
     )
 
 
-async def fetch_active_buses(services, r: Redis):
+def fetch_active_buses(services, r: Redis):
     """Fetches all buses"""
 
     service_ids = ",".join(str(service) for service in services)
 
-    async def fetch(services):
-        data = await fetch_json(VEHICLES_BASE + f"?service={service_ids}")
+    def fetch(services):
+        data = fetch_json(VEHICLES_BASE + f"?service={service_ids}")
 
         if not data:
             return None
 
         return data
 
-    active = await get_cached(
+    active = get_cached(
         f"service:{service_ids}:trips",
         fetch,
         (services,),

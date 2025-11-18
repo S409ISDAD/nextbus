@@ -5,7 +5,7 @@ from backend.deps import get_logger
 log = get_logger(__name__)
 
 
-async def calculate_distances(stops: list) -> list[float]:
+def calculate_distances(stops: list) -> list[float]:
     distances = []
 
     for stop in stops:
@@ -22,7 +22,7 @@ async def calculate_distances(stops: list) -> list[float]:
     return distances
 
 
-async def estimate_speeds(distances: list[float]) -> list[int]:
+def estimate_speeds(distances: list[float]) -> list[int]:
     speeds = []
     for dist in distances:
         if dist < 200:
@@ -41,7 +41,7 @@ async def estimate_speeds(distances: list[float]) -> list[int]:
     return speeds
 
 
-async def calculate_time_frac(distances: list[float], speeds: list[int]) -> list[float]:
+def calculate_time_frac(distances: list[float], speeds: list[int]) -> list[float]:
     time_per_segment = []
 
     for speed, dist in zip(speeds, distances):
@@ -59,7 +59,7 @@ async def calculate_time_frac(distances: list[float], speeds: list[int]) -> list
     return frac
 
 
-async def redistribute(fracs: list[float], stops: list):
+def redistribute(fracs: list[float], stops: list):
     start_time = stops[0]["aimed_time"]
     end_time = stops[-1]["aimed_time"]
     total_time = end_time - start_time
@@ -73,7 +73,7 @@ async def redistribute(fracs: list[float], stops: list):
     return new_times
 
 
-async def check_similarity(stops: list, new_times: list[int], distances, speeds):
+def check_similarity(stops: list, new_times: list[int], distances, speeds):
     errors: list = []
     for stop, new_time in zip(stops, new_times):
         diff = new_time - stop["aimed_time"]
@@ -99,21 +99,21 @@ async def check_similarity(stops: list, new_times: list[int], distances, speeds)
     log.debug(f"Standard deviation: {std_error:.1f} seconds")
 
 
-async def recalculate_timetable(stops: list, journey_id: int, r):
-    async def calculate(stops: list):
-        distances = await calculate_distances(stops)
+def recalculate_timetable(stops: list, journey_id: int, r):
+    def calculate(stops: list):
+        distances = calculate_distances(stops)
 
-        speeds = await estimate_speeds(distances)
+        speeds = estimate_speeds(distances)
 
-        fracs = await calculate_time_frac(distances, speeds)
+        fracs = calculate_time_frac(distances, speeds)
 
-        new_times = await redistribute(fracs, stops)
+        new_times = redistribute(fracs, stops)
 
-        await check_similarity(stops, new_times, distances, speeds)
+        check_similarity(stops, new_times, distances, speeds)
 
         return new_times
 
-    # new_times = await get_cached(
+    # new_times = get_cached(
     #     key=f"times:{journey_id}",
     #     func=lambda *args: calculate(*args),
     #     args=(stops,),
@@ -121,7 +121,7 @@ async def recalculate_timetable(stops: list, journey_id: int, r):
     #     r=r,
     # )
 
-    new_times = await calculate(stops)
+    new_times = calculate(stops)
 
     for i, stop in enumerate(stops):
         stops[i]["aimed_time"] = new_times[i]

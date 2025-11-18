@@ -40,7 +40,7 @@ def natural_sort_key(text: str):
 
 
 @router.get("/")
-async def all_sources(
+def all_sources(
     request: Request,
     db=Depends(get_db),
 ):
@@ -107,7 +107,7 @@ async def all_sources(
 
 
 @router.get("/{id}/")
-async def source(
+def source(
     request: Request,
     id: int,
     db=Depends(get_db),

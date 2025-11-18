@@ -8,7 +8,7 @@ from backend.schemas.trains import (
     TrainService,
 )
 from backend.services.caching import TRAIN_CACHE, get_cached
-from redis.asyncio import Redis
+from redis import Redis
 
 from backend.services.train_prediction import predict_future, get_started_finished
 from backend.utils.fetch_json import fetch_rtt_json
@@ -23,7 +23,7 @@ from backend.deps import get_logger
 log = get_logger(__name__)
 
 
-async def parse_operator(atocName: str):
+def parse_operator(atocName: str):
     if not atocName:
         return {"code": "Unknown", "color": "#888888"}
     if atocName == "Unknown":
@@ -57,7 +57,7 @@ def parse_time(time_str: str):
     return date
 
 
-async def parse_trains(trains: dict) -> StationResponse | None:
+def parse_trains(trains: dict) -> StationResponse | None:
     try:
         if not trains.get("services"):
             trains_dict = dict(trains)
@@ -68,12 +68,12 @@ async def parse_trains(trains: dict) -> StationResponse | None:
             )
             return StationResponse(**trains_dict)
 
-        async def process_train(train):
+        def process_train(train):
             atoc_name = train.get("atocName")
             if atoc_name == "Unknown" and train.get("atocCode") == "LD":
                 atoc_name = "Lumo"
 
-            operator = await parse_operator(atoc_name)
+            operator = parse_operator(atoc_name)
 
             location = train.get("locationDetail", {})
             expected_departure = parse_time(location.get("realtimeDeparture"))
@@ -121,9 +121,7 @@ async def parse_trains(trains: dict) -> StationResponse | None:
                 return Train(**train_dict)
             return None
 
-        processed_trains = await asyncio.gather(
-            *(process_train(train) for train in trains["services"])
-        )
+        processed_trains = [process_train(train) for train in trains["services"]]
         updated_trains = [train for train in processed_trains if train]
 
         trains_dict = dict(trains)
@@ -138,13 +136,13 @@ async def parse_trains(trains: dict) -> StationResponse | None:
         return None
 
 
-async def parse_train(train) -> TrainService | None:
+def parse_train(train) -> TrainService | None:
     try:
         atoc_name = train.get("atocName", "")
         if atoc_name == "Unknown" and train.get("atocCode") == "LD":
             atoc_name = "Lumo"
             train["atocName"] = atoc_name
-        operator = await parse_operator(atoc_name)
+        operator = parse_operator(atoc_name)
 
         updated_stops: List[ServiceLocation] = []
         now = datetime.now(tz=UTC)
@@ -235,19 +233,19 @@ async def parse_train(train) -> TrainService | None:
         return None
 
 
-async def get_departures(station_code: str, r: Redis) -> StationResponse | None:
-    async def fetch(station_code):
+def get_departures(station_code: str, r: Redis) -> StationResponse | None:
+    def fetch(station_code):
         url = f"https://api.rtt.io/api/v1/json/search/{station_code}"
-        trains = await fetch_rtt_json(url)
+        trains = fetch_rtt_json(url)
 
         if not trains:
             raise HTTPException(status_code=404, detail="No departures found")
 
-        updated_trains = await parse_trains(trains)
+        updated_trains = parse_trains(trains)
 
         return updated_trains
 
-    trains = await get_cached(
+    trains = get_cached(
         f"trains:departures:{station_code}",
         fetch,
         (station_code,),
@@ -258,19 +256,19 @@ async def get_departures(station_code: str, r: Redis) -> StationResponse | None:
     return trains
 
 
-async def get_arrivals(station_code: str, r: Redis) -> StationResponse | None:
-    async def fetch(station_code):
+def get_arrivals(station_code: str, r: Redis) -> StationResponse | None:
+    def fetch(station_code):
         url = f"https://api.rtt.io/api/v1/json/search/{station_code}/arrivals"
-        trains = await fetch_rtt_json(url)
+        trains = fetch_rtt_json(url)
 
         if not trains:
             raise HTTPException(status_code=404, detail="No arrivals found")
 
-        updated_trains = await parse_trains(trains)
+        updated_trains = parse_trains(trains)
 
         return updated_trains
 
-    trains = await get_cached(
+    trains = get_cached(
         f"trains:arrivals:{station_code}",
         fetch,
         (station_code,),
@@ -281,17 +279,17 @@ async def get_arrivals(station_code: str, r: Redis) -> StationResponse | None:
     return trains
 
 
-async def get_detailed_route_trains(from_station: str, to_station: str, r: Redis):
-    route_result = await get_route_trains(from_station, to_station, r)
+def get_detailed_route_trains(from_station: str, to_station: str, r: Redis):
+    route_result = get_route_trains(from_station, to_station, r)
 
     if not route_result or not route_result.services:
         return []
 
     services = route_result.services[:10]
 
-    async def fetch_and_process(train):
+    def fetch_and_process(train):
         service_id = train.serviceUid
-        full_train = await get_service(
+        full_train = get_service(
             service_id, r, do_predictions=False, running_date=train.runDate
         )
         if not full_train:
@@ -318,9 +316,7 @@ async def get_detailed_route_trains(from_station: str, to_station: str, r: Redis
 
         return full_train
 
-    detailed_services = await asyncio.gather(
-        *(fetch_and_process(train) for train in services)
-    )
+    detailed_services = [fetch_and_process(train) for train in services]
 
     detailed_services = [train for train in detailed_services if train]
 
@@ -334,21 +330,21 @@ async def get_detailed_route_trains(from_station: str, to_station: str, r: Redis
     return detailed_services
 
 
-async def get_route_trains(
+def get_route_trains(
     from_station: str, to_station: str, r: Redis
 ) -> StationResponse | None:
-    async def fetch(from_station, to_station):
+    def fetch(from_station, to_station):
         url = f"https://api.rtt.io/api/v1/json/search/{from_station}/to/{to_station}"
-        trains = await fetch_rtt_json(url)
+        trains = fetch_rtt_json(url)
 
         if not trains:
             raise HTTPException(status_code=404, detail="No route found")
 
-        updated_trains = await parse_trains(trains)
+        updated_trains = parse_trains(trains)
 
         return updated_trains
 
-    trains = await get_cached(
+    trains = get_cached(
         f"trains:route:{from_station}:to:{to_station}",
         fetch,
         (from_station, to_station),
@@ -362,34 +358,34 @@ async def get_route_trains(
     return trains
 
 
-async def get_service(
+def get_service(
     service_id: str,
     r: Redis,
     do_predictions: bool = True,
     running_date: str | None = None,
 ) -> TrainService | None:
-    async def fetch(service_id):
+    def fetch(service_id):
         if running_date:
             date_str = running_date.replace("-", "/")
         else:
             today = datetime.now(tz=UTC)
             date_str = today.strftime("%Y/%m/%d")
         url = f"https://api.rtt.io/api/v1/json/service/{service_id}/{date_str}"
-        train = await fetch_rtt_json(url)
+        train = fetch_rtt_json(url)
 
         if not train:
             raise HTTPException(status_code=404, detail="Train service not found")
 
-        updated_train = await parse_train(train)
+        updated_train = parse_train(train)
 
         if not updated_train:
             return None
 
-        started, finished = await get_started_finished(updated_train, r)
+        started, finished = get_started_finished(updated_train, r)
 
         predictions = None
         if do_predictions:
-            predictions = await predict_future(updated_train, None, started, 35, r)
+            predictions = predict_future(updated_train, None, started, 35, r)
 
         updated_train.started = started
         updated_train.finished = finished
@@ -397,7 +393,7 @@ async def get_service(
 
         return updated_train
 
-    train = await get_cached(
+    train = get_cached(
         f"trains:service:{service_id}",
         fetch,
         (service_id,),
