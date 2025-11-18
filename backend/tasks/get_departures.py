@@ -7,6 +7,7 @@ from backend.deps import LONDON
 from backend.models import StopTime
 
 from backend.deps import get_logger
+from backend.utils.time_taken import time_taken
 
 log = get_logger(__name__)
 
@@ -36,7 +37,8 @@ def get_scheduled(stop_id: str, redis, services=None):
             if stop:
                 db_lines = Stop.lines_served(stop, db)
                 db_line_names = [line.line_name for line in db_lines]
-                db_times = stop.times_from_stop(db)
+                with time_taken("fetching db times"):
+                    db_times = stop.times_from_stop(db)
 
             if len(line_names) == 0:
                 line_names = db_line_names

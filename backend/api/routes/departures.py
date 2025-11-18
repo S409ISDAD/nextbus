@@ -1,10 +1,14 @@
 from datetime import datetime as dt
 from fastapi import APIRouter, Depends, HTTPException, Request
 
+from backend.db.db import get_db
 from backend.deps import UTC, get_redis, limiter
+from backend.models import Journey, Service, Stop, StopTime
 from backend.services import bus, stops
 from backend.tasks.get_departures import get_departures, get_scheduled
 from backend.deps import get_logger
+from backend.utils.time_taken import time_taken
+from sqlalchemy.orm import selectinload
 
 router = APIRouter()
 
@@ -14,25 +18,48 @@ log = get_logger(__name__)
 
 @router.get("/scheduled")
 @limiter.limit("45/minute")
-def departures_scheduled(request: Request, stop_id: str, redis=Depends(get_redis)):
+def departures_scheduled(
+    request: Request, stop_id: str, redis=Depends(get_redis), db=Depends(get_db)
+):
     try:
         redis.sadd("total_stops", stop_id)
         times = get_scheduled(stop_id, redis)
 
+        stop_time_ids = [t["st"].id for t in times if t.get("source") == "db"]
+
+        preloaded = (
+            db.query(StopTime)
+            .filter(StopTime.id.in_(stop_time_ids))
+            .options(
+                selectinload(StopTime.journey).selectinload(Journey.timetable),
+                selectinload(StopTime.journey)
+                .selectinload(Journey.service)
+                .selectinload(Service.operators),
+                selectinload(StopTime.journey)
+                .selectinload(Journey.destination)
+                .selectinload(Stop.locality),
+            )
+            .all()
+        )
+
+        stop_time_map = {st.id: st for st in preloaded}
+
         buses = []
-        for _time in times:
-            if _time.get("source") == "db":
-                buses.append(
-                    bus.build_scheduled_db(
-                        time=_time,
-                        trip_id=_time.get("trip_id"),
-                        st=_time.get("st"),
-                        r=redis,
-                        get_prev=False,
+        with time_taken("building scheduled buses"):
+            for _time in times:
+                if _time.get("source") == "db":
+                    buses.append(
+                        bus.build_scheduled_db(
+                            time=_time,
+                            trip_id=_time.get("trip_id"),
+                            st=_time.get("st"),
+                            st_map=stop_time_map,
+                            r=redis,
+                            get_prev=False,
+                        )
                     )
-                )
-            else:
-                buses.append(bus.build_scheduled(_time, redis))
+                else:
+                    buses.append(bus.build_scheduled(_time, redis))
 
         buses = [bus for bus in buses if bus is not None]
 

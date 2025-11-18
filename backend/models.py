@@ -47,6 +47,7 @@ from geoalchemy2.functions import ST_Transform
 from sqlalchemy.orm import object_session
 
 
+
 log = get_logger(__name__)
 
 Base = declarative_base()
@@ -575,12 +576,18 @@ class Stop(Base):
             # consider tomorrows morning trips
             day_offsets.append(1)
 
-        for day_offset in day_offsets:
-            service_day = (now + timedelta(days=day_offset)).date()
+        service_days = [(now + timedelta(days=offset)).date() for offset in day_offsets]
 
-            stop_times_today = [
-                st for st in stop_times if st.journey.is_valid(service_day)
-            ]
+        valid_journeys_by_day = {
+            day: get_valid_journey_ids(db, valid_tt_ids, day) for day in service_days
+        }
+
+        for service_day in service_days:
+
+            j_ids = valid_journeys_by_day[service_day]
+
+            stop_times_today = [st for st in stop_times if st.journey.id in j_ids]
+
             for st in stop_times_today:
                 depdt = st.departure_datetime(service_day)
 
@@ -1636,6 +1643,15 @@ class Journey(Base):
 
             self.bt_trip_id = trip_id
             return trip_id
+
+
+def get_valid_journey_ids(db: Session, valid_tt_ids: list[int], day: date):
+    query = (
+        db.query(Journey.id)
+        .join(Journey.calendar)
+        .filter(journey_is_valid_filter(day), Journey.timetable_id.in_(valid_tt_ids))
+    )
+    return set(row[0] for row in query.all())
 
 
 def journey_is_valid_filter(date: date | None = None):

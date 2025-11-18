@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 
 from dateutil import parser
 from redis import Redis
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, selectinload
 
 from backend.config import VEHICLES_BASE, API_BASE
 from backend.db.db import SessionLocal
@@ -202,78 +202,104 @@ def best_bus(buses: list[dict]) -> dict | None:
 def fetch_buses(
     services, stop_id, times, r: Redis, use_db=False, is_tomorrow=False
 ) -> list[TrackedBus]:
-    active = fetch_active_buses(services, r)
+    with SessionLocal() as db:
+        active = fetch_active_buses(services, r)
 
-    bustimes_times = stops.get_times(stop_id, r)
+        bustimes_times = stops.get_times(stop_id, r)
 
-    active_by_trip: dict[int, list[dict]] = {}
-    if active:
-        for bus in active:
-            trip_id = bus.get("trip_id")
-            active_by_trip.setdefault(trip_id, []).append(bus)
-    else:
-        log.debug("No active buses")
-        active = []
+        active_by_trip: dict[int, list[dict]] = {}
+        if active:
+            for bus in active:
+                trip_id = bus.get("trip_id")
+                active_by_trip.setdefault(trip_id, []).append(bus)
+        else:
+            log.debug("No active buses")
+            active = []
 
-    bus_seen_counts = {bus["id"]: 0 for bus in active} if active else {}
+        bus_seen_counts = {bus["id"]: 0 for bus in active} if active else {}
 
-    final_buses = []
+        final_buses = []
 
-    scheduled_trip_ids = {t["trip_id"] for t in times if t.get("trip_id")}
-    not_included = [
-        bus for bus in bustimes_times if bus.get("trip_id") not in scheduled_trip_ids
-    ]
+        scheduled_trip_ids = {t["trip_id"] for t in times if t.get("trip_id")}
+        not_included = [
+            bus
+            for bus in bustimes_times
+            if bus.get("trip_id") not in scheduled_trip_ids
+        ]
 
-    for time in not_included:
-        # add buses that are late, and the scheduled departure time has passed
-        buses = active_by_trip.get(time.get("trip_id"), [])
-        with SessionLocal() as db:
+        for time in not_included:
+            # add buses that are late, and the scheduled departure time has passed
+            buses = active_by_trip.get(time.get("trip_id"), [])
+
             journey = match_trip_journey(db, time.get("trip_id"), r)
             journey_id = journey.id if journey else None
-        final_buses.append(
-            build_bus_candidates(
-                buses,
-                r,
-                stop_id,
-                journey_id,
-                "api",
-                bus_seen_counts,
-            )
-        )
-
-    for time in times:
-        trip_id = time.get("trip_id")
-        journey_id = time.get("journey_id")
-        source = time.get("source", "api")
-        matched_buses = active_by_trip.get(trip_id, [])
-        if matched_buses:
-            for bus in matched_buses:
-                bus_seen_counts[bus["id"]] += 1
             final_buses.append(
                 build_bus_candidates(
-                    matched_buses,
+                    buses,
                     r,
                     stop_id,
                     journey_id,
-                    source,
+                    "api",
                     bus_seen_counts,
                 )
             )
-        else:
-            if time.get("source") == "db":
+
+        stop_time_ids = [t["st"].id for t in times if t.get("source") == "db"]
+
+        preloaded = (
+            db.query(StopTime)
+            .filter(StopTime.id.in_(stop_time_ids))
+            .options(
+                selectinload(StopTime.journey).selectinload(Journey.timetable),
+                selectinload(StopTime.journey)
+                .selectinload(Journey.service)
+                .selectinload(Service.operators),
+                selectinload(StopTime.journey)
+                .selectinload(Journey.destination)
+                .selectinload(Stop.locality),
+            )
+            .all()
+        )
+
+        stop_time_map = {st.id: st for st in preloaded}
+
+        for time in times:
+            trip_id = time.get("trip_id")
+            journey_id = time.get("journey_id")
+            source = time.get("source", "api")
+            matched_buses = active_by_trip.get(trip_id, [])
+            if matched_buses:
+                for bus in matched_buses:
+                    bus_seen_counts[bus["id"]] += 1
                 final_buses.append(
-                    build_scheduled_db(
-                        time=time, trip_id=trip_id, st=time.get("st", None), r=r
+                    build_bus_candidates(
+                        matched_buses,
+                        r,
+                        stop_id,
+                        journey_id,
+                        source,
+                        bus_seen_counts,
                     )
                 )
             else:
-                final_buses.append(build_scheduled(time, r))
+                if time.get("source") == "db":
+                    final_buses.append(
+                        build_scheduled_db(
+                            time=time,
+                            trip_id=trip_id,
+                            st=time.get("st", None),
+                            st_map=stop_time_map,
+                            r=r,
+                        )
+                    )
+                else:
+                    final_buses.append(build_scheduled(time, r))
 
-    final_buses = [bus for bus in final_buses if bus is not None]
-    for b in final_buses:
-        if isinstance(b, TrackedBus):
-            b.journey = None  # to save data transfer
-    return final_buses
+        final_buses = [bus for bus in final_buses if bus is not None]
+        for b in final_buses:
+            if isinstance(b, TrackedBus):
+                b.journey = None  # to save data transfer
+        return final_buses
 
 
 def fetch_buses_live(services, stop_id, r: Redis) -> list[TrackedBus]:
@@ -333,25 +359,14 @@ def build_scheduled_db(
     time,
     trip_id,
     st: StopTime,
+    st_map: dict[int, StopTime],
     r,
     include_started=True,
     get_prev=True,
 ):
     with SessionLocal() as db:
-        stop_time: StopTime = (
-            db.query(StopTime)
-            .filter(StopTime.id == st.id)
-            .options(
-                joinedload(StopTime.journey).joinedload(Journey.timetable),
-                joinedload(StopTime.journey)
-                .joinedload(Journey.service)
-                .joinedload(Service.operators),
-                joinedload(StopTime.journey)
-                .joinedload(Journey.destination)
-                .joinedload(Stop.locality),
-            )
-            .first()
-        )
+        stop_time = st_map.get(st.id)
+        stop_time._dep_dt = st._dep_dt
 
         if not stop_time:
             log.warning(
