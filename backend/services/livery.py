@@ -16,6 +16,7 @@ def get_livery(id: int, r):
 
         if data:
             return {
+                "id": id,
                 "name": data.get("name"),
                 "left_css": data.get("left_css"),
                 "right_css": data.get("right_css"),
@@ -28,6 +29,9 @@ def get_livery(id: int, r):
         exp=LIVERY_CACHE,
         r=r,
     )
+
+    if not livery:
+        return None
 
     if livery.get("css"):
         livery["left_css"] = livery["css"]
