@@ -47,7 +47,6 @@ from geoalchemy2.functions import ST_Transform
 from sqlalchemy.orm import object_session
 
 
-
 log = get_logger(__name__)
 
 Base = declarative_base()
@@ -1008,7 +1007,8 @@ class Service(Base, AutoSlugMixin):
         return valid_tts
 
     def with_timetable(self):
-        timetable = self.get_correct_timetables()[0]
+        timetables = self.get_correct_timetables()
+        timetable = timetables[0] if timetables else None
         operators_data = []
         operators = self.operators
 

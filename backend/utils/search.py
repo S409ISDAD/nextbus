@@ -136,7 +136,7 @@ if __name__ == "__main__":
     else:
         search_query = ""
     with SessionLocal() as db:
-        results = asyncio.run(search_db(search_query, db))
+        results = search_db(search_query, db)
         print(f"Search results for query '{search_query}':")
         for category, items in results.items():
             print(f"\n{category.capitalize()}:")
@@ -144,7 +144,7 @@ if __name__ == "__main__":
                 if isinstance(item, Operator):
                     print(f"- {item.name} (NOC: {item.noc})")
                 elif isinstance(item, dict):
-                    print(item)
+                    # print(item)
                     print(
                         f"- {item['line_name']} | {item['description']} (rank: {item['rank']})"
                     )
