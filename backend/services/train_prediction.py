@@ -75,6 +75,7 @@ def predict_future(
                 progress = calculate_progress(prev_dep, next_arr, future_time)
 
             prediction = Prediction(
+                heading=0,  # no heading data for trains
                 timestamp=future_time,
                 sequence=sequence,
                 progress=progress,
