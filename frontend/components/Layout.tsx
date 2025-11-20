@@ -24,7 +24,7 @@ function NavSearchBar(queryProp?: { query?: string }) {
             layout
             key={"search-bar-nav"}
             layoutId="search-bar-nav"
-            className="flex items-center rounded-full shadow-2xl w-fit border-1 border-neutral-800 bg-neutral-900">
+            className="flex items-center border rounded-full shadow-2xl w-fit border-neutral-800 bg-neutral-900">
             <div className="ml-3 mr-2 text-gray-500">
                 <FontAwesomeIcon
                     icon={faMagnifyingGlass}
@@ -36,7 +36,7 @@ function NavSearchBar(queryProp?: { query?: string }) {
             <input
                 type="text"
                 placeholder="Search for a route or place"
-                className="flex-grow text-sm font-medium placeholder-gray-400 bg-transparent focus:outline-none"
+                className="text-sm font-medium placeholder-gray-400 bg-transparent grow focus:outline-none"
                 onChange={(e) => setSearchQuery(e.target.value)}
                 value={searchQuery}
                 onKeyDown={(e) => {
@@ -56,9 +56,20 @@ function NavSearchBar(queryProp?: { query?: string }) {
     );
 }
 
-const footer = (currentYear: number) => (
+const footer = () => (
     <footer className="flex flex-row flex-wrap items-start justify-center w-full gap-2 p-3 text-sm text-gray-200 border-t-2 max-h-fit border-neutral-800">
-        <span>© {currentYear} nextbus</span> ·
+        <span>
+            built by{" "}
+            {/* <a
+                className="underline text-link-400 max-h-fit"
+                href="https://orbitix.dev"
+                target="_blank"
+                rel="noopener noreferrer">
+                orbitix.dev
+            </a> */}
+            orbitix
+        </span>{" "}
+        ·
         <a href="/data" className="underline text-link-400 max-h-fit">
             Data Sources
         </a>
@@ -93,7 +104,6 @@ const footer = (currentYear: number) => (
 );
 
 export default function Layout() {
-    const currentYear = new Date().getFullYear();
     const showAppNav = useShowAppNav();
     const navigate = useNavigate();
     const location = useLocation();
@@ -132,7 +142,7 @@ export default function Layout() {
     if (!showAppNav) {
         return (
             <div className="h-full">
-                <div className="top-0 flex justify-between p-[8px] z-[99] border-b-1 border-neutral-800 rounded-b-[24px] fixed w-full bg-[#131313] shadow-2xl md:shadow-xl">
+                <div className="top-0 flex justify-between p-2 z-99 border-b border-neutral-800 rounded-b-3xl fixed w-full bg-[#131313] shadow-2xl md:shadow-xl">
                     <div className="flex gap-2">
                         <Link to="/">
                             <div className="flex flex-col items-center h-full mx-4">
@@ -146,12 +156,12 @@ export default function Layout() {
                         </Link>
 
                         <Link to="/map">
-                            <button className="p-2 px-3 transition-all cursor-pointer border-neutral-800 h-max rounded-2xl border-1 hover:border-primary-700 ">
+                            <button className="p-2 px-3 transition-all border cursor-pointer border-neutral-800 h-max rounded-2xl hover:border-primary-700 ">
                                 map
                             </button>
                         </Link>
                         <Link to="/buses">
-                            <button className="p-2 px-3 transition-all cursor-pointer border-neutral-800 h-max rounded-2xl border-1 hover:border-primary-700 ">
+                            <button className="p-2 px-3 transition-all border cursor-pointer border-neutral-800 h-max rounded-2xl hover:border-primary-700 ">
                                 buses
                             </button>
                         </Link>
@@ -166,7 +176,7 @@ export default function Layout() {
                 <main>
                     <div className="h-15"></div>
                     <Outlet />
-                    {whereAmI() !== "map" && footer(currentYear)}
+                    {whereAmI() !== "map" && footer()}
                 </main>
             </div>
         );
@@ -184,14 +194,14 @@ export default function Layout() {
                     onClick={() => {
                         navigate("/search");
                     }}
-                    className="fixed z-[100] bottom-22 right-4 bg-link/30 text-white rounded-full shadow-lg w-12 h-12 flex items-center justify-center transition-all"
+                    className="fixed flex items-center justify-center w-12 h-12 text-white transition-all rounded-full shadow-lg z-100 bottom-22 right-4 bg-link/30"
                     aria-label="Search">
                     <span className="text-lg font-bold">
                         <FontAwesomeIcon icon={faMagnifyingGlass} />
                     </span>
                 </motion.div>
                 <nav
-                    className="bottom-0 left-0 text-neutral-200 right-0 flex justify-around items-center p-3 z-[99] border-t border-neutral-800 rounded-t-2xl fixed w-full shadow-2xl md:shadow-xl bg-[#131313]"
+                    className="bottom-0 left-0 text-neutral-200 right-0 flex justify-around items-center p-3 z-99 border-t border-neutral-800 rounded-t-2xl fixed w-full shadow-2xl md:shadow-xl bg-[#131313]"
                     style={isIOS() ? { paddingBottom: "20px" } : {}}>
                     {items.map((item) => {
                         const isBus = item.name === "buses";
@@ -230,7 +240,7 @@ export default function Layout() {
                 </nav>
                 <main>
                     <Outlet />
-                    {whereAmI() !== "map" && footer(currentYear)}
+                    {whereAmI() !== "map" && footer()}
                     <div className="h-18"></div>
                 </main>
             </div>
