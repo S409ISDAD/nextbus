@@ -59,10 +59,10 @@ datasources = [
         "name": "White Bus",
         "url": "https://opendata.ticketer.com/uk/WBSV/routes_and_timetables/current.zip",
     },
-    # {
-    #     "name": "Arriva Kent and Surrey",
-    #     "url": "https://opendata.ticketer.com/uk/AKSS/routes_and_timetables/current.zip",
-    # },
+    {
+        "name": "Arriva Kent and Surrey",
+        "url": "https://opendata.ticketer.com/uk/AKSS/routes_and_timetables/current.zip",
+    },
     {
         "name": "Travel Masters",
         "noc": "TMST",

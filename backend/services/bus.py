@@ -765,7 +765,7 @@ def build_bus(
         speed=None,
         confidence=confidence,
         coords=coords,
-        heading=this_bus.get("heading", 0),
+        heading=this_bus.get("heading", 0) or 0,
         status=status,
         source=source,
     )

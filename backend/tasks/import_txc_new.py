@@ -347,6 +347,7 @@ class TXCImporter:
         self.map = {}
         self.files_in_revision = 0
         self.file_idx_in_revision = 0
+        self.has_deleted_journeys = False
         self.stops: dict[str, Stop] = {}
         self.file_count = 0
         self.operator_updated = False
@@ -460,6 +461,7 @@ class TXCImporter:
 
                 self.files_in_revision = len(rev_data["files"])
                 self.file_idx_in_revision = 0
+                self.has_deleted_journeys = False
                 self.services.clear()
 
                 for file in rev_data["files"]:
@@ -800,9 +802,10 @@ class TXCImporter:
         stop_times_to_add = []
         journeys_to_add = []
 
-        if not self.is_repeat_revision:
-            # only clear journeys if this is the first file in a revision with multiple files OR if there's only one file
+        if not self.has_deleted_journeys:
+            # only clear journeys if this is the first file to delete journeys for this timetable, allows for when the first actual file is skipped
             log.debug("Clearing existing journeys...")
+            self.has_deleted_journeys = True
 
             delete_stmt = Journey.__table__.delete().where(
                 Journey.timetable_id == timetable.id,
@@ -863,8 +866,10 @@ class TXCImporter:
 
             for seq, cell in enumerate(txc_journey.get_times()):
                 stop_time = self.get_stop_time(journey, cell)
+
                 if stop_time.stop_sequence is None:
                     stop_time.stop_sequence = seq
+
                 stop_times_to_add.append(stop_time)
 
             # last stop cant have a departure time
@@ -1255,7 +1260,7 @@ class TXCImporter:
                     and not new_revision == 0
                     # dont skip if revision number is 0, operator might not be setting it
                     and not self.skip_checks
-                    and not self.is_repeat_revision
+                    and not self.is_repeat_revision  # if re-importing the same revision, dont skip
                 ):
                     log.info(
                         f"No changes to timetable for service {service.service_code} on line {txc_line.line_name}, skipping"

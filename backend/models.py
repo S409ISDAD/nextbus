@@ -1734,8 +1734,6 @@ def journey_is_valid_filter(date: date | None = None):
             CE.calendar_id == Calendar.id,
             CE.operating.is_(True),
             CE.special.is_(False),
-            CE.start_date <= date,
-            or_(CE.end_date is None, CE.end_date >= date),
         )
     )
 
@@ -1906,9 +1904,3 @@ class StopTime(Base):
             hours = hours - 24
         minutes = (total_seconds % 3600) // 60
         return f"{hours:02d}:{minutes:02d}"
-
-    __table_args__ = (
-        UniqueConstraint(
-            "journey_id", "stop_sequence", name="uq_stop_time_journey_sequence"
-        ),
-    )

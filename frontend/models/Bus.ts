@@ -110,10 +110,12 @@ export function isTrackedBus(bus: Departure): bus is Bus {
 }
 
 export function getKey(bus: Departure): string {
+    const scheduled = new Date(bus.scheduled);
+    scheduled.setSeconds(0, 0); // ignore seconds for key
     if (isTrackedBus(bus)) {
-        return `${bus.scheduled}-${bus.service.line_name}-${bus.destination}`;
+        return `${scheduled.toISOString()}-${bus.service.line_name}-${bus.destination}`;
     } else {
-        return `${bus.scheduled}-${bus.line}-${bus.destination}`;
+        return `${scheduled.toISOString()}-${bus.line}-${bus.destination}`;
     }
 }
 
