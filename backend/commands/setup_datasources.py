@@ -14,14 +14,14 @@ datasources = [
     #     "name": "Stagecoach South East",
     #     "url": "https://opendata.stagecoachbus.com/stagecoach-scek-route-schedule-data-transxchange_2_4.zip",
     # },
-    {
-        "name": "Stagecoach East Scotland",
-        "url": "https://opendata.stagecoachbus.com/stagecoach-scfi-route-schedule-data-transxchange_2_4.zip",
-    },
-    {
-        "name": "Stagecoach West Scotland",
-        "url": "https://opendata.stagecoachbus.com/stagecoach-stws-route-schedule-data-transxchange_2_4.zip",
-    },
+    # {
+    #     "name": "Stagecoach East Scotland",
+    #     "url": "https://opendata.stagecoachbus.com/stagecoach-scfi-route-schedule-data-transxchange_2_4.zip",
+    # },
+    # {
+    #     "name": "Stagecoach West Scotland",
+    #     "url": "https://opendata.stagecoachbus.com/stagecoach-stws-route-schedule-data-transxchange_2_4.zip",
+    # },
     {
         "name": "Cresta Coaches",
         "noc": "CRES",
