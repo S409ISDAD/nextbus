@@ -152,15 +152,15 @@ def perform_journey_tests(db_session, valid_dates, invalid_dates, journey, cal):
             for c in db_session.query(Calendar).filter(journey_is_valid_filter(d)).all()
         ]
         assert journey.is_valid(d), f"Journey should be valid on {d}"
-        assert (
-            cal.id in valid_cal_ids
-        ), f"Journey should be valid on {d}"  # make sure both functions agree
+        assert cal.id in valid_cal_ids, (
+            f"Journey should be valid on {d}"
+        )  # make sure both functions agree
     for d in invalid_dates:
         valid_cal_ids = [
             c.id
             for c in db_session.query(Calendar).filter(journey_is_valid_filter(d)).all()
         ]
         assert not journey.is_valid(d), f"Journey should be invalid on {d}"
-        assert (
-            cal.id not in valid_cal_ids
-        ), f"Journey should be valid on {d}"  # make sure both functions agree
+        assert cal.id not in valid_cal_ids, (
+            f"Journey should be valid on {d}"
+        )  # make sure both functions agree

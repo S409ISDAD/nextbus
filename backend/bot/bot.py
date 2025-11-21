@@ -100,7 +100,9 @@ async def send_import_message(data: ImportMessage):
         time_str = (
             f"{int(hours)}h {int(mins)}m {secs:.2f}s"
             if hours
-            else f"{int(mins)}m {secs:.2f}s" if mins else f"{secs:.2f}s"
+            else f"{int(mins)}m {secs:.2f}s"
+            if mins
+            else f"{secs:.2f}s"
         )
         embed = discord.Embed(
             title="TXC Import Completed",

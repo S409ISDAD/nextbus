@@ -1,4 +1,3 @@
-
 import requests
 
 from backend.deps import STATIC_DATA_DIR

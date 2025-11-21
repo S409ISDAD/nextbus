@@ -18,7 +18,6 @@ def find_bus_on_block(
     journey_id: Optional[int] = None,
     today: Optional[datetime] = None,
 ):
-
     ThisJourney = aliased(Journey)
 
     if today is None:
@@ -67,7 +66,7 @@ def find_bus_on_block(
         bus = fetch_bus_trip(service_id, trip_id, r)
         if bus is not None:
             log.debug(
-                f"Found bus for journey {journey.id}, block {block_id}: {bus.get("vehicle").get("name")}"
+                f"Found bus for journey {journey.id}, block {block_id}: {bus.get('vehicle').get('name')}"
             )
             return bus, away
         away += 1

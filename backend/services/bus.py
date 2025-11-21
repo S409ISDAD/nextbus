@@ -615,7 +615,7 @@ def build_bus(
         bus_type = "Double decker"
 
     if vehicle_data.special_features:
-        bus_type += f", {", ".join(vehicle_data.special_features)}"
+        bus_type += f", {', '.join(vehicle_data.special_features)}"
     # journey = get_vehicle_journey(bus_id, journey_id, r)
 
     delay += 10  # account for stopping and various other things that increase delay

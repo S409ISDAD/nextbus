@@ -47,7 +47,9 @@ def import_datasets():
     time_str = (
         f"{int(hours)}h {int(mins)}m {secs:.2f}s"
         if hours
-        else f"{int(mins)}m {secs:.2f}s" if mins else f"{secs:.2f}s"
+        else f"{int(mins)}m {secs:.2f}s"
+        if mins
+        else f"{secs:.2f}s"
     )
     log.debug(f"Total import time: {time_str}")
 

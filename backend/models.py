@@ -582,7 +582,6 @@ class Stop(Base):
         }
 
         for service_day in service_days:
-
             j_ids = valid_journeys_by_day[service_day]
 
             stop_times_today = [st for st in stop_times if st.journey.id in j_ids]

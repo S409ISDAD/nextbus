@@ -110,7 +110,11 @@ datasources = [
         "name": "Newbury & District",
         "url": "https://data.discoverpassenger.com/operator/kennections",
     },
-    {"name": "Salisbury Reds", "noc": "SWWD", "search": "Salisbury Reds"},
+    {
+        "name": "Salisbury Reds",
+        "noc": "SWWD",
+        "search": "Salisbury Reds",
+    },
 ]
 
 

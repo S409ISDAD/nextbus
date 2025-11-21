@@ -1,4 +1,3 @@
-import asyncio
 from collections import defaultdict
 
 from sqlalchemy import select, func
