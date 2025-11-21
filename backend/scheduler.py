@@ -3,6 +3,7 @@ from apscheduler.triggers.cron import CronTrigger
 from backend.config import get_logger, setup_logging
 from backend.tasks.import_all_datasets import import_datasets, import_weekly_data
 from backend.tasks.reset_bt_trip_ids import reset_trip_ids
+from backend.commands.setup_datasources import setup
 import time
 
 log = get_logger(__name__)
@@ -37,6 +38,10 @@ def main():
 
     scheduler.start()
     log.info("Data scheduler started.")
+
+    log.info("running datasource setup...")
+    setup()
+    log.info("datasource setup complete.")
 
     try:
         # keep it running
