@@ -15,6 +15,14 @@ datasources = [
     #     "url": "https://opendata.stagecoachbus.com/stagecoach-scek-route-schedule-data-transxchange_2_4.zip",
     # },
     {
+        "name": "Stagecoach East Scotland",
+        "url": "https://opendata.stagecoachbus.com/stagecoach-scfi-route-schedule-data-transxchange_2_4.zip",
+    },
+    {
+        "name": "Stagecoach West Scotland",
+        "url": "https://opendata.stagecoachbus.com/stagecoach-stws-route-schedule-data-transxchange_2_4.zip",
+    },
+    {
         "name": "Cresta Coaches",
         "noc": "CRES",
     },
@@ -64,9 +72,21 @@ datasources = [
         "url": "https://opendata.ticketer.com/uk/AKSS/routes_and_timetables/current.zip",
     },
     {
+        "name": "Arriva Beds and Bucks",
+        "url": "https://opendata.ticketer.com/uk/ARBB/routes_and_timetables/current.zip",
+    },
+    {
         "name": "Travel Masters",
         "noc": "TMST",
         "search": "travel masters",
+    },
+    {
+        "name": "Diamond Bus West Midlands",
+        "search": "diamond bus west midlands",
+    },
+    {
+        "name": "National Express West Midlands",
+        "search": "national express west midlands",
     },
     {
         "name": "Unilink",
