@@ -788,7 +788,8 @@ class Calendar(Base):
         1. Any off exception or bank holiday -> False
         2. Special exceptions (special=True) or bank holiday on -> True
         3. Normal exceptions (special=False) -> respect weekday
-        4. Fallback -> weekday
+        4. If any normal exceptions AND not operating -> False
+        5. Fallback -> weekday
         """
 
         date = service_day or datetime.now(tz=LONDON).date()
@@ -796,72 +797,50 @@ class Calendar(Base):
 
         # check date range first
         if not (
-            bool(self.start_date <= date)
-            and (self.end_date is None or bool(self.end_date >= date))
+            (self.start_date <= date)
+            and (self.end_date is None or self.end_date >= date)
         ):
             return False
 
-        # check exceptions not operating
-        for exc in self.calendar_exceptions:
-            if exc.start_date <= date <= exc.end_date and not exc.operating:
-                return False
+        today_normal_exc_on = False  # special=False and operating=True
+        today_special_exc_on = False  # special=True and operating=True
 
-        # check bank holidays not operating
-        for link in self.calendar_bank_holiday:
-            bh = link.bh
-            for bh_date in bh.dates:
-                if bh_date.date == date and not link.operating:
+        any_normal_exc = any(
+            exc.operating and not exc.special for exc in self.calendar_exceptions
+        )
+
+        for exc in self.calendar_exceptions:
+            if exc.start_date <= date and (
+                exc.end_date is None or date <= exc.end_date
+            ):
+                if not exc.operating:
+                    # any off exception -> False
                     return False
 
-        # check special operating exceptions
-        for exc in self.calendar_exceptions:
-            if exc.start_date <= date <= exc.end_date and exc.operating and exc.special:
-                return True
+                # special inclusion today -> override everything to true
+                if exc.operating and exc.special:
+                    today_special_exc_on = True
 
-        # check bank holidays operating
-        for link in self.calendar_bank_holiday:
-            bh = link.bh
-            for bh_date in bh.dates:
-                if bh_date.date == date and link.operating:
-                    return True
+                # normal inclusion today
+                if exc.operating and not exc.special:
+                    today_normal_exc_on = True
 
-        # check normal operating exceptions and respect weekday
-        for exc in self.calendar_exceptions:
-            if (
-                exc.start_date <= date <= exc.end_date
-                and exc.operating
-                and not exc.special
-            ):
-                return getattr(self, weekday)
-
-        # fallback to normal weekday
-        return getattr(self, weekday)
-
-    def is_valid_exp(self, service_day: date | None = None) -> bool:
-        """
-        Checks only exceptions (and bank holidays for now)
-        """
-
-        date = service_day or datetime.now(tz=LONDON).date()
-
-        # check exceptions
-        for exc in self.calendar_exceptions:
-            if date < exc.start_date and exc.operating is True:
-                return False
-            if exc.start_date <= date <= exc.end_date:
-                return exc.operating
-            if date > exc.end_date and exc.operating is True:
-                return False
-
-        # check bank holidays
         for link in self.calendar_bank_holiday:
             bh = link.bh
             for bh_date in bh.dates:
                 if bh_date.date == date:
-                    log.debug(f"Bank holiday valid, and operating={link.operating}")
-                    return link.operating
+                    return link.operating  # respect operating flag
 
-        return True
+        if today_special_exc_on:
+            # always true if special exception today
+            return True
+
+        if any_normal_exc:
+            # respect normal exceptions if any exist
+            return today_normal_exc_on
+
+        # fallback to weekday
+        return getattr(self, weekday)
 
 
 class CalendarException(Base):
@@ -1665,7 +1644,7 @@ def journey_is_valid_filter(date: date | None = None):
     # base calendar date range
     base_filter = and_(
         Calendar.start_date <= date,
-        or_(Calendar.end_date is None, Calendar.end_date >= date),
+        or_(Calendar.end_date.is_(None), Calendar.end_date >= date),
     )
 
     # any exceptions turning off this date?
@@ -1673,7 +1652,7 @@ def journey_is_valid_filter(date: date | None = None):
         and_(
             CE.calendar_id == Calendar.id,
             CE.start_date <= date,
-            or_(CE.end_date is None, CE.end_date >= date),
+            or_(CE.end_date.is_(None), CE.end_date >= date),
             CE.operating.is_(False),
         )
     )
@@ -1692,12 +1671,26 @@ def journey_is_valid_filter(date: date | None = None):
         )
     )
 
+    # any bank holidays turning on this date?
+    bh_on = exists().where(
+        and_(
+            CBH.calendar_id == Calendar.id,
+            exists().where(
+                and_(
+                    BHD.bank_holiday_name == CBH.bank_holiday,
+                    BHD.date == date,
+                )
+            ),
+            CBH.operating.is_(True),
+        )
+    )
+
     # exceptions that override weekday, special = true
     exc_special = exists().where(
         and_(
             CE.calendar_id == Calendar.id,
             CE.start_date <= date,
-            or_(CE.end_date is None, CE.end_date >= date),
+            or_(CE.end_date.is_(None), CE.end_date >= date),
             CE.operating.is_(True),
             CE.special.is_(True),
         )
@@ -1710,21 +1703,7 @@ def journey_is_valid_filter(date: date | None = None):
             CE.operating.is_(True),
             CE.special.is_(False),
             CE.start_date <= date,
-            or_(CE.end_date is None, CE.end_date >= date),
-        )
-    )
-
-    # any bank holidays turning on this date?
-    bh_on = exists().where(
-        and_(
-            CBH.calendar_id == Calendar.id,
-            exists().where(
-                and_(
-                    BHD.bank_holiday_name == CBH.bank_holiday,
-                    BHD.date == date,
-                )
-            ),
-            CBH.operating.is_(True),
+            or_(CE.end_date.is_(None), CE.end_date >= date),
         )
     )
 

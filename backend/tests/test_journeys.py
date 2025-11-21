@@ -50,11 +50,36 @@ def test_valid(db_session, journey_factory, calendar_factory):
         sunday=False,
     )
 
+    j1 = journey_factory(
+        block_id="WI30", sequence=1, start_time="08:00", end_time="09:00", calendar=cal
+    )
+
     cal_to_bh = CalendarToBankHoliday(
         calendar_id=cal.id, bank_holiday=bh.name, operating=False
     )  # no service on BH
     db_session.add(cal_to_bh)
     db_session.flush()
+
+    db_session.commit()
+
+    # test boundary and normal dates
+    valid_dates = [
+        date(2025, 1, 1),  # boundary
+        date(2025, 12, 31),  # boundary
+        date(2025, 10, 6),  # monday
+        date(2025, 10, 7),  # tuesday
+        date(2025, 10, 2),  # thursday
+    ]
+
+    invalid_dates = [
+        date(2024, 12, 31),  # before start
+        date(2026, 1, 1),  # after end
+        date(2025, 12, 25),  # bank holiday
+        date(2024, 10, 7),  # wrong year
+        date(2025, 10, 5),  # sunday
+    ]
+
+    perform_journey_tests(db_session, valid_dates, invalid_dates, j1, cal)
 
     cal_exceptions = [
         CalendarException(
@@ -95,15 +120,9 @@ def test_valid(db_session, journey_factory, calendar_factory):
     db_session.add_all(cal_exceptions)
     db_session.flush()
 
-    j1 = journey_factory(
-        block_id="WI30", sequence=1, start_time="08:00", end_time="09:00", calendar=cal
-    )
-
     db_session.commit()
 
     valid_dates = [
-        date(2025, 1, 1),  # boundary
-        date(2025, 12, 31),  # boundary
         date(2025, 10, 6),  # monday
         date(2025, 10, 7),  # tuesday
         date(2025, 10, 2),  # thursday
@@ -113,21 +132,26 @@ def test_valid(db_session, journey_factory, calendar_factory):
     ]
 
     invalid_dates = [
+        date(2025, 1, 1),  # boundary
+        date(2025, 12, 31),  # boundary
         date(2024, 12, 31),  # before start
         date(2026, 1, 1),  # after end
-        date(2025, 12, 25),  # bank holiday
         date(2025, 10, 20),  # exception monday
         date(2024, 10, 7),  # wrong year
         date(2025, 10, 5),  # sunday
-        date(2025, 12, 25),  # bank holiday wins over normal inclusion
+        date(2025, 12, 25),  # bank holiday overrides everything
     ]
 
+    perform_journey_tests(db_session, valid_dates, invalid_dates, j1, cal)
+
+
+def perform_journey_tests(db_session, valid_dates, invalid_dates, journey, cal):
     for d in valid_dates:
         valid_cal_ids = [
             c.id
             for c in db_session.query(Calendar).filter(journey_is_valid_filter(d)).all()
         ]
-        assert j1.is_valid(d), f"Journey should be valid on {d}"
+        assert journey.is_valid(d), f"Journey should be valid on {d}"
         assert (
             cal.id in valid_cal_ids
         ), f"Journey should be valid on {d}"  # make sure both functions agree
@@ -136,7 +160,7 @@ def test_valid(db_session, journey_factory, calendar_factory):
             c.id
             for c in db_session.query(Calendar).filter(journey_is_valid_filter(d)).all()
         ]
-        assert not j1.is_valid(d), f"Journey should be invalid on {d}"
+        assert not journey.is_valid(d), f"Journey should be invalid on {d}"
         assert (
             cal.id not in valid_cal_ids
         ), f"Journey should be valid on {d}"  # make sure both functions agree
