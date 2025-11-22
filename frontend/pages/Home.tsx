@@ -132,9 +132,9 @@ const Home: React.FC = () => {
 
     return (
         <div>
-            <div className="flex flex-col items-center justify-center gap-6">
-                <div className="flex flex-col items-center justify-center w-full gap-5 pt-0 py-7">
-                    <div className="flex flex-col items-center justify-center p-2">
+            <div className="flex flex-col items-center justify-center">
+                <div className="flex flex-col items-center justify-center w-full gap-6 pt-0 py-7">
+                    <div className="flex flex-col items-center justify-center p-2 pb-0">
                         <div className="flex flex-col items-center w-full">
                             <button
                                 className="flex flex-row items-center justify-center gap-1 p-2 px-4 transition border cursor-pointer rounded-2xl bg-neutral-800 border-amber-500 hover:border-amber-400"
@@ -166,112 +166,91 @@ const Home: React.FC = () => {
                                 </div>
                             )}
                         </div>
-                        <div className="flex flex-row items-center gap-1">
-                            <span className="text-5xl font-black text-center pt-7">
-                                nextbus
-                            </span>
-                            <span className="text-xl font-bold h-fit text-link">
-                                beta
-                            </span>
-                        </div>
-                    </div>
-                    {showStop && closestStop && (
-                        <div className="flex flex-col items-center gap-2 p-3 bg-neutral-800 rounded-3xl">
-                            <span className="px-5 font-semibold text-center text-neutral-300 text">
-                                It looks like you're at a bus stop!
-                                <br /> Would you like to see the departures?
-                            </span>
-                            <div className="flex flex-row w-full gap-2">
-                                <button
-                                    className="w-full p-2 mt-2 font-semibold text-white transition-all cursor-pointer bg-neutral-600 rounded-xl hover:bg-neutral-700"
-                                    onClick={() => {
-                                        setShowStop(false);
-                                    }}>
-                                    No, thanks.
-                                </button>
-                                <button
-                                    className="w-full p-2 mt-2 font-semibold text-white transition-all cursor-pointer bg-primary text-nowrap rounded-xl hover:bg-primary-700"
-                                    onClick={() => {
-                                        setShowStop(false);
-                                        navigate(`/buses/stops/${closestStop}`);
-                                    }}>
-                                    Yes, show me!{" "}
-                                </button>
+                        <div className="flex flex-col items-center gap-3">
+                            <div className="flex flex-row items-center gap-1">
+                                <h1 className="text-5xl font-black text-center sm:text-6xl pt-7">
+                                    nextbus
+                                </h1>
+                                <h3 className="text-xl font-bold h-fit text-link">
+                                    beta
+                                </h3>
                             </div>
+                            <h1 className="text-2xl font-bold text-center sm:text-4xl">
+                                track your bus and{" "}
+                                <span className="underline text-link">
+                                    skip the guesswork
+                                </span>
+                            </h1>
+                            {showStop && closestStop ? (
+                                <div className="flex flex-col items-center gap-2 p-3 bg-neutral-800 rounded-3xl">
+                                    <p className="px-5 font-semibold text-center text-neutral-300 text">
+                                        It looks like you're at a bus stop!
+                                        <br /> Would you like to see the
+                                        departures?
+                                    </p>
+                                    <div className="flex flex-row w-full gap-2">
+                                        <button
+                                            className="w-full p-2 mt-2 font-semibold text-white transition-all cursor-pointer bg-neutral-600 rounded-xl hover:bg-neutral-700"
+                                            onClick={() => {
+                                                setShowStop(false);
+                                            }}>
+                                            No, thanks.
+                                        </button>
+                                        <button
+                                            className="w-full p-2 mt-2 font-semibold text-white transition-all cursor-pointer bg-primary text-nowrap rounded-xl hover:bg-primary-700"
+                                            onClick={() => {
+                                                setShowStop(false);
+                                                navigate(
+                                                    `/buses/stops/${closestStop}`
+                                                );
+                                            }}>
+                                            Yes, show me!{" "}
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <p className="max-w-lg m-2 text-center text-neutral-400">
+                                    Real-time bus tracking across the UK, with
+                                    smart predictions to make taking the bus
+                                    easier, faster, and more reliable.
+                                </p>
+                            )}
                         </div>
-                    )}
-                    <div className="flex flex-wrap items-center justify-center w-full gap-4">
-                        <div className="flex flex-col items-center p-2 px-6 shadow bg-neutral-800/50 rounded-xl">
-                            <span className="text-xl font-bold text-link-400">
-                                {stats?.total_buses?.toLocaleString() ?? "--"}
-                            </span>
-                            <span className="mt-1 text-sm text-neutral-400">
-                                Buses Tracked
-                            </span>
-                        </div>
-                        <div className="flex flex-col items-center p-2 px-6 shadow bg-neutral-800/50 rounded-xl">
-                            <span className="text-xl font-bold text-purple-400">
-                                {stats?.total_stops?.toLocaleString() ?? "--"}
-                            </span>
-                            <span className="mt-1 text-sm text-neutral-400">
-                                Stops Viewed
-                            </span>
-                        </div>
-                        {/* <div className="flex flex-col items-center p-2 px-6 shadow bg-neutral-800/50 rounded-xl">
-                            <span className="text-xl font-bold text-emerald-400">
-                                {stats?.operators?.toLocaleString() ?? "--"}
-                            </span>
-                            <span className="mt-1 text-sm text-neutral-400">
-                                Operators
-                            </span>
-                        </div> */}
                     </div>
-                    <a
-                        href="/stats"
-                        className="text-sm underline text-link-400">
-                        See more stats <FontAwesomeIcon icon={faCaretRight} />
-                    </a>
+
                     <SearchBar />
+                    <div className="flex flex-row w-[90vw] lg:w-[40%] md:w-[50%] items-center justify-center gap-2">
+                        <button
+                            className="button text-nowrap"
+                            onClick={() => {
+                                navigate("/buses");
+                            }}>
+                            Buses <FontAwesomeIcon icon={faBus} />
+                        </button>
+                        <button
+                            className="button text-nowrap"
+                            onClick={() => {
+                                navigate("/map");
+                            }}>
+                            Map <FontAwesomeIcon icon={faMap} />
+                        </button>
+                        <button
+                            className="button text-nowrap"
+                            onClick={() => {
+                                navigate("/trains");
+                            }}>
+                            Trains <FontAwesomeIcon icon={faTrainSubway} />
+                        </button>
+                    </div>
+
                     <a
                         href="/tutorials/install"
                         className="underline text-link-400">
                         Want nextbus as an app?{" "}
                         <FontAwesomeIcon icon={faCaretRight} />
                     </a>
-                    <div className="flex flex-row flex-wrap items-start justify-center w-full gap-5">
+                    {/* <div className="flex flex-row flex-wrap items-start justify-center w-full gap-5">
                         <Card className="max-w-[90vw] flex flex-col items-center gap-2">
-                            <div className="flex flex-col items-center justify-center">
-                                <span className="text-xl font-bold text-center">
-                                    Quick Links
-                                </span>
-                            </div>
-                            <div className="flex flex-row flex-wrap items-center justify-center gap-2">
-                                <button
-                                    className="button max-w-fit"
-                                    onClick={() => {
-                                        navigate("/buses");
-                                    }}>
-                                    Buses <FontAwesomeIcon icon={faBus} />
-                                </button>
-                                <button
-                                    className="button max-w-fit"
-                                    onClick={() => {
-                                        navigate("/map");
-                                    }}>
-                                    Map <FontAwesomeIcon icon={faMap} />
-                                </button>
-                                <button
-                                    className="button max-w-fit"
-                                    onClick={() => {
-                                        navigate("/trains");
-                                    }}>
-                                    Trains{" "}
-                                    <FontAwesomeIcon icon={faTrainSubway} />
-                                </button>
-                            </div>
-                        </Card>
-
-                        {/* <Card className="max-w-[90vw] flex flex-col items-center gap-2">
                             <div className="flex flex-row items-center justify-center gap-3">
                                 <div className="flex flex-col items-center justify-center gap-1">
                                     <div className="flex flex-row items-center justify-center gap-1">
@@ -319,20 +298,48 @@ const Home: React.FC = () => {
                                     ))}
                                 </div>
                             </div>
-                        </Card> */}
+                        </Card>
+                    </div> */}
+                    <div className="flex flex-col items-center justify-center gap-2">
+                        <div className="flex flex-wrap items-center justify-center w-full gap-4">
+                            <div className="flex flex-col items-center p-2 px-6 shadow bg-neutral-800/50 rounded-xl">
+                                <h2 className="text-xl font-bold text-link-400">
+                                    {stats?.total_buses?.toLocaleString() ??
+                                        "--"}
+                                </h2>
+                                <p className="mt-1 text-sm text-neutral-400">
+                                    Buses Tracked
+                                </p>
+                            </div>
+                            <div className="flex flex-col items-center p-2 px-6 shadow bg-neutral-800/50 rounded-xl">
+                                <h2 className="text-xl font-bold text-purple-400">
+                                    {stats?.total_stops?.toLocaleString() ??
+                                        "--"}
+                                </h2>
+                                <p className="mt-1 text-sm text-neutral-400">
+                                    Stops Viewed
+                                </p>
+                            </div>
+                        </div>
+                        <a
+                            href="/stats"
+                            className="text-sm underline text-link-400">
+                            See more stats{" "}
+                            <FontAwesomeIcon icon={faCaretRight} />
+                        </a>
                     </div>
 
                     <Card className="max-w-[90vw] flex flex-col items-center gap-2">
                         <div className="flex flex-col items-center justify-center">
-                            <span className="text-xl font-bold text-center">
+                            <h2 className="text-xl font-bold text-center">
                                 Get Involved
-                            </span>
+                            </h2>
                         </div>
 
-                        <span className="mb-2 text-sm text-center text-neutral-400">
+                        <p className="mb-2 text-sm text-center text-neutral-400">
                             Join our Discord to give feedback, report issues,
                             and suggest features!
-                        </span>
+                        </p>
 
                         <button
                             className="button max-w-fit"
@@ -348,14 +355,14 @@ const Home: React.FC = () => {
                     </Card>
                     <Card className="max-w-[90vw] flex flex-col items-center gap-2">
                         <div className="flex flex-col items-center justify-center">
-                            <span className="text-xl font-bold text-center">
+                            <h2 className="text-xl font-bold text-center">
                                 Settings
-                            </span>
+                            </h2>
                         </div>
                         <div className="flex flex-row items-center justify-center gap-2">
-                            <span className="text-center text-neutral-400">
+                            <p className="text-center text-neutral-400">
                                 veg mode
-                            </span>
+                            </p>
 
                             <Switch
                                 checked={vegMode}
@@ -367,10 +374,10 @@ const Home: React.FC = () => {
                                 />
                             </Switch>
                         </div>
-                        <span className="text-xs text-center text-neutral-400">
+                        <p className="text-xs text-center text-neutral-400">
                             (for bus enthusiasts, shows bus details like reg,
                             fleet number, and vehicle type)
-                        </span>
+                        </p>
                     </Card>
                 </div>
             </div>

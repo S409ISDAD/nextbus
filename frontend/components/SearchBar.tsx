@@ -18,7 +18,7 @@ export default function SearchBar(queryProp?: {
             key={"search-bar"}
             layoutId="search-bar"
             className={cn(
-                "flex items-center w-[90vw] lg:w-[50%] py-2 rounded-full shadow-2xl border-1 border-neutral-800 bg-neutral-900",
+                "flex items-center w-[90vw] lg:w-[50%] py-2 rounded-full shadow-2xl border border-neutral-800 bg-neutral-900",
                 className
             )}>
             <div className="ml-4 mr-2 text-gray-500">
