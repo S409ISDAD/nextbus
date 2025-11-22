@@ -45,6 +45,7 @@ import PossibleJourneysPage from "../pages/PossibleJourneysPage.tsx";
 import PredictionsPage from "../pages/bus/Predictions.tsx";
 import ErrorBoundary from "../components/ErrorBoundary.tsx";
 import Error from "../pages/Error.tsx";
+import Canonical from "./Canonical.tsx";
 
 // function UsefulBanner() {
 //     const location = useLocation();
@@ -143,6 +144,7 @@ function App() {
         <ErrorBoundary fallback={<Error />}>
             <MotionConfig reducedMotion="user">
                 <BrowserRouter>
+                    <Canonical />
                     <div className="flex flex-col min-h-screen">
                         <Toaster
                             position="top-right"
