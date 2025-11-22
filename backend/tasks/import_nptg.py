@@ -3,6 +3,7 @@ import xml.etree.ElementTree as ET
 
 from sqlalchemy_searchable import sync_trigger
 
+from backend.autoslug import update_slugs
 from backend.config import get_logger, setup_logging
 from backend.db.db import SessionLocal, engine
 from backend.deps import STATIC_DATA_DIR
@@ -121,7 +122,7 @@ def import_nptg_data():
                     regions = {reg.id: reg for reg in db.query(Region).all()}
                     admin_areas = {adm.id: adm for adm in db.query(AdminArea).all()}
                     districts = {d.id: d for d in db.query(District).all()}
-                    print(
+                    log.debug(
                         f"Imported {len(regions)} regions, {len(admin_areas)} admin areas, {len(districts)} districts"
                     )
 
@@ -167,6 +168,11 @@ def import_nptg_data():
                         log.warning(
                             f"Skipped {skipped} localities with missing FK references"
                         )
+
+            localities = {loc.id: loc for loc in db.query(Locality).all()}
+
+            log.debug(f"Imported {len(localities)} localities")
+            update_slugs(db, list(localities.values()))
             log.debug("Committing...")
             db.commit()
             log.debug("Import complete")

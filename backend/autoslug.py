@@ -1,90 +1,113 @@
+"""
+Slug utils for SQLAlchemy models.
+
+Original code from https://digitalhedgehog.org/articles/how-to-manage-slugs-for-database-entities-with-flask-and-sqlalchemy
+Modified to fit nextbus models.
+"""
+
 from sqlalchemy import Column, String, event, select
 from slugify import slugify
 from sqlalchemy.orm import Session
+import re
+from backend.config import get_logger
+from backend.db.db import SessionLocal
+
+log = get_logger(__name__)
 
 
-class AutoSlugMixin:
+SLUG_MAX_LENGTH = 128
+
+
+class SlugMixin:
     """Mixin to automatically set up AutoSlug columns after mapping."""
 
-    @classmethod
-    def __declare_last__(cls):
-        for name, col in cls.__dict__.items():
-            if isinstance(col, AutoSlug):
-                col.setup(cls, name)
+    slug_target_col = "slug"
+    slug = Column(String, unique=True, nullable=True)
 
 
-class AutoSlug(Column):
-    """
-    SQLAlchemy Column that generates a unique slug automatically.
+# @event.listens_for(SessionLocal, "before_commit")
+# def update_before_commit(session: Session):
+#     """Update slugs for all new and modified items before commit."""
 
-    Parameters:
-        source: str or callable, field name or function/property that returns string to slugify
-        max_length: int, max length of slug
-        unique: bool, enforce uniqueness
-    """
+#     new_items = [obj for obj in session.new if isinstance(obj, SlugMixin)]
+#     dirty_items = [obj for obj in session.dirty if isinstance(obj, SlugMixin)]
 
-    inherit_cache = True
+#     all_items = new_items + dirty_items
 
-    def __init__(self, source, max_length=255, unique=True, **kwargs):
-        super().__init__(String(max_length), unique=unique, **kwargs)
-        if not callable(source) and not isinstance(source, str):
-            raise TypeError("source must be a field name or a callable")
-        self.source = source
-        self.max_length = max_length
-        self.unique = unique
+#     update_slugs(session, all_items)
 
-    def setup(self, model_cls, attr_name):
-        @event.listens_for(model_cls, "before_insert")
-        def receive_before_insert(mapper, connection, target):
-            value = self._get_source_value(target)
-            if value:
-                slug_value = self._generate_unique_slug(
-                    target, value, model_cls, attr_name
+
+def update_all_slugs(session: Session):
+    from backend.models import Service, Locality
+
+    all_items = []
+    for cls in [Service, Locality]:
+        items = session.execute(select(cls)).scalars().all()
+        session.query(cls).update({cls.slug: None})  # reset all slugs
+        all_items.extend(items)
+
+    session.flush()
+    log.debug("reset slugs, now updating...")
+
+    update_slugs(session, all_items)
+
+    session.commit()
+
+
+def update_slugs(session: Session, all_items: list[SlugMixin]):
+    """update slugs for the given items."""
+
+    log.debug(f"Updating slugs for {len(all_items)} items.")
+
+    if all_items:
+        slugs_map = {}
+
+        for item in all_items:
+            table = item.__table__
+
+            if table not in slugs_map:
+                slugs_map[table] = set(
+                    c[0] for c in session.execute(select(table.c.slug)).all()
                 )
-                setattr(target, attr_name, slug_value)
 
-        @event.listens_for(model_cls, "before_update")
-        def receive_before_update(mapper, connection, target):
-            value = self._get_source_value(target)
-            if value:
-                slug_value = self._generate_unique_slug(
-                    target, value, model_cls, attr_name
+            item_slug = str(item.slug or "")
+            to_slugify = getattr(item, item.slug_target_col)
+
+            if not to_slugify:
+                log.warning(
+                    f"Cannot generate slug for item {item} as source column '{item.slug_target_col}' is empty."
                 )
-                setattr(target, attr_name, slug_value)
+                continue
 
-    def _get_source_value(self, instance):
-        if callable(self.source):
-            return self.source(instance)
-        else:
-            return getattr(instance, self.source, None)
+            slug = slugify(to_slugify)[:SLUG_MAX_LENGTH]
+            if not item_slug.startswith(slug):  # only update if changed
+                base_slug = slug
+                i = 1
 
-    def _generate_unique_slug(self, instance, value, model_cls, attr_name):
-        base_slug = slugify(value)[: self.max_length]
-        if not self.unique:
-            return base_slug
+                while slug in slugs_map[table]:
+                    i += 1
+                    slug_candidate = f"{base_slug}-{i}"
+                    if len(slug_candidate) > SLUG_MAX_LENGTH:
+                        slug_candidate = (
+                            base_slug[: SLUG_MAX_LENGTH - len(f"-{i}")] + f"-{i}"
+                        )
+                    log.warning(
+                        f"Slug '{slug}' already exists in table '{table.name}', trying '{slug_candidate}'"
+                    )
+                    slug = slug_candidate
+                item.slug = slug
+                slugs_map[table].add(slug)
 
-        session = Session.object_session(instance)
-        if session is None:
-            return base_slug
+    else:
+        log.debug("No items to update slugs for.")
 
-        slug_candidate = base_slug
-        suffix = 1
 
-        while True:
-            stmt = select(model_cls).where(
-                getattr(model_cls, attr_name) == slug_candidate
-            )
-            if instance.__dict__.get("id") is not None:
-                stmt = stmt.where(model_cls.id != instance.id)
-            exists = session.execute(stmt).scalar()
-            if not exists:
-                break
+if __name__ == "__main__":
+    from backend.config import setup_logging
 
-            slug_candidate = f"{base_slug}-{suffix}"
-            if len(slug_candidate) > self.max_length:
-                slug_candidate = (
-                    slug_candidate[: self.max_length - len(f"-{suffix}")] + f"-{suffix}"
-                )
-            suffix += 1
-
-        return slug_candidate
+    setup_logging()
+    # event.remove(SessionLocal, "before_commit", update_before_commit)
+    with SessionLocal() as db:
+        log.info("Updating slugs for all models...")
+        update_all_slugs(db)
+    # event.listen(SessionLocal, "before_commit", update_before_commit)

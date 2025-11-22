@@ -1,5 +1,4 @@
 import argparse
-import asyncio
 from backend.config import get_logger, setup_logging
 from backend.tasks.datasources import import_datasource
 from backend.deps import STATIC_DATA_DIR
@@ -18,4 +17,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
     id = args.id
     skip_checks = args.skip_checks
-    asyncio.run(import_datasource(id, STATIC_DATA_DIR, skip_checks=skip_checks))
+    import_datasource(id, STATIC_DATA_DIR, skip_checks=skip_checks)

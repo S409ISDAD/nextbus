@@ -42,7 +42,7 @@ MANUFACTURERS = [
     "Wright ",
     "Scania ",
     "VDL ",
-    "Optare ",
+    # "Optare ",
     "ADL/TransBus ",
     "Dennis Trident Alexander ",  # wtf
 ]
@@ -199,9 +199,7 @@ def best_bus(buses: list[dict]) -> dict | None:
     return max(valid, key=lambda b: b["progress"]["sequence"])
 
 
-def fetch_buses(
-    services, stop_id, times, r: Redis, use_db=False, is_tomorrow=False
-) -> list[TrackedBus]:
+def fetch_buses(services, stop_id, times, r: Redis) -> list[TrackedBus]:
     with SessionLocal() as db:
         active = fetch_active_buses(services, r)
 
@@ -296,10 +294,25 @@ def fetch_buses(
                     final_buses.append(build_scheduled(time, r))
 
         final_buses = [bus for bus in final_buses if bus is not None]
-        for b in final_buses:
-            if isinstance(b, TrackedBus):
-                b.journey = None  # to save data transfer
-        return final_buses
+
+        final_map = {}
+
+        for sb in [b for b in final_buses if isinstance(b, ScheduledBus)]:
+            key = (sb.line, sb.started, sb.scheduled.replace(second=0, microsecond=0))
+            log.debug(f"scheduled bus key: {key}")
+            final_map[key] = sb
+
+        for tb in [b for b in final_buses if isinstance(b, TrackedBus)]:
+            key = (
+                tb.service.line_name,
+                tb.started,
+                tb.scheduled.replace(second=0, microsecond=0),
+            )
+            log.debug(f"tracked bus key: {key}")
+            tb.journey = None  # to save data transfer
+            final_map[key] = tb
+
+        return list(final_map.values())
 
 
 def fetch_buses_live(services, stop_id, r: Redis) -> list[TrackedBus]:

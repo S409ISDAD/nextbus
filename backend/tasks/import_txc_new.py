@@ -17,6 +17,7 @@ from sqlalchemy_searchable import sync_trigger
 
 from titlecase import titlecase
 
+from backend.autoslug import update_slugs
 from backend.config import get_logger, setup_logging
 from backend.db.db import SessionLocal, engine
 from backend.deps import LONDON
@@ -1201,6 +1202,7 @@ class TXCImporter:
             if txc_service.mode:
                 service.mode = txc_service.mode
 
+            update_slugs(self.db, [service])
             self.db.add(service)
             self.db.flush()
 
@@ -1552,6 +1554,7 @@ class TXCImporter:
             service.do_stopusages(db=self.db)
             service.do_geometry(db=self.db)
             self.db.add(service)
+
         self.db.commit()
 
     def handle_txc_file(self, file: Path):

@@ -33,7 +33,7 @@ from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import relationship, Session, joinedload, deferred, aliased
 from sqlalchemy_searchable import make_searchable
 from sqlalchemy_utils.types import TSVectorType
-from backend.autoslug import AutoSlugMixin
+from backend.autoslug import SlugMixin
 from backend.config import API_BASE, get_logger
 from backend.db.db import SessionLocal
 from backend.deps import LONDON
@@ -203,6 +203,7 @@ class DataSource(Base):
     url = Column(String, nullable=True, doc="parent url for stagecoach/passenger etc")
     search = Column(String, nullable=True, doc="Search term for BODS")
     noc = Column(String, nullable=True, doc="noc for searching BODS")
+    disabled = Column(Boolean, nullable=False, default=False)
 
     services = relationship(
         "Service",
@@ -296,13 +297,14 @@ class District(Base):
     localities = relationship("Locality", back_populates="district")
 
 
-class Locality(Base, AutoSlugMixin):
+class Locality(Base, SlugMixin):
     __tablename__ = "locality"
+
+    slug_target_col = "get_full_name"
 
     id = Column(String, primary_key=True)
     name = Column(String, nullable=False)
     qualifier_name = Column(String, nullable=True)
-    # slug = AutoSlug(source="get_full_name", max_length=100, unique=True, nullable=False)
     created_at = Column(DateTime(timezone=True), nullable=True)
     modified_at = Column(DateTime(timezone=True), nullable=True)
     admin_area_id = Column(Integer, ForeignKey("admin_area.id"), nullable=True)
@@ -658,13 +660,40 @@ class Operator(Base):
     noc = Column(String, nullable=False, unique=True)
     name = Column(String, nullable=False)
     mode = Column(String, nullable=True)
+    slug = Column(String, nullable=True, unique=True)
     services = relationship(
         "Service",
         secondary=service_operator_table,
         back_populates="operators",
     )
+    codes = relationship(
+        "OperatorCode",
+        back_populates="operator",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
 
     search_vector = deferred(Column(TSVectorType("name", "noc")))
+
+
+class OperatorCode(Base):
+    __tablename__ = "operator_code"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    operator_id = Column(
+        Integer, ForeignKey("operator.id", ondelete="CASCADE"), nullable=False
+    )
+    code = Column(String, nullable=False, index=True)
+
+    operator = relationship("Operator", back_populates="codes")
+
+    __table_args__ = (
+        UniqueConstraint(
+            "operator_id",
+            "code",
+            name="uq_operator_code_per_operator",
+        ),
+    )
 
 
 class BankHoliday(Base):
@@ -872,12 +901,15 @@ class CalendarException(Base):
     )
 
 
-class Service(Base, AutoSlugMixin):
+class Service(Base, SlugMixin):
     """
     The top level representation of a bus service, containing all the generic information. can have multiple route objects, being timetable revisions
     """
 
     __tablename__ = "service"
+
+    slug_target_col = "get_slug_base"
+
     id = Column(Integer, primary_key=True, autoincrement=True)
     service_code = Column(String, nullable=False, index=True)
     bt_service_id = Column(Integer, nullable=True, index=True)
@@ -889,7 +921,6 @@ class Service(Base, AutoSlugMixin):
     line_brand = Column(String, nullable=True)
     description = Column(String)
     vias = Column(String, nullable=True)
-    # slug = AutoSlug(source="get_full_name", max_length=100, unique=True, nullable=False)
 
     mode = Column(String, nullable=True, index=True)
 
@@ -945,6 +976,12 @@ class Service(Base, AutoSlugMixin):
     @property
     def get_full_name(self):
         return f"{self.line_name} {self.description}".strip()
+
+    @property
+    def get_slug_base(self):
+        if self.vias:
+            return f"{self.line_name} {self.description} via {self.vias}".strip()
+        return self.get_full_name
 
     def get_correct_timetables(
         self, now_dt: datetime | None = None

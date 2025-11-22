@@ -66,6 +66,8 @@ def get_scheduled(stop_id: str, redis, services=None):
                             dayshift = 1
                         scheduled_times.append(
                             {
+                                "line_name": line_name,
+                                "dest": st.journey.headsign,
                                 "trip_id": trip_id,
                                 "journey_id": journey.id,
                                 "dayshift": dayshift,

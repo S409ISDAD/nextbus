@@ -25,6 +25,16 @@ def import_datasource(id, folder: Path, skip_checks=False) -> "Statistics":
             logs.append((datetime.now(tz=LONDON), f"No DataSource with id {id} found."))
             return stats
 
+        if datasource.disabled:
+            log.debug(f"DataSource {name} is disabled, skipping import.")
+            logs.append(
+                (
+                    datetime.now(tz=LONDON),
+                    f"DataSource {name} is disabled, skipping import.",
+                )
+            )
+            return stats
+
         logs.append(
             (
                 datetime.now(tz=LONDON),
