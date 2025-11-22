@@ -210,7 +210,7 @@ const Home: React.FC = () => {
                                 </div>
                             ) : (
                                 <p className="max-w-lg m-2 text-center text-neutral-400">
-                                    Real-time bus tracking across the UK, with
+                                    real-time bus tracking across the UK, with
                                     smart predictions to make taking the bus
                                     easier, faster, and more reliable.
                                 </p>
