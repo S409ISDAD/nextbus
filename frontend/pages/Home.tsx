@@ -361,7 +361,7 @@ const Home: React.FC = () => {
                         </div>
                         <div className="flex flex-row items-center justify-center gap-2">
                             <p className="text-center text-neutral-400">
-                                veg mode
+                                enthusiast mode
                             </p>
 
                             <Switch
