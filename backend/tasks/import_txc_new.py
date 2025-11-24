@@ -159,7 +159,11 @@ class TXCOperator:
 
     @property
     def name(self):
-        return self.trading_name or self.operator_short_name or self.name_on_licence
+        opname = self.trading_name or self.operator_short_name or self.name_on_licence
+
+        if opname == "B&H":
+            return "Brighton & Hove"
+        return opname
 
     def get_noc(self):
         """
