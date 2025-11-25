@@ -136,6 +136,7 @@ def handle_passenger(
         .filter(
             DataSourceVersion.id.notin_(current_ids),
             DataSourceVersion.data_source_id == datasource.id,
+            DataSourceVersion.end_date < datetime.now().date(),
         )
         .all()
     )
