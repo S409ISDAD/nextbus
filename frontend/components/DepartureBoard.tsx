@@ -215,7 +215,17 @@ function BusCard({
                                         </span>
                                     )}
                                     {!bus.started && (
-                                        <span className="text-sm font-medium opacity-70">
+                                        <span
+                                            className="text-sm font-medium opacity-70"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                isTrackedBus(bus) &&
+                                                bus.status == "on_prev_trip"
+                                                    ? navigate(
+                                                          `/buses/${bus.id}`
+                                                      )
+                                                    : null;
+                                            }}>
                                             {bus.status === "not_tracking"
                                                 ? "Upcoming"
                                                 : bus.status === "waiting"
