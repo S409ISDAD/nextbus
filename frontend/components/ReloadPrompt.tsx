@@ -10,7 +10,7 @@ export default function useReloadPrompt() {
 
     useEffect(() => {
         if (offlineReady) {
-            toast.success("App initialised sucessfully", {
+            toast.success("App initialised successfully", {
                 duration: 4000,
             });
         }

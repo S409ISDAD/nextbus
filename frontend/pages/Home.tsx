@@ -175,12 +175,12 @@ const Home: React.FC = () => {
                                     beta
                                 </h3>
                             </div>
-                            <h1 className="text-2xl font-bold text-center sm:text-4xl">
+                            <h2 className="text-2xl font-bold text-center sm:text-4xl">
                                 track your bus and{" "}
                                 <span className="underline text-link">
                                     skip the guesswork
                                 </span>
-                            </h1>
+                            </h2>
                             {showStop && closestStop ? (
                                 <div className="flex flex-col items-center gap-2 p-3 bg-neutral-800 rounded-3xl">
                                     <p className="px-5 font-semibold text-center text-neutral-300 text">
