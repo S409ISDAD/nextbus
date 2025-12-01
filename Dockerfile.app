@@ -1,4 +1,4 @@
-FROM python:3.13
+FROM python:3.14
 
 # Install dependencies
 RUN apt-get update && \
