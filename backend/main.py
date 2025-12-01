@@ -38,6 +38,7 @@ from backend.deps import (
 )
 from backend.websockets.routes import ws_router
 from backend.deps import get_logger
+from backend.db import events  # Ensure event listeners are registered  # noqa: F401
 
 setup_logging()
 

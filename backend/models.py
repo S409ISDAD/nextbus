@@ -361,14 +361,14 @@ class Locality(Base, SlugMixin):
 class Stop(Base):
     __tablename__ = "stop"
 
-    atco_code = Column(String, primary_key=True, index=True)  # atco_code
-    naptan_code = Column(String, nullable=True)  # naptan_code
-    common_name = Column(String, nullable=False)  # stop_name
-    common_short_name = Column(String, nullable=True)  # stop_short_name
-    landmark = Column(String, nullable=True)  # stop_landmark
-    street = Column(String, nullable=True)  # stop_street
-    crossing = Column(String, nullable=True)  # stop_crossing
-    indicator = Column(String, nullable=True)  # stop_indicator
+    atco_code = Column(String, primary_key=True, index=True)
+    naptan_code = Column(String, nullable=True)
+    common_name = Column(String, nullable=False)
+    common_short_name = Column(String, nullable=True)
+    landmark = Column(String, nullable=True)
+    street = Column(String, nullable=True)
+    crossing = Column(String, nullable=True)
+    indicator = Column(String, nullable=True)
     point = Column(
         Geometry(geometry_type="POINT"), nullable=False
     )  # PostGIS point for (lat, lon)
@@ -402,9 +402,12 @@ class Stop(Base):
         "Service", secondary="service_stop_usage", back_populates="stops"
     )
 
+    search_name = Column(String, nullable=False, index=True)
+
     search_vector = deferred(
         Column(
             TSVectorType(
+                "search_name",
                 "common_name",
                 "common_short_name",
                 "landmark",
@@ -412,16 +415,22 @@ class Stop(Base):
                 "suburb",
                 "town",
                 weights={
-                    "common_name": "A",
-                    "common_short_name": "A",
-                    "landmark": "B",
-                    "street": "B",
-                    "suburb": "C",
-                    "town": "C",
+                    "search_name": "A",
+                    "common_name": "B",
+                    "common_short_name": "B",
+                    "landmark": "C",
+                    "street": "C",
+                    "suburb": "D",
+                    "town": "D",
                 },
             ),
         )
     )
+
+    def compute_search_name(self):
+        search_name = self.name.strip()
+
+        return search_name
 
     @property
     def name(self):

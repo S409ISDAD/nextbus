@@ -4,6 +4,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy_searchable import sync_trigger
 
+
 load_dotenv()
 
 POSTGRES_USER = os.getenv("POSTGRES_USER")
@@ -45,6 +46,7 @@ def sync_search_vectors():
             "stop",
             "search_vector",
             [
+                "search_name",
                 "common_name",
                 "common_short_name",
                 "landmark",

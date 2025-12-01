@@ -9,7 +9,7 @@ const SearchPage: React.FC = () => {
     const navigate = useNavigate();
     const [results, setResults] = React.useState<Search>();
     const [loading, setLoading] = React.useState(false);
-    const [tab, setTab] = React.useState<"services" | "operators" | "places">(
+    const [tab, setTab] = React.useState<"services" | "operators" | "stops">(
         "services"
     );
     const { query } = useParams();
@@ -75,13 +75,13 @@ const SearchPage: React.FC = () => {
                 </button> */}
                 <button
                     className={`px-4 py-2 text-lg font-semibold rounded-xl transition-all duration-150 cursor-pointer ${
-                        tab === "places"
+                        tab === "stops"
                             ? " bg-neutral-800 text-primary-400 scale-105"
                             : " bg-neutral-900 text-neutral-400 hover:text-primary-300"
                     }`}
-                    onClick={() => setTab("places")}
-                    aria-selected={tab === "places"}>
-                    {results?.localities.length} Places
+                    onClick={() => setTab("stops")}
+                    aria-selected={tab === "stops"}>
+                    {results?.stops.length} Stops
                 </button>
             </div>
             {loading && (
@@ -102,11 +102,11 @@ const SearchPage: React.FC = () => {
                                     {results?.services.map((service, idx) => (
                                         <>
                                             <div className="flex items-center gap-2 mb-0.5">
-                                                <div className="flex-grow border-t border-dashed border-neutral-600"></div>
+                                                <div className="border-t border-dashed grow border-neutral-600"></div>
                                                 <span className="text-[10px] text-neutral-600">
                                                     nextbus
                                                 </span>
-                                                <div className="flex-grow border-t border-dashed border-neutral-600"></div>
+                                                <div className="border-t border-dashed grow border-neutral-600"></div>
                                             </div>
                                             <div
                                                 key={service.service_id}
@@ -144,11 +144,11 @@ const SearchPage: React.FC = () => {
                                             {idx ===
                                                 results.services.length - 1 && (
                                                 <div className="flex items-center gap-2 mb-0.5">
-                                                    <div className="flex-grow border-t border-dashed border-neutral-600"></div>
+                                                    <div className="border-t border-dashed grow border-neutral-600"></div>
                                                     <span className="text-[10px] text-neutral-600">
                                                         nextbus
                                                     </span>
-                                                    <div className="flex-grow border-t border-dashed border-neutral-600"></div>
+                                                    <div className="border-t border-dashed grow border-neutral-600"></div>
                                                 </div>
                                             )}
                                         </>
@@ -183,25 +183,25 @@ const SearchPage: React.FC = () => {
                             )}
                         </div>
                     )}
-                    {tab == "places" && (
+                    {tab == "stops" && (
                         <div className="flex flex-col">
-                            {results?.localities.length === 0 ? (
+                            {results?.stops.length === 0 ? (
                                 <span className="w-full mb-5 text-sm text-center text-gray-400">
-                                    No places found.
+                                    No stops found.
                                 </span>
                             ) : (
-                                <div className="gap-4 mb-8 columns-2 sm:columns-3">
-                                    {results?.localities.map((locality) => (
+                                <div className="gap-4 mb-8 columns-2 sm:columns-2">
+                                    {results?.stops.map((stop) => (
                                         <div
-                                            key={locality.id}
-                                            className="flex flex-col mb-2 cursor-pointer break-inside-avoid"
+                                            key={stop.atco_code}
+                                            className="flex flex-col mb-4 cursor-pointer w-fit break-inside-avoid"
                                             onClick={() =>
                                                 navigate(
-                                                    `/locality/${locality.id}`
+                                                    `/buses/stops/${stop.atco_code}`
                                                 )
                                             }>
                                             <span className="underline text-link">
-                                                {locality.name}
+                                                {stop.long_name}
                                             </span>
                                         </div>
                                     ))}

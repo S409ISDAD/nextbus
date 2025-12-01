@@ -116,6 +116,32 @@ def search_db(query: str, db: Session, limit: int = 20):
 
     results["services"].sort(key=lambda x: x["rank"], reverse=True)
 
+    stop_query = (
+        search(select(Stop), query, sort=True)
+        .add_columns(
+            func.ts_rank_cd(Stop.search_vector, func.websearch_to_tsquery(query)).label(
+                "rank"
+            )
+        )
+        .filter(Stop.stop_type.in_(["BCE", "BST", "BCQ", "BCS", "BCT"]))
+        .limit(20)
+    )
+
+    stops_with_rank = db.execute(stop_query).all()
+    stops = []
+    for stop, rank in stops_with_rank:
+        stop.rank = rank or 0.0
+        json_stop = {
+            "atco_code": stop.atco_code,
+            "long_name": stop.long_name,
+            "rank": stop.rank,
+        }
+        stops.append(json_stop)
+
+    stops.sort(key=lambda x: x["rank"], reverse=True)
+
+    results["stops"] = stops
+
     for operator in results["operators"]:
         del operator.services
 
@@ -148,6 +174,8 @@ if __name__ == "__main__":
                         f"- {item['line_name']} | {item['description']} (rank: {item['rank']})"
                     )
                 elif isinstance(item, Stop):
-                    print(f"- {item.name} (ID: {item.atco_code})")
+                    print(
+                        f"- {item.long_name} (ID: {item.atco_code}, rank: {item.rank})"
+                    )
                 elif isinstance(item, Locality):
                     print(f"- {item.get_full_name}")

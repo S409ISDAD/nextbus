@@ -1,7 +1,13 @@
 export interface Search {
     operators: OperatorResult[];
     localities: LocalityResult[];
+    stops: StopResult[];
     services: ServiceResult[];
+}
+
+export interface StopResult {
+    atco_code: string;
+    long_name: string;
 }
 
 export interface OperatorResult {
