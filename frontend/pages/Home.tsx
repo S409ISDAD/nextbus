@@ -83,37 +83,37 @@ const Home: React.FC = () => {
     // };
 
     useEffect(() => {
-        const getClosest = async () => {
-            try {
-                // console.log(isGeolocationAvailable, isGeolocationEnabled);
-                // if (!isGeolocationAvailable || !isGeolocationEnabled) return;
+        // const getClosest = async () => {
+        //     try {
+        //         // console.log(isGeolocationAvailable, isGeolocationEnabled);
+        //         // if (!isGeolocationAvailable || !isGeolocationEnabled) return;
 
-                const pos = await getCurrentPosition();
+        //         const pos = await getCurrentPosition();
 
-                const closestStops = await getClosestStops([
-                    pos.coords.latitude,
-                    pos.coords.longitude,
-                ]);
-                // const closestStop = await getClosestStop(fakeCoords);
-                if (closestStops) {
-                    const closestStop = closestStops[0];
-                    console.log(
-                        "closest stop",
-                        closestStop,
-                        "distance",
-                        closestStop.dist
-                    );
-                    if (closestStop.dist < 10 && closestStop.stop_id) {
-                        // 10 meters
-                        console.log("stop is close enough, showing popup");
-                        setClosestStop(closestStop.stop_id);
-                        setShowStop(true);
-                    }
-                }
-            } catch (error) {
-                console.log("uh oh", error);
-            }
-        };
+        //         const closestStops = await getClosestStops([
+        //             pos.coords.latitude,
+        //             pos.coords.longitude,
+        //         ]);
+        //         // const closestStop = await getClosestStop(fakeCoords);
+        //         if (closestStops) {
+        //             const closestStop = closestStops[0];
+        //             console.log(
+        //                 "closest stop",
+        //                 closestStop,
+        //                 "distance",
+        //                 closestStop.dist
+        //             );
+        //             if (closestStop.dist < 10 && closestStop.stop_id) {
+        //                 // 10 meters
+        //                 console.log("stop is close enough, showing popup");
+        //                 setClosestStop(closestStop.stop_id);
+        //                 setShowStop(true);
+        //             }
+        //         }
+        //     } catch (error) {
+        //         console.log("uh oh", error);
+        //     }
+        // };
         const fetchStats = async () => {
             try {
                 const stats = await getStats();
