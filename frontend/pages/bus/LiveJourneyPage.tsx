@@ -276,6 +276,8 @@ const LiveJourneyPage: React.FC = () => {
 
     const navigate = useNavigate();
 
+    const doPredictions = false;
+
     const [bus, setBus] = useState<Bus>();
     const [predictions, setPredictions] = useState<Prediction[]>();
     const [sequence, setSeq] = useState<number>(0);
@@ -630,7 +632,7 @@ const LiveJourneyPage: React.FC = () => {
                                 ))}
                             </div>
                             <div className="flex flex-col gap-1">
-                                {liveJourney?.stops.map((stop) => (
+                                {liveJourney?.stops.map((stop, idx) => (
                                     <div
                                         key={stop.stop_id}
                                         className="flex flex-row items-center">
@@ -648,7 +650,12 @@ const LiveJourneyPage: React.FC = () => {
                                             }}>
                                             <div
                                                 className={`flex items-stretch flex-col ${
-                                                    stop.departed
+                                                    (doPredictions
+                                                        ? stop.departed
+                                                        : (bus.progress
+                                                              ?.sequence ??
+                                                              -1) >= idx) &&
+                                                    bus.started
                                                         ? "opacity-40"
                                                         : ""
                                                 }`}>

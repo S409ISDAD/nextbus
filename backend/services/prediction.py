@@ -6,8 +6,8 @@ from datetime import timedelta
 from dateutil.parser import isoparse
 from geopy.distance import geodesic
 
-from backend.deps import LONDON
-from backend.deps import UTC
+from backend.deps import LONDON, UTC
+from backend.config import PREDICTION_DISABLED
 from backend.schemas.journey import Journey
 from backend.schemas.prediction import Prediction
 from backend.schemas.stop import StopTime
@@ -124,6 +124,8 @@ def predict_future(
     ahead: int,
     r,
 ) -> list[Prediction]:
+    if PREDICTION_DISABLED:
+        return []
     current_time = dt.now(tz=UTC)
 
     stops = journey.stops
@@ -135,7 +137,7 @@ def predict_future(
 
     ideal_age = 45  # seconds
     sensitivity = 0.2  # multiplier for adjustment
-    max_offset = 20  # cap adjustment to ±20s
+    max_offset = 20  # cap adjustment to +-20s
 
     for seconds_ahead in range(ahead + 1):
         future_time = current_time + timedelta(seconds=seconds_ahead)

@@ -40,7 +40,7 @@ export default defineConfig({
       navigateFallbackDenylist: [
         /^\/api(\/.*)?$/,
         /^\/ws(\/.*)?$/,
-        /^\/robots\.txt$/,
+        /^\/robots\.txt$/i,
       ],
       clientsClaim: true,
       skipWaiting: true,
