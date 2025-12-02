@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 // import { faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
 // import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Card } from "../components/ui/Card";
-import { getCurrentPosition } from "../utils/locations";
+// import { getCurrentPosition } from "../utils/locations";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
     faBus,
@@ -13,7 +13,7 @@ import {
     faTrainSubway,
     faWarning,
 } from "@fortawesome/free-solid-svg-icons";
-import { getClosestStops } from "../utils/closestStop";
+// import { getClosestStops } from "../utils/closestStop";
 import { useNavigate } from "react-router";
 import SearchBar from "../components/SearchBar";
 import { Switch } from "@headlessui/react";
@@ -32,7 +32,8 @@ import { useLocalSetting } from "../src/settings.ts";
 const Home: React.FC = () => {
     // const navigate = useNavigate();
 
-    const [closestStop, setClosestStop] = React.useState<string | null>(null);
+    // const [closestStop, setClosestStop] = React.useState<string | null>(null);
+    const [closestStop] = React.useState<string | null>(null);
     const [showStop, setShowStop] = React.useState(false);
     const [stats, setStats] = useState<Stats>();
     // const [destinations, setDestinations] = useState<Locality[]>([]);
