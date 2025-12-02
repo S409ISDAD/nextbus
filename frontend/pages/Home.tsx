@@ -125,7 +125,7 @@ const Home: React.FC = () => {
             }
         };
 
-        getClosest();
+        // getClosest();
         // fetchLocalities();
         fetchStats();
     }, [coords]);
