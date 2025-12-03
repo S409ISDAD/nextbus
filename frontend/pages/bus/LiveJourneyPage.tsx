@@ -424,8 +424,12 @@ const LiveJourneyPage: React.FC = () => {
 
                 if (bus_response) {
                     setBus(bus_response);
-                    // setPredictions([]);
-                    setPredictions(bus_response.predictions);
+
+                    if (doPredictions) {
+                        setPredictions(bus_response.predictions);
+                    } else {
+                        setPredictions([]);
+                    }
                     setLiveJourney(bus_response.journey);
                     document.title = `${bus_response.journey.route_name} to ${bus_response.journey.destination} - ${bus_response.vehicle.reg}`;
                     setMsg("");
@@ -709,7 +713,12 @@ const LiveJourneyPage: React.FC = () => {
                                                     )}
                                                 </div> */}
                                                 <div className="flex flex-row gap-6 font-bold text-purple-500">
-                                                    {stop.departed ? (
+                                                    {(doPredictions
+                                                        ? stop.departed
+                                                        : (bus.progress
+                                                              ?.sequence ??
+                                                              -1) >= idx) &&
+                                                    bus.started ? (
                                                         <div className="flex items-center gap-2">
                                                             <FontAwesomeIcon
                                                                 icon={
