@@ -200,12 +200,18 @@ def best_bus(buses: list[dict]) -> dict | None:
 
 
 def fetch_buses(services, stop_id, times, r: Redis) -> list[TrackedBus]:
-    with SessionLocal() as db:
-        active = fetch_active_buses(services, r)
+    with SessionLocal() as db:  # open a database session
+        active = fetch_active_buses(
+            services, r
+        )  # fetch all live buses for the given services
 
-        bustimes_times = stops.get_times(stop_id, r)
+        bustimes_times = stops.get_times(
+            stop_id, r
+        )  # fetch all scheduled times for the stop from bustimes.org
 
-        active_by_trip: dict[int, list[dict]] = {}
+        active_by_trip: dict[int, list[dict]] = (
+            {}
+        )  # deal with multiple buses on same trip
         if active:
             for bus in active:
                 trip_id = bus.get("trip_id")

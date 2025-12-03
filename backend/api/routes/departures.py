@@ -22,11 +22,15 @@ def departures_scheduled(
     request: Request, stop_id: str, redis=Depends(get_redis), db=Depends(get_db)
 ):
     try:
-        redis.sadd("total_stops", stop_id)
-        times = get_scheduled(stop_id, redis)
+        redis.sadd("total_stops", stop_id)  # track number of stops requested
+        times = get_scheduled(
+            stop_id, redis
+        )  # get scheduled times from helper function
 
+        # generate list of all StopTime object IDs to preload
         stop_time_ids = [t["st"].id for t in times if t.get("source") == "db"]
 
+        # preload all StopTime objects beforehand to speed up processing
         preloaded = (
             db.query(StopTime)
             .filter(StopTime.id.in_(stop_time_ids))
@@ -42,12 +46,14 @@ def departures_scheduled(
             .all()
         )
 
-        stop_time_map = {st.id: st for st in preloaded}
+        stop_time_map = {st.id: st for st in preloaded}  # map of StopTime ID to object
 
         buses = []
         with time_taken("building scheduled buses"):
             for _time in times:
+                # loop through each scheduled time and build bus object
                 if _time.get("source") == "db":
+                    # if the departure came from the database, use the StopTime object to build
                     buses.append(
                         bus.build_scheduled_db(
                             time=_time,
@@ -59,14 +65,19 @@ def departures_scheduled(
                         )
                     )
                 else:
+                    # otherwise, it came from bustimes.org, build normally
                     buses.append(bus.build_scheduled(_time, redis))
 
+        # filter out any None values (failed/not included buses)
         buses = [bus for bus in buses if bus is not None]
 
         log.debug(len([b for b in buses if b.source == "db"]))
 
         current_time = dt.now(tz=UTC).isoformat()
-        return {"buses": buses, "timestamp": current_time}
+        return {
+            "buses": buses,
+            "timestamp": current_time,
+        }  # return buses with current timestamp
     except Exception as e:
         log.error(f"Unexpected error: {e}")
         raise HTTPException(500, detail="An unexpected error occured")
