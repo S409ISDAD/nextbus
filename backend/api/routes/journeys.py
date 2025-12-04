@@ -13,6 +13,7 @@ from sqlalchemy.orm import selectinload, load_only
 from backend.deps import limiter
 from backend.deps import get_logger
 from backend.utils import blocks
+from backend.utils.route_dist import compute_distance
 
 router = APIRouter()
 
@@ -27,6 +28,24 @@ def get_trip(request: Request, trip_id: int, redis=Depends(get_redis)):
         trip = journeys.get_trip(trip_id, 0, redis)
 
         return trip
+    except Exception as e:
+        log.error(f"Unexpected error: {e}")
+        raise HTTPException(500, detail="An unexpected error occured")
+
+
+@router.get("/distance")
+@limiter.limit("20/minute")
+def get_distance(
+    request: Request,
+    trip_id: int,
+    atco_on: str,
+    atco_off: str,
+    redis=Depends(get_redis),
+):
+    try:
+        distance = compute_distance(atco_on, atco_off, trip_id, redis)
+
+        return {"distance_meters": distance}
     except Exception as e:
         log.error(f"Unexpected error: {e}")
         raise HTTPException(500, detail="An unexpected error occured")
