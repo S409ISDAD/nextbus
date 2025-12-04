@@ -220,7 +220,9 @@ def fetch_buses(services, stop_id, times, r: Redis) -> list[TrackedBus]:
             log.debug("No active buses")
             active = []
 
-        bus_seen_counts = {bus["id"]: 0 for bus in active} if active else {}
+        bus_seen_counts = (
+            {bus["id"]: 0 for bus in active} if active else {}
+        )  # keep track of how many times we've seen each bus
 
         final_buses = []
 
@@ -232,10 +234,13 @@ def fetch_buses(services, stop_id, times, r: Redis) -> list[TrackedBus]:
         ]
 
         for time in not_included:
-            # add buses that are late, and the scheduled departure time has passed
+            # add buses that are late, and so the scheduled departure time has passed; not included in the main list of times
+            # e.g. these buses only appear in the active buses list from bustimes.org
             buses = active_by_trip.get(time.get("trip_id"), [])
 
-            journey = match_trip_journey(db, time.get("trip_id"), r)
+            journey = match_trip_journey(
+                db, time.get("trip_id"), r
+            )  # match bustime.org trip to database journey
             journey_id = journey.id if journey else None
             final_buses.append(
                 build_bus_candidates(
@@ -245,9 +250,10 @@ def fetch_buses(services, stop_id, times, r: Redis) -> list[TrackedBus]:
                     journey_id,
                     "api",
                     bus_seen_counts,
-                )
+                )  # handle multiple buses on same trip
             )
 
+        # preload all StopTime objects beforehand to speed up processing
         stop_time_ids = [t["st"].id for t in times if t.get("source") == "db"]
 
         preloaded = (
@@ -274,7 +280,9 @@ def fetch_buses(services, stop_id, times, r: Redis) -> list[TrackedBus]:
             matched_buses = active_by_trip.get(trip_id, [])
             if matched_buses:
                 for bus in matched_buses:
-                    bus_seen_counts[bus["id"]] += 1
+                    bus_seen_counts[
+                        bus["id"]
+                    ] += 1  # keep track of how many times we've seen each bus
                 final_buses.append(
                     build_bus_candidates(
                         matched_buses,
@@ -283,7 +291,7 @@ def fetch_buses(services, stop_id, times, r: Redis) -> list[TrackedBus]:
                         journey_id,
                         source,
                         bus_seen_counts,
-                    )
+                    )  #
                 )
             else:
                 if time.get("source") == "db":
@@ -294,10 +302,10 @@ def fetch_buses(services, stop_id, times, r: Redis) -> list[TrackedBus]:
                             st=time.get("st", None),
                             st_map=stop_time_map,
                             r=r,
-                        )
+                        )  # handle multiple buses on same trip
                     )
                 else:
-                    final_buses.append(build_scheduled(time, r))
+                    final_buses.append(build_scheduled(time, r))  # scheduled from api
 
         final_buses = [bus for bus in final_buses if bus is not None]
 
