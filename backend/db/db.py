@@ -39,45 +39,61 @@ def get_db():
         db.close()
 
 
+def sync_stop_sv(conn):
+    sync_trigger(
+        conn,
+        "stop",
+        "search_vector",
+        [
+            "search_name",
+            "common_name",
+            "common_short_name",
+            "landmark",
+            "street",
+            "suburb",
+            "town",
+        ],
+    )
+
+
+def sync_service_sv(conn):
+    sync_trigger(
+        conn,
+        "service",
+        "search_vector",
+        [
+            "line_name",
+            "line_brand",
+            "description",
+            "vias",
+        ],
+    )
+
+
+def sync_operator_sv(conn):
+    sync_trigger(
+        conn,
+        "operator",
+        "search_vector",
+        ["name", "noc"],
+    )
+
+
+def sync_locality_sv(conn):
+    sync_trigger(
+        conn,
+        "locality",
+        "search_vector",
+        [
+            "name",
+            "qualifier_name",
+        ],
+    )
+
+
 def sync_search_vectors():
     with engine.begin() as conn:
-        sync_trigger(
-            conn,
-            "stop",
-            "search_vector",
-            [
-                "search_name",
-                "common_name",
-                "common_short_name",
-                "landmark",
-                "street",
-                "suburb",
-                "town",
-            ],
-        )
-        sync_trigger(
-            conn,
-            "service",
-            "search_vector",
-            [
-                "line_name",
-                "line_brand",
-                "description",
-                "vias",
-            ],
-        )
-        sync_trigger(
-            conn,
-            "operator",
-            "search_vector",
-            ["name", "noc"],
-        )
-        sync_trigger(
-            conn,
-            "locality",
-            "search_vector",
-            [
-                "name",
-                "qualifier_name",
-            ],
-        )
+        sync_stop_sv(conn)
+        sync_service_sv(conn)
+        sync_operator_sv(conn)
+        sync_locality_sv(conn)

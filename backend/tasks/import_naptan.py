@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy_searchable import sync_trigger
 
 from backend.config import get_logger, setup_logging
-from backend.db.db import SessionLocal
+from backend.db.db import SessionLocal, sync_stop_sv
 from backend.db.db import engine
 from backend.deps import LONDON
 from backend.models import (
@@ -103,6 +103,7 @@ def get_stop(element, atco_code):
         "naptan_code": naptan_code,
         "bearing": bearing,
         "point": point,
+        "search_name": "",
     }
 
     for xml_path, attr in stop_mapping:
@@ -186,6 +187,8 @@ def handle_stop_point(element: ET.Element):
     stop["created_at"] = created_at
     stop["revision_number"] = revision_number
 
+    stop["search_name"] = ""
+
     for stop_area_ref in element.findall("StopAreas/StopAreaRef"):
         if stop_area_ref.attrib.get("Status") == "active":
             stop["stop_area_id"] = stop_area_ref.text
@@ -259,6 +262,7 @@ def create_or_update(db: Session, no_update: bool):
                     "modified_at",
                     "created_at",
                     "revision_number",
+                    "search_name",
                 ],
             )
 
@@ -266,14 +270,7 @@ def create_or_update(db: Session, no_update: bool):
 def import_naptan_data(file_path: Path, no_update=False):
     log.debug("Importing NAPTAN data...")
 
-    global \
-        new_stops, \
-        existing_stop_ids, \
-        stop_area_ids, \
-        new_stop_areas, \
-        admin_areas, \
-        localities, \
-        localities_not_exist
+    global new_stops, existing_stop_ids, stop_area_ids, new_stop_areas, admin_areas, localities, localities_not_exist
     iterator = ET.iterparse(file_path, events=("start", "end"))
     with SessionLocal() as db:
         try:
@@ -296,21 +293,7 @@ def import_naptan_data(file_path: Path, no_update=False):
             create_or_update(db, no_update)
             log.debug("Updating search vectors...")
             with engine.begin() as conn:
-                sync_trigger(
-                    conn,
-                    "stop",
-                    "search_vector",
-                    [
-                        "atco_code",
-                        "naptan_code",
-                        "common_name",
-                        "common_short_name",
-                        "landmark",
-                        "street",
-                        "suburb",
-                        "town",
-                    ],
-                )
+                sync_stop_sv(conn)
             log.debug("Import complete.")
         except Exception as e:
             log.error("An error occurred during NaPTAN import:")
