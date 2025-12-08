@@ -209,9 +209,9 @@ def fetch_buses(services, stop_id, times, r: Redis) -> list[TrackedBus]:
             stop_id, r
         )  # fetch all scheduled times for the stop from bustimes.org
 
-        active_by_trip: dict[int, list[dict]] = (
-            {}
-        )  # deal with multiple buses on same trip
+        active_by_trip: dict[
+            int, list[dict]
+        ] = {}  # deal with multiple buses on same trip
         if active:
             for bus in active:
                 trip_id = bus.get("trip_id")
@@ -280,9 +280,9 @@ def fetch_buses(services, stop_id, times, r: Redis) -> list[TrackedBus]:
             matched_buses = active_by_trip.get(trip_id, [])
             if matched_buses:
                 for bus in matched_buses:
-                    bus_seen_counts[
-                        bus["id"]
-                    ] += 1  # keep track of how many times we've seen each bus
+                    bus_seen_counts[bus["id"]] += (
+                        1  # keep track of how many times we've seen each bus
+                    )
                 final_buses.append(
                     build_bus_candidates(
                         matched_buses,

@@ -7,7 +7,6 @@ from ciso8601 import parse_datetime
 from geoalchemy2.shape import from_shape
 from shapely.geometry import Point
 from sqlalchemy.orm import Session
-from sqlalchemy_searchable import sync_trigger
 
 from backend.config import get_logger, setup_logging
 from backend.db.db import SessionLocal, sync_stop_sv
@@ -270,7 +269,14 @@ def create_or_update(db: Session, no_update: bool):
 def import_naptan_data(file_path: Path, no_update=False):
     log.debug("Importing NAPTAN data...")
 
-    global new_stops, existing_stop_ids, stop_area_ids, new_stop_areas, admin_areas, localities, localities_not_exist
+    global \
+        new_stops, \
+        existing_stop_ids, \
+        stop_area_ids, \
+        new_stop_areas, \
+        admin_areas, \
+        localities, \
+        localities_not_exist
     iterator = ET.iterparse(file_path, events=("start", "end"))
     with SessionLocal() as db:
         try:

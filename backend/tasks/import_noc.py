@@ -6,7 +6,6 @@ from sqlalchemy.orm import joinedload
 from backend.config import get_logger, setup_logging
 from backend.db.db import SessionLocal, engine
 from backend.models import Operator, OperatorCode
-from backend.utils.bulk_upsert import bulk_upsert
 from slugify import slugify
 
 log = get_logger(__name__)

@@ -5,10 +5,9 @@ Original code from https://digitalhedgehog.org/articles/how-to-manage-slugs-for-
 Modified to fit nextbus models.
 """
 
-from sqlalchemy import Column, String, event, select
+from sqlalchemy import Column, String, select
 from slugify import slugify
 from sqlalchemy.orm import Session
-import re
 from backend.config import get_logger
 from backend.db.db import SessionLocal
 

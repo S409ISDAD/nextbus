@@ -1,54 +1,60 @@
-from redis import Redis
-from backend.services.journeys import get_trip
-from backend.deps import get_redis
 from geopy.distance import geodesic
+from redis import Redis
 
-from backend.utils.time_taken import time_taken
-from backend.deps import get_logger
 from backend.config import setup_logging
+from backend.deps import get_logger, get_redis
+from backend.services.journeys import get_trip
+from backend.utils.time_taken import time_taken
 
 log = get_logger(__name__)
 
 
-def compute_distance(atco_on, atco_off, trip_id, r: Redis) -> float:
+def compute_distance(
+    atco_on: str, atco_off: str, trip_id: int, r: Redis
+) -> float | None:
     trip = get_trip(trip_id, 0, r)
 
     if not trip:
         return None
 
     total_distance = 0.0
-
     found_start = False
 
     for stop in trip.stops:
         if not stop:
             continue
 
+        # only start once we reach the boarding stop
         if not found_start:
             if stop.stop_id == atco_on:
                 found_start = True
             else:
                 continue
 
-        if not stop.track or len(stop.track) < 2:
-            continue
-        previous_coords = None
-        for coords in stop.track:
-            if previous_coords is not None:
-                total_distance += geodesic(previous_coords, coords).meters
-            previous_coords = coords
+        if stop.track and len(stop.track) >= 2:
+            prev_coords = None
+            for coords in stop.track:
+                if prev_coords is not None:
+                    total_distance += geodesic(prev_coords, coords).meters
+                prev_coords = coords
 
+        # stop once we reach the alighting stop
         if stop.stop_id == atco_off:
             break
 
+    distance_km = total_distance / 1000
+
     log.debug(
-        f"Computed distance from {atco_on} to {atco_off} on trip {trip_id}: {round(total_distance)} meters, {round(total_distance / 1000, 2)} km"
+        f"Distance from {atco_on} to {atco_off} on trip {trip_id}: "
+        f"{round(total_distance)}m ({distance_km:.2f}km)"
     )
+
     return round(total_distance)
 
 
 if __name__ == "__main__":
     r = get_redis()
     setup_logging()
+
     with time_taken("compute distance"):
-        compute_distance("1900HA110055", "1900HA020369", 552633449, r)
+        compute_distance("1900HA110364", "1900HA020637", 552633449, r)
