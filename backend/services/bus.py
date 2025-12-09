@@ -209,9 +209,9 @@ def fetch_buses(services, stop_id, times, r: Redis) -> list[TrackedBus]:
             stop_id, r
         )  # fetch all scheduled times for the stop from bustimes.org
 
-        active_by_trip: dict[
-            int, list[dict]
-        ] = {}  # deal with multiple buses on same trip
+        active_by_trip: dict[int, list[dict]] = (
+            {}
+        )  # deal with multiple buses on same trip
         if active:
             for bus in active:
                 trip_id = bus.get("trip_id")
@@ -280,9 +280,9 @@ def fetch_buses(services, stop_id, times, r: Redis) -> list[TrackedBus]:
             matched_buses = active_by_trip.get(trip_id, [])
             if matched_buses:
                 for bus in matched_buses:
-                    bus_seen_counts[bus["id"]] += (
-                        1  # keep track of how many times we've seen each bus
-                    )
+                    bus_seen_counts[
+                        bus["id"]
+                    ] += 1  # keep track of how many times we've seen each bus
                 final_buses.append(
                     build_bus_candidates(
                         matched_buses,
@@ -291,6 +291,7 @@ def fetch_buses(services, stop_id, times, r: Redis) -> list[TrackedBus]:
                         journey_id,
                         source,
                         bus_seen_counts,
+                        st_map=stop_time_map,
                     )  #
                 )
             else:
@@ -307,7 +308,9 @@ def fetch_buses(services, stop_id, times, r: Redis) -> list[TrackedBus]:
                 else:
                     final_buses.append(build_scheduled(time, r))  # scheduled from api
 
-        final_buses = [bus for bus in final_buses if bus is not None]
+        final_buses = [
+            bus for bus in final_buses if bus is not None
+        ]  # filter out ignored buses
 
         final_map = {}
 
@@ -392,8 +395,8 @@ def build_scheduled_db(
     get_prev=True,
 ):
     with SessionLocal() as db:
-        stop_time = st_map.get(st.id)
-        stop_time._dep_dt = st._dep_dt
+        stop_time = st_map.get(st.id)  # use preloaded StopTime
+        stop_time._dep_dt = st._dep_dt  # ensure departure datetime is set
 
         if not stop_time:
             log.warning(
@@ -409,7 +412,7 @@ def build_scheduled_db(
         today = datetime.now(tz=LONDON).date()
         dayshift = time.get("dayshift", 0)
         if dayshift:
-            today += timedelta(days=dayshift)
+            today += timedelta(days=dayshift)  # adjust for dayshift if needed
 
         headsign = stop_time.headsign
         line_name = stop_time.journey.service.line_name
@@ -421,7 +424,9 @@ def build_scheduled_db(
 
         scheduled = departure_time
 
-        time_to = (scheduled - datetime.now(tz=LONDON)).total_seconds()
+        time_to = (
+            scheduled - datetime.now(tz=LONDON)
+        ).total_seconds()  # seconds to scheduled time
 
         if time_to > 2 * 3600:
             get_prev = False  # save processing time
@@ -445,37 +450,47 @@ def build_scheduled_db(
             db_journey=stop_time.journey.id,
             status="not_tracking",
             source="db",
-        )
+        )  # default scheduled bus
 
         if get_prev:
             with time_taken("getting previous journey", threshold=1):
-                prev_journey = stop_time.journey.get_previous_journey(db, today)
+                prev_journey = stop_time.journey.get_previous_journey(
+                    db, today
+                )  # get the journey before this one
 
             if not prev_journey:
                 log.warning("No previous journey")
-                return scheduled_bus
+                return scheduled_bus  # no previous journey, return scheduled bus
 
             layover_time = (
-                stop_time.journey.start_time - prev_journey.end_time
+                stop_time.journey.start_time
+                - prev_journey.end_time
+                - timedelta(minutes=1)  # load/unload time
                 if prev_journey
                 else timedelta(0)
-            )
+            )  # calculate layover time
 
-            prev_trip = prev_journey.get_bt_trip_id(db)
+            prev_trip = prev_journey.get_bt_trip_id(db)  # get previous bustimes trip id
 
-            prev_service_id = prev_journey.service.get_bt_service_id(db)
-            this_service_id = stop_time.journey.service.get_bt_service_id(db)
+            prev_service_id = prev_journey.service.get_bt_service_id(
+                db
+            )  # get previous bustimes service id
+            this_service_id = stop_time.journey.service.get_bt_service_id(
+                db
+            )  # get this bustimes service id
 
             if not prev_trip or not prev_service_id or not this_service_id:
                 log.warning(
                     f"no previous trip or service: {prev_trip}, {prev_service_id}, {this_service_id}"
                 )
-                return scheduled_bus
+                return scheduled_bus  # missing data, return scheduled bus
 
             with time_taken("getting service info", threshold=5):
                 service_info = get_service_info(this_service_id, r)
 
-            potential_bus = fetch_bus_trip(prev_service_id, prev_trip, r)
+            potential_bus = fetch_bus_trip(
+                prev_service_id, prev_trip, r
+            )  # check if any bus is on the previous trip
 
             if potential_bus:
                 log.debug(
@@ -489,6 +504,8 @@ def build_scheduled_db(
                     delay = max(
                         bus.delay - int(layover_time.total_seconds()), 0
                     )  # account for layover
+
+                    # replace with scheduled bus info
                     bus.destination = dest
                     bus.scheduled = scheduled
                     bus.expected = scheduled + timedelta(seconds=delay)
@@ -527,7 +544,26 @@ def build_bus_candidates(
     journey_id: int | None = None,
     source: str = "api",
     bus_seen_counts: dict[int, int] | None = None,
+    st_map: dict[int, StopTime] | None = None,
 ) -> TrackedBus | None:
+    """builds all buses on the same trip, returns the one that is furthest along the route.
+
+    deals with cases like breakdowns where there is a replacement bus
+
+    Args:
+        buses (list[dict]): list of bus dicts
+        r (Redis): redis instance
+        stop_id (str):
+        journey_id (int | None, optional): Defaults to None.
+        source (str, optional): "api" or "db". Defaults to "api".
+        bus_seen_counts (dict[int, int] | None, optional). Defaults to None.
+        st_map (dict[int, StopTime] | None, optional): map of StopTime id to StopTime object. Defaults to None.
+
+    Returns:
+        TrackedBus | None: Can return None if no valid bus found
+    """
+
+    # build all buses
     results = [
         build_bus(
             bus["id"],
@@ -540,6 +576,7 @@ def build_bus_candidates(
                 bus_seen_counts.get(bus["id"], 1) if bus_seen_counts else 1
             ),
             pick_up_only=True,
+            st_map=st_map,
         )
         for bus in buses
     ]
@@ -550,7 +587,7 @@ def build_bus_candidates(
         if bus is not None
         and hasattr(bus, "progress")
         and isinstance(bus.progress.sequence, int)
-    ]
+    ]  # filter out invalid buses
 
     if not valid:
         return None
@@ -568,39 +605,39 @@ def build_bus(
     source: str = "api",
     bus_seen_count: int = 1,
     pick_up_only: bool = False,
+    st_map: dict[int, StopTime] | None = None,
 ) -> TrackedBus | None:
-    this_bus = fetch_active_bus(bus_id, r)
-    vehicle_data = fetch_vehicle(bus_id, r)
+    this_bus = fetch_active_bus(bus_id, r)  # fetch live bus data, e.g. delay, coords
+    vehicle_data = fetch_vehicle(
+        bus_id, r
+    )  # fetch vehicle data, e.g. reg, type, livery
 
     if not this_bus or not vehicle_data:
         return None
 
-    delay = this_bus.get("delay")
+    delay = this_bus.get("delay")  # delay (lateness) in seconds
 
     db_stoptime = None
 
     if db_journey_id:
         with SessionLocal() as db:
-            db_stoptime: StopTime | None = (
-                db.query(StopTime)
+            st_id_row = (
+                db.query(StopTime.id)
                 .filter(
                     StopTime.journey_id == db_journey_id, StopTime.stop_id == stop_id
                 )
-                .options(
-                    joinedload(StopTime.journey).joinedload(Journey.timetable),
-                    joinedload(StopTime.journey)
-                    .joinedload(Journey.service)
-                    .joinedload(Service.operators),
-                    joinedload(StopTime.journey)
-                    .joinedload(Journey.destination)
-                    .joinedload(Stop.locality),
-                )
                 .first()
-            )
+            )  # get stoptime id for the given journey and stop
+
+            st_id: int | None = st_id_row[0] if st_id_row else None
+
+            if st_id and st_map:
+                db_stoptime = st_map.get(st_id)  # use preloaded StopTime
 
     tracking = True
 
     if not delay:
+        # the bus is not reporting a delay, could be tracking incorrectly
         log.warning(f"No delay for bus id: {bus_id}")
         delay = 0
         tracking = False
@@ -633,7 +670,7 @@ def build_bus(
         log.warning(f"resetting delay, too early. id: {bus_id}, reg: {reg}")
         delay = 0
 
-    r.sadd("total_buses", bus_id)
+    r.sadd("total_buses", bus_id)  # track total unique buses seen
 
     bus_type = vehicle_data.vehicle_type
     if not bus_type.double_decker:
@@ -642,16 +679,12 @@ def build_bus(
         bus_type = "Double decker"
 
     if vehicle_data.special_features:
-        bus_type += f", {', '.join(vehicle_data.special_features)}"
-    # journey = get_vehicle_journey(bus_id, journey_id, r)
+        bus_type += f", {', '.join(vehicle_data.special_features)}"  # generate a string like "Double decker, USB-A, USB-C"
 
     delay += 10  # account for stopping and various other things that increase delay
     confidence = calculate_confidence(
         delay, coords, journey_id, this_bus.get("trip_id"), r
     )
-
-    # if reg == "YX67 VCD" or bus_id == 34196:  # known tracking broken
-    #     confidence.broken_tracking_confidence = 1.0
 
     log.debug(
         f"final={round(confidence.final_confidence, 5)}, brokendown={round(confidence.broken_down_confidence, 5)}, logoff={round(confidence.log_off_confidence, 5)}, diversion={round(confidence.diversion_confidence, 5)}, brokentracking={round(confidence.broken_tracking_confidence, 5)} id={bus_id}, reg={reg}"
@@ -683,7 +716,7 @@ def build_bus(
         r,
         bus_seen_count,
         pick_up_only,
-    )
+    )  # get expected times and target sequence
 
     sequence = progress.get("sequence", None)
     prog = progress.get("progress", None)
@@ -701,13 +734,17 @@ def build_bus(
     service_info = get_service_info(journey.service_id, r)
 
     if not times:
-        log.warning(f"no times object. id: {bus_id}, reg: {reg}")
+        log.warning(f"no times object. id: {bus_id}, reg: {reg}")  # shouldn't happen
         return None
     if (times.scheduled is None or times.expected is None) and stop_id:
-        log.info(f"no scheduled time. id: {bus_id}, reg: {reg}")
+        log.info(
+            f"no scheduled time. id: {bus_id}, reg: {reg}"
+        )  # failed to generate times, shouldn't happen
         return None
     if not times.include:
-        log.warning(f"not including id: {bus_id}, reg: {reg}")
+        log.warning(
+            f"not including id: {bus_id}, reg: {reg}"
+        )  # bus should not be included, decided by calculate_expected
         return None
 
     # if times.finished and stop_id:
@@ -717,7 +754,9 @@ def build_bus(
         delay = 0
 
     if get_journey:
-        predictions = predict_future(journey, delay, timestamp, times.started, 35, r)
+        predictions = predict_future(
+            journey, delay, timestamp, times.started, 35, r
+        )  # predict bus locations for the next 35 seconds
     else:
         predictions = []
 
@@ -733,10 +772,10 @@ def build_bus(
         status = "cancelled"
         if times.expected and times.scheduled:
             delay = 0
-            times.expected = times.scheduled
-            times.expected += timedelta(
+
+            times.expected = times.scheduled + timedelta(
                 minutes=30
-            )  # show as cancelled after departure time so that everyone sees it
+            )  # show as cancelled for 30 mins after departure time so that everyone sees it
 
     min_expected = None
     max_expected = None
@@ -744,7 +783,7 @@ def build_bus(
     if times.started:
         min_expected, max_expected = calculate_expected_difference(
             timestamp, times.expected, times.scheduled
-        )  # type: ignore
+        )  # calculate expected time range based on location age
 
     if min_expected and times.scheduled and times.expected:
         delay = int((min_expected - times.scheduled).total_seconds())
@@ -757,10 +796,12 @@ def build_bus(
             times.expected = min_expected
 
     if db_stoptime:
+        # override destination and line name with database values
         destination = db_stoptime.headsign or destination
         service_info.line_name = db_stoptime.journey.service.line_name
 
     if stop_id:
+        # never include journey if asked for a stop, as it is not needed
         journey = None
 
     return TrackedBus(

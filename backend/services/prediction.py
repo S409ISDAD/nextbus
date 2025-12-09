@@ -196,7 +196,9 @@ def calculate_expected(
     bus_seen_count: int = 1,
     pick_up_only: bool = False,
 ):
-    journey: Journey | None = get_vehicle_journey(journey_id, delay, r)
+    journey: Journey | None = get_vehicle_journey(
+        journey_id, delay, r
+    )  # get journey data from bustimes.org
 
     if not journey:
         log.warning(f"no journey found for journey_id {journey_id}")
@@ -211,7 +213,9 @@ def calculate_expected(
     expected_time = None
     scheduled_time = None
 
-    call_condition = None
+    call_condition = (
+        None  # determines if the bus is stopping at the stop or not, e.g. cancelled
+    )
 
     seen = bus_seen_count
 
@@ -220,7 +224,7 @@ def calculate_expected(
 
     for stop_time in journey.stops:
         call_condition = stop_time.call_condition
-        if stop_idx == 0:
+        if stop_idx == 0:  # first stop
             scheduled_time_start = stop_time.aimed_time
 
             time_till_start = (scheduled_time_start - current_time).total_seconds()
@@ -228,6 +232,8 @@ def calculate_expected(
             if scheduled_time_start > current_time and (
                 time_till_start > 300 or sequence < 4
             ):
+                # if more than 5 minutes before start, bus hasn't started yet.
+                # if less than 5 minutes before start, only started if bus is very close to start
                 not_started = True
 
         if stop_time.stop_id == stop_id:
@@ -296,7 +302,7 @@ def calculate_expected_difference(timestamp: str, expected: dt, scheduled: dt):
 
     max_expected = expected + timedelta(
         seconds=diff + 60
-    )  # add 1 min buffer, as "max" really means "definitely not later than this"
+    )  # add 1 min buffer, as "max" means "definitely not later than this"
     min_expected = max(
         expected - timedelta(seconds=diff), scheduled
     )  # don't go earlier than scheduled
