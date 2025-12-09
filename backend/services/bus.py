@@ -45,7 +45,7 @@ MANUFACTURERS = [
     # "Optare ",
     "ADL/TransBus ",
     "Dennis Trident Alexander ",  # wtf
-]
+]  # bus manufacturers to strip from bus type names
 
 
 # from bustimes.org
@@ -68,7 +68,7 @@ def format_reg(reg):
 
 def get_bus_type(btype):
     for manu in MANUFACTURERS:
-        btype = btype.replace(manu, "")
+        btype = btype.replace(manu, "")  # remove manufacturer from bus type
 
     return btype
 
@@ -81,6 +81,7 @@ def fetch_vehicle(bus_id, r: Redis) -> Vehicle | None:
 
         return data
 
+    # use caching to avoid repeated calls, vehicles don't change often
     data = get_cached(
         f"bus:{bus_id}",
         fetch,
@@ -151,14 +152,16 @@ def fetch_active_bus(bus_id, r: Redis):
 
 
 def fetch_bus_trip(service_id, trip_id, r: Redis):
-    """Fetches specific bus by service and trip"""
+    """Fetches specific bus by service and trip IDs"""
 
     def fetch(service_id, trip_id):
         data = fetch_json(VEHICLES_BASE + f"?service={service_id}&trip={trip_id}")
         if not data:
             return None
 
-        exact_bus = [bus for bus in data if bus.get("trip_id") == trip_id]
+        exact_bus = [
+            bus for bus in data if bus.get("trip_id") == trip_id
+        ]  # filter exact trip match, as passing in trip_id does not filter. this is because bustimes.org api has quirks
 
         return exact_bus[0] if exact_bus else None
 
@@ -170,33 +173,7 @@ def fetch_bus_trip(service_id, trip_id, r: Redis):
         r,
     )
 
-    # if this_bus:
-    #     r.set(
-    #         f"bus:{this_bus.get('id')}",
-    #         value=json.dumps(
-    #             {"data": this_bus},
-    #             cls=DateTimeEncoder,
-    #             default=lambda o: o.__dict__ if hasattr(o, "__dict__") else str(o),
-    #         ),
-    #         ex=BUS_CACHE,
-    #     )
-
     return this_bus
-
-
-def best_bus(buses: list[dict]) -> dict | None:
-    valid = []
-
-    for bus in buses:
-        progress = bus.get("progress")
-        if progress and isinstance(progress.get("sequence"), int):
-            log.debug("valid")
-            valid.append(bus)
-
-    if not valid:
-        return None
-
-    return max(valid, key=lambda b: b["progress"]["sequence"])
 
 
 def fetch_buses(services, stop_id, times, r: Redis) -> list[TrackedBus]:
@@ -255,7 +232,6 @@ def fetch_buses(services, stop_id, times, r: Redis) -> list[TrackedBus]:
 
         # preload all StopTime objects beforehand to speed up processing
         stop_time_ids = [t["st"].id for t in times if t.get("source") == "db"]
-
         preloaded = (
             db.query(StopTime)
             .filter(StopTime.id.in_(stop_time_ids))
@@ -271,7 +247,9 @@ def fetch_buses(services, stop_id, times, r: Redis) -> list[TrackedBus]:
             .all()
         )
 
-        stop_time_map = {st.id: st for st in preloaded}
+        stop_time_map = {
+            st.id: st for st in preloaded
+        }  # map of StopTime id to StopTime object
 
         for time in times:
             trip_id = time.get("trip_id")
@@ -314,6 +292,9 @@ def fetch_buses(services, stop_id, times, r: Redis) -> list[TrackedBus]:
 
         final_map = {}
 
+        # merge scheduled and tracked results as sometimes duplicate entries appear
+        # e.g. when there is no bustimes trip ID for a db journey
+
         for sb in [b for b in final_buses if isinstance(b, ScheduledBus)]:
             key = (sb.line, sb.started, sb.scheduled.replace(second=0, microsecond=0))
             log.debug(f"scheduled bus key: {key}")
@@ -329,10 +310,11 @@ def fetch_buses(services, stop_id, times, r: Redis) -> list[TrackedBus]:
             tb.journey = None  # to save data transfer
             final_map[key] = tb
 
-        return list(final_map.values())
+        return list(final_map.values())  # ignore keys, return values (buses) as list
 
 
 def fetch_buses_live(services, stop_id, r: Redis) -> list[TrackedBus]:
+    # same as fetch_buses but only actively tracked buses
     active = fetch_active_buses(services, r)
 
     if not active:
@@ -353,22 +335,42 @@ def fetch_buses_live(services, stop_id, r: Redis) -> list[TrackedBus]:
     return [bus for bus in final_buses if bus is not None]
 
 
-def build_scheduled(time, r, include_started=True):
-    scheduled = parser.isoparse(time.get("aimed_departure_time"))
+def build_scheduled(departure: dict, r: Redis, include_started=True):
+    """builds a scheduled bus from bustimes.org api response
 
-    if time.get("expected_departure_time"):
-        expected = parser.isoparse(time.get("expected_departure_time"))
+    Args:
+        departure (dict): the departure data from bustimes.org
+        r (Redis): redis instance
+        include_started (bool, optional): whether to calculate started flag. Defaults to True.
+
+    Returns:
+        _type_: _description_
+    """
+
+    aimed = departure.get("aimed_departure_time")
+    expected_time = departure.get("expected_departure_time")
+
+    if not aimed:
+        log.warning("No aimed departure time in scheduled bus")
+        return None
+
+    scheduled = parser.isoparse(aimed)
+
+    if expected_time:
+        expected = parser.isoparse(expected_time)
 
     else:
-        expected = scheduled
+        expected = scheduled  # default to scheduled if expected not provided
 
-    destination = time.get("destination").get("locality")
-    line = time.get("service").get("line_name")
+    destination = departure.get("destination", {}).get("locality")
+    line = departure.get("service", {}).get("line_name")
 
-    trip_id = time.get("trip_id")
+    trip_id = departure.get("trip_id")
 
     if include_started:
-        started, finished = get_started_finished(trip_id, r)
+        started, _ = get_started_finished(
+            trip_id, r
+        )  # determine if the bus has started the journey
     else:
         started = False
 
