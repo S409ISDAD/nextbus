@@ -73,7 +73,7 @@ def process_times(times: list[dict]) -> list[dict]:
             track_dist = 0.0
 
             prev_coords = None
-            for coords in stop.get("track", []):
+            for coords in stop.get("track", []) or []:
                 # get cumulative distance along the track between stops, to get an accurate road distance
                 if prev_coords is not None:
                     track_dist += geodesic(prev_coords, tuple(coords)).meters
