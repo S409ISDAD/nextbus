@@ -32,6 +32,9 @@ class StopTime(BaseModel):
         "OTH"  # PTP: Principal Timing Point, OTH: Other, TIP: Timing Information Point
     )
     call_condition: Optional[str] = None  # "notStopping" means cancelled
+    track_distance: Optional[float] = (
+        0.0  # distance in metres along track to this stop from previous stop
+    )
 
 
 class ScheduledStopTime(BaseModel):

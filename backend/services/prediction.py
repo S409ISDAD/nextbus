@@ -5,6 +5,7 @@ from datetime import timedelta
 
 from dateutil.parser import isoparse
 from geopy.distance import geodesic
+from redis import Redis
 
 from backend.deps import LONDON, UTC
 from backend.config import PREDICTION_DISABLED
@@ -188,11 +189,11 @@ def predict_future(
 
 
 def calculate_expected(
-    delay,
-    sequence,
-    stop_id,
-    journey_id,
-    r,
+    delay: int,
+    sequence: int,
+    stop_id: str,
+    journey_id: int,
+    r: Redis,
     bus_seen_count: int = 1,
     pick_up_only: bool = False,
 ):
@@ -264,9 +265,9 @@ def calculate_expected(
             expected_time = scheduled_time + timedelta(seconds=delay)
 
         if stop_idx == len(journey.stops) - 1:
-            scheduled_time_end = stop_time.aimed_time
+            expected_time_end = stop_time.aimed_time + timedelta(seconds=delay)
 
-            if scheduled_time_end + timedelta(seconds=delay + 60) < current_time:
+            if expected_time_end + timedelta(seconds=delay + 60) < current_time:
                 finished = True
 
         stop_idx += 1
@@ -310,7 +311,21 @@ def calculate_expected_difference(timestamp: str, expected: dt, scheduled: dt):
     return min_expected, max_expected
 
 
-def get_started_finished(trip_id, r):
+def get_started_finished(
+    trip_id: int,
+    r: Redis,
+    delay: int = 0,
+) -> tuple[bool, bool]:
+    """calculate if the trip has started or ended based on the current time
+
+    Args:
+        trip_id (int): ID of the bustimes trip
+        r (Redis): redis instance
+        delay (int, optional): delay in seconds to apply to the trip. Defaults to 0.
+
+    Returns:
+        tuple(bool, bool): has started, has finished
+    """
     trip = get_trip(trip_id, 0, r)
 
     if not trip:
@@ -318,7 +333,7 @@ def get_started_finished(trip_id, r):
 
     current_time = dt.now(tz=UTC)
 
-    not_started = False
+    started = False
     finished = False
 
     stop_idx = 0
@@ -327,15 +342,15 @@ def get_started_finished(trip_id, r):
         if stop_idx == 0:
             scheduled_time_start = stop_time.aimed_time.astimezone(UTC)
 
-            if scheduled_time_start > current_time:
-                not_started = True
+            if scheduled_time_start <= current_time:
+                started = True
 
         if stop_idx == len(trip.stops) - 1:
-            scheduled_time_end = stop_time.aimed_time
+            scheduled_time_end = stop_time.aimed_time + timedelta(seconds=delay)
 
             if scheduled_time_end + timedelta(seconds=60) < current_time:
                 finished = True
 
         stop_idx += 1
 
-    return not not_started, finished
+    return started, finished
