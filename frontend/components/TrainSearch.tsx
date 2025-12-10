@@ -24,7 +24,7 @@ export default function TrainSearchCard() {
 
             {msg && <span className="font-semibold text-red-500">{msg}</span>}
 
-            <div className="flex flex-row w-full gap-[12px]">
+            <div className="flex flex-row w-full gap-3">
                 <div className="flex flex-col w-full gap-4">
                     <StationCombobox
                         placeholder="from station..."

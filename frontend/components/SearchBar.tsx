@@ -32,19 +32,19 @@ export default function SearchBar(queryProp?: {
             <input
                 type="text"
                 placeholder="Search for a route or place"
-                className="flex-grow font-medium placeholder-gray-400 bg-transparent focus:outline-none"
+                className="font-medium placeholder-gray-400 bg-transparent grow focus:outline-none"
                 onChange={(e) => setSearchQuery(e.target.value)}
                 value={searchQuery}
                 onKeyDown={(e) => {
                     if (e.key === "Enter") {
-                        navigate(`/search/${searchQuery}`);
+                        navigate(`/search?q=${searchQuery}`);
                     }
                 }}
             />
             <button
                 className="mr-2 px-4 py-1.5 font-bold text-white rounded-full bg-primary-500  transition cursor-pointer shadow-[0_0_5px_1px_var(--shadow-primary)] hover:shadow-[0_0_10px_2px_var(--shadow-primary-hover)]"
                 onClick={() => {
-                    navigate(`/search/${searchQuery}`);
+                    navigate(`/search?q=${searchQuery}`);
                 }}>
                 Go
             </button>

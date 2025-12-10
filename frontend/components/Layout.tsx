@@ -41,14 +41,14 @@ function NavSearchBar(queryProp?: { query?: string }) {
                 value={searchQuery}
                 onKeyDown={(e) => {
                     if (e.key === "Enter") {
-                        navigate(`/search/${searchQuery}`);
+                        navigate(`/search?q=${searchQuery}`);
                     }
                 }}
             />
             <button
                 className="mr-2 px-3 py-1 font-bold text-sm text-white rounded-full bg-primary-500  transition cursor-pointer shadow-[0_0_5px_1px_var(--shadow-primary)] hover:shadow-[0_0_10px_2px_var(--shadow-primary-hover)]"
                 onClick={() => {
-                    navigate(`/search/${searchQuery}`);
+                    navigate(`/search?q=${searchQuery}`);
                 }}>
                 Go
             </button>

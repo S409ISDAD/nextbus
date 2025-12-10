@@ -2,7 +2,7 @@ import React, { useEffect } from "react";
 import doSearch from "../utils/doSearch";
 import SearchBar from "../components/SearchBar";
 import type { Search } from "../models/Search";
-import { useNavigate, useParams } from "react-router";
+import { useNavigate } from "react-router";
 import { Card } from "../components/ui/Card";
 
 const SearchPage: React.FC = () => {
@@ -12,11 +12,14 @@ const SearchPage: React.FC = () => {
     const [tab, setTab] = React.useState<"services" | "operators" | "stops">(
         "services"
     );
-    const { query } = useParams();
+    const query = new URLSearchParams(window.location.search).get("q") || "";
 
     useEffect(() => {
         document.title = `"${query ?? "search"}" | nextbus`;
-        if (!query) return;
+        if (!query) {
+            setResults(undefined);
+            return;
+        }
         const getSearch = async () => {
             try {
                 console.log("searching for", query);

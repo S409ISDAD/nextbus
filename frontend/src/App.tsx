@@ -218,7 +218,7 @@ function App() {
                                 <Route path="/data" element={<Data />} />
                                 <Route path="/stats" element={<StatsPage />} />
                                 <Route
-                                    path="/search/:query?"
+                                    path="/search"
                                     element={<SearchPage />}
                                 />
                                 <Route path="/map" element={<Map />} />
