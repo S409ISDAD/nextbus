@@ -98,7 +98,15 @@ def get_db_journey(
             vehicle_journey_code=db_journey.vehicle_journey_code,
             ticket_machine_code=db_journey.ticket_machine_code,
             route_name=db_journey.service.line_name,
-            destination=db_journey.headsign,
+            destination=(
+                db_journey.headsign
+                if db_journey.headsign
+                else (
+                    db_journey.destination.locality.name
+                    if db_journey.destination and db_journey.destination.locality
+                    else "Unknown"
+                )
+            ),
             block=db_journey.block_id,
             service_id=0,
             stops=stops,
