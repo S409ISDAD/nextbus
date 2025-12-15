@@ -1,11 +1,11 @@
 import React, { useEffect } from "react";
 import { useNavigate } from "react-router";
-import type { SimpleDataSource } from "../models/DataSource";
+import type { DataSource } from "../models/DataSource";
 import { getSources } from "../utils/getSources";
 
 const SourcesPage: React.FC = () => {
     const navigate = useNavigate();
-    const [dataSources, setDataSources] = React.useState<SimpleDataSource[]>();
+    const [dataSources, setDataSources] = React.useState<DataSource[]>();
     const [loading, setLoading] = React.useState(false);
 
     useEffect(() => {

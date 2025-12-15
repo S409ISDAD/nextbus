@@ -1,9 +1,9 @@
-import { type DetailedDataSource, type SimpleDataSource } from "../models/DataSource";
+import { type DataSource, type DetailedDataSource } from "../models/DataSource";
 import api from "../src/api"
 
 const getSources = async () => {
     try {
-        const response = await api.get<SimpleDataSource[]>(
+        const response = await api.get<DataSource[]>(
             `/sources/`
         );
 

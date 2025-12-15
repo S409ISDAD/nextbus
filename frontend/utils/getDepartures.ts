@@ -1,10 +1,10 @@
 import api from "../src/api"
-import { isTrackedBus, type Bus, type Departure, type ScheduledBus } from "../models/Bus"
+import { isTrackedBus, type TrackedBus, type Departure, type ScheduledBus } from "../models/Bus"
 import { timeToDiff } from "./timeUtils";
 
 
 export interface Departures {
-    buses: Bus[] | ScheduledBus[];
+    buses: TrackedBus[] | ScheduledBus[];
     timestamp: string;
 }
 

@@ -1,11 +1,11 @@
 import React, { useEffect } from "react";
 import { useNavigate, useParams } from "react-router";
-import type { Region } from "../../models/Places";
+import type { RegionDetails } from "../../models/Places";
 import { getRegion } from "../../utils/getPlaces";
 
 const RegionsPage: React.FC = () => {
     const navigate = useNavigate();
-    const [region, setRegion] = React.useState<Region>();
+    const [region, setRegion] = React.useState<RegionDetails>();
     const [loading, setLoading] = React.useState(false);
 
     const { region_id } = useParams();

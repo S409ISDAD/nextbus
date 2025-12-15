@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from backend.db.db import get_db
 from backend.deps import UTC, get_redis, limiter
 from backend.models import Journey, Service, Stop, StopTime
+from backend.schemas.departures import DeparturesResponse
 from backend.services import bus, stops
 from backend.tasks.get_departures import get_departures, get_scheduled
 from backend.deps import get_logger
@@ -16,7 +17,7 @@ router = APIRouter()
 log = get_logger(__name__)
 
 
-@router.get("/scheduled")
+@router.get("/scheduled", response_model=DeparturesResponse)
 @limiter.limit("45/minute")
 def departures_scheduled(
     request: Request, stop_id: str, redis=Depends(get_redis), db=Depends(get_db)
@@ -83,7 +84,7 @@ def departures_scheduled(
         raise HTTPException(500, detail="An unexpected error occured")
 
 
-@router.get("/live")
+@router.get("/live", response_model=DeparturesResponse)
 @limiter.limit("10/minute")
 def departures_live(request: Request, stop_id: str, redis=Depends(get_redis)):
     try:
@@ -100,7 +101,7 @@ def departures_live(request: Request, stop_id: str, redis=Depends(get_redis)):
         raise HTTPException(500, detail="An unexpected error occured")
 
 
-@router.get("/")
+@router.get("/", response_model=DeparturesResponse)
 @limiter.limit("20/minute")
 def departures(request: Request, stop_id: str, redis=Depends(get_redis)):
     try:

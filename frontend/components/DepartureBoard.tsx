@@ -7,7 +7,7 @@ import { Card } from "./ui/Card";
 import { getClosestStops } from "../utils/closestStop";
 import { getCurrentPosition } from "../utils/locations";
 import getStopData from "../utils/getStopData";
-import type { BTStop } from "../models/Stop";
+import type { Stop } from "../models/Stop";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -347,7 +347,7 @@ function BusCard({
 
 function DepartureBoard({ stop_id, closest, filter }: Props) {
     const [buses, setBuses] = useState<Departure[]>([]);
-    const [stop, setStop] = useState<BTStop>();
+    const [stop, setStop] = useState<Stop>();
     const [stopID, setStopID] = useState<string>("");
     const [loading, setLoading] = useState(true);
     const [gettingLiveData, setGettingLiveData] = useState(true);
@@ -439,12 +439,14 @@ function DepartureBoard({ stop_id, closest, filter }: Props) {
                         pos.coords.latitude,
                         pos.coords.longitude,
                     ]);
-                    stop_id = closestStop[0].stop_id;
-                    if (!stop_id) {
+                    const foundStopId = closestStop[0].stop_id;
+                    if (!foundStopId) {
                         setMsg("No stop found nearby");
                         setLoading(false);
                         setFetching(false);
+                        return;
                     }
+                    stop_id = foundStopId;
                 }
                 setStopID(stop_id);
 

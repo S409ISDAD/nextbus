@@ -1,10 +1,10 @@
 
-import type { Bus } from "../models/Bus";
+import type { TrackedBus } from "../models/Bus";
 import api from "../src/api"
 
 const getBus = async (bus_id: string) => {
     try {
-        const response = await api.get<Bus>(
+        const response = await api.get<TrackedBus>(
             `/buses/?bus_id=${bus_id}`
         );
 

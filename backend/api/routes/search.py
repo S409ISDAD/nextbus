@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from backend.db.db import get_db
 from backend.deps import get_redis
+from backend.schemas.search import SearchResponse
 from backend.utils.search import search_db
 from backend.services.caching import get_cached
 from backend.deps import get_logger
@@ -11,7 +12,7 @@ router = APIRouter()
 log = get_logger(__name__)
 
 
-@router.get("/")
+@router.get("/", response_model=SearchResponse)
 def search(query: str, limit: int = 10, db=Depends(get_db), redis=Depends(get_redis)):
     try:
         if not query or len(query) < 1:

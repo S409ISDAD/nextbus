@@ -176,13 +176,17 @@ def get_closest_stop(lat, lon, ignore, dist=0.005, limit=1):
 
         if ignore != stop.stop_id:
             closest_stops.append(
-                {
-                    "stop_id": stop.stop_id,
-                    "dist": stop.dist,
-                    "lat": stop_lat,
-                    "lon": stop_lon,
-                    "active_now": True,
-                }
+                Stop(
+                    stop_id=stop.stop_id,
+                    coords=[stop_lon, stop_lat],
+                    long_name="",
+                    name=stop.name,
+                    indicator=stop.indicator,
+                    bearing=stop.bearing,
+                    active=stop.active,
+                    services=None,
+                    dist=dist,
+                )
             )
 
     if closest_stops is None:
@@ -190,7 +194,7 @@ def get_closest_stop(lat, lon, ignore, dist=0.005, limit=1):
 
     # r = get_redis()
 
-    closest_stops.sort(key=lambda x: x["dist"])
+    closest_stops.sort(key=lambda x: x.dist)
     closest_stops = closest_stops[:limit]
 
     # for stop in closest_stops:
@@ -267,9 +271,14 @@ def get_closest_stop_for_service(lat, lon, service_id, r, dist=0.005):
     if not closest_stop:
         return None
 
-    return {
-        "stop_id": closest_stop.stop_id,
-        "dist": min_dist,
-        "lat": closest_stop.coords[1],
-        "lon": closest_stop.coords[0],
-    }
+    return Stop(
+        stop_id=closest_stop.stop_id,
+        coords=[closest_stop.coords[0], closest_stop.coords[1]],
+        long_name="",
+        name=closest_stop.name,
+        indicator=closest_stop.indicator,
+        bearing=closest_stop.bearing,
+        active=closest_stop.active,
+        services=None,
+        dist=min_dist,
+    )

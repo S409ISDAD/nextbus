@@ -1,12 +1,14 @@
 export interface StopTime {
-    stop_id: string
+    stop_id: string;
     name: string;
     aimed_time: string;
     expt_time?: string;
-    departed?: boolean;
+    departed: boolean;
     coords: number[];
-    track: number[][];
+    track?: number[][];
     set_down: boolean;
-    timing_status: "PTP" | "OTH";
-    call_condition?: string; // "notStopping" means cancelled
+    pick_up: boolean;
+    timing_status: "OTH" | "PTP" | "TIP";
+    call_condition?: string;
+    track_distance?: number;
 }

@@ -8,13 +8,13 @@ import { useParams } from "react-router";
 import { getCurrentPosition } from "../../utils/locations";
 
 import { getDBService } from "../../utils/getService";
-import type { ServiceResult } from "../../models/Search";
+import type { ServiceWithTimetable } from "../../models/ServiceInfo";
 import Timetable from "../../components/Timetable";
 
 const ServicePage: React.FC = () => {
     const { service_id } = useParams();
 
-    const [service, setservice] = useState<ServiceResult>();
+    const [service, setservice] = useState<ServiceWithTimetable>();
     const [loading, setLoading] = useState(true);
     const [stopID, setStopID] = useState<string>("");
 
@@ -35,10 +35,12 @@ const ServicePage: React.FC = () => {
                     if (service.bt_service_id) {
                         const closest_stop = await getClosestStopForService(
                             [pos.coords.latitude, pos.coords.longitude],
-                            service.bt_service_id ? service.bt_service_id : ""
+                            service.bt_service_id
+                                ? String(service.bt_service_id)
+                                : ""
                         );
                         console.log("closest_stop", closest_stop);
-                        setStopID(closest_stop);
+                        setStopID(closest_stop ?? "");
                     }
                     setMsg("");
                     setLoading(false);
@@ -109,7 +111,7 @@ const ServicePage: React.FC = () => {
                                 {service.outbound_description}
                             </span>
                             <Timetable
-                                service_id={service.service_id}
+                                service_id={service.id}
                                 inbound={false}
                             />
                         </div>
@@ -119,10 +121,7 @@ const ServicePage: React.FC = () => {
                             <span className="mb-2 text-lg font-semibold">
                                 {service.inbound_description}
                             </span>
-                            <Timetable
-                                service_id={service.service_id}
-                                inbound={true}
-                            />
+                            <Timetable service_id={service.id} inbound={true} />
                         </div>
                     )}
                 </div>

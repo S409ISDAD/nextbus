@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 
 from sqlalchemy import distinct, func
 from backend.models import DataSource, Journey, Service, Timetable
+from backend.schemas import sources
 from backend.db.db import get_db
 from sqlalchemy.orm import selectinload, joinedload
 
@@ -38,7 +39,7 @@ def natural_sort_key(text: str):
     return tuple(key)
 
 
-@router.get("/")
+@router.get("/", response_model=list[sources.DataSource])
 def all_sources(
     request: Request,
     db=Depends(get_db),
@@ -105,7 +106,7 @@ def all_sources(
         raise HTTPException(500, detail="An unexpected error occurred")
 
 
-@router.get("/{id}/")
+@router.get("/{id}/", response_model=sources.DetailedDataSource)
 def source(
     request: Request,
     id: int,
@@ -156,6 +157,7 @@ def source(
             grouped_timetables: dict[str, dict] = {}
 
             for s in source.services:
+                s.geometry = None  # remove geometry to reduce payload size
                 for tt in s.timetables:
                     setattr(tt, "journey_count", journey_counts.get(tt.id, 0))
                     del tt.journeys

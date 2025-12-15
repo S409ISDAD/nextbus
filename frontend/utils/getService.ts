@@ -1,7 +1,6 @@
 import api from "../src/api"
 
-import type { ServiceInfo } from "../models/ServiceInfo";
-import type { ServiceResult } from "../models/Search";
+import type { ServiceInfo, ServiceWithTimetable } from "../models/ServiceInfo";
 
 
 export const getService = async (service_id: string) => {
@@ -24,7 +23,7 @@ export const getService = async (service_id: string) => {
 
 export const getDBService = async (service_id: string) => {
     try {
-        const response = await api.get<ServiceResult>(
+        const response = await api.get<ServiceWithTimetable>(
             `/lines/${service_id}`
         );
 

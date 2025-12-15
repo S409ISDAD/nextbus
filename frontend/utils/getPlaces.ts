@@ -1,4 +1,4 @@
-import type { Locality, Region, AdminArea, District } from "../models/Places";
+import type { Region, RegionDetails, AdminAreaDetails, DistrictDetails, LocalityDetails } from "../models/Places";
 import api from "../src/api"
 
 const getRegions = async () => {
@@ -16,7 +16,7 @@ const getRegions = async () => {
 
 const getRegion = async (region_id: string) => {
     try {
-        const response = await api.get<Region>(
+        const response = await api.get<RegionDetails>(
             `/places/regions/${region_id}/`
         );
         return response.data;
@@ -28,7 +28,7 @@ const getRegion = async (region_id: string) => {
 
 const getAdminArea = async (admin_area_id: string) => {
     try {
-        const response = await api.get<AdminArea>(
+        const response = await api.get<AdminAreaDetails>(
             `/places/admin_areas/${admin_area_id}/`
         );
         return response.data;
@@ -40,7 +40,7 @@ const getAdminArea = async (admin_area_id: string) => {
 
 const getDistrict = async (district_id: string) => {
     try {
-        const response = await api.get<District>(
+        const response = await api.get<DistrictDetails>(
             `/places/districts/${district_id}/`
         );
         return response.data;
@@ -52,7 +52,7 @@ const getDistrict = async (district_id: string) => {
 
 const getLocality = async (locality_id: string) => {
     try {
-        const response = await api.get<Locality>(
+        const response = await api.get<LocalityDetails>(
             `/places/localities/${locality_id}/`
         );
         return response.data;

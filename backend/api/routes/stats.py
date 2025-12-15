@@ -4,6 +4,7 @@ from backend.db.db import get_db
 from backend.deps import get_redis
 from backend.models import Service, Stop, Operator
 
+from backend.schemas.stats import DBStats, Stats
 from backend.services.caching import get_cached
 from backend.deps import get_logger
 
@@ -13,7 +14,7 @@ router = APIRouter()
 log = get_logger(__name__)
 
 
-@router.get("/")
+@router.get("/", response_model=Stats)
 def stats(redis=Depends(get_redis)):
     try:
         total_buses = redis.scard("total_buses")
@@ -26,7 +27,7 @@ def stats(redis=Depends(get_redis)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/db")
+@router.get("/db", response_model=DBStats)
 def db_stats(request: Request, db=Depends(get_db), redis=Depends(get_redis)):
     def get_stats(db):
         total_services = db.query(Service).filter(Service.current).count()

@@ -1,17 +1,25 @@
-export interface Timetable {
-    stops: TimetableStop[];
-    journeys: TimetableJourney[];
+export interface TimetableService {
+    id: number;
+    line_name: string;
+    inbound: boolean;
 }
 
-interface TimetableStop {
-    id: number;
+export interface TimetableStop {
+    id: string;
     name: string;
-    timing_status: "PTP" | "TIP" | "OTH";
+    timing_status: string;
 }
-interface TimetableJourney {
+
+export interface TimetableJourney {
     id: number;
     start_time: string;
-    times: string | null[];
+    times: (string | null)[];
+}
+
+export interface TimetableResponse {
+    service: TimetableService;
+    stops: TimetableStop[];
+    journeys: TimetableJourney[];
 }
 
 export interface DBTimetable {
@@ -30,7 +38,6 @@ export interface DBTimetable {
     destination: string;
     vias: string | null;
     public_use: boolean;
-    operator_id: number;
     data_source_id: number;
     created_at: string;
     modified_at: string;

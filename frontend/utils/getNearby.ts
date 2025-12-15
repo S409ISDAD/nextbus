@@ -1,13 +1,13 @@
 import api from "../src/api"
 
-import type { Service } from "../models/ServiceInfo";
+import type { ServiceWithTimetable } from "../models/ServiceInfo";
 
 const getNearby = async (position: number[]) => {
     try {
         const lat = position[0]
         const lon = position[1]
 
-        const response = await api.post<Service[]>(
+        const response = await api.post<ServiceWithTimetable[]>(
             `/location/nearby?dist=200`, // 200 meters
             {
                 lat: lat,

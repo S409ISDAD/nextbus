@@ -1,11 +1,11 @@
 import React, { useEffect } from "react";
 import { useNavigate, useParams } from "react-router";
-import type { District } from "../../models/Places";
+import type { DistrictDetails } from "../../models/Places";
 import { getDistrict } from "../../utils/getPlaces";
 
 const DistrictPage: React.FC = () => {
     const navigate = useNavigate();
-    const [district, setDistrict] = React.useState<District>();
+    const [district, setDistrict] = React.useState<DistrictDetails>();
     const [loading, setLoading] = React.useState(false);
 
     const { district_id } = useParams();

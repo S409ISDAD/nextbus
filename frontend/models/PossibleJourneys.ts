@@ -1,4 +1,4 @@
-import type {Bus} from "./Bus.ts";
+import type { TrackedBus } from "./Bus.ts";
 
 export interface PossibleJourney {
     journey_id: string;
@@ -16,5 +16,5 @@ export interface PossibleJourney {
     wait_seconds: number;
     in_vehicle_seconds: number;
     total_seconds: number;
-    live_bus: Bus | null;
+    live_bus: TrackedBus | null;
 }

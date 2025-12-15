@@ -1,11 +1,11 @@
 import React, { useEffect } from "react";
 import { useNavigate, useParams } from "react-router";
-import type { AdminArea } from "../../models/Places";
+import type { AdminAreaDetails } from "../../models/Places";
 import { getAdminArea } from "../../utils/getPlaces";
 
 const AdminAreaPage: React.FC = () => {
     const navigate = useNavigate();
-    const [admin_area, setadmin_area] = React.useState<AdminArea>();
+    const [admin_area, setadmin_area] = React.useState<AdminAreaDetails>();
     const [loading, setLoading] = React.useState(false);
 
     const { admin_area_id } = useParams();

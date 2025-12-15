@@ -77,150 +77,145 @@ const DataSourcePage: React.FC = () => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {Object.entries(dataSource.services).map(
-                                        ([serviceCode, lines]) =>
-                                            Object.entries(lines).map(
-                                                ([
-                                                    lineName,
-                                                    { service, timetables },
-                                                ]) =>
-                                                    timetables &&
-                                                    timetables.length > 0 ? (
-                                                        timetables.map(
-                                                            (
-                                                                timetable,
-                                                                idx
-                                                            ) => (
-                                                                <tr
-                                                                    key={`${serviceCode}-${lineName}-${
-                                                                        timetable.id ??
-                                                                        idx
-                                                                    }`}
+                                    {Object.entries(
+                                        dataSource.services ?? {}
+                                    ).map(([serviceCode, lines]) =>
+                                        Object.entries(lines).map(
+                                            ([
+                                                lineName,
+                                                { service, timetables },
+                                            ]) =>
+                                                timetables &&
+                                                timetables.length > 0 ? (
+                                                    timetables.map(
+                                                        (timetable, idx) => (
+                                                            <tr
+                                                                key={`${serviceCode}-${lineName}-${
+                                                                    timetable.id ??
+                                                                    idx
+                                                                }`}
+                                                                className={clsx(
+                                                                    "cursor-pointer hover:bg-neutral-800 transition-colors",
+                                                                    idx > 0
+                                                                        ? "border-t-0"
+                                                                        : "border-t border-neutral-700"
+                                                                    // "border-b border-neutral-800"
+                                                                )}
+                                                                onClick={() =>
+                                                                    navigate(
+                                                                        `/buses/services/${service.id}`
+                                                                    )
+                                                                }>
+                                                                <td
                                                                     className={clsx(
-                                                                        "cursor-pointer hover:bg-neutral-800 transition-colors",
+                                                                        "px-4 py-2 text-neutral-400 align-top",
                                                                         idx > 0
-                                                                            ? "border-t-0"
-                                                                            : "border-t border-neutral-700"
-                                                                        // "border-b border-neutral-800"
+                                                                            ? "border-t-0 text-transparent select-none"
+                                                                            : ""
+                                                                    )}>
+                                                                    {
+                                                                        serviceCode
+                                                                    }
+                                                                </td>
+                                                                <td className="px-4 py-2 align-top">
+                                                                    {lineName}
+                                                                </td>
+                                                                <td className="px-4 py-2 align-top">
+                                                                    {
+                                                                        timetable.revision_number
+                                                                    }
+                                                                </td>
+                                                                <td className="px-4 py-2 align-top">
+                                                                    {new Date(
+                                                                        timetable.start_date
+                                                                    ).toLocaleDateString(
+                                                                        "en-GB",
+                                                                        {
+                                                                            day: "numeric",
+                                                                            month: "long",
+                                                                            year: "numeric",
+                                                                        }
                                                                     )}
-                                                                    onClick={() =>
-                                                                        navigate(
-                                                                            `/buses/services/${service.id}`
-                                                                        )
-                                                                    }>
-                                                                    <td
-                                                                        className={clsx(
-                                                                            "px-4 py-2 text-neutral-400 align-top",
-                                                                            idx >
-                                                                                0
-                                                                                ? "border-t-0 text-transparent select-none"
-                                                                                : ""
-                                                                        )}>
-                                                                        {
-                                                                            serviceCode
-                                                                        }
-                                                                    </td>
-                                                                    <td className="px-4 py-2 align-top">
-                                                                        {
-                                                                            lineName
-                                                                        }
-                                                                    </td>
-                                                                    <td className="px-4 py-2 align-top">
-                                                                        {
-                                                                            timetable.revision_number
-                                                                        }
-                                                                    </td>
-                                                                    <td className="px-4 py-2 align-top">
-                                                                        {new Date(
-                                                                            timetable.start_date
-                                                                        ).toLocaleDateString(
-                                                                            "en-GB",
-                                                                            {
-                                                                                day: "numeric",
-                                                                                month: "long",
-                                                                                year: "numeric",
-                                                                            }
-                                                                        )}
-                                                                    </td>
-                                                                    <td className="px-4 py-2 align-top">
-                                                                        {timetable.end_date
-                                                                            ? new Date(
-                                                                                  timetable.end_date
-                                                                              ).toLocaleDateString(
-                                                                                  "en-GB",
-                                                                                  {
-                                                                                      day: "numeric",
-                                                                                      month: "long",
-                                                                                      year: "numeric",
-                                                                                  }
-                                                                              )
-                                                                            : "Ongoing"}
-                                                                    </td>
-                                                                    <td className="px-4 py-2 align-top text-nowrap">
-                                                                        {timetable.modified_at
-                                                                            ? new Date(
-                                                                                  timetable.modified_at
-                                                                              ).toLocaleString(
-                                                                                  "en-GB",
-                                                                                  {
-                                                                                      day: "numeric",
-                                                                                      month: "numeric",
-                                                                                      year: "numeric",
-                                                                                      hour: "2-digit",
-                                                                                      minute: "2-digit",
-                                                                                  }
-                                                                              )
-                                                                            : "N/A"}
-                                                                    </td>
-                                                                    <td className="px-4 py-2 align-top">
-                                                                        {
-                                                                            timetable.journey_count
-                                                                        }
-                                                                    </td>
-                                                                </tr>
-                                                            )
+                                                                </td>
+                                                                <td className="px-4 py-2 align-top">
+                                                                    {timetable.end_date
+                                                                        ? new Date(
+                                                                              timetable.end_date
+                                                                          ).toLocaleDateString(
+                                                                              "en-GB",
+                                                                              {
+                                                                                  day: "numeric",
+                                                                                  month: "long",
+                                                                                  year: "numeric",
+                                                                              }
+                                                                          )
+                                                                        : "Ongoing"}
+                                                                </td>
+                                                                <td className="px-4 py-2 align-top text-nowrap">
+                                                                    {timetable.modified_at
+                                                                        ? new Date(
+                                                                              timetable.modified_at
+                                                                          ).toLocaleString(
+                                                                              "en-GB",
+                                                                              {
+                                                                                  day: "numeric",
+                                                                                  month: "numeric",
+                                                                                  year: "numeric",
+                                                                                  hour: "2-digit",
+                                                                                  minute: "2-digit",
+                                                                              }
+                                                                          )
+                                                                        : "N/A"}
+                                                                </td>
+                                                                <td className="px-4 py-2 align-top">
+                                                                    {
+                                                                        timetable.journey_count
+                                                                    }
+                                                                </td>
+                                                            </tr>
                                                         )
-                                                    ) : (
-                                                        <tr
-                                                            key={`${serviceCode}-${lineName}-no-timetable`}
-                                                            className="border-b cursor-pointer hover:bg-neutral-800 border-neutral-800"
-                                                            onClick={() =>
-                                                                navigate(
-                                                                    `/buses/services/${service.id}`
-                                                                )
-                                                            }>
-                                                            <td className="px-4 py-2 text-gray-500">
-                                                                {serviceCode}
-                                                            </td>
-                                                            <td className="px-4 py-2">
-                                                                {lineName}
-                                                            </td>
-                                                            <td
-                                                                className="px-4 py-2"
-                                                                colSpan={2}>
-                                                                No timetables
-                                                            </td>
-                                                            <td className="px-4 py-2 text-nowrap">
-                                                                {service.last_modified
-                                                                    ? new Date(
-                                                                          service.last_modified
-                                                                      ).toLocaleString(
-                                                                          "en-GB",
-                                                                          {
-                                                                              day: "numeric",
-                                                                              month: "long",
-                                                                              year: "numeric",
-                                                                              hour: "2-digit",
-                                                                              minute: "2-digit",
-                                                                              timeZoneName:
-                                                                                  "short",
-                                                                          }
-                                                                      )
-                                                                    : "N/A"}
-                                                            </td>
-                                                        </tr>
                                                     )
-                                            )
+                                                ) : (
+                                                    <tr
+                                                        key={`${serviceCode}-${lineName}-no-timetable`}
+                                                        className="border-b cursor-pointer hover:bg-neutral-800 border-neutral-800"
+                                                        onClick={() =>
+                                                            navigate(
+                                                                `/buses/services/${service.id}`
+                                                            )
+                                                        }>
+                                                        <td className="px-4 py-2 text-gray-500">
+                                                            {serviceCode}
+                                                        </td>
+                                                        <td className="px-4 py-2">
+                                                            {lineName}
+                                                        </td>
+                                                        <td
+                                                            className="px-4 py-2"
+                                                            colSpan={2}>
+                                                            No timetables
+                                                        </td>
+                                                        <td className="px-4 py-2 text-nowrap">
+                                                            {service.last_modified
+                                                                ? new Date(
+                                                                      service.last_modified
+                                                                  ).toLocaleString(
+                                                                      "en-GB",
+                                                                      {
+                                                                          day: "numeric",
+                                                                          month: "long",
+                                                                          year: "numeric",
+                                                                          hour: "2-digit",
+                                                                          minute: "2-digit",
+                                                                          timeZoneName:
+                                                                              "short",
+                                                                      }
+                                                                  )
+                                                                : "N/A"}
+                                                        </td>
+                                                    </tr>
+                                                )
+                                        )
                                     )}
                                 </tbody>
                             </table>

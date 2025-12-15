@@ -1,11 +1,11 @@
 import React, { useEffect } from "react";
 import { useNavigate, useParams } from "react-router";
-import type { Locality } from "../../models/Places";
+import type { LocalityDetails } from "../../models/Places";
 import { getLocality } from "../../utils/getPlaces";
 
 const LocalityPage: React.FC = () => {
     const navigate = useNavigate();
-    const [locality, setLocality] = React.useState<Locality>();
+    const [locality, setLocality] = React.useState<LocalityDetails>();
     const [loading, setLoading] = React.useState(false);
 
     const { locality_id } = useParams();
@@ -65,7 +65,6 @@ const LocalityPage: React.FC = () => {
                                                 <div className="flex-grow border-t border-dashed border-neutral-600"></div>
                                             </div>
                                             <div
-                                                key={service.id}
                                                 className="flex flex-col cursor-pointer"
                                                 onClick={() => {
                                                     navigate(
@@ -136,7 +135,7 @@ const LocalityPage: React.FC = () => {
                                                 );
                                             }}>
                                             <span className="underline text-link">
-                                                {stop.common_name}{" "}
+                                                {stop.name}{" "}
                                                 {stop.indicator &&
                                                     `(${stop.indicator})`}
                                             </span>

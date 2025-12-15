@@ -1041,7 +1041,7 @@ class Service(Base, SlugMixin):
 
         if timetable:
             return {
-                "service_id": self.id,
+                "id": self.id,
                 "line_name": timetable.line_name,
                 "inbound_description": timetable.inbound_description,
                 "outbound_description": timetable.outbound_description,
@@ -1056,6 +1056,8 @@ class Service(Base, SlugMixin):
                 "last_modified": timetable.modified_at
                 or timetable.data_source_version.last_modified,
             }
+
+        return None
 
     def get_dest_localities(self):
         with SessionLocal() as db:

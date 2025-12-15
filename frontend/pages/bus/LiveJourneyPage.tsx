@@ -11,7 +11,12 @@ import {
     faCalendarXmark,
     faWarning,
 } from "@fortawesome/free-solid-svg-icons";
-import type { Bus, MapBus, MapVehicle, Prediction } from "../../models/Bus";
+import type {
+    TrackedBus,
+    MapBus,
+    MapVehicle,
+    Prediction,
+} from "../../models/Bus";
 import {
     Map as MapGL,
     Marker,
@@ -43,7 +48,7 @@ type MapViewProps = {
     lat: number;
     lon: number;
     heading: number;
-    bus: Bus;
+    bus: TrackedBus;
     timestamp: number;
     track: Latlon[];
 };
@@ -154,7 +159,7 @@ const MapView: React.FC<MapViewProps> = ({
                         <i className="text-xs text-white fas fa-bus" />
                     </div>
                 </Marker> */}
-                {bus.journey.stops.map((stop) => (
+                {bus.journey?.stops.map((stop) => (
                     <Marker
                         key={stop.stop_id}
                         longitude={stop.coords[1]}
@@ -278,7 +283,7 @@ const LiveJourneyPage: React.FC = () => {
 
     const doPredictions = false;
 
-    const [bus, setBus] = useState<Bus>();
+    const [bus, setBus] = useState<TrackedBus>();
     const [predictions, setPredictions] = useState<Prediction[]>();
     const [sequence, setSeq] = useState<number>(0);
     const [progress, setProg] = useState<number>(0);
@@ -431,7 +436,7 @@ const LiveJourneyPage: React.FC = () => {
                         setPredictions([]);
                     }
                     setLiveJourney(bus_response.journey);
-                    document.title = `${bus_response.journey.route_name} to ${bus_response.journey.destination} - ${bus_response.vehicle.reg}`;
+                    document.title = `${bus_response.journey?.route_name} to ${bus_response.journey?.destination} - ${bus_response.vehicle.reg}`;
                     setMsg("");
                     setRefreshed(now);
                     setTimeout(() => {
@@ -510,7 +515,7 @@ const LiveJourneyPage: React.FC = () => {
                             heading={heading}
                             timestamp={timestamp}
                             track={generateWholeTrack(
-                                bus.journey?.stops
+                                bus.journey?.stops ?? []
                             )}></MapView>
                         <div className="flex gap-3">
                             <a

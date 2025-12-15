@@ -1,11 +1,11 @@
 import api from "../src/api"
 
-import type { Timetable } from "../models/Timetable";
+import type { TimetableResponse } from "../models/Timetable";
 
 
 export const getTimetable = async (service_id: number, inbound: boolean = true) => {
     try {
-        const response = await api.get<Timetable>(
+        const response = await api.get<TimetableResponse>(
             `/timetable/${service_id}?inbound=${inbound}`
         );
 

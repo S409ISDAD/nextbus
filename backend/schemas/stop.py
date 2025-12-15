@@ -8,8 +8,8 @@ from backend.schemas.service import Service
 
 class Stop(BaseModel):
     stop_id: str
-    name: str
-    long_name: str
+    name: Optional[str]
+    long_name: Optional[str]
     indicator: Optional[str]
     bearing: Optional[int | str]
     active: bool
@@ -34,17 +34,4 @@ class StopTime(BaseModel):
     call_condition: Optional[str] = None  # "notStopping" means cancelled
     track_distance: Optional[float] = (
         0.0  # distance in metres along track to this stop from previous stop
-    )
-
-
-class ScheduledStopTime(BaseModel):
-    stop_id: str
-    name: str
-    aimed_time: datetime
-    coords: list[float]
-    track: Optional[list[list[float]]]
-    set_down: bool
-    pick_up: bool
-    timing_status: Literal["OTH", "PTP", "TIP"] = (
-        "OTH"  # PTP: Principal Timing Point, OTH: Other, TIP: Timing Information Point
     )

@@ -1,13 +1,13 @@
 import React, { useEffect } from "react";
 import doSearch from "../utils/doSearch";
 import SearchBar from "../components/SearchBar";
-import type { Search } from "../models/Search";
+import type { SearchResponse } from "../models/Search";
 import { useNavigate } from "react-router";
 import { Card } from "../components/ui/Card";
 
 const SearchPage: React.FC = () => {
     const navigate = useNavigate();
-    const [results, setResults] = React.useState<Search>();
+    const [results, setResults] = React.useState<SearchResponse>();
     const [loading, setLoading] = React.useState(false);
     const [tab, setTab] = React.useState<"services" | "operators" | "stops">(
         "services"
@@ -112,11 +112,11 @@ const SearchPage: React.FC = () => {
                                                 <div className="border-t border-dashed grow border-neutral-600"></div>
                                             </div>
                                             <div
-                                                key={service.service_id}
+                                                key={service.id}
                                                 className="flex flex-col cursor-pointer"
                                                 onClick={() => {
                                                     navigate(
-                                                        `/buses/services/${service.service_id}`
+                                                        `/buses/services/${service.id}`
                                                     );
                                                 }}>
                                                 <div className="flex flex-row items-stretch mb-1">

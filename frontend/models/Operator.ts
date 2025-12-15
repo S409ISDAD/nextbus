@@ -1,5 +1,4 @@
 export interface Operator {
+    noc?: string;
     name: string;
-    ref: string;
-    noc: string;
 }

@@ -4,23 +4,31 @@ from datetime import datetime
 from backend.schemas.stop import StopTime
 
 
-class Journey(BaseModel):
+class Location(BaseModel):
+    coords: list[float]
+    direction: int
+    timestamp: datetime
+
+
+class BaseJourney(BaseModel):
     route_name: str
     destination: str
     service_id: int
     stops: list[StopTime]
 
 
-class LiveJourney(BaseModel):
+class Journey(BaseJourney):
+    """basic journey representation"""
+
+    pass
+
+
+class LiveJourney(BaseJourney):
     vehicle_id: int
-    service_id: int
     trip_id: int
     start_time: datetime
-    route_name: str
-    destination: str
     current: bool
     locations: list["Location"]
-    stops: list[StopTime]
 
     def generate_location_history(self, exclude_start=False):
         full_track = []
@@ -34,20 +42,10 @@ class LiveJourney(BaseModel):
         return full_track
 
 
-class Location(BaseModel):
-    coords: list[float]
-    direction: int
-    timestamp: datetime
-
-
-class Trip(BaseModel):
+class Trip(BaseJourney):
     vehicle_journey_code: str
     ticket_machine_code: str
-    route_name: Optional[str] = None
-    destination: Optional[str] = None
     block: Optional[str] = None
-    service_id: int
-    stops: list[StopTime]
 
     def generate_full_track(self):
         full_track = []

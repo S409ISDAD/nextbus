@@ -1,4 +1,4 @@
-import type { Service } from "./ServiceInfo";
+import type { ServiceWithTimetable } from "./ServiceInfo";
 
 export interface Line {
     id: string;

@@ -33,7 +33,7 @@ def get_trip(request: Request, trip_id: int, redis=Depends(get_redis)):
         raise HTTPException(500, detail="An unexpected error occured")
 
 
-@router.get("/distance")
+@router.get("/distance", response_model=dict)
 @limiter.limit("20/minute")
 def get_distance(
     request: Request,
@@ -111,7 +111,7 @@ def get_db_journey(
         raise HTTPException(500, detail="An unexpected error occured")
 
 
-@router.get("/dbjourney/{journey_id}/whatbus")
+@router.get("/dbjourney/{journey_id}/whatbus", response_model=dict)
 @limiter.limit("20/minute")
 def get_bus_on_prev_journey(
     request: Request, journey_id: int, redis=Depends(get_redis), db=Depends(get_db)

@@ -1,21 +1,12 @@
 import api from "../src/api"
-
-
-interface closestStop {
-    stop_id: string;
-    dist: number;
-    lat: number;
-    lon: number;
-    active_now: boolean;
-}
-
+import { type Stop } from "../models/Stop"
 
 
 export const getClosestStops = async (position: number[], ignore?: string, limit: number = 1) => {
     const lat = position[0]
     const lon = position[1]
 
-    const response = await api.post<closestStop[]>(`/location/closest?dist=0.01&ignore=${ignore}&limit=${limit}`,
+    const response = await api.post<Stop[]>(`/location/closest?dist=0.01&ignore=${ignore}&limit=${limit}`,
         {
             lat: lat,
             lon: lon,
@@ -30,7 +21,7 @@ export const getClosestStopForService = async (position: number[], service_id: s
     const lat = position[0]
     const lon = position[1]
 
-    const response = await api.post<closestStop>(`/location/closestforservice?dist=0.01&service_id=${service_id}`,
+    const response = await api.post<Stop>(`/location/closestforservice?dist=0.01&service_id=${service_id}`,
         { lat: lat, lon: lon }
     )
     console.log("closest_stop_for_service", response)

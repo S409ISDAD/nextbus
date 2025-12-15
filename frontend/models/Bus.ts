@@ -24,46 +24,44 @@ export interface Vehicle {
     special_features?: string[];
 }
 
-export interface ScheduledBus {
-    type: string;
-    line: string;
+export interface BaseBus {
     destination: string;
-    expected: string;
     scheduled: string;
-    timeTo: string;
+    expected: string;
     started: boolean;
-    trip: number | null;
-    db_journey: number | null;
+    trip?: number | null;
+    db_journey?: number | null;
     status: string;
+    source: string;
 }
 
-export interface Bus {
-    type: string;
+export interface ScheduledBus extends BaseBus {
+    type: "scheduled";
+    line: string;
+    timeTo?: string; // calculated field
+}
+
+export interface TrackedBus extends BaseBus {
+    type: "tracked";
     id: number;
-    trip: number | null;
-    db_journey: number | null;
     timestamp: string;
     service: ServiceInfo;
-    destination: string;
-    bus_type: string;
     vehicle: Vehicle;
+    bus_type: string;
     journey_id: number;
     delay: number;
-    expected: string;
     min_expected?: string;
     max_expected?: string;
-    scheduled: string;
-    started: boolean;
     finished: boolean;
     target_seq?: number;
-    progress?: ProgressInfo;
-    coords?: number[];
-    heading?: number;
+    speed?: number;
+    progress: ProgressInfo;
     predictions: Prediction[];
-    journey: LiveJourney
+    journey?: LiveJourney;
     confidence: Confidence;
-    timeTo: string;
-    status: string;
+    coords: number[];
+    heading: number;
+    timeTo?: string; // Calculated on frontend
 }
 
 export interface Prediction {
@@ -105,7 +103,7 @@ interface MapService {
     line_name: string;
 }
 
-export function isTrackedBus(bus: Departure): bus is Bus {
+export function isTrackedBus(bus: Departure): bus is TrackedBus {
     return bus.type === "tracked";
 }
 
@@ -119,4 +117,4 @@ export function getKey(bus: Departure): string {
     }
 }
 
-export type Departure = Bus | ScheduledBus;
+export type Departure = TrackedBus | ScheduledBus;

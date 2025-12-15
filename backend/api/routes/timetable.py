@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, Request, HTTPException
 from backend.db.db import get_db
 from backend.deps import LONDON, get_redis, limiter
 from backend.models import Service
+from backend.schemas.timetable import TimetableResponse
 from backend.utils.generate_timetable import generate_timetable
 from backend.services.caching import TIMETABLE_CACHE, get_cached
 from backend.deps import get_logger
@@ -13,7 +14,7 @@ router = APIRouter()
 log = get_logger(__name__)
 
 
-@router.get("/{service_id}")
+@router.get("/{service_id}", response_model=TimetableResponse)
 @limiter.limit("45/minute")
 def service_timetable(
     request: Request,

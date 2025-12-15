@@ -10,7 +10,7 @@ import { getCurrentPosition } from "../../utils/locations";
 import getNearby from "../../utils/getNearby";
 import { Card } from "../../components/ui/Card";
 import { getClosestStops } from "../../utils/closestStop";
-import type { Service } from "../../models/ServiceInfo";
+import type { ServiceWithTimetable } from "../../models/ServiceInfo";
 import { useNavigate } from "react-router";
 import UsageManager from "../../usage/UsageManager";
 import type { PredictedStop } from "../../usage/usageModels";
@@ -25,7 +25,9 @@ const BusPage: React.FC = () => {
 
     const [tab, setTab] = useState<"nearby" | "fav">("fav");
     const [closestStops, setClosestStops] = useState<string[]>([]);
-    const [nearbyServices, setNearbyServices] = useState<Service[]>([]);
+    const [nearbyServices, setNearbyServices] = useState<
+        ServiceWithTimetable[]
+    >([]);
     const [status, setStatus] = useState<string>("Getting location...");
     const [usageToggle] = useLocalSetting("usageToggle", true);
 
@@ -60,8 +62,9 @@ const BusPage: React.FC = () => {
                 );
                 setStatus("");
                 const stopIDs = closestStops
-                    .filter((stop) => stop.active_now)
-                    .map((stop) => stop.stop_id);
+                    .filter((stop) => stop.active)
+                    .map((stop) => stop.stop_id)
+                    .filter((id): id is string => id !== undefined);
                 setClosestStops(stopIDs);
 
                 const services = await getNearby([

@@ -1,18 +1,10 @@
 export interface Stats {
-    total_active: number;
-    unique_active: number;
     total_buses: number;
     total_stops: number;
-    total_users: number;
 }
 
 export interface DBStats {
     lines: number;
     stops: number;
     operators: number;
-}
-
-export interface StatsTimeSeries {
-    timestamp: string;
-    unique: number;
 }

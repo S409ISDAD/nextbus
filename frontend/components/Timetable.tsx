@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Card } from "./ui/Card";
 import { getTimetable } from "../utils/getTimetable";
-import type { Timetable } from "../models/Timetable";
+import type { TimetableResponse } from "../models/Timetable";
 import { useNavigate } from "react-router";
 
 type TimetableProps = {
@@ -13,7 +13,7 @@ export default function Timetable({
     service_id,
     inbound = true,
 }: TimetableProps) {
-    const [timetable, setTimetable] = useState<Timetable>();
+    const [timetable, setTimetable] = useState<TimetableResponse>();
     const [showAll, setShowAll] = useState(false);
     const [hasAnyTimingPoints, setHasAnyTimingPoints] = useState(false);
     const navigate = useNavigate();

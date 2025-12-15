@@ -1,7 +1,7 @@
 import api from "../src/api"
 
 import type { Trip } from "../models/Journey";
-import type { Bus } from "../models/Bus";
+import type { TrackedBus } from "../models/Bus";
 
 
 export const getDBJourney = async (journey_id: number) => {
@@ -36,7 +36,7 @@ export const getBusOnPrevJourney = async (journey_id: number) => {
     try {
         const response = await api.get<{
             away: number;
-            bus: Bus;
+            bus: TrackedBus;
         }>(
             `/journeys/dbjourney/${journey_id}/whatbus`
         );

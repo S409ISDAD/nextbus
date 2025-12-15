@@ -3,19 +3,23 @@ import type { Operator } from "./Operator";
 export interface ServiceInfo {
     id: number;
     line_name: string;
-    description?: string;
+    description: string;
     detail?: string;
 }
 
-
-export interface Service {
+export interface ServiceWithTimetable {
     id: number;
-    service_code?: string;
-    description?: string;
-    vias?: string;
     line_name: string;
-    line_brand?: string;
+    inbound_description?: string;
+    outbound_description?: string;
+    geometry?: string;
+    bt_service_id?: number;
+    service_code: string;
+    description: string;
+    origin?: string;
+    destination?: string;
+    vias?: string;
+    operators: Operator[];
     last_modified?: string;
-    operators?: Operator[];
-    _user_distance?: number; // in meters, optional
+    rank?: number;
 }

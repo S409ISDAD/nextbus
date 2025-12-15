@@ -30,7 +30,7 @@ type MapViewProps = {
     track: Latlon[];
 };
 import React from "react";
-import type { Bus } from "../../models/Bus";
+import type { TrackedBus } from "../../models/Bus";
 import { useLocalSetting } from "../../src/settings";
 
 const MapView: React.FC<MapViewProps> = ({ journey, track = [] }) => {
@@ -186,7 +186,7 @@ const JourneyPage: React.FC = () => {
     const [journey, setJourney] = useState<Trip>();
     const [potentialBus, setPotentialBus] = useState<null | {
         away: number;
-        bus: Bus;
+        bus: TrackedBus;
     }>(null);
     const [loading, setLoading] = useState(true);
     const [fetching, setFetching] = useState(false);

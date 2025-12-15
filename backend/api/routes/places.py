@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from backend.models import Locality, District, Region, AdminArea, Service
+from backend.schemas import places
 from backend.db.db import get_db
 from sqlalchemy.orm import joinedload
 from backend.deps import get_logger
@@ -10,7 +11,7 @@ router = APIRouter()
 log = get_logger(__name__)
 
 
-@router.get("/localities/{id}/")
+@router.get("/localities/{id}/", response_model=places.LocalityDetails)
 def localities(
     request: Request,
     id: str,
@@ -50,7 +51,7 @@ def localities(
         raise HTTPException(500, detail="An unexpected error occurred")
 
 
-@router.get("/districts/{id}/")
+@router.get("/districts/{id}/", response_model=places.DistrictDetails)
 def districts(
     request: Request,
     id: str,
@@ -88,7 +89,7 @@ def districts(
         raise HTTPException(500, detail="An unexpected error occurred")
 
 
-@router.get("/admin_areas/{id}/")
+@router.get("/admin_areas/{id}/", response_model=places.AdminAreaDetails)
 def admin_areas(
     request: Request,
     id: str,
@@ -117,7 +118,7 @@ def admin_areas(
         raise HTTPException(500, detail="An unexpected error occurred")
 
 
-@router.get("/regions/")
+@router.get("/regions/", response_model=list[places.Region])
 def regions_all(
     request: Request,
     db=Depends(get_db),
@@ -139,7 +140,7 @@ def regions_all(
         raise HTTPException(500, detail="An unexpected error occurred")
 
 
-@router.get("/regions/{id}/")
+@router.get("/regions/{id}/", response_model=places.RegionDetails)
 def regions(
     request: Request,
     id: str,

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { getKey, isTrackedBus, type Departure } from "../../models/Bus";
-import type { BTStop } from "../../models/Stop";
+import type { Stop } from "../../models/Stop";
 import fetchDepartures, {
     mostCommonDest,
     parseDepartures,
@@ -26,7 +26,7 @@ import { faStar as faStarRegular } from "@fortawesome/free-regular-svg-icons";
 import clsx from "clsx";
 import { WebSocketManager } from "../../websockets/ws_manager";
 import getBus from "../../utils/getBus";
-import type { Bus } from "../../models/Bus";
+import type { TrackedBus } from "../../models/Bus";
 import useLocalStorageState from "use-local-storage-state";
 import { useLocalSetting } from "../../src/settings";
 
@@ -76,7 +76,7 @@ function BusCard({
     gettingLiveData: boolean;
     idx: number;
 }) {
-    const [busDetail, setBusDetail] = useState<Bus | null>(null);
+    const [busDetail, setBusDetail] = useState<TrackedBus | null>(null);
     const [sequence, setSequence] = useState<number | null>(null);
     const [trackingBroken, setTrackingBroken] = useState(false);
     const [notLoggedOff, setNotLoggedOff] = useState(false);
@@ -414,10 +414,10 @@ function BusCard({
                                 <>
                                     {" "}
                                     <span className="text-lg font-bold text-nowrap">
-                                        {bus.timeTo.split(" ")[0]}
+                                        {bus.timeTo?.split(" ")[0]}
                                     </span>
                                     <span className="self-end h-full mb-[0.15rem] text-sm font-bold ">
-                                        {bus.timeTo.split(" ")[1]}
+                                        {bus.timeTo?.split(" ")[1]}
                                     </span>
                                 </>
                             )}
@@ -434,11 +434,12 @@ function BusCard({
                         (() => {
                             const startIdx = Math.max(0, bus.target_seq! - 5);
                             const endIdx = bus.target_seq! + 2;
-                            const stopsSlice = busDetail.journey.stops.slice(
+                            const stopsSlice = busDetail.journey?.stops.slice(
                                 startIdx,
                                 endIdx
                             );
                             return (
+                                stopsSlice &&
                                 bus.target_seq - sequence <
                                     stopsSlice.length - 1 && (
                                     <motion.div
@@ -555,7 +556,7 @@ const DeparturePage: React.FC = () => {
     const firstFetch = useRef(true);
 
     const [buses, setBuses] = useState<Departure[]>([]);
-    const [stop, setStop] = useState<BTStop>();
+    const [stop, setStop] = useState<Stop>();
     const [closestStop, setClosest] = useState<string>();
     const [loading, setLoading] = useState(true);
     const [gettingLiveData, setGettingLiveData] = useState(true);
@@ -622,7 +623,7 @@ const DeparturePage: React.FC = () => {
                         document.title = stopData.name;
 
                         (await usageManager).logStop(
-                            stopData.stop_id,
+                            stopData.stop_id || "",
                             stopData.name,
                             stopData.coords[0],
                             stopData.coords[1],
@@ -772,55 +773,61 @@ const DeparturePage: React.FC = () => {
                 </div>
                 <div className="overflow-x-auto">
                     <div className="inline-flex justify-center min-w-full gap-1">
-                        {stop?.services
-                            .sort((a, b) =>
-                                new Intl.Collator(undefined, {
-                                    numeric: true,
-                                    sensitivity: "base",
-                                }).compare(a.line_name, b.line_name)
-                            )
-                            .map((service) =>
-                                service.line_name === filter ? (
-                                    <span
-                                        key={service.id}
-                                        className="flex items-center justify-center px-3 py-1 text-lg font-bold text-center border-2 cursor-pointer rounded-xl bg-emerald-900/50 border-emerald-800"
-                                        onClick={() => {
-                                            filter = null;
-                                            navigate(`/buses/stops/${stop_id}`);
-                                        }}>
-                                        {service.line_name}
-                                    </span>
-                                ) : (
-                                    <span
-                                        key={service.id}
-                                        className="flex items-center justify-center px-3 py-1 text-lg font-bold text-center cursor-pointer rounded-xl bg-neutral-800/50"
-                                        onClick={async () => {
-                                            filter = service.line_name;
-                                            if (stop && buses.length > 0) {
-                                                const dest = mostCommonDest(
-                                                    buses,
-                                                    filter
-                                                );
-                                                (await usageManager).logRoute(
-                                                    stop.stop_id,
-                                                    stop.name,
-                                                    stop.coords[0],
-                                                    stop.coords[1],
-                                                    service.id,
-                                                    service.line_name,
-                                                    service.description || "",
-                                                    dest,
-                                                    "filter"
-                                                );
-                                            }
-                                            navigate(
-                                                `/buses/stops/${stop_id}?filter=${service.line_name}`
-                                            );
-                                        }}>
-                                        {service.line_name}
-                                    </span>
+                        {stop?.services &&
+                            stop.services
+                                .sort((a, b) =>
+                                    new Intl.Collator(undefined, {
+                                        numeric: true,
+                                        sensitivity: "base",
+                                    }).compare(a.line_name, b.line_name)
                                 )
-                            )}
+                                .map((service) =>
+                                    service.line_name === filter ? (
+                                        <span
+                                            key={service.id}
+                                            className="flex items-center justify-center px-3 py-1 text-lg font-bold text-center border-2 cursor-pointer rounded-xl bg-emerald-900/50 border-emerald-800"
+                                            onClick={() => {
+                                                filter = null;
+                                                navigate(
+                                                    `/buses/stops/${stop_id}`
+                                                );
+                                            }}>
+                                            {service.line_name}
+                                        </span>
+                                    ) : (
+                                        <span
+                                            key={service.id}
+                                            className="flex items-center justify-center px-3 py-1 text-lg font-bold text-center cursor-pointer rounded-xl bg-neutral-800/50"
+                                            onClick={async () => {
+                                                filter = service.line_name;
+                                                if (stop && buses.length > 0) {
+                                                    const dest = mostCommonDest(
+                                                        buses,
+                                                        filter
+                                                    );
+                                                    (
+                                                        await usageManager
+                                                    ).logRoute(
+                                                        stop.stop_id ?? "",
+                                                        stop.name,
+                                                        stop.coords[0],
+                                                        stop.coords[1],
+                                                        service.id,
+                                                        service.line_name,
+                                                        service.description ||
+                                                            "",
+                                                        dest,
+                                                        "filter"
+                                                    );
+                                                }
+                                                navigate(
+                                                    `/buses/stops/${stop_id}?filter=${service.line_name}`
+                                                );
+                                            }}>
+                                            {service.line_name}
+                                        </span>
+                                    )
+                                )}
                     </div>
                 </div>
 

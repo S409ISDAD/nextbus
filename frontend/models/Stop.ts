@@ -1,21 +1,14 @@
 import type { ServiceInfo } from "./ServiceInfo";
 
-export interface BTStop {
-    stop_id: string;
+export interface Stop {
+    stop_id?: string;
+    atco_code?: string;
     name: string;
     long_name: string;
-    indicator: string;
-    bearing: string;
+    indicator?: string;
+    bearing?: number | string;
     active: boolean;
     coords: number[];
-    services: ServiceInfo[];
-}
-
-export interface Stop {
-    atco_code: string;
-    common_name: string;
-    common_short_name: string;
-    indicator: string;
-    bearing: string;
-    active: boolean;
+    services?: ServiceInfo[];
+    dist?: number;
 }

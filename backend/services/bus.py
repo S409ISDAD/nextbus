@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 
 from dateutil import parser
 from redis import Redis
-from sqlalchemy.orm import joinedload, selectinload
+from sqlalchemy.orm import selectinload
 
 from backend.config import VEHICLES_BASE, API_BASE
 from backend.db.db import SessionLocal
@@ -13,7 +13,8 @@ from backend.models import (
     StopTime,
     Stop,
 )
-from backend.schemas.bus import ScheduledBus, TrackedBus, Vehicle, VehicleType
+from backend.schemas.bus import ScheduledBus, TrackedBus
+from backend.schemas.vehicle import Vehicle, VehicleType
 from backend.schemas.livery import Livery
 from backend.schemas.progress import Progress
 from backend.services import stops
