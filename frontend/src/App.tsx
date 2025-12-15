@@ -16,10 +16,8 @@ import StatsPage from "../pages/Stats";
 import TrainSearchPage from "../pages/train/TrainSearchPage.tsx";
 import TrainsDashboard from "../pages/train/Trains.tsx";
 import { BrowserRouter, Route, Routes } from "react-router";
-import toast, { Toaster } from "react-hot-toast";
-import useReloadPrompt from "../components/ReloadPrompt";
+import { Toaster } from "react-hot-toast";
 import InstallToast from "../components/InstallPrompt";
-import useLocalStorageState from "use-local-storage-state";
 import version from "../utils/version";
 import { useShowAppNav } from "../utils/AppNav";
 import { MotionConfig } from "framer-motion";
@@ -91,31 +89,8 @@ function App() {
     }, []);
 
     const [isOpen, setIsOpen] = useState(false);
-    const [haveReset, setHaveReset] = useLocalStorageState<boolean>(
-        "haveResetSW",
-        {
-            defaultValue: false,
-        }
-    );
 
     const showAppNav = useShowAppNav();
-    const reset = async () => {
-        if (!haveReset) {
-            const registrations =
-                await navigator.serviceWorker.getRegistrations();
-            for (const reg of registrations) {
-                console.log("Unregistering service worker:", reg);
-                await reg.unregister();
-            }
-
-            const cacheNames = await caches.keys();
-            for (const name of cacheNames) {
-                console.log("Deleting cache:", name);
-                await caches.delete(name);
-            }
-            setHaveReset(true);
-        }
-    };
     useEffect(() => {
         console.log("App mounted");
         console.log("Current version:", version);
@@ -128,17 +103,7 @@ function App() {
             url.searchParams.delete("from");
             window.history.replaceState({}, document.title, url.toString());
         }
-        reset();
-        const prevVersion = localStorage.getItem("appVersion");
-        const currentVersion = version;
-        if (prevVersion && prevVersion !== currentVersion) {
-            toast.success("App updated to latest version");
-            localStorage.setItem("shownUpdatePopup", "false");
-        }
-        localStorage.setItem("appVersion", currentVersion);
     }, []);
-
-    useReloadPrompt();
 
     return (
         <ErrorBoundary fallback={<Error />}>

@@ -7,18 +7,7 @@ const api = axios.create({
 });
 
 api.interceptors.response.use(
-    (response) => {
-        const version = response.headers['x-version'];
-        if (version) {
-            const prevVersion = localStorage.getItem("appVersion");
-            const currentVersion = version;
-            if (prevVersion && prevVersion !== currentVersion && localStorage.getItem("shownUpdatePopup") !== 'true') {
-                toast(`Version ${currentVersion} available! Refresh to update`, { id: 'version-update-toast', duration: 3000, icon: 'ℹ️' });
-                localStorage.setItem("shownUpdatePopup", "true");
-            }
-        }
-        return response;
-    },
+    response => response,
     (error) => {
         // Check if response exists
         if (error.response) {

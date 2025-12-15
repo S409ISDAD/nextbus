@@ -6,15 +6,15 @@ import basicSsl from '@vitejs/plugin-basic-ssl'
 
 export default defineConfig({
   plugins: [react(), tailwindcss(), basicSsl(), VitePWA({
-    registerType: 'autoUpdate',
-    injectRegister: 'auto',
+    injectRegister: null,
+    selfDestroying: true,
     devOptions: {
       enabled: true,
     },
     manifest: {
       "name": "nextbus",
       "short_name": "nextbus",
-      "description": "a simple but powerful bus tracking and planning website (with trains too) ",
+      "description": "track your bus and skip the guesswork. real-time bus tracking across the UK, with smart predictions to make taking the bus easier, faster, and more reliable.",
       "id": "/",
       "start_url": "/",
       "icons": [
@@ -35,19 +35,8 @@ export default defineConfig({
       "background_color": "#131313",
       "display": "standalone"
     },
-    scope: '/',
-    workbox: {
-      navigateFallbackDenylist: [
-        /^\/api(\/.*)?$/,
-        /^\/ws(\/.*)?$/,
-        /^\/robots\.txt$/i,
-      ],
-      clientsClaim: true,
-      skipWaiting: true,
-    },
   })],
   server: {
-    allowedHosts: ['pi5.tailefc815.ts.net'],
     proxy: {
       // REST API
       '/api': {

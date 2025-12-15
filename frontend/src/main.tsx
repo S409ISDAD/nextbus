@@ -5,5 +5,6 @@ import App from "./App.tsx";
 import "./theme.ts";
 
 localStorage.removeItem("ws-client-id");
+localStorage.removeItem("appVersion");
 
 createRoot(document.getElementById("root")!).render(<App />);

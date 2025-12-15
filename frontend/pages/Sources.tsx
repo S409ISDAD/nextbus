@@ -114,7 +114,7 @@ const SourcesPage: React.FC = () => {
                                             </tr>
 
                                             {/* Versions */}
-                                            {source.versions.map((version) => (
+                                            {source.versions?.map((version) => (
                                                 <tr
                                                     key={version.id}
                                                     className="transition border-t border-neutral-800 hover:bg-neutral-800">
