@@ -33,12 +33,13 @@ export interface BaseBus {
     db_journey?: number | null;
     status: string;
     source: string;
+    timeTo?: string; // calculated field
 }
 
 export interface ScheduledBus extends BaseBus {
     type: "scheduled";
     line: string;
-    timeTo?: string; // calculated field
+
 }
 
 export interface TrackedBus extends BaseBus {
@@ -61,7 +62,6 @@ export interface TrackedBus extends BaseBus {
     confidence: Confidence;
     coords: number[];
     heading: number;
-    timeTo?: string; // Calculated on frontend
 }
 
 export interface Prediction {
