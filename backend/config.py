@@ -18,6 +18,7 @@ dotenv.load_dotenv()
 class Config(BaseSettings):
     env: str = "development"
     bods_api_key: str | None = os.getenv("BODS_API_KEY", None)
+    sentry_dsn: str | None = os.getenv("SENTRY_DSN", None)
 
 
 config = Config()

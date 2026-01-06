@@ -90,9 +90,11 @@ async def lifespan(app: FastAPI):
         redis.close()
 
 
+print(config.sentry_dsn)
+
 # if config.env != "development":
 sentry_sdk.init(
-    dsn="https://3da698c3793790b5233cb0a4a72d017f@o4509935722889216.ingest.de.sentry.io/4509935731277904",
+    dsn=config.sentry_dsn,
     # Add data like request headers and IP for users,
     # see https://docs.sentry.io/platforms/python/data-management/data-collected/ for more info
     integrations=[
