@@ -32,3 +32,8 @@ class ServiceWithTimetable(BaseModel):
     operators: list[Operator]
     last_modified: Optional[datetime] = None
     rank: Optional[float] = None
+
+
+class RoutePixels(BaseModel):
+    route: list[tuple[int, int]]
+    stops: list[tuple[int, int]]
