@@ -177,7 +177,7 @@ def fetch_bus_trip(service_id, trip_id, r: Redis):
     return this_bus
 
 
-def fetch_buses(services, stop_id, times, r: Redis) -> list[TrackedBus]:
+def fetch_buses(services, stop_id, times, r: Redis) -> list[TrackedBus | ScheduledBus]:
     with SessionLocal() as db:  # open a database session
         active = fetch_active_buses(
             services, r
@@ -311,7 +311,16 @@ def fetch_buses(services, stop_id, times, r: Redis) -> list[TrackedBus]:
             tb.journey = None  # to save data transfer
             final_map[key] = tb
 
-        return list(final_map.values())  # ignore keys, return values (buses) as list
+        to_sort: list[TrackedBus | ScheduledBus] = list(
+            final_map.values()
+        )  # ignore keys, return values (buses) as list
+
+        return sorted(
+            to_sort,
+            key=lambda b: (
+                b.expected if hasattr(b, "expected") and b.expected else datetime.max
+            ),
+        )
 
 
 def fetch_buses_live(services, stop_id, r: Redis) -> list[TrackedBus]:
