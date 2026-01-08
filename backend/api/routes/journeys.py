@@ -134,8 +134,10 @@ def get_bus_on_prev_journey(
             raise HTTPException(404, detail="No bus found on previous journey")
 
         bus_id = bus.get("id")
-        bus_data = build_bus(bus_id, redis, get_journey=False)
+        bus_data = build_bus(bus_id, redis, get_journey=False, ignore_returns=True)
 
+        if not bus_data:
+            raise HTTPException(404, detail="Could not generate/find bus")
         return {
             "away": away,
             "bus": bus_data,

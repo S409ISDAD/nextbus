@@ -609,6 +609,7 @@ def build_bus(
     bus_seen_count: int = 1,
     pick_up_only: bool = False,
     st_map: dict[int, StopTime] | None = None,
+    ignore_returns=False,
 ) -> TrackedBus | None:
     this_bus = fetch_active_bus(bus_id, r)  # fetch live bus data, e.g. delay, coords
     vehicle_data = fetch_vehicle(
@@ -654,24 +655,26 @@ def build_bus(
 
     reg = vehicle_data.reg if vehicle_data else "Unknown"
 
-    # Ignore buses with a delay of over 2 hours, they are likely broken down or similar
-    if delay > 2 * 60 * 60:
-        log.warning(
-            f"ignoring bus with delay of {round(delay / 60)} minutes. id: {bus_id}"
-        )
-        return None
+    if not ignore_returns:  # special case for whatbus on journey
 
-    # Ignore buses more than 2 hours early, probably logged on to the wrong trip
-    if delay < -2 * 60 * 60:
-        log.warning(
-            f"ignoring bus with delay of {round(delay / 60)} minutes. id: {bus_id}"
-        )
-        return None
+        # Ignore buses with a delay of over 2 hours, they are likely broken down or similar
+        if delay > 2 * 60 * 60:
+            log.warning(
+                f"ignoring bus with delay of {round(delay / 60)} minutes. id: {bus_id}"
+            )
+            return None
 
-    # Reset delay if earlier than 15 mins, it has probably logged on early
-    if delay < -15 * 60:
-        log.warning(f"resetting delay, too early. id: {bus_id}, reg: {reg}")
-        delay = 0
+        # Ignore buses more than 2 hours early, probably logged on to the wrong trip
+        if delay < -2 * 60 * 60:
+            log.warning(
+                f"ignoring bus with delay of {round(delay / 60)} minutes. id: {bus_id}"
+            )
+            return None
+
+        # Reset delay if earlier than 15 mins, it has probably logged on early
+        if delay < -15 * 60:
+            log.warning(f"resetting delay, too early. id: {bus_id}, reg: {reg}")
+            delay = 0
 
     r.sadd("total_buses", bus_id)  # track total unique buses seen
 
@@ -744,7 +747,7 @@ def build_bus(
             f"no scheduled time. id: {bus_id}, reg: {reg}"
         )  # failed to generate times, shouldn't happen
         return None
-    if not times.include:
+    if not times.include and not ignore_returns:
         log.warning(
             f"not including id: {bus_id}, reg: {reg}"
         )  # bus should not be included, decided by calculate_expected
