@@ -219,21 +219,22 @@ const Home: React.FC = () => {
                         </div>
                     </div>
 
-                    <SearchBar />
+                    {/* TODO: re enable later, but needs popup disclamer */}
+                    {/* <SearchBar /> */}
                     <div className="flex flex-row w-[90vw] lg:w-[40%] md:w-[50%] items-center justify-center gap-2">
-                        <button
-                            className="button text-nowrap"
-                            onClick={() => {
-                                navigate("/buses");
-                            }}>
-                            Buses <FontAwesomeIcon icon={faBus} />
-                        </button>
                         <button
                             className="button text-nowrap"
                             onClick={() => {
                                 navigate("/map");
                             }}>
                             Map <FontAwesomeIcon icon={faMap} />
+                        </button>
+                        <button
+                            className="button text-nowrap"
+                            onClick={() => {
+                                navigate("/buses");
+                            }}>
+                            Buses <FontAwesomeIcon icon={faBus} />
                         </button>
                         <button
                             className="button text-nowrap"
