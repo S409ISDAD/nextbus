@@ -15,7 +15,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 // import { getClosestStops } from "../utils/closestStop";
 import { useNavigate } from "react-router";
-import SearchBar from "../components/SearchBar";
+// import SearchBar from "../components/SearchBar";
 import { Switch } from "@headlessui/react";
 // import {
 //     LocationPrompt,
