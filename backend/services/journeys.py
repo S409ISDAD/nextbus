@@ -345,7 +345,7 @@ def get_trip(trip_id, delay, r) -> Trip | None:
     return Trip(
         route_name=trip.get("service").get("line_name"),
         destination=trip.get("headsign"),
-        service_id=trip.get("service").get("id"),
+        service_id=trip.get("service").get("id", 0) or 0,
         vehicle_journey_code=trip.get("vehicle_journey_code"),
         ticket_machine_code=trip.get("ticket_machine_code"),
         block=trip.get("block"),
