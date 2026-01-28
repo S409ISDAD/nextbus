@@ -297,19 +297,19 @@ def fetch_buses(services, stop_id, times, r: Redis) -> list[TrackedBus | Schedul
         # e.g. when there is no bustimes trip ID for a db journey
 
         for sb in [b for b in final_buses if isinstance(b, ScheduledBus)]:
-            # Create a base key with common attributes
+            # create the base key with common values
             base_key = (
                 sb.line,
                 sb.started,
                 sb.scheduled.replace(second=0, microsecond=0),
             )
 
-            # Check if this bus matches any existing entry by trip_id or db_journey
+            # check if this bus matches an existing bus by trip or journey ID
             matched = False
             for existing_key, existing_bus in list(final_map.items()):
                 existing_base = existing_key[:3]
                 if existing_base == base_key:
-                    # Same line, started status, and time - check if it's the same journey
+                    # if same line, started, status and time, check if it's the same journey
                     if (
                         sb.trip and existing_bus.trip and sb.trip == existing_bus.trip
                     ) or (
@@ -318,29 +318,29 @@ def fetch_buses(services, stop_id, times, r: Redis) -> list[TrackedBus | Schedul
                         and sb.db_journey == existing_bus.db_journey
                     ):
                         matched = True
-                        # Keep existing (don't replace scheduled with scheduled)
+                        # keep existing, no need to replace scheduled with scheduled
                         break
 
             if not matched:
-                # Use destination as differentiator when no trip/journey ID available
+                # use destination if journey/trip ID not available
                 key = base_key + (sb.trip or 0, sb.db_journey or 0, sb.destination)
                 log.debug(f"scheduled bus key: {key}")
                 final_map[key] = sb
 
         for tb in [b for b in final_buses if isinstance(b, TrackedBus)]:
-            # Create a base key with common attributes
+            # create the base key with common values
             base_key = (
                 tb.service.line_name,
                 tb.started,
                 tb.scheduled.replace(second=0, microsecond=0),
             )
 
-            # Check if this bus matches any existing entry by trip_id or db_journey
+            # check if this bus matches an existing bus by trip or journey ID
             matched_key = None
             for existing_key, existing_bus in list(final_map.items()):
                 existing_base = existing_key[:3]
                 if existing_base == base_key:
-                    # Same line, started status, and time - check if it's the same journey
+                    # if same line, started, status and time, check if it's the same journey
                     if (
                         tb.trip and existing_bus.trip and tb.trip == existing_bus.trip
                     ) or (
@@ -352,12 +352,12 @@ def fetch_buses(services, stop_id, times, r: Redis) -> list[TrackedBus | Schedul
                         break
 
             if matched_key:
-                # Replace scheduled with tracked
+                # replace scheduled with tracked
                 log.debug(f"tracked bus replacing scheduled with key: {matched_key}")
                 tb.journey = None  # to save data transfer
                 final_map[matched_key] = tb
             else:
-                # New entry - use destination as differentiator when no trip/journey ID available
+                # new entry, use destination if journey/trip ID not available
                 key = base_key + (tb.trip or 0, tb.db_journey or 0, tb.destination)
                 log.debug(f"tracked bus key: {key}")
                 tb.journey = None  # to save data transfer
