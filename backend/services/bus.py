@@ -310,8 +310,12 @@ def fetch_buses(services, stop_id, times, r: Redis) -> list[TrackedBus | Schedul
                 existing_base = existing_key[:3]
                 if existing_base == base_key:
                     # Same line, started status, and time - check if it's the same journey
-                    if (sb.trip and existing_bus.trip == sb.trip) or (
-                        sb.db_journey and existing_bus.db_journey == sb.db_journey
+                    if (
+                        sb.trip and existing_bus.trip and sb.trip == existing_bus.trip
+                    ) or (
+                        sb.db_journey
+                        and existing_bus.db_journey
+                        and sb.db_journey == existing_bus.db_journey
                     ):
                         matched = True
                         # Keep existing (don't replace scheduled with scheduled)
