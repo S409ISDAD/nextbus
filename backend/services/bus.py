@@ -297,19 +297,67 @@ def fetch_buses(services, stop_id, times, r: Redis) -> list[TrackedBus | Schedul
         # e.g. when there is no bustimes trip ID for a db journey
 
         for sb in [b for b in final_buses if isinstance(b, ScheduledBus)]:
-            key = (sb.line, sb.started, sb.scheduled.replace(second=0, microsecond=0))
-            log.debug(f"scheduled bus key: {key}")
-            final_map[key] = sb
+            # Create a base key with common attributes
+            base_key = (
+                sb.line,
+                sb.started,
+                sb.scheduled.replace(second=0, microsecond=0),
+            )
+
+            # Check if this bus matches any existing entry by trip_id or db_journey
+            matched = False
+            for existing_key, existing_bus in list(final_map.items()):
+                existing_base = existing_key[:3]
+                if existing_base == base_key:
+                    # Same line, started status, and time - check if it's the same journey
+                    if (sb.trip and existing_bus.trip == sb.trip) or (
+                        sb.db_journey and existing_bus.db_journey == sb.db_journey
+                    ):
+                        matched = True
+                        # Keep existing (don't replace scheduled with scheduled)
+                        break
+
+            if not matched:
+                # Use destination as differentiator when no trip/journey ID available
+                key = base_key + (sb.trip or 0, sb.db_journey or 0, sb.destination)
+                log.debug(f"scheduled bus key: {key}")
+                final_map[key] = sb
 
         for tb in [b for b in final_buses if isinstance(b, TrackedBus)]:
-            key = (
+            # Create a base key with common attributes
+            base_key = (
                 tb.service.line_name,
                 tb.started,
                 tb.scheduled.replace(second=0, microsecond=0),
             )
-            log.debug(f"tracked bus key: {key}")
-            tb.journey = None  # to save data transfer
-            final_map[key] = tb
+
+            # Check if this bus matches any existing entry by trip_id or db_journey
+            matched_key = None
+            for existing_key, existing_bus in list(final_map.items()):
+                existing_base = existing_key[:3]
+                if existing_base == base_key:
+                    # Same line, started status, and time - check if it's the same journey
+                    if (
+                        tb.trip and existing_bus.trip and tb.trip == existing_bus.trip
+                    ) or (
+                        tb.db_journey
+                        and existing_bus.db_journey
+                        and tb.db_journey == existing_bus.db_journey
+                    ):
+                        matched_key = existing_key
+                        break
+
+            if matched_key:
+                # Replace scheduled with tracked
+                log.debug(f"tracked bus replacing scheduled with key: {matched_key}")
+                tb.journey = None  # to save data transfer
+                final_map[matched_key] = tb
+            else:
+                # New entry - use destination as differentiator when no trip/journey ID available
+                key = base_key + (tb.trip or 0, tb.db_journey or 0, tb.destination)
+                log.debug(f"tracked bus key: {key}")
+                tb.journey = None  # to save data transfer
+                final_map[key] = tb
 
         to_sort: list[TrackedBus | ScheduledBus] = list(
             final_map.values()
