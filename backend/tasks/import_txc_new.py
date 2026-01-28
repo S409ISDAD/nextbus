@@ -93,6 +93,7 @@ def import_txc_zip(zip_path, ds_id=None, dsv_id=None, skip_checks=False):
         log.debug(f"Total TXC Import completed in {duration}")
         if txc_importer:
             stats = txc_importer.stats
+            txc_importer.close()
             del txc_importer
             gc.collect()
 
@@ -361,6 +362,16 @@ class TXCImporter:
         self.processed_cache: dict[str, txc.TransXChange] = {}
         self.service_line_key: tuple[str, str] | None = None
         self.dsv = self.get_dsv()
+
+    def close(self):
+        if self.db:
+            self.db.close()
+        del self.processed_cache
+        del self.stops
+        del self.calendar_cache
+        del self.operators
+        del self.map
+        gc.collect()
 
     def get_dsv(self):
         if self.dsv_id:
