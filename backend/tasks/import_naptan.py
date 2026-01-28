@@ -269,17 +269,12 @@ def create_or_update(db: Session, no_update: bool):
 def import_naptan_data(file_path: Path, no_update=False):
     log.debug("Importing NAPTAN data...")
 
-    global \
-        new_stops, \
-        existing_stop_ids, \
-        stop_area_ids, \
-        new_stop_areas, \
-        admin_areas, \
-        localities, \
-        localities_not_exist
+    global new_stops, existing_stop_ids, stop_area_ids, new_stop_areas, admin_areas, localities, localities_not_exist
+
     iterator = ET.iterparse(file_path, events=("start", "end"))
     with SessionLocal() as db:
         try:
+            # collect existing data
             existing_stop_ids = {
                 atco_code[0] for atco_code in db.query(Stop.atco_code).all()
             }
@@ -288,15 +283,21 @@ def import_naptan_data(file_path: Path, no_update=False):
             localities = {loc[0] for loc in db.query(Locality.id).all()}
             localities_not_exist = set()
             log.debug("Loaded existing data")
-            for event, element in iterator:
-                element.tag = element.tag.removeprefix("{http://www.naptan.org.uk/}")
+
+            for event, element in iterator:  # loop over the streamed XML file
+                element.tag = element.tag.removeprefix(
+                    "{http://www.naptan.org.uk/}"
+                )  # remove the tag prefix
                 if event == "end":
                     if element.tag == "StopPoint":
+                        # a StopPoint is a single bus stop.
                         handle_stop_point(element)
                     if element.tag == "StopArea":
+                        # a StopArea is a collection of stops, e.g. a bus station.
                         handle_stop_area(element)
 
             create_or_update(db, no_update)
+
             log.debug("Updating search vectors...")
             with engine.begin() as conn:
                 sync_stop_sv(conn)
