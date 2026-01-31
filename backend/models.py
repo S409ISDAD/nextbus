@@ -1602,19 +1602,27 @@ class Journey(Base):
             db.query(Journey)
             .join(Journey.calendar)
             .filter(
-                Journey.id != self.id,
-                Journey.block_id == self.block_id,
-                Journey.end_time < self.start_time,
-                journey_is_valid_filter(date),
+                Journey.id != self.id,  # make sure not to get the same journey
+                Journey.block_id
+                == self.block_id,  # same block_id filters journeys on a bus's running block
+                Journey.end_time
+                < self.start_time,  # only find journeys that end before this one
+                journey_is_valid_filter(
+                    date
+                ),  # it has to be valid today, as this is called in real time
             )
             .options(joinedload(Journey.service).joinedload(Service.operators))
         )
 
-        candidate_journey = query.order_by(Journey.end_time.desc()).first()
+        candidate_journey = query.order_by(
+            Journey.end_time.desc()
+        ).first()  # pick the first, most recently finished journey
 
         prev_journey = candidate_journey if candidate_journey else None
 
-        layover_time = self.start_time - prev_journey.end_time if prev_journey else None
+        layover_time = (
+            self.start_time - prev_journey.end_time if prev_journey else None
+        )  # calulate layover time for debugging
 
         log.debug(
             f"layover: {layover_time or 'none'} this: {self.start_time}, prev: {prev_journey.end_time if prev_journey else 'N/A'}"
