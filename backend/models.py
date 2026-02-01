@@ -1106,15 +1106,16 @@ class Service(Base, SlugMixin):
 
         results = fetch_json(
             f"{API_BASE}/services/?operator={noc}&search={self.line_name} {self.description.replace('-', '')}"
-        )
+        )  # query the bustimes.org API with the relevant fields
 
         if not results or "results" not in results or len(results["results"]) != 1:
+            # more than one means the result is unreliable and we cannot accept any.
             return None
 
         service_id = results["results"][0]["id"]
 
         obj = db.merge(self)
-        obj.bt_service_id = service_id
+        obj.bt_service_id = service_id  # save the ID for future lookup
         db.commit()
         db.refresh(obj)
 
@@ -1656,7 +1657,7 @@ class Journey(Base):
 
             results = fetch_json(
                 f"{API_BASE}/trips/?vehicle_journey_code={vjc}&ticket_machine_code={tmc}&block={block or ''}"
-            )
+            )  # searches the bustimes.org API with the relevant attributes
 
             if not results or "results" not in results:
                 return None
@@ -1664,9 +1665,11 @@ class Journey(Base):
             bt_trips = results["results"]
 
             if len(bt_trips) == 1:
+                # if only one, use that
                 trip_id = bt_trips[0]["id"]
 
             elif len(bt_trips) > 1:
+                # if more than one, choose the first one with a valid ID (bustimes.org/data bug)
                 trip_id = next(
                     (
                         trip["id"]
@@ -1681,10 +1684,10 @@ class Journey(Base):
             if trip_id is None:
                 log.warning(
                     f"{API_BASE}/trips/?vehicle_journey_code={vjc}&ticket_machine_code={tmc}&block={block or ''}"
-                )
+                )  # log that a trip was not found
 
             obj = db.merge(self)
-            obj.bt_trip_id = trip_id
+            obj.bt_trip_id = trip_id  # set ID for future lookup
             db.commit()
             db.refresh(obj)
 
