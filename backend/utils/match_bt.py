@@ -42,9 +42,10 @@ def match_service(db: Session, service_id: int, r) -> Service | None:
     if service:
         db_service = fuzzy_search_service(
             f"{service.line_name} {service.description} {service.detail}", db, limit=10
-        )
+        )  # attempt a fuzzy search of the key attributes
 
         if db_service:
+            # further refine the top result just to make sure
             db_service = db_service[0]
             line_ids = db_service.line_names.split(", ")
             log.debug(db_service.service_code)
@@ -54,6 +55,8 @@ def match_service(db: Session, service_id: int, r) -> Service | None:
                 .filter(Service.line_name.in_(line_ids))
                 .first()
             )
+
+        # save the ID for future lookups
         if db_service:
             log.debug(
                 f"Matched service {service_id} to db {db_service.id} via fuzzy search"
@@ -86,17 +89,21 @@ def match_trip_journey(db: Session, trip_id: int, r) -> Journey | None:
             .filter(Journey.ticket_machine_code == str(trip.ticket_machine_code))
             .filter(Service.line_name == trip.route_name)
             .filter(journey_is_valid_filter(today))
-        )
+        )  # find journey with matching attributes, as well as being valid today
+
         if trip.block is not None:
+            # add block ID if present to narrow down search
             query = query.filter(Journey.block_id == trip.block)
 
         if len(query.all()) > 1:
+            # this rarely happens, normally when there is an error in the data that produces 2 journeys
             log.warning(
                 f"Multiple journeys found for trip {trip_id} and vjc {trip.vehicle_journey_code} and tmc {trip.ticket_machine_code}"
             )
 
         journey = query.first()
         if journey:
+            # save ID for future lookups
             log.debug(f"Matched trip {trip_id} to journey {journey.id}")
             journey.bt_trip_id = trip_id
             db.commit()

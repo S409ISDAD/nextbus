@@ -554,9 +554,10 @@ class Stop(Base):
                 joinedload(StopTime.journey).joinedload(Journey.calendar),
                 joinedload(StopTime.journey).joinedload(Journey.timetable),
             )
-        )
+        )  # query for all departures at this stop
 
         if line_names:
+            # optionally filter for line names
             stop_times_q = (
                 stop_times_q.join(StopTime.journey)
                 .join(Journey.service)
@@ -564,12 +565,14 @@ class Stop(Base):
             )
 
         valid_tt_ids = []
-        for st in (
+        for service in (
             db.query(Stop).filter(Stop.atco_code == self.atco_code).first().services
         ):
-            valid_tt_ids += [tt.id for tt in st.get_correct_timetables(now)]
+            # grab all timetables from the routes that serve at this stop
+            valid_tt_ids += [tt.id for tt in service.get_correct_timetables(now)]
 
         if valid_tt_ids:
+            # filter stop times by all valid timetables
             stop_times_q = stop_times_q.filter(
                 StopTime.journey.has(Journey.timetable_id.in_(valid_tt_ids))
             )
@@ -579,26 +582,30 @@ class Stop(Base):
         day_offsets = [0]
 
         if now.hour < 3:
-            # consider yesterdays night trips
+            # consider yesterday night trips
             day_offsets.insert(0, -1)
 
         if now.hour >= 21:
-            # consider tomorrows morning trips
+            # consider tomorrow morning trips
             day_offsets.append(1)
 
         service_days = [(now + timedelta(days=offset)).date() for offset in day_offsets]
 
         valid_journeys_by_day = {
             day: get_valid_journey_ids(db, valid_tt_ids, day) for day in service_days
-        }
+        }  # pre-collect all valid journeys by day, quicker than calculating 3 times
 
         for service_day in service_days:
             j_ids = valid_journeys_by_day[service_day]
 
-            stop_times_today = [st for st in stop_times if st.journey.id in j_ids]
+            stop_times_today = [
+                st for st in stop_times if st.journey.id in j_ids
+            ]  # get all stop times on this service day
 
             for st in stop_times_today:
-                depdt = st.departure_datetime(service_day)
+                depdt = st.departure_datetime(
+                    service_day
+                )  # convert the departure time to a datetime with the service day context
 
                 if not depdt:
                     log.warning(
@@ -1004,7 +1011,9 @@ class Service(Base, SlugMixin):
 
         now = (now_dt or datetime.now(tz=LONDON)).date()
 
-        valid_tts = [tt for tt in self.timetables if tt.is_valid(now)]
+        valid_tts = [
+            tt for tt in self.timetables if tt.is_valid(now)
+        ]  # filter for timetables that are valid today
         if not valid_tts:
             return []
 
@@ -1015,13 +1024,17 @@ class Service(Base, SlugMixin):
             tt.revision_number
             for tt in self.timetables
             if tt.revision_number is not None
-        ]
+        ]  # get revision numbers for all timetables
 
         if revisions:
             highest_rev = max(revisions)
-            same_rev_tts = [tt for tt in valid_tts if tt.revision_number == highest_rev]
+            same_rev_tts = [
+                tt for tt in valid_tts if tt.revision_number == highest_rev
+            ]  # find any timetables with the same highest revision number
 
             if len(same_rev_tts) > 1:
+                # if there are, log for debugging
+                # this is not an issue, just something I wanted to keep track of
                 log.debug(
                     f"Service {self.id} has {len(same_rev_tts)} timetables at revision {highest_rev}"
                 )

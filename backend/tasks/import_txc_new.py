@@ -400,13 +400,18 @@ class TXCImporter:
             for file in files:
                 log.debug(file)
 
-                txc_data, services = get_service_data(file)
-                self.processed_cache[file.as_posix()] = txc_data
+                txc_data, services = get_service_data(
+                    file
+                )  # services contains operator, service_id, line_name, revision_num, operating_period
+
+                self.processed_cache[file.as_posix()] = (
+                    txc_data  # save the processed TXC object for importing later
+                )
                 for service in services:
                     operator, service_id, line_name, revision_num, operating_period = (
                         service
                     )
-                    line_key = (service_id, line_name)
+                    line_key = (service_id, line_name)  # group by bus route
                     start = operating_period.start
                     end = operating_period.end or date(9999, 12, 31)
 
@@ -415,18 +420,27 @@ class TXCImporter:
                     if line_key not in txc_map:
                         txc_map[line_key] = {}
 
-                    revision_key = (revision_num, start)
+                    revision_key = (
+                        revision_num,
+                        start,
+                    )  # further group by revision number + start date
 
                     if revision_key in txc_map[line_key]:
-                        # append file(s) if multiple files exist for same service/(revision_num, start)
+                        # append file(s) if multiple files exist for same revision
                         txc_map[line_key][revision_key]["files"].append(file.as_posix())
+
+                        # calculate the date bounds of all the files for this revision
                         existing = txc_map[line_key][revision_key]
                         existing["start"] = min(existing["start"], start)
                         existing["end"] = max(existing["end"], end)
+
+                        # set a global start date for this revision
+                        # used to later set end dates automatically for previous revisions
                         txc_map[line_key][revision_key]["start"] = min(
                             txc_map[line_key][revision_key]["start"], start
                         )
                     else:
+                        # first / only file in this revision
                         txc_map[line_key][revision_key] = entry
 
             self.map = txc_map
