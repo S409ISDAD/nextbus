@@ -26,8 +26,6 @@ import {
 import { faStar as faStarRegular } from "@fortawesome/free-regular-svg-icons";
 import clsx from "clsx";
 import { WebSocketManager } from "../../websockets/ws_manager";
-import getBus from "../../utils/getBus";
-import type { TrackedBus } from "../../models/Bus";
 import useLocalStorageState from "use-local-storage-state";
 import { useLocalSetting } from "../../src/settings";
 
@@ -39,13 +37,6 @@ import { useLocalSetting } from "../../src/settings";
 //     Transition,
 //     TransitionChild,
 // } from "@headlessui/react";
-
-const getBusDetail = async (bus: Departure) => {
-    if (isTrackedBus(bus)) {
-        const bus_response = await getBus(String(bus.id));
-        return bus_response;
-    }
-};
 
 export function formatBusType(bus: any, vegMode: boolean) {
     if (!vegMode) return bus.bus_type;
@@ -66,7 +57,7 @@ function BusCard({
     stop_lon,
     usageManager,
     gettingLiveData,
-    idx,
+    // idx,
 }: {
     bus: Departure;
     stop_id: string;
@@ -75,9 +66,8 @@ function BusCard({
     stop_lon: number;
     usageManager: Promise<UsageManager>;
     gettingLiveData: boolean;
-    idx: number;
+    // idx: number;
 }) {
-    const [busDetail, setBusDetail] = useState<TrackedBus | null>(null);
     const [sequence, setSequence] = useState<number | null>(null);
     const [trackingBroken, setTrackingBroken] = useState(false);
     const [notLoggedOff, setNotLoggedOff] = useState(false);
@@ -966,7 +956,7 @@ const DeparturePage: React.FC = () => {
                                             stop_lon={stop?.coords[1] || 0}
                                             usageManager={usageManager}
                                             gettingLiveData={gettingLiveData}
-                                            idx={idx}
+                                            // idx={idx}
                                         />
                                         {idx === buses.length - 1 && (
                                             <div className="flex items-center gap-2 mb-0.5">
