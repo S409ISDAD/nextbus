@@ -125,7 +125,7 @@ function BusCard({
                 bus.service.line_name,
                 bus.service.description || "",
                 bus.destination,
-                "tracked"
+                "tracked",
             );
             navigate(`/buses/${bus.id}`);
         } else if (bus.db_journey) {
@@ -167,7 +167,7 @@ function BusCard({
         ) {
             const now = Date.now();
             const progressIdx = busDetail.predictions.findIndex(
-                (p) => now < new Date(p.timestamp).getTime()
+                (p) => now < new Date(p.timestamp).getTime(),
             );
             // If all timestamps are in the past, pick the last one
             const seq =
@@ -203,7 +203,7 @@ function BusCard({
                             brokenDown ||
                             notLoggedOff ||
                             bus.status == "cancelled") &&
-                        "opacity-75"
+                        "opacity-75",
                 )}>
                 <div className="flex flex-row items-center justify-between gap-x-2">
                     <div className="flex flex-col justify-around gap-1">
@@ -275,15 +275,39 @@ function BusCard({
                             </div>
                         )}
 
+                        {isTrackedBus(bus) &&
+                            bus.status != "on_prev_trip" &&
+                            (() => {
+                                const curr_seq = bus.progress.sequence;
+                                const target_seq = bus.target_seq;
+
+                                if (target_seq === undefined) {
+                                    return null;
+                                }
+
+                                const stops_remaining =
+                                    target_seq - curr_seq - 1;
+
+                                if (stops_remaining < 5) {
+                                    return null;
+                                }
+
+                                return (
+                                    <span className="ml-2 text-xs text-neutral-400">
+                                        {stops_remaining} stops away
+                                    </span>
+                                );
+                            })()}
+
                         <div className="flex flex-row items-center pl-2 font-semibold text gap-x-3 text-nowrap">
                             <div className="flex items-center gap-2">
                                 {bus.expected && bus.scheduled
                                     ? (() => {
                                           const aimed = new Date(
-                                              bus.scheduled
+                                              bus.scheduled,
                                           ).getTime();
                                           const expt = new Date(
-                                              bus.expected
+                                              bus.expected,
                                           ).getTime();
                                           const diff = Math.abs(expt - aimed);
                                           const isLate =
@@ -295,7 +319,7 @@ function BusCard({
                                                           "cancelled") && (
                                                       <span className="line-through text-neutral-500">
                                                           {toTime(
-                                                              bus.scheduled
+                                                              bus.scheduled,
                                                           )}
                                                       </span>
                                                   )}
@@ -334,7 +358,7 @@ function BusCard({
                                                             : "green"
                                                     }-400`}>
                                                     {lateness(
-                                                        bus ? bus.delay : 0
+                                                        bus ? bus.delay : 0,
                                                     )}
                                                 </span>
                                             )}
@@ -348,15 +372,15 @@ function BusCard({
                                                 isTrackedBus(bus) &&
                                                 bus.status == "on_prev_trip"
                                                     ? navigate(
-                                                          `/buses/${bus.id}`
+                                                          `/buses/${bus.id}`,
                                                       )
                                                     : null;
                                             }}>
                                             {bus.status === "not_tracking"
                                                 ? "Upcoming"
                                                 : bus.status === "waiting"
-                                                ? "Not Started"
-                                                : "On prev. trip"}
+                                                  ? "Not Started"
+                                                  : "On prev. trip"}
                                         </span>
                                     )}
                                     {bus.started && !trackingBroken && (
@@ -378,7 +402,7 @@ function BusCard({
                                                               "text-emerald-500":
                                                                   bus.status ===
                                                                   "user_tracking",
-                                                          }
+                                                          },
                                                 )}
                                             />
                                             {!gettingLiveData &&
@@ -436,7 +460,7 @@ function BusCard({
                             const endIdx = bus.target_seq! + 2;
                             const stopsSlice = busDetail.journey?.stops.slice(
                                 startIdx,
-                                endIdx
+                                endIdx,
                             );
                             return (
                                 stopsSlice &&
@@ -526,7 +550,7 @@ function BusCard({
                                                             actualIndex ===
                                                                 bus.target_seq
                                                                 ? "bg-link"
-                                                                : "bg-neutral-600"
+                                                                : "bg-neutral-600",
                                                         )}></div>
                                                     {index <
                                                         stopsSlice.length -
@@ -577,7 +601,7 @@ const DeparturePage: React.FC = () => {
         const interval = setInterval(() => {
             const now = new Date();
             const diffSec = Math.floor(
-                (now.getTime() - lastRefreshed.getTime()) / 1000
+                (now.getTime() - lastRefreshed.getTime()) / 1000,
             );
             const min = Math.floor(diffSec / 60);
             const sec = diffSec % 60;
@@ -594,7 +618,7 @@ const DeparturePage: React.FC = () => {
                 .filter(
                     (bus) =>
                         new Date(new Date(bus.expected).getTime() + 60 * 1000) >
-                        now
+                        now,
                 );
             setBuses(newBuses);
         }, 1000);
@@ -628,12 +652,12 @@ const DeparturePage: React.FC = () => {
                             stopData.coords[0],
                             stopData.coords[1],
                             isFav,
-                            "tapped"
+                            "tapped",
                         );
 
                         const closestStop = await getClosestStops(
                             stopData.coords,
-                            stop_id
+                            stop_id,
                         );
                         setClosest(closestStop[0].stop_id);
                     }
@@ -712,8 +736,8 @@ const DeparturePage: React.FC = () => {
                         {stop?.indicator
                             ? `(${stop.indicator})`
                             : stop?.bearing
-                            ? `(${stop.bearing})`
-                            : ""}
+                              ? `(${stop.bearing})`
+                              : ""}
                     </span>
                     <div className="flex flex-wrap items-center justify-center gap-2 gap-y-1">
                         {closestStop && (
@@ -747,7 +771,7 @@ const DeparturePage: React.FC = () => {
                                         ...prev,
                                         [stop_id]: stop.coords as [
                                             number,
-                                            number
+                                            number,
                                         ],
                                     }));
                                 }
@@ -779,7 +803,7 @@ const DeparturePage: React.FC = () => {
                                     new Intl.Collator(undefined, {
                                         numeric: true,
                                         sensitivity: "base",
-                                    }).compare(a.line_name, b.line_name)
+                                    }).compare(a.line_name, b.line_name),
                                 )
                                 .map((service) =>
                                     service.line_name === filter ? (
@@ -789,7 +813,7 @@ const DeparturePage: React.FC = () => {
                                             onClick={() => {
                                                 filter = null;
                                                 navigate(
-                                                    `/buses/stops/${stop_id}`
+                                                    `/buses/stops/${stop_id}`,
                                                 );
                                             }}>
                                             {service.line_name}
@@ -803,7 +827,7 @@ const DeparturePage: React.FC = () => {
                                                 if (stop && buses.length > 0) {
                                                     const dest = mostCommonDest(
                                                         buses,
-                                                        filter
+                                                        filter,
                                                     );
                                                     (
                                                         await usageManager
@@ -817,16 +841,16 @@ const DeparturePage: React.FC = () => {
                                                         service.description ||
                                                             "",
                                                         dest,
-                                                        "filter"
+                                                        "filter",
                                                     );
                                                 }
                                                 navigate(
-                                                    `/buses/stops/${stop_id}?filter=${service.line_name}`
+                                                    `/buses/stops/${stop_id}?filter=${service.line_name}`,
                                                 );
                                             }}>
                                             {service.line_name}
                                         </span>
-                                    )
+                                    ),
                                 )}
                     </div>
                 </div>
@@ -888,7 +912,7 @@ const DeparturePage: React.FC = () => {
                                         !filter || // no filter
                                         (isTrackedBus(bus)
                                             ? bus.service.line_name === filter
-                                            : bus.line === filter)
+                                            : bus.line === filter),
                                 )
                                 .map((bus, idx) => (
                                     <motion.div
@@ -936,7 +960,7 @@ const DeparturePage: React.FC = () => {
                                     !filter ||
                                     (isTrackedBus(bus)
                                         ? bus.service.line_name === filter
-                                        : bus.line === filter)
+                                        : bus.line === filter),
                             ).length === 0 && (
                                 <div className="flex justify-center">
                                     <span className="text-neutral-400">
