@@ -14,6 +14,7 @@ import { getClosestStops } from "../../utils/closestStop";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { motion, AnimatePresence } from "framer-motion";
 import UsageManager from "../../usage/UsageManager";
+import { useShowAppNav } from "../../utils/AppNav";
 import {
     faBus,
     faSatelliteDish,
@@ -86,29 +87,7 @@ function BusCard({
     // const [externalUrl, setExternalUrl] = useState<string | null>(null);
     const navigate = useNavigate();
     const [vegMode] = useLocalSetting("veg", false);
-
-    useEffect(() => {
-        let interval: ReturnType<typeof setInterval> | null = null;
-
-        const fetchDetail = () => {
-            if (idx === 0 && isTrackedBus(bus)) {
-                getBusDetail(bus).then((detail) => {
-                    if (detail) {
-                        setBusDetail(detail);
-                    }
-                });
-            }
-        };
-
-        fetchDetail();
-        if (idx === 0 && isTrackedBus(bus)) {
-            interval = setInterval(fetchDetail, 30000);
-        }
-
-        return () => {
-            if (interval) clearInterval(interval);
-        };
-    }, [idx === 0 && isTrackedBus(bus) ? bus.id : null]);
+    const showAppNav = useShowAppNav();
 
     const handleClick = async () => {
         if (
@@ -159,23 +138,16 @@ function BusCard({
         if (isTrackedBus(bus) && bus.confidence.diversion_confidence >= 0.65) {
             setIsOnDiversion(true);
         }
-        if (
-            idx === 0 &&
-            isTrackedBus(bus) &&
-            busDetail &&
-            busDetail.predictions
-        ) {
+        if (isTrackedBus(bus) && bus.predictions) {
             const now = Date.now();
-            const progressIdx = busDetail.predictions.findIndex(
+            const progressIdx = bus.predictions.findIndex(
                 (p) => now < new Date(p.timestamp).getTime(),
             );
             // If all timestamps are in the past, pick the last one
             const seq =
                 progressIdx === -1
-                    ? busDetail.predictions[busDetail.predictions.length - 1]
-                          ?.sequence
-                    : busDetail.predictions[Math.max(0, progressIdx - 1)]
-                          ?.sequence;
+                    ? bus.predictions[bus.predictions.length - 1]?.sequence
+                    : bus.predictions[Math.max(0, progressIdx - 1)]?.sequence;
 
             let adjustedSeq = seq;
             if (
@@ -275,10 +247,21 @@ function BusCard({
                             </div>
                         )}
 
-                        {isTrackedBus(bus) &&
+                        {showAppNav &&
+                            isTrackedBus(bus) &&
+                            bus.arrival &&
+                            bus.target_seq === 0 && (
+                                <span className="ml-2 text-sm font-semibold text-neutral-500">
+                                    arriving {toTime(bus.arrival)}
+                                </span>
+                            )}
+                        {showAppNav &&
+                            isTrackedBus(bus) &&
                             bus.status != "on_prev_trip" &&
                             (() => {
-                                const curr_seq = bus.progress.sequence;
+                                if (!sequence) {
+                                    return null;
+                                }
                                 const target_seq = bus.target_seq;
 
                                 if (target_seq === undefined) {
@@ -286,9 +269,12 @@ function BusCard({
                                 }
 
                                 const stops_remaining =
-                                    target_seq - curr_seq - 1;
+                                    target_seq - sequence - 1;
 
-                                if (stops_remaining < 5) {
+                                if (
+                                    stops_remaining < 5 ||
+                                    stops_remaining > 15
+                                ) {
                                     return null;
                                 }
 
@@ -337,6 +323,44 @@ function BusCard({
                                           );
                                       })()
                                     : "-"}
+
+                                {!showAppNav &&
+                                    isTrackedBus(bus) &&
+                                    bus.arrival &&
+                                    bus.target_seq === 0 && (
+                                        <span className="text-sm text-neutral-500">
+                                            arriving {toTime(bus.arrival)}
+                                        </span>
+                                    )}
+                                {!showAppNav &&
+                                    isTrackedBus(bus) &&
+                                    bus.status != "on_prev_trip" &&
+                                    (() => {
+                                        if (!sequence) {
+                                            return null;
+                                        }
+                                        const target_seq = bus.target_seq;
+
+                                        if (target_seq === undefined) {
+                                            return null;
+                                        }
+
+                                        const stops_remaining =
+                                            target_seq - sequence - 1;
+
+                                        if (
+                                            stops_remaining < 5 ||
+                                            stops_remaining > 15
+                                        ) {
+                                            return null;
+                                        }
+
+                                        return (
+                                            <span className="text-xs text-neutral-400">
+                                                {stops_remaining} stops away
+                                            </span>
+                                        );
+                                    })()}
                             </div>
                             {bus.status === "cancelled" ? (
                                 <span className="font-bold text-red-400">
@@ -449,19 +473,19 @@ function BusCard({
                     </div>
                 </div>
                 <AnimatePresence>
-                    {busDetail &&
-                        idx === 0 &&
-                        isTrackedBus(bus) &&
+                    {isTrackedBus(bus) &&
+                        bus.stops &&
                         bus.target_seq !== undefined &&
                         sequence !== null &&
                         bus.status !== "cancelled" &&
                         (() => {
                             const startIdx = Math.max(0, bus.target_seq! - 5);
                             const endIdx = bus.target_seq! + 2;
-                            const stopsSlice = busDetail.journey?.stops.slice(
+                            const stopsSlice = bus.stops.slice(
                                 startIdx,
                                 endIdx,
                             );
+
                             return (
                                 stopsSlice &&
                                 bus.target_seq - sequence <

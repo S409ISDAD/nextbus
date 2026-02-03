@@ -15,6 +15,7 @@ class BaseBus(BaseModel):
     destination: str
     scheduled: Optional[datetime] = None
     expected: Optional[datetime] = None
+    arrival: Optional[datetime] = None
     started: bool
     trip: Optional[int] = None
     db_journey: Optional[int] = None
@@ -43,6 +44,7 @@ class TrackedBus(BaseBus):
     speed: Optional[float] = None
     progress: Progress
     predictions: list[Prediction]
+    stops: Optional[list[str]] = None
     journey: Optional[Journey] = None
     confidence: Confidence
     coords: list[float]

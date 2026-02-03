@@ -28,6 +28,7 @@ export interface BaseBus {
     destination: string;
     scheduled: string;
     expected: string;
+    arrival?: string | null;
     started: boolean;
     trip?: number | null;
     db_journey?: number | null;
@@ -58,6 +59,7 @@ export interface TrackedBus extends BaseBus {
     speed?: number;
     progress: ProgressInfo;
     predictions: Prediction[];
+    stops?: string[];
     journey?: LiveJourney;
     confidence: Confidence;
     coords: number[];

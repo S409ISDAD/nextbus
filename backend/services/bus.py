@@ -521,6 +521,18 @@ def build_scheduled_db(
                     bus.destination = dest
                     bus.scheduled = scheduled
                     bus.expected = scheduled + timedelta(seconds=delay)
+
+                    end_time = (datetime.min + prev_journey.end_time).time()
+                    bus.arrival = datetime.combine(today, end_time) + timedelta(
+                        seconds=bus.delay
+                    )
+                    bus.target_seq = None
+
+                    if stop_time.is_first_stop:
+                        # this is so that we can show the arrival time on the frontend,
+                        # but for the first stop only (where it turns around or sits for a while)
+                        bus.target_seq = 0
+
                     bus.delay = delay
                     bus.trip = trip_id if trip_id != 0 else None
                     bus.db_journey = stop_time.journey.id
@@ -541,6 +553,7 @@ def build_scheduled_db(
                     ):  # bus is not necessarily going straight on the next trip, might have to drive there which affects delay
                         log.debug("Layover too long")
                         bus.delay = 0
+                        bus.arrival = None
 
                     log.debug("Bus expected too far in future")
             else:
@@ -768,12 +781,13 @@ def build_bus(
         log.debug(f"bus not started yet. id: {bus_id}, reg: {reg}")
         delay = 0
 
-    if get_journey:
-        predictions = predict_future(
-            journey, delay, timestamp, times.started, 35, r
-        )  # predict bus locations for the next 35 seconds
-    else:
-        predictions = []
+    predictions = predict_future(
+        journey, delay, timestamp, times.started, 35, r
+    )  # predict bus locations for the next 35 seconds
+
+    stops = []
+    if journey:
+        stops = [stop.stop_id for stop in journey.stops]
 
     status = "tracking"
 
@@ -844,6 +858,7 @@ def build_bus(
             else Progress(sequence=0, next_stop="", prev_stop="", progress=0)
         ),
         predictions=predictions,
+        stops=stops,
         journey=journey,
         speed=None,
         confidence=confidence,

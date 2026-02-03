@@ -1845,6 +1845,14 @@ class StopTime(Base):
         return f"id={self.id}, journey_id={self.journey_id}, stop_id={self.stop_id}, stop_sequence={self.stop_sequence}, arrival_time={self.arrival_time}, departure_time={self.departure_time}"
 
     @property
+    def is_first_stop(self):
+        return self.journey.origin_stop_id == self.stop_id
+
+    @property
+    def is_last_stop(self):
+        return self.journey.destination_stop_id == self.stop_id
+
+    @property
     def headsign(self):
         try:
             # return self.journey.destination.locality.name#
