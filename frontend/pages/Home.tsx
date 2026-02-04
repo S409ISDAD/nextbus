@@ -10,7 +10,6 @@ import {
     faCaretRight,
     faMap,
     // faRotateRight,
-    faTrainSubway,
     faWarning,
 } from "@fortawesome/free-solid-svg-icons";
 // import { getClosestStops } from "../utils/closestStop";
@@ -202,7 +201,7 @@ const Home: React.FC = () => {
                                             onClick={() => {
                                                 setShowStop(false);
                                                 navigate(
-                                                    `/buses/stops/${closestStop}`
+                                                    `/buses/stops/${closestStop}`,
                                                 );
                                             }}>
                                             Yes, show me!{" "}
@@ -235,13 +234,6 @@ const Home: React.FC = () => {
                                 navigate("/buses");
                             }}>
                             Buses <FontAwesomeIcon icon={faBus} />
-                        </button>
-                        <button
-                            className="button text-nowrap"
-                            onClick={() => {
-                                navigate("/trains");
-                            }}>
-                            Trains <FontAwesomeIcon icon={faTrainSubway} />
                         </button>
                     </div>
 
@@ -348,7 +340,7 @@ const Home: React.FC = () => {
                             onClick={() => {
                                 window.open(
                                     "https://discord.gg/dyEmZSkwge",
-                                    "_blank"
+                                    "_blank",
                                 );
                             }}>
                             Join the Discord!{" "}

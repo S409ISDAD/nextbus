@@ -87,11 +87,11 @@ function JourneyCard({
                                 {journey.departure &&
                                     (() => {
                                         const aimed = new Date(
-                                            journey.departure
+                                            journey.departure,
                                         ).getTime();
                                         const expt = new Date(
                                             journey.live_bus?.expected ||
-                                                journey.departure
+                                                journey.departure,
                                         ).getTime();
                                         const diff = Math.abs(expt - aimed);
                                         const isLate =
@@ -101,7 +101,7 @@ function JourneyCard({
                                                 {isLate && (
                                                     <span className="line-through text-neutral-500">
                                                         {toTime(
-                                                            journey.departure
+                                                            journey.departure,
                                                         )}
                                                     </span>
                                                 )}
@@ -110,7 +110,7 @@ function JourneyCard({
                                                     {toTime(
                                                         journey.live_bus
                                                             ?.expected ||
-                                                            journey.departure
+                                                            journey.departure,
                                                     )}
                                                 </span>
                                             </div>
@@ -157,7 +157,7 @@ function JourneyCard({
                                         />
                                         Ride for{" "}
                                         {timedeltaDisplay(
-                                            journey.in_vehicle_seconds
+                                            journey.in_vehicle_seconds,
                                         )}
                                     </div>
                                 )}
@@ -172,13 +172,13 @@ function JourneyCard({
                                 {journey.arrival &&
                                     (() => {
                                         const aimed = new Date(
-                                            journey.arrival
+                                            journey.arrival,
                                         ).getTime();
                                         const expt = new Date(
                                             journey.live_bus
                                                 ? journey.live_bus.delay +
-                                                  journey.arrival
-                                                : journey.arrival
+                                                      journey.arrival
+                                                : journey.arrival,
                                         ).getTime();
                                         const diff = Math.abs(expt - aimed);
                                         const isLate =
@@ -188,7 +188,7 @@ function JourneyCard({
                                                 {isLate && (
                                                     <span className="line-through text-neutral-500">
                                                         {toTime(
-                                                            journey.arrival
+                                                            journey.arrival,
                                                         )}
                                                     </span>
                                                 )}
@@ -201,10 +201,10 @@ function JourneyCard({
                                                                       .live_bus
                                                                       .delay +
                                                                       new Date(
-                                                                          journey.arrival
-                                                                      ).getTime()
+                                                                          journey.arrival,
+                                                                      ).getTime(),
                                                               ).toString()
-                                                            : journey.arrival
+                                                            : journey.arrival,
                                                     )}
                                                 </span>
                                             </div>
@@ -214,24 +214,6 @@ function JourneyCard({
                         </div>
                     </div>
                 </div>
-
-                {/* RIGHT BLOCK */}
-                {/*<div className="flex flex-wrap items-center justify-center gap-2 text-sm md:gap-4 sm:text-base">*/}
-                {/*    <div className="px-1.5 py-0.5 bg-primary rounded-lg">*/}
-                {/*        <span className="text-xs font-bold text-neutral-950 whitespace-nowrap">*/}
-                {/*            Platform {train.fromStop?.platform ?? "-"}*/}
-                {/*        </span>*/}
-                {/*    </div>*/}
-
-                {/*    <div className="flex items-end justify-center gap-1 px-2 py-[0.2rem] w-16 sm:w-18 rounded-xl bg-neutral-800/50">*/}
-                {/*        <span className="text-base font-bold sm:text-lg">*/}
-                {/*            {train.timeTo?.split(" ")[0] ?? "--"}*/}
-                {/*        </span>*/}
-                {/*        <span className="text-xs sm:text-sm font-bold mb-[0.15rem]">*/}
-                {/*            {train.timeTo?.split(" ")[1]}*/}
-                {/*        </span>*/}
-                {/*    </div>*/}
-                {/*</div>*/}
             </div>
         </div>
     );
@@ -243,7 +225,7 @@ const PossibleJourneysPage: React.FC = () => {
     const navigate = useNavigate();
 
     const [possibleJourneys, setPossibleJourneys] = useState<PossibleJourney[]>(
-        []
+        [],
     );
     const [destination, setDestination] = useState<Locality>();
     const [loading, setLoading] = useState(true);
@@ -255,49 +237,12 @@ const PossibleJourneysPage: React.FC = () => {
         const interval = setInterval(() => {
             const now = new Date();
             const diffSec = Math.floor(
-                (now.getTime() - lastRefreshed.getTime()) / 1000
+                (now.getTime() - lastRefreshed.getTime()) / 1000,
             );
             const min = Math.floor(diffSec / 60);
             const sec = diffSec % 60;
 
             setElapsed(min > 0 ? `${min}m ${sec}s` : `${sec}s`);
-
-            // setPossibleJourneys((prevTrains) =>
-            //     prevTrains
-            //         .map((train) => {
-            //             return {
-            //                 ...train,
-            //                 timeTo: generateTimeTo(
-            //                     (() => {
-            //                         const expected =
-            //                             train.fromStop?.expectedDeparture ||
-            //                             train.fromStop?.expectedArrival;
-            //
-            //                         if (!expected) return 0;
-            //                         const expectedDate =
-            //                             typeof expected === "string"
-            //                                 ? new Date(expected)
-            //                                 : expected;
-            //                         return (
-            //                             (expectedDate.getTime() -
-            //                                 now.getTime()) /
-            //                             1000
-            //                         );
-            //                     })()
-            //                 ),
-            //             };
-            //         })
-            //         .filter((train) => {
-            //             const expected =
-            //                 train.fromStop?.expectedDeparture ||
-            //                 train.fromStop?.expectedArrival;
-            //             if (!expected) return false;
-            //             return (
-            //                 new Date(new Date(expected).getTime() + 60 * 1000) >
-            //                 now
-            //             );
-            //         })
-            // );
         }, 1000);
         return () => clearInterval(interval);
     }, [lastRefreshed]);
@@ -319,7 +264,7 @@ const PossibleJourneysPage: React.FC = () => {
                 const possible = await getPossibleJourneys(
                     [pos.coords.latitude, pos.coords.longitude],
                     locality,
-                    undefined
+                    undefined,
                 );
                 // const possible = await getPossibleJourneys(
                 //     fakePos, locality
@@ -436,11 +381,7 @@ const PossibleJourneysPage: React.FC = () => {
 
                                     <JourneyCard
                                         journey={journey}
-                                        onClick={() => {
-                                            // navigate(
-                                            //     `/trains/${train.serviceUid}?from=${fromStationCode}&to=${toStationCode}`
-                                            // )
-                                        }}
+                                        onClick={() => {}}
                                         idx={idx}
                                     />
                                     {idx === possibleJourneys.length - 1 && (
@@ -457,7 +398,7 @@ const PossibleJourneysPage: React.FC = () => {
                             {possibleJourneys.length === 0 && (
                                 <div className="flex justify-center">
                                     <span className="text-neutral-400">
-                                        No more trains!
+                                        No more vuses!
                                     </span>
                                 </div>
                             )}

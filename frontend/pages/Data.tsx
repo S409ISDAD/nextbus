@@ -102,24 +102,6 @@ const Data: React.FC = () => {
                     </li>
                 </ul>
             </div>
-            <div className="flex flex-col gap-2">
-                <span className="text-2xl font-bold">Train Data</span>
-                <ul className="list-disc list-inside">
-                    <li>
-                        All train data is provided by{" "}
-                        <strong>
-                            <a
-                                href="https://www.realtimetrains.co.uk/"
-                                className="underline text-link"
-                                target="_blank"
-                                rel="noopener noreferrer">
-                                realtimetrains.co.uk
-                            </a>
-                        </strong>
-                        , through the use of their free API.
-                    </li>
-                </ul>
-            </div>
         </div>
     );
 };

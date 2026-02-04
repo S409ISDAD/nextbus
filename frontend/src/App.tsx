@@ -9,12 +9,8 @@ import Data from "../pages/Data";
 import BusPage from "../pages/bus/BusPage.tsx";
 import ServicePage from "../pages/bus/ServicePage.tsx";
 import Layout from "../components/Layout";
-import StationPage from "../pages/train/StationPage.tsx";
-import TrainPage from "../pages/train/TrainPage.tsx";
 import NotFound from "../pages/NotFound";
 import StatsPage from "../pages/Stats";
-import TrainSearchPage from "../pages/train/TrainSearchPage.tsx";
-import TrainsDashboard from "../pages/train/Trains.tsx";
 import { BrowserRouter, Route, Routes } from "react-router";
 import { Toaster } from "react-hot-toast";
 import InstallToast from "../components/InstallPrompt";
@@ -243,22 +239,6 @@ function App() {
                                 <Route
                                     path="buses/services/:service_id"
                                     element={<ServicePage />}
-                                />
-                                <Route
-                                    path="/trains"
-                                    element={<TrainsDashboard />}
-                                />
-                                <Route
-                                    path="/trains/stations/:station_id"
-                                    element={<StationPage />}
-                                />
-                                <Route
-                                    path="trains/search/:fromStationCode/to/:toStationCode"
-                                    element={<TrainSearchPage />}
-                                />
-                                <Route
-                                    path="trains/:service_id"
-                                    element={<TrainPage />}
                                 />
                             </Route>
                             <Route

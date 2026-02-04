@@ -22,7 +22,6 @@ from backend.api.routes import (
     services,
     buses,
     livery,
-    trains,
     journey_planning,
     places,
     timetable,
@@ -165,7 +164,6 @@ app.include_router(stops.router, prefix="/api/v1/stops")
 app.include_router(services.router, prefix="/api/v1/services")
 app.include_router(buses.router, prefix="/api/v1/buses")
 app.include_router(livery.router, prefix="/api/v1/liveries")
-app.include_router(trains.router, prefix="/api/v1/trains")
 app.include_router(lines.router, prefix="/api/v1/lines")
 app.include_router(stats.router, prefix="/api/v1/stats")
 app.include_router(search.router, prefix="/api/v1/search")
