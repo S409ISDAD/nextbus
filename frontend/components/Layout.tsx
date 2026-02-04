@@ -6,7 +6,6 @@ import {
     faHome,
     faMagnifyingGlass,
     faMap,
-    faTrainSubway,
 } from "@fortawesome/free-solid-svg-icons";
 import { faDiscord } from "@fortawesome/free-brands-svg-icons";
 import version from "../utils/version";
@@ -110,26 +109,19 @@ export default function Layout() {
 
     const [lastBusPage, setLastBusPage] = useLocalSetting(
         "lastBusPage",
-        "/buses"
-    );
-    const [lastTrainPage, setLastTrainPage] = useLocalSetting(
-        "lastTrainPage",
-        "/trains"
+        "/buses",
     );
 
     useEffect(() => {
-        // update last visited bus/train page, even if its the root
+        // update last visited bus page, even if its the root
         if (location.pathname.startsWith("/buses")) {
             setLastBusPage(location.pathname);
         }
-        if (location.pathname.startsWith("/trains")) {
-            setLastTrainPage(location.pathname);
-        }
     }, [location.pathname]);
 
-    function handleNavClick(target: "buses" | "trains") {
+    function handleNavClick(target: "buses") {
         const root = `/${target}`;
-        const last = target === "buses" ? lastBusPage : lastTrainPage;
+        const last = lastBusPage;
 
         // if already inside the section, go to root
         if (location.pathname.startsWith(root)) {
@@ -165,11 +157,6 @@ export default function Layout() {
                                 buses
                             </button>
                         </Link>
-                        {/* <Link to="/trains">
-                            <button className="p-2 px-3 transition-all cursor-pointer border-neutral-800 h-max rounded-2xl border-1 hover:border-primary-700 ">
-                                trains
-                            </button>
-                        </Link> */}
                     </div>
                     <NavSearchBar />
                 </div>
@@ -185,7 +172,6 @@ export default function Layout() {
             { name: "home", href: "/", icon: faHome },
             { name: "map", href: "/map", icon: faMap },
             { name: "buses", href: "/buses", icon: faBus },
-            { name: "trains", href: "/trains", icon: faTrainSubway },
         ];
         return (
             <div className="h-full">
@@ -205,11 +191,8 @@ export default function Layout() {
                     style={isIOS() ? { paddingBottom: "20px" } : {}}>
                     {items.map((item) => {
                         const isBus = item.name === "buses";
-                        const isTrain = item.name === "trains";
                         const onClick = isBus
                             ? () => handleNavClick("buses")
-                            : isTrain
-                            ? () => handleNavClick("trains")
                             : () => navigate(item.href);
 
                         return (

@@ -43,12 +43,6 @@ export const whereAmI = () => {
     if (location.pathname.startsWith("/buses")) {
         return "buses";
     }
-    if (location.pathname.startsWith("/trains")) {
-        return "trains";
-    }
-    if (location.pathname === "/account") {
-        return "account";
-    }
     if (location.pathname.startsWith("/map")) {
         return "map";
     }

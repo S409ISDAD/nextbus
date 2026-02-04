@@ -18,7 +18,6 @@ STOPS_CACHE = DAY
 TIMETABLE_CACHE = 3600
 # TIMETABLE_CACHE = 1
 LIVERY_CACHE = DAY
-TRAIN_CACHE = 29
 
 
 def get_cached(key: str, func: Callable, args: tuple, exp: int, r: redis.Redis):
