@@ -29,7 +29,7 @@ class DataSource(BaseModel):
 
 class ServiceGroup(BaseModel):
     service: ServiceWithTimetable
-    timetables: list[DBTimetable]
+    timetables: Optional[list[DBTimetable]]
 
 
 class DetailedDataSource(DataSource):

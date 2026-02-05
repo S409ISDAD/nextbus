@@ -25,7 +25,7 @@ def handle_bods(
         log.error("BODS API key not configured.")
         return
 
-    bods_api = "https://data.bus-data.dft.gov.uk/api/v1/dataset?offset=0"
+    bods_api = "https://data.bus-data.dft.gov.uk/api/v1/dataset?offset=0&limit=100000"
 
     if datasource.noc:
         bods_api += f"&noc={datasource.noc}"
@@ -45,8 +45,15 @@ def handle_bods(
 
     start = time.time()
 
+    datasets_parsed = 0
+
     log.info(f"Found {data['count']} BODS datasets for datasource {datasource.name}")
+
     for dataset in data["results"]:
+        datasets_parsed += 1
+
+        log.info(f"parsing dataset {datasets_parsed}/{data['count']}")
+
         id = dataset["id"]
         name = dataset["name"]
         description = dataset.get("description", "")
@@ -95,6 +102,8 @@ def handle_bods(
             stats += _stats
         else:
             log.debug(f"No updates for BODS dataset {version.name} - {id}")
+
+    log.info(f"imported {datasets_parsed}/{data['count']} datasets for this operator.")
 
     time_taken = time.time() - start
 

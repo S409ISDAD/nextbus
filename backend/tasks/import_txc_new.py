@@ -58,24 +58,35 @@ def import_txc_zip(zip_path, ds_id=None, dsv_id=None, skip_checks=False):
     txc_importer = None
     stats = Statistics()
     try:
-        with zipfile.ZipFile(zip_path, "r") as zf:
-            xml_files = [f for f in zf.namelist() if f.endswith(".xml")]
+        # check if zip file
+        if zipfile.is_zipfile(zip_path):
+            with zipfile.ZipFile(zip_path, "r") as zf:
+                xml_files = [f for f in zf.namelist() if f.endswith(".xml")]
 
-            for filename in xml_files:
-                extracted_path = extract_dir / Path(filename).name
-                with zf.open(filename) as xml_file, open(extracted_path, "wb") as f_out:
-                    f_out.write(xml_file.read())
+                for filename in xml_files:
+                    extracted_path = extract_dir / Path(filename).name
+                    with (
+                        zf.open(filename) as xml_file,
+                        open(extracted_path, "wb") as f_out,
+                    ):
+                        f_out.write(xml_file.read())
 
-            log.debug(f"Extracted {len(xml_files)} XML files to {extract_dir}")
-            txc_importer = TXCImporter(
-                extract_dir, ds_id=ds_id, dsv_id=dsv_id, skip_checks=skip_checks
-            )
-            txc_importer.import_folder()
+                log.debug(f"Extracted {len(xml_files)} XML files to {extract_dir}")
+        else:
+            # single XML file, copy it to extract_dir
+            extracted_path = extract_dir / f"{zip_path.stem}.xml"
+            extracted_path.write_bytes(zip_path.read_bytes())
+            log.debug(f"Copied single XML file to {extracted_path}")
+
+        txc_importer = TXCImporter(
+            extract_dir, ds_id=ds_id, dsv_id=dsv_id, skip_checks=skip_checks
+        )
+        txc_importer.import_folder()
     except Exception as e:
         import traceback
 
         traceback.print_exc()
-        log.error(f"Error importing TXC zip {zip_path}: {e}")
+        log.error(f"Error importing TXC file {zip_path}: {e}")
     finally:
         end = time.time()
         time_taken = end - start
@@ -242,7 +253,6 @@ def get_description(txc_service: txc.Service):
 
 def get_service_data(path):
     txc_data = txc.TransXChange(path)
-    operators = getOperators(txc_data.operators)
 
     revision_num = txc_data.attributes.get("RevisionNumber")
 
@@ -250,14 +260,11 @@ def get_service_data(path):
 
     for service in txc_data.services.values():
         service_id = service.service_code
-        operator = operators[service.operator].noc
         operating_period = service.operating_period
 
         for line in service.lines:
             line_name = line.line_name or "Unknown"
-            services.append(
-                [operator, service_id, line_name, revision_num, operating_period]
-            )
+            services.append([service_id, line_name, revision_num, operating_period])
 
     return txc_data, services
 
@@ -402,15 +409,13 @@ class TXCImporter:
 
                 txc_data, services = get_service_data(
                     file
-                )  # services contains operator, service_id, line_name, revision_num, operating_period
+                )  # services contains service_id, line_name, revision_num, operating_period
 
                 self.processed_cache[file.as_posix()] = (
                     txc_data  # save the processed TXC object for importing later
                 )
                 for service in services:
-                    operator, service_id, line_name, revision_num, operating_period = (
-                        service
-                    )
+                    service_id, line_name, revision_num, operating_period = service
                     line_key = (service_id, line_name)  # group by bus route
                     start = operating_period.start
                     end = operating_period.end or date(9999, 12, 31)

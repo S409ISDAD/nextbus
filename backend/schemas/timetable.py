@@ -38,7 +38,7 @@ class DBTimetable(BaseModel):
     service_id: int
     bt_service_id: Optional[int] = None
     revision_number: int
-    description: str
+    description: Optional[str]
     outbound_description: str
     inbound_description: str
     origin: str

@@ -16,7 +16,7 @@
     {
         "name": "Stagecoach East Midlands",
         "url": "https://opendata.stagecoachbus.com/stagecoach-scem-route-schedule-data-transxchange_2_4.zip",
-        "disabled": true
+        "disabled": false
     },
     {
         "name": "Stagecoach Midlands",
@@ -26,7 +26,7 @@
     {
         "name": "Stagecoach Yorkshire",
         "url": "https://opendata.stagecoachbus.com/stagecoach-syrk-route-schedule-data-transxchange_2_4.zip",
-        "disabled": true
+        "disabled": false
     },
     {
         "name": "Stagecoach Cumbria",
@@ -162,5 +162,30 @@
         "name": "Salisbury Reds",
         "noc": "SWWD",
         "search": "Salisbury Reds"
+    },
+    {
+        "name": "PC Coaches",
+        "noc": "PCCO"
+    },
+    {
+        "name": "Brylaine Travel",
+        "noc": "BRYL"
+    },
+    {
+        "name": "Black Cat Travel",
+        "noc": "BLCT"
+    },
+    {
+        "name": "LMS Travel",
+        "noc": "LMST"
+    },
+    {
+        "name": "Kevs Cars & Coaches",
+        "noc": "KEVS"
+    },
+    {
+        "name": "Oxford Bus Company",
+        "noc": "OXBC",
+        "search": "OXBC"
     }
 ]
