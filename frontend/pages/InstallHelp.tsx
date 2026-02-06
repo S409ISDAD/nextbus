@@ -79,6 +79,14 @@ const InstallHelp: React.FC = () => {
 
     return (
         <div className="flex flex-col items-center max-w-6xl gap-8 p-6 mx-auto">
+            <meta
+                name="description"
+                content="nextbus App Installation Guide: Step-by-step instructions to install nextbus on your iOS or Android device for easy access to real-time bus information."
+            />
+            <meta
+                name="keywords"
+                content="nextbus, app installation, iOS, Android, install guide, real-time bus information, add to home screen"
+            />
             <h1 className="text-4xl font-bold text-center">
                 Installing nextbus
             </h1>

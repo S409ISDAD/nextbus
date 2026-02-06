@@ -53,7 +53,7 @@ const MapView: React.FC<MapViewProps> = ({
 
             onBoundsChange();
         },
-        [onBoundsChange]
+        [onBoundsChange],
     );
 
     return (
@@ -309,7 +309,7 @@ const Map: React.FC = () => {
                 if (busesTimeout.current) clearTimeout(busesTimeout.current);
                 busesTimeout.current = window.setTimeout(
                     () => fetchBuses(bounds),
-                    1000
+                    1000,
                 );
             }
         }
@@ -320,7 +320,7 @@ const Map: React.FC = () => {
             if (stopsTimeout.current) clearTimeout(stopsTimeout.current);
             stopsTimeout.current = window.setTimeout(
                 () => fetchStops(bounds),
-                400
+                400,
             );
         }
     }, [fetchStops, fetchBuses, stops.length]);
@@ -328,13 +328,23 @@ const Map: React.FC = () => {
     document.title = "map | nextbus";
 
     return (
-        <MapView
-            mapRef={mapRef}
-            stops={stops}
-            buses={buses}
-            loading={loading}
-            onBoundsChange={handleBoundsChange}
-        />
+        <>
+            <meta
+                name="description"
+                content="nextbus Map: View live bus locations and nearby stops on an interactive map. Zoom in to see more details and click on stops for departure information."
+            />
+            <meta
+                name="keywords"
+                content="bus, map, real-time, live locations, nearby stops, interactive map, nextbus"
+            />
+            <MapView
+                mapRef={mapRef}
+                stops={stops}
+                buses={buses}
+                loading={loading}
+                onBoundsChange={handleBoundsChange}
+            />
+        </>
     );
 };
 

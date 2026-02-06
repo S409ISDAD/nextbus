@@ -743,16 +743,24 @@ const DeparturePage: React.FC = () => {
 
     return (
         <div className="p-5 md:mx-20">
+            <meta
+                name="description"
+                content="nextbus Stop Departures: View real-time bus departures and stop information for your selected bus stop. "
+            />
+            <meta
+                name="keywords"
+                content="bus, real-time, departures, stop information, bus stop, nextbus"
+            />
             <div className="flex flex-col gap-4">
                 <div className="flex flex-col items-center justify-center gap-3">
-                    <span className="text-3xl font-bold text-center md:text-4xl">
+                    <h1 className="text-3xl font-bold text-center md:text-4xl">
                         {stop?.name}{" "}
                         {stop?.indicator
                             ? `(${stop.indicator})`
                             : stop?.bearing
                               ? `(${stop.bearing})`
                               : ""}
-                    </span>
+                    </h1>
                     <div className="flex flex-wrap items-center justify-center gap-2 gap-y-1">
                         {closestStop && (
                             <div

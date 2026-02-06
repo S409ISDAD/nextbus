@@ -58,7 +58,7 @@ const BusPage: React.FC = () => {
                 const closestStops = await getClosestStops(
                     [userCoords.coords.latitude, userCoords.coords.longitude],
                     "",
-                    1
+                    1,
                 );
                 setStatus("");
                 const stopIDs = closestStops
@@ -76,14 +76,14 @@ const BusPage: React.FC = () => {
                 }
             } catch (e) {
                 setStatus(
-                    "Unable to get location. Make sure location services are enabled."
+                    "Unable to get location. Make sure location services are enabled.",
                 );
             }
 
             const stops = userCoords
                 ? (await usageManager).predictStopAndRoutes(
                       userCoords.coords.latitude,
-                      userCoords.coords.longitude
+                      userCoords.coords.longitude,
                   )
                 : (await usageManager).predictStopAndRoutes();
 
@@ -94,6 +94,15 @@ const BusPage: React.FC = () => {
 
     return (
         <div className="flex flex-col items-center justify-center gap-3 p-4">
+            <meta
+                name="description"
+                content="nextbus Bus Dashboard: View nearby services and your favorite stops. "
+            />
+            <meta
+                name="keywords"
+                content="bus, dashboard, real-time, departures, nearby services, favorite stops, nextbus"
+            />
+            <h1 className="hidden text-4xl font-bold">Bus Dashboard</h1>
             <div className="flex flex-row justify-center gap-4 mb-4">
                 <button
                     className={`px-4 py-2 text-lg font-semibold rounded-xl transition-all duration-150 cursor-pointer ${
@@ -208,7 +217,7 @@ const BusPage: React.FC = () => {
                                                     className="mb-4 text-xl font-bold cursor-pointer"
                                                     onClick={() =>
                                                         navigate(
-                                                            `/buses/stops/${predictedStop.stopId}`
+                                                            `/buses/stops/${predictedStop.stopId}`,
                                                         )
                                                     }>
                                                     {predictedStop.stopName}
@@ -223,7 +232,7 @@ const BusPage: React.FC = () => {
                                                                 className="flex flex-row items-stretch justify-center cursor-pointer"
                                                                 onClick={() =>
                                                                     navigate(
-                                                                        `/buses/stops/${predictedStop.stopId}?filter=${route.lineName}`
+                                                                        `/buses/stops/${predictedStop.stopId}?filter=${route.lineName}`,
                                                                     )
                                                                 }>
                                                                 <div className="flex items-center px-3 py-1 bg-primary-700 rounded-l-2xl">
@@ -236,7 +245,7 @@ const BusPage: React.FC = () => {
                                                                 <div className="flex flex-col justify-center px-3 bg-neutral-800/50 rounded-r-2xl">
                                                                     <span className="font-semibold text">
                                                                         {route.destination.includes(
-                                                                            "-"
+                                                                            "-",
                                                                         )
                                                                             ? ""
                                                                             : "to "}
@@ -246,7 +255,7 @@ const BusPage: React.FC = () => {
                                                                     </span>
                                                                 </div>
                                                             </div>
-                                                        )
+                                                        ),
                                                     )}
                                                 </div>
                                             </Card>

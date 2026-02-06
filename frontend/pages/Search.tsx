@@ -10,7 +10,7 @@ const SearchPage: React.FC = () => {
     const [results, setResults] = React.useState<SearchResponse>();
     const [loading, setLoading] = React.useState(false);
     const [tab, setTab] = React.useState<"services" | "operators" | "stops">(
-        "services"
+        "services",
     );
     const query = new URLSearchParams(window.location.search).get("q") || "";
 
@@ -39,7 +39,15 @@ const SearchPage: React.FC = () => {
 
     return (
         <div className="flex flex-col items-center justify-center w-full p-8 pb-0">
-            <span className="text-4xl font-bold">Search nextbus</span>
+            <meta
+                name="description"
+                content="nextbus Search: Find bus services and stops in your area with nextbus's search feature."
+            />
+            <meta
+                name="keywords"
+                content="nextbus, search, bus services, bus stops, real-time bus information, find buses"
+            />
+            <h1 className="text-4xl font-bold">Search nextbus</h1>
             <Card className="max-w-5xl p-2 mt-5 text-sm rounded-2xl border-amber-600 ">
                 <span>
                     Search is limited to imported data; you may not find what
@@ -116,7 +124,7 @@ const SearchPage: React.FC = () => {
                                                 className="flex flex-col cursor-pointer"
                                                 onClick={() => {
                                                     navigate(
-                                                        `/buses/services/${service.id}`
+                                                        `/buses/services/${service.id}`,
                                                     );
                                                 }}>
                                                 <div className="flex flex-row items-stretch mb-1">
@@ -174,7 +182,7 @@ const SearchPage: React.FC = () => {
                                             className="flex flex-col mb-2 cursor-pointer break-inside-avoid"
                                             onClick={() =>
                                                 navigate(
-                                                    `buses/operators/${operator.noc}`
+                                                    `buses/operators/${operator.noc}`,
                                                 )
                                             }>
                                             <span className="underline text-link">
@@ -200,7 +208,7 @@ const SearchPage: React.FC = () => {
                                             className="flex flex-col mb-4 cursor-pointer w-fit break-inside-avoid"
                                             onClick={() =>
                                                 navigate(
-                                                    `/buses/stops/${stop.atco_code}`
+                                                    `/buses/stops/${stop.atco_code}`,
                                                 )
                                             }>
                                             <span className="underline text-link">
