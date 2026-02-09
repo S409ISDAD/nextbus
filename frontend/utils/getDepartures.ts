@@ -24,7 +24,7 @@ export const parseDepartures = async (departures: Departures, filter?: string) =
                 return {
                     ...bus,
                     timestamp: departures.timestamp,
-                    timeTo: timeToDiff(minDiff, maxDiff),
+                    timeTo: timeToDiff(diffSec, minDiff, maxDiff),
                 };
             })
             .filter((bus) => {

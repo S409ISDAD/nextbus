@@ -7,15 +7,15 @@ export default function timeTo(bus: Departure) {
     const minDiff = 'min_expected' in bus && bus.min_expected ? (new Date(bus.min_expected).getTime() / 1000 - Math.floor(now.getTime() / 1000)) : diffSec;
     const maxDiff = 'max_expected' in bus && bus.max_expected ? (new Date(bus.max_expected).getTime() / 1000 - Math.floor(now.getTime() / 1000)) : diffSec;
 
-    return timeToDiff(minDiff, maxDiff);
+    return timeToDiff(diffSec, minDiff, maxDiff);
 
 }
 
-export function timeToDiff(minDiff: number, maxDiff: number) {
+export function timeToDiff(standardDiff: number, minDiff: number, maxDiff: number) {
     const diff = maxDiff - minDiff;
 
     if (diff < 75) {
-        return generateTimeTo(minDiff);
+        return generateTimeTo(standardDiff);
     }
     minDiff = Math.max(0, minDiff);
 
