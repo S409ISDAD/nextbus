@@ -142,20 +142,23 @@ def get_scheduled(stop_id: str, redis, services=None):
 
 
 def get_departures(stop_id: str, redis):
-    services = stops.get_services_from_stop(
-        stop_id, redis
-    )  # fetch services for the stop from bustimes.org
+    with time_taken("get_departures"):
+        services = stops.get_services_from_stop(
+            stop_id, redis
+        )  # fetch services for the stop from bustimes.org
 
-    service_ids = [service.get("id") for service in services]  # extract service IDs
+        service_ids = [service.get("id") for service in services]  # extract service IDs
 
-    times = get_scheduled(stop_id, redis, services)  # fetch scheduled times (see above)
+        times = get_scheduled(
+            stop_id, redis, services
+        )  # fetch scheduled times (see above)
 
-    buses = bus.fetch_buses(
-        service_ids,
-        stop_id,
-        times,
-        redis,
-    )  # fetch all buses (live and scheduled combined)
-    log.debug(f"got {len(buses)} buses")
+        buses = bus.fetch_buses(
+            service_ids,
+            stop_id,
+            times,
+            redis,
+        )  # fetch all buses (live and scheduled combined)
+        log.debug(f"got {len(buses)} buses")
 
-    return buses
+        return buses

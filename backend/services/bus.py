@@ -833,6 +833,9 @@ def build_bus(
         # never include journey if asked for a stop, as it is not needed
         journey = None
 
+    if times.expected and times.scheduled:
+        delay = (times.expected - times.scheduled).seconds
+
     return TrackedBus(
         type="tracked",
         id=bus_id,
