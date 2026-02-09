@@ -834,7 +834,7 @@ def build_bus(
         journey = None
 
     if times.expected and times.scheduled:
-        delay = (times.expected - times.scheduled).seconds
+        delay = round(times.expected.timestamp() - times.scheduled.timestamp())
 
     return TrackedBus(
         type="tracked",
