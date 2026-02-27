@@ -270,18 +270,20 @@ const Map: React.FC = () => {
             const res = await fetch(url);
             const geojson = await res.json();
             geojson.splice(1000);
-            const busesData: MapBus[] = geojson.map((feature: any) => ({
-                id: feature.id,
-                coords: [feature.coordinates[1], feature.coordinates[0]],
-                heading: feature.heading,
-                updated: new Date(feature.datetime),
-                destination: feature.destination,
-                trip_id: feature.trip_id,
-                service_id: feature.service_id,
-                service: feature.service,
-                vehicle: feature.vehicle,
-                livery_id: feature.vehicle.livery,
-            }));
+            const busesData: MapBus[] = geojson
+                .filter((feature: any) => feature.coordinates && feature.service)
+                .map((feature: any) => ({
+                    id: feature.id,
+                    coords: [feature.coordinates[1], feature.coordinates[0]],
+                    heading: feature.heading,
+                    updated: new Date(feature.datetime),
+                    destination: feature.destination ?? "",
+                    trip_id: feature.trip_id,
+                    service_id: feature.service_id,
+                    service: feature.service ?? { line_name: "" },
+                    vehicle: feature.vehicle ?? { name: "", features: "", livery: null },
+                    livery_id: feature.vehicle?.livery ?? null,
+                }));
 
             console.log(busesData);
             setBuses(busesData);

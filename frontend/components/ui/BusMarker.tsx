@@ -48,14 +48,18 @@ export function BusMarker({ bus, setPopup }: { bus: MapBus; setPopup: any }) {
                             <span
                                 className="underline cursor-pointer text-link"
                                 onClick={() => navigate(`/buses/${bus.id}`)}>
-                                {bus.service.line_name} to {bus.destination}
+                                {bus.service?.line_name ?? ""}{bus.destination ? ` to ${bus.destination}` : ""}
                             </span>
-                            <span className="text-xs text-gray-300">
-                                {bus.vehicle.name}
-                            </span>
-                            <span className="text-xs font-normal text-gray-400">
-                                {parse(bus.vehicle.features)}
-                            </span>
+                            {bus.vehicle?.name && (
+                                <span className="text-xs text-gray-300">
+                                    {bus.vehicle.name}
+                                </span>
+                            )}
+                            {bus.vehicle?.features && (
+                                <span className="text-xs font-normal text-gray-400">
+                                    {parse(bus.vehicle.features)}
+                                </span>
+                            )}
                             <TimeSince
                                 className="text-xs text-gray-300"
                                 time={bus.updated}
